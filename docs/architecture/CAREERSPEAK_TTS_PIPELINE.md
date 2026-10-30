@@ -1,149 +1,92 @@
 # CareerSpeak — TTS Worker & Audio Production Architecture
 
-**Document version:** 1.2  
-**Status:** Architecture baseline  
-**Applies to:** VoxPrep / CareerSpeak v0.7+
+**Document version:** 2.0  
+**Status:** Normative TTS production baseline  
+**Applies to:** CareerSpeak v0.9+
+
+Related standard:
+
+- [`CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md`](CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md)
 
 ---
 
 ## 1. Decision
 
-CareerSpeak SHALL use a separate long-running TTS worker for content production.
-
-Production components:
+CareerSpeak uses a separate server-managed long-running TTS Worker:
 
 ```text
-Spring Boot Backend
-PostgreSQL TTS queue
-RustFS model/media storage
-TTS Worker: Python + Piper + FFmpeg
-```
-
-The worker is server-managed and SHALL start/restart automatically with the deployment environment.
-
-Piper SHALL NOT run inside learner request paths or Spring MVC request threads.
-
----
-
-## 2. Responsibilities
-
-### Backend
-
-Owns:
-
-- TTS job lifecycle;
-- exact voice/model resolution;
-- PostgreSQL queue state;
-- lease ownership;
-- presigned RustFS authorization;
-- stale-result protection;
-- final FileAsset association;
-- ADMIN review/publish workflow.
-
-### Worker
-
-Owns only:
-
-- claim job;
-- obtain exact model;
-- synthesize;
-- post-process;
-- technical QC;
-- upload;
-- report success/failure.
-
-Worker SHALL NOT publish content and SHALL NOT connect directly to PostgreSQL.
-
----
-
-## 3. Production topology
-
-```text
-                    Spring Boot Backend
-                           │
-                           ▼
-                     PostgreSQL
-                    durable TTS queue
-                           ▲
-                           │ authenticated HTTPS
-                           │
-                     TTS Worker
-              Python + Piper + FFmpeg
-                           │
-                 ┌─────────┴─────────┐
-                 ▼                   ▼
-           local model cache        RustFS
-                                  models/audio
-```
-
-The worker uses outbound connectivity only.
-
----
-
-## 4. Worker runtime model
-
-The worker is a long-running process/container.
-
-```text
-START
- ↓
-load configuration
- ↓
-authenticate with machine token
- ↓
-claim job
- ↓
-no job? → bounded sleep/backoff → claim again
- ↓
-job found
- ↓
-obtain exact model
- ↓
+Python
 Piper
- ↓
 FFmpeg
- ↓
-QC
- ↓
-RustFS upload
- ↓
-complete/fail
- ↓
-next claim
+local immutable model cache
 ```
 
-Production SHALL use auto-start/auto-restart, for example Docker restart policy or equivalent process supervision.
+Production worker starts/restarts automatically under Docker/process supervision.
 
-A developer may run the worker locally, but local Windows execution is not the production architecture baseline.
+Piper never runs in learner request paths or Spring MVC request threads.
 
 ---
 
-## 5. Worker authentication
+## 2. Ownership
 
-Worker uses a dedicated machine credential.
+Backend owns:
 
 ```text
-Authorization: Bearer <worker-token>
+TTS voice/model registry
+exact voice_model_id resolution
+TTS job lifecycle
+PostgreSQL queue
+lease ownership
+fingerprint expectation
+presigned RustFS authorization
+FileAsset metadata association
+ADMIN review/publication
 ```
 
-Worker access is limited to `/internal/v1/tts/**` and required presigned RustFS operations.
+Worker owns only:
+
+```text
+claim
+model download/cache
+synthesis
+post-processing
+technical QC
+upload
+complete/fail reporting
+```
+
+Worker does not publish learner content and does not connect directly to PostgreSQL.
+
+---
+
+## 3. Security
+
+Worker calls:
+
+```text
+/internal/v1/tts/**
+```
+
+using dedicated machine token.
 
 Worker SHALL NOT receive:
 
 ```text
 ADMIN password
+learner installation token
 PostgreSQL password
 permanent RustFS secret key
-learner installation token
 ```
+
+RustFS private operations use short-lived presigned GET/PUT.
 
 ---
 
-## 6. Voice and model model
+## 4. Voice/model distinction
 
 ### `tts_voice`
 
-Logical ADMIN-facing voice profile:
+Logical profile:
 
 ```text
 id
@@ -159,7 +102,7 @@ default_model_id
 
 ### `tts_voice_model`
 
-Exact immutable Piper model revision:
+Exact immutable technical revision:
 
 ```text
 id
@@ -180,102 +123,76 @@ created_at
 approved_at
 ```
 
-A job SHALL reference an exact immutable `voice_model_id`.
+Every TTS job references exact immutable `voice_model_id`.
 
-Silent model substitution is forbidden.
+Silent substitution is forbidden.
 
 ---
 
-## 7. Model lifecycle
+## 5. Model lifecycle
 
 ```text
 UPLOADING
- ↓
 UPLOADED
- ↓
 VALIDATING
- ↓
 READY_FOR_REVIEW
- ↓
 APPROVED
- ↓
 ACTIVE
- ↓
 DEPRECATED
 ```
 
-Failure states MAY include:
+Failure states:
 
 ```text
 INVALID
 QUARANTINED
 ```
 
-A model binary/version SHALL never be overwritten in place.
+Model objects are immutable by revision and never overwritten in place.
+
+Only technically qualified and license-reviewed models may become ACTIVE.
 
 ---
 
-## 8. RustFS model storage
+## 6. Model storage/cache
 
-Models/config files are private RustFS objects.
-
-Example:
+Private RustFS model layout may be:
 
 ```text
 careerspeak-models/
-└── piper/
-    └── en/
-        └── en_US-lessac-high/
-            └── v1/
-                ├── model.onnx
-                └── model.onnx.json
+└── piper/en/en_US-lessac-high/v1/
+    ├── model.onnx
+    └── model.onnx.json
 ```
 
-PostgreSQL stores object metadata/checksum, not model binary bytes.
-
-ADMIN model upload SHOULD use presigned PUT.
-
-Worker model download SHOULD use presigned GET.
-
----
-
-## 9. Local model cache
-
-Worker maintains a persistent local disk cache.
-
-Example:
+Worker local cache:
 
 ```text
-/var/lib/careerspeak/tts/models/
-└── PIPER_EN_US_LESSAC_HIGH_V1/
-    ├── model.onnx
-    ├── model.onnx.json
-    └── manifest.json
+/var/lib/careerspeak/tts/models/<VOICE_MODEL_CODE>/
 ```
 
 On cache miss:
 
 ```text
-request download authorization
-→ RustFS download
-→ SHA-256 verification
-→ local install
-→ Piper load
+request presigned GET
+→ download exact model/config
+→ verify SHA-256
+→ install atomically in cache
+→ load Piper model
 ```
 
-If checksum validation fails, the worker SHALL fail the job/model operation explicitly.
+Checksum mismatch is a hard model-use failure; worker never chooses another voice automatically.
 
-The worker MAY maintain a small in-memory LRU of loaded Piper models to reduce repeated model initialization.
+A small in-memory LRU of loaded models may be used.
 
 ---
 
-## 10. TTS job model
+## 7. TTS job
 
 Recommended fields:
 
 ```text
 tts_job
-──────────────────────────────
 id
 content_type
 content_revision_id
@@ -296,7 +213,7 @@ error_code nullable
 error_message nullable
 ```
 
-Status baseline:
+Statuses:
 
 ```text
 PENDING
@@ -307,15 +224,15 @@ CANCELLED
 SUPERSEDED
 ```
 
+Worker `READY` is a TTS-job result state and is unrelated to Flutter offline pack `READY`.
+
 ---
 
-## 11. PostgreSQL queue contract
+## 8. PostgreSQL durable queue
 
-TTS queue is implemented in PostgreSQL. RabbitMQ is not required.
+Job claim is atomic.
 
-Job claiming MUST be atomic and concurrency-safe.
-
-Recommended PostgreSQL pattern:
+Recommended pattern:
 
 ```sql
 WITH next_job AS (
@@ -331,132 +248,118 @@ WITH next_job AS (
     LIMIT 1
 )
 UPDATE tts_job j
-SET status        = 'RUNNING',
-    worker_id     = :workerId,
-    lease_token   = :leaseToken,
-    lease_until   = NOW() + INTERVAL '5 minutes',
-    started_at    = COALESCE(started_at, NOW()),
-    attempt_count = attempt_count + 1
+SET status         = 'RUNNING',
+    worker_id      = :workerId,
+    lease_token    = :leaseToken,
+    lease_until    = NOW() + :leaseDuration,
+    started_at     = COALESCE(started_at, NOW()),
+    attempt_count  = attempt_count + 1
 FROM next_job
 WHERE j.id = next_job.id
 RETURNING j.*;
 ```
 
-The exact lease duration is configuration, not a domain constant.
+Exact lease duration is configuration.
 
-Spring implementation MAY use native SQL for queue claim/lease operations while ordinary metadata remains managed through JPA.
-
----
-
-## 12. Queue indexes
-
-At minimum qualify partial indexes equivalent to:
+Recommended indexes:
 
 ```sql
 CREATE INDEX idx_tts_job_pending_claim
-    ON tts_job (created_at, id)
-    WHERE status = 'PENDING';
-```
+ON tts_job (created_at, id)
+WHERE status = 'PENDING';
 
-and:
-
-```sql
 CREATE INDEX idx_tts_job_expired_lease
-    ON tts_job (lease_until)
-    WHERE status = 'RUNNING';
+ON tts_job (lease_until)
+WHERE status = 'RUNNING';
 ```
 
-Index shape SHALL be verified against actual claim/recovery queries.
+RabbitMQ is not required initially.
 
 ---
 
-## 13. Claim API
+## 9. Worker APIs
 
-Example:
+Baseline:
 
 ```text
 POST /internal/v1/tts/jobs/claim
+POST /internal/v1/tts/jobs/{id}/heartbeat
+POST /internal/v1/tts/jobs/{id}/complete
+POST /internal/v1/tts/jobs/{id}/fail
+POST /internal/v1/tts/models/{id}/download
 ```
 
-Successful response includes enough information to produce exactly one asset:
-
-```json
-{
-  "jobId": 501,
-  "contentRevisionId": 1203,
-  "audioRole": "MODEL_ANSWER",
-  "text": "Dependency injection is a design pattern...",
-  "ttsText": "Dependency injection is a design pattern...",
-  "voiceModelId": 17,
-  "fingerprint": "...",
-  "leaseToken": "..."
-}
-```
-
-No pending job may return `204 No Content` or the agreed empty-job response.
-
----
-
-## 14. Lease and heartbeat
-
-A successful claim creates a unique `lease_token` and `lease_until`.
-
-Long-running synthesis SHOULD heartbeat:
+Claim response contains enough information to generate exactly one asset, including:
 
 ```text
-POST /internal/v1/tts/jobs/{id}/heartbeat
+jobId
+contentRevisionId
+audioRole
+text/ttsText
+voiceModelId
+fingerprint
+leaseToken
 ```
-
-Heartbeat is valid only when job id, worker id and lease token match the current lease.
-
-Conceptual SQL:
-
-```sql
-UPDATE tts_job
-SET lease_until = NOW() + INTERVAL '5 minutes'
-WHERE id = :jobId
-  AND status = 'RUNNING'
-  AND worker_id = :workerId
-  AND lease_token = :leaseToken;
-```
-
-If zero rows are updated, the worker has lost ownership and SHALL NOT finalize the job.
 
 ---
 
-## 15. Crash recovery
+## 10. Lease/heartbeat
 
-If a worker dies while a job is `RUNNING`, no manual database repair is required.
+Claim generates unique:
 
-After `lease_until < now()`, the job becomes eligible for a later atomic claim.
+```text
+leaseToken
+leaseUntil
+```
 
-A returned old worker result is rejected because its lease token no longer matches.
+Heartbeat extends lease only when:
+
+```text
+job id matches
+status = RUNNING
+worker id matches
+lease token matches
+```
+
+Zero-row update means ownership is lost. Worker must stop finalization for that lease.
 
 ---
 
-## 16. TTS text pipeline
+## 11. Crash recovery
+
+If Worker dies:
+
+```text
+RUNNING job remains leased until leaseUntil
+→ lease expires
+→ later claim may reclaim
+```
+
+Old worker completion is rejected because lease token no longer matches.
+
+No manual database repair is required.
+
+---
+
+## 12. TTS text pipeline
 
 ```text
 canonical display text
- ↓
-content-specific tts_text override
- ↓
-controlled pronunciation rules
- ↓
-normalized TTS input
- ↓
-Piper
+→ optional content tts_text override
+→ controlled pronunciation rules
+→ normalized TTS input
+→ Piper
 ```
 
-Learner-visible English SHALL NOT be distorted to satisfy the TTS engine.
+Learner-visible text is not distorted for synthesis.
 
-Professional terms such as JVM, JPA, SQL, OAuth and Kubernetes may require controlled pronunciation rules.
+Technical terms may have explicit pronunciation rules.
 
 ---
 
-## 17. Fingerprint
+## 13. Fingerprint
 
-Recommended fingerprint input:
+Fingerprint input includes at least:
 
 ```text
 normalized_tts_text
@@ -474,29 +377,23 @@ Algorithm:
 SHA-256
 ```
 
-Changing text, voice model or qualified audio profile creates a new fingerprint.
+Any relevant change creates a new fingerprint.
 
 ---
 
-## 18. Audio processing
+## 14. Audio generation
 
 ```text
 Piper
- ↓
-temporary WAV
- ↓
-technical validation
- ↓
-FFmpeg
- ↓
-production MP3
- ↓
-technical QC
- ↓
-RustFS
+→ temporary WAV
+→ technical validation
+→ FFmpeg
+→ production MP3
+→ QC
+→ RustFS
 ```
 
-Candidate production profile:
+Candidate profile:
 
 ```text
 MP3
@@ -505,79 +402,64 @@ mono
 speech-oriented sample rate
 ```
 
-Final parameters SHALL be qualified by listening tests and recorded separately.
-
-Temporary WAV should normally be deleted after successful conversion/upload.
+Final audio profile is qualified by listening tests.
 
 ---
 
-## 19. Technical QC
+## 15. Technical QC
 
-Worker SHALL verify at least:
+Verify at least:
 
 ```text
-output exists
+file exists
 size > 0
 duration > 0
-expected codec
-expected channel count
-expected sample-rate/profile
-checksum calculated
+expected codec/channel/profile
 Piper success
 FFmpeg success
+checksum generated
 reasonable duration bounds
 ```
 
-A technically invalid asset SHALL NOT become `READY`.
+Invalid audio never reaches job READY.
 
 ---
 
-## 20. Upload and completion
+## 16. Upload/completion
 
-Worker obtains temporary upload authorization and uploads directly to RustFS.
+Worker obtains presigned PUT and uploads directly to RustFS.
 
-Completion endpoint example:
-
-```text
-POST /internal/v1/tts/jobs/{id}/complete
-```
-
-Completion data includes at minimum:
+Completion contains at least:
 
 ```text
 jobId
 leaseToken
 fingerprint
 voiceModelId
-objectKey
-checksum
+objectKey/checksum
 size
 duration
 ```
 
-Backend accepts completion only if:
+Backend accepts only if:
 
 ```text
-current lease token matches
-job is RUNNING
-voice_model_id matches
-fingerprint is still expected
-content revision is still valid
+current lease matches
+job RUNNING
+voice model matches
+fingerprint still expected
+content revision still valid
 ```
 
-Otherwise result is rejected or marked `SUPERSEDED`.
+Otherwise reject or mark SUPERSEDED according to contract.
+
+Duplicate callback handling must be idempotent/replay-safe.
 
 ---
 
-## 21. Failure endpoint
+## 17. Failure reporting
 
-Worker reports bounded failures through:
-
-```text
-POST /internal/v1/tts/jobs/{id}/fail
-```
-
-Useful error codes include:
+Worker fail codes include:
 
 ```text
 VOICE_MODEL_NOT_FOUND
@@ -591,35 +473,28 @@ STORAGE_TEMPORARILY_UNAVAILABLE
 LEASE_LOST
 ```
 
-Retry policy SHALL be bounded.
+Retry is bounded and classified by Backend policy.
 
 ---
 
-## 22. Human review
-
-Generated audio does not automatically publish learner content.
+## 18. Human review/publication
 
 ```text
-GENERATED
- ↓
-TECHNICAL QC
- ↓
-READY_FOR_REVIEW
- ↓
-ADMIN preview
- ↓
-APPROVE / REGENERATE
- ↓
-PUBLISH
+TTS job READY
+→ generated asset available to ADMIN preview
+→ ADMIN approve/regenerate
+→ content revision qualifies for publication
+→ PUBLISHED + ACTIVE
+→ asset appears in learner manifest/delivery
 ```
 
-There is one ADMIN actor; no separate moderator/reviewer role is required in MVP.
+Worker itself never changes Backend availability.
 
 ---
 
-## 23. Worker configuration
+## 19. Worker configuration
 
-Worker should require only operational configuration such as:
+Only operational configuration such as:
 
 ```text
 BACKEND_URL
@@ -630,31 +505,11 @@ POLL_INTERVAL
 MAX_LOADED_MODELS
 ```
 
-It SHALL NOT require direct database or permanent RustFS credentials.
+No direct DB or permanent RustFS secrets.
 
 ---
 
-## 24. Deployment
-
-Initial production topology may be:
-
-```text
-Docker Host
-├── careerspeak-backend
-├── careerspeak-tts-worker
-├── rustfs
-└── reverse-proxy
-
-Managed PostgreSQL
-```
-
-Worker runs continuously with auto-restart.
-
-When idle it polls with bounded/exponential backoff.
-
----
-
-## 25. Scaling
+## 20. Scaling
 
 Initial:
 
@@ -668,60 +523,49 @@ Future:
 TTS Worker × N
 ```
 
-All workers use the same atomic claim API. `FOR UPDATE SKIP LOCKED` plus leases prevent duplicate ownership.
-
-No queue contract change is required to add workers.
+All workers use the same claim/lease protocol. `FOR UPDATE SKIP LOCKED` + leases prevent simultaneous ownership.
 
 ---
 
-## 26. Mandatory failure tests
+## 21. Mandatory failure qualification
 
-Qualification SHALL cover:
-
-1. two workers claiming concurrently;
-2. worker killed during Piper synthesis;
-3. worker killed during FFmpeg conversion;
-4. lease expiry and re-claim;
-5. old worker completes with stale lease token;
-6. network loss before upload;
-7. upload succeeds but completion callback is lost;
-8. duplicate completion callback;
-9. model missing locally;
-10. RustFS model download failure;
-11. model checksum mismatch;
-12. invalid/corrupt generated audio;
-13. text revision changes while job runs;
-14. exact voice model becomes deprecated while an already-created job still references it;
-15. backend restart with pending/running jobs.
-
----
-
-## 27. Acceptance path
+Must prove:
 
 ```text
-ADMIN creates/edits content
- ↓
-backend resolves exact voice_model_id
- ↓
-backend inserts PENDING TTS job
- ↓
-worker atomically claims job
- ↓
-worker gets/caches exact model
- ↓
-Piper + FFmpeg + QC
- ↓
-RustFS upload
- ↓
-backend validates lease/fingerprint/model/revision
- ↓
-job READY
- ↓
-ADMIN previews and approves
- ↓
-content publishes
- ↓
-Flutter plays immutable published asset
+two workers claim concurrently
+worker crash during Piper
+worker crash during FFmpeg
+lease expiry/reclaim
+stale worker completion
+upload success + callback loss
+duplicate callback
+missing model
+model checksum mismatch
+corrupt output
+text changes during job
+model deprecated after job creation
+backend restart with queue state preserved
+RustFS temporary outage
 ```
 
-The learner runtime remains independent of worker availability.
+---
+
+## 22. End-to-end acceptance
+
+```text
+ADMIN creates content
+→ Backend resolves exact model
+→ PENDING job
+→ Worker atomic claim
+→ exact model/cache
+→ Piper + FFmpeg + QC
+→ RustFS upload
+→ Backend validates lease/fingerprint/model/revision
+→ TTS job READY
+→ ADMIN review
+→ PUBLISHED + ACTIVE
+→ learner manifest
+→ Flutter stream/download immutable asset
+```
+
+This is the authoritative TTS production baseline for CareerSpeak v0.9.
