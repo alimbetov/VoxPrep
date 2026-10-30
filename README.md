@@ -26,7 +26,7 @@ CareerSpeak is an English-only learning product. Other supported languages are u
 - Pre-generated reviewed audio
 - Optional Study Ambience themes with Focus Mode
 
-## Architecture baseline v0.5
+## Architecture baseline v0.6
 
 ```text
 Learners
@@ -57,6 +57,7 @@ Spring MVC Content Studio
    │                  │
    │                  ├── content/revisions
    │                  ├── TTS jobs
+   │                  ├── availability state
    │                  └── voice/model registry
    │
    └──────────────► RustFS
@@ -87,6 +88,55 @@ The backend is a **Spring Boot modular monolith**. MVP does not require Eureka, 
 - CDN/edge layer — published immutable learner media
 - DigitalOcean Managed PostgreSQL — production database target
 - Docker — backend packaging
+
+## Content delivery and availability
+
+Learner catalog APIs use cursor/keyset pagination and expose only content that is both published and active.
+
+```text
+publication_status = PUBLISHED
+AND
+availability_status = ACTIVE
+```
+
+Publication lifecycle and learner availability are separate concepts. A published item may be deactivated without destructive deletion.
+
+Flutter synchronizes content through a compact root manifest plus pack manifests. Server-side removals/deactivations are propagated through tombstones so stale local assets can be reclaimed.
+
+## Local retention
+
+Flutter keeps learner progress separately from re-downloadable content/media.
+
+```text
+Durable local state
+├── favorites
+├── progress
+├── test attempts
+├── review schedule
+└── settings
+
+Disposable/re-downloadable state
+├── pack snapshots
+├── audio
+├── remote images
+└── future downloadable theme assets
+```
+
+Automatic cache management uses:
+
+```text
+TTL
++
+LRU
++
+local storage quota
++
+pinning / explicit-download protection
++
+asset reference tracking
+```
+
+Evicting media must not erase learner progress. Shared assets are physically removed only when no retained local content references them.
 
 ## TTS model
 
@@ -170,6 +220,7 @@ Study Mode may use themed backgrounds; Focus/Exam modes prefer minimal presentat
 ## Specifications
 
 - [System Requirements & Architecture Specification v0.5](docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
+- [Content Delivery, Availability & Local Retention Requirements v1.0 — v0.6 normative addendum](docs/specification/CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md)
 - [Globalization & Localization Requirements](docs/specification/CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
 - [Spring MVC + Local Headless Piper Worker Architecture v1.1](docs/architecture/CAREERSPEAK_TTS_PIPELINE.md)
 
@@ -183,15 +234,17 @@ Next deliverables:
 
 1. Domain map
 2. Full PostgreSQL ERD
-3. Content revision/publication model
+3. Content revision/publication/availability model
 4. Localization model
 5. Assessment snapshot model
 6. TTS voice/model/job ERD
 7. RustFS FileAsset/model storage model
-8. Content manifest/offline-pack model
-9. OpenAPI contracts
-10. ADR baseline
-11. P0 implementation backlog
+8. Cursor-pagination query/index model
+9. Content manifest, tombstones and offline-pack model
+10. Flutter local retention/cache schema
+11. OpenAPI contracts
+12. ADR baseline
+13. P0 implementation backlog
 
 ## Commercial model
 
@@ -204,4 +257,4 @@ No ads
 No learner runtime AI/STT/TTS cost
 ```
 
-The product differentiator is curated English content for IELTS and profession-specific international interviews, supported by reusable tests, multilingual hints, reviewed pre-generated audio and privacy-first offline learning.
+The product differentiator is curated English content for IELTS and profession-specific international interviews, supported by reusable tests, multilingual hints, reviewed pre-generated audio, controlled offline storage and privacy-first learning.
