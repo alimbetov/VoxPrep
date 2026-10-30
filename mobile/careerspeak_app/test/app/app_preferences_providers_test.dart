@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:careerspeak_app/app/app_preferences_providers.dart';
 import 'package:careerspeak_app/app/learner_state_providers.dart';
 import 'package:careerspeak_app/data/local/drift_app_preferences_repository.dart';
@@ -16,14 +18,10 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    expect(
-      container.read(appPreferencesRepositoryProvider),
-      isA<DriftAppPreferencesRepository>(),
-    );
+    final repository = container.read(appPreferencesRepositoryProvider);
+    expect(repository, isA<DriftAppPreferencesRepository>());
 
-    final preferences = await container.read(
-      applicationPreferencesProvider.future,
-    );
+    final preferences = (await repository.getPreferences()).getOrThrow();
     expect(preferences.uiLocale, ApplicationPreferences.defaults.uiLocale);
     expect(
       preferences.translationLocale,
@@ -44,11 +42,23 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    await container.read(applicationPreferencesProvider.future);
+    final kazakhObserved = Completer<void>();
+    final subscription = container.listen<AsyncValue<String>>(
+      translationLocaleProvider,
+      (_, next) {
+        if (next.asData?.value == AppTranslationLocale.kazakh.code &&
+            !kazakhObserved.isCompleted) {
+          kazakhObserved.complete();
+        }
+      },
+      fireImmediately: true,
+    );
+    addTearDown(subscription.close);
+
     await container
         .read(appPreferencesControllerProvider)
         .setTranslationLocale(AppTranslationLocale.kazakh);
-    await Future<void>.delayed(Duration.zero);
+    await kazakhObserved.future.timeout(const Duration(seconds: 2));
 
     expect(
       container.read(translationLocaleProvider).asData?.value,
