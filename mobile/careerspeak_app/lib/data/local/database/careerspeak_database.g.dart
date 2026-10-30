@@ -9516,44 +9516,42 @@ typedef $$ContentManifestStatesTableProcessedTableManager =
       ContentManifestState,
       PrefetchHooks Function()
     >;
-typedef $$SyncRunsTableCreateCompanionBuilder =
-    SyncRunsCompanion Function({
-      required String runId,
-      required String trigger,
-      required String translationLocale,
-      Value<int?> fromContentVersion,
-      Value<int?> targetContentVersion,
-      Value<int?> targetSchemaVersion,
-      required String state,
-      Value<bool> resyncRequested,
-      Value<int> attemptCount,
-      Value<bool> retryable,
-      Value<String?> errorCode,
-      Value<String?> errorMessage,
-      required DateTime startedAt,
-      required DateTime updatedAt,
-      Value<DateTime?> finishedAt,
-      Value<int> rowid,
-    });
-typedef $$SyncRunsTableUpdateCompanionBuilder =
-    SyncRunsCompanion Function({
-      Value<String> runId,
-      Value<String> trigger,
-      Value<String> translationLocale,
-      Value<int?> fromContentVersion,
-      Value<int?> targetContentVersion,
-      Value<int?> targetSchemaVersion,
-      Value<String> state,
-      Value<bool> resyncRequested,
-      Value<int> attemptCount,
-      Value<bool> retryable,
-      Value<String?> errorCode,
-      Value<String?> errorMessage,
-      Value<DateTime> startedAt,
-      Value<DateTime> updatedAt,
-      Value<DateTime?> finishedAt,
-      Value<int> rowid,
-    });
+typedef $$SyncRunsTableCreateCompanionBuilder = SyncRunsCompanion Function({
+  required String runId,
+  required String trigger,
+  required String translationLocale,
+  Value<int?> fromContentVersion,
+  Value<int?> targetContentVersion,
+  Value<int?> targetSchemaVersion,
+  required String state,
+  Value<bool> resyncRequested,
+  Value<int> attemptCount,
+  Value<bool> retryable,
+  Value<String?> errorCode,
+  Value<String?> errorMessage,
+  required DateTime startedAt,
+  required DateTime updatedAt,
+  Value<DateTime?> finishedAt,
+  Value<int> rowid,
+});
+typedef $$SyncRunsTableUpdateCompanionBuilder = SyncRunsCompanion Function({
+  Value<String> runId,
+  Value<String> trigger,
+  Value<String> translationLocale,
+  Value<int?> fromContentVersion,
+  Value<int?> targetContentVersion,
+  Value<int?> targetSchemaVersion,
+  Value<String> state,
+  Value<bool> resyncRequested,
+  Value<int> attemptCount,
+  Value<bool> retryable,
+  Value<String?> errorCode,
+  Value<String?> errorMessage,
+  Value<DateTime> startedAt,
+  Value<DateTime> updatedAt,
+  Value<DateTime?> finishedAt,
+  Value<int> rowid,
+});
 
 final class $$SyncRunsTableReferences
     extends BaseReferences<_$CareerSpeakDatabase, $SyncRunsTable, SyncRun> {
@@ -10521,19 +10519,15 @@ class $$SyncPackUpdatesTableTableManager
                     >
                   >(state) {
                     if (runId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.runId,
-                                referencedTable:
-                                    $$SyncPackUpdatesTableReferences
-                                        ._runIdTable(db),
-                                referencedColumn:
-                                    $$SyncPackUpdatesTableReferences
-                                        ._runIdTable(db)
-                                        .runId,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.runId,
+                        referencedTable: $$SyncPackUpdatesTableReferences
+                            ._runIdTable(db),
+                        referencedColumn: $$SyncPackUpdatesTableReferences
+                            ._runIdTable(db)
+                            .runId,
+                      ) as T;
                     }
 
                     return state;
@@ -10893,18 +10887,15 @@ class $$SyncTombstonesTableTableManager
                     >
                   >(state) {
                     if (runId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.runId,
-                                referencedTable: $$SyncTombstonesTableReferences
-                                    ._runIdTable(db),
-                                referencedColumn:
-                                    $$SyncTombstonesTableReferences
-                                        ._runIdTable(db)
-                                        .runId,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.runId,
+                        referencedTable: $$SyncTombstonesTableReferences
+                            ._runIdTable(db),
+                        referencedColumn: $$SyncTombstonesTableReferences
+                            ._runIdTable(db)
+                            .runId,
+                      ) as T;
                     }
 
                     return state;
@@ -12636,19 +12627,15 @@ class $$ContentAssetRefsTableTableManager
                     >
                   >(state) {
                     if (assetId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.assetId,
-                                referencedTable:
-                                    $$ContentAssetRefsTableReferences
-                                        ._assetIdTable(db),
-                                referencedColumn:
-                                    $$ContentAssetRefsTableReferences
-                                        ._assetIdTable(db)
-                                        .assetId,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.assetId,
+                        referencedTable: $$ContentAssetRefsTableReferences
+                            ._assetIdTable(db),
+                        referencedColumn: $$ContentAssetRefsTableReferences
+                            ._assetIdTable(db)
+                            .assetId,
+                      ) as T;
                     }
 
                     return state;
@@ -12973,17 +12960,15 @@ class $$PackAssetRefsTableTableManager
                     >
                   >(state) {
                     if (assetId) {
-                      state =
-                          state.withJoin(
-                                currentTable: table,
-                                currentColumn: table.assetId,
-                                referencedTable: $$PackAssetRefsTableReferences
-                                    ._assetIdTable(db),
-                                referencedColumn: $$PackAssetRefsTableReferences
-                                    ._assetIdTable(db)
-                                    .assetId,
-                              )
-                              as T;
+                      state = state.withJoin(
+                        currentTable: table,
+                        currentColumn: table.assetId,
+                        referencedTable: $$PackAssetRefsTableReferences
+                            ._assetIdTable(db),
+                        referencedColumn: $$PackAssetRefsTableReferences
+                            ._assetIdTable(db)
+                            .assetId,
+                      ) as T;
                     }
 
                     return state;
@@ -13377,20 +13362,18 @@ typedef $$ContentCatalogReadsTableProcessedTableManager =
       ContentCatalogRead,
       PrefetchHooks Function()
     >;
-typedef $$FavoritesTableCreateCompanionBuilder =
-    FavoritesCompanion Function({
-      required String contentCode,
-      required String contentType,
-      required DateTime createdAt,
-      Value<int> rowid,
-    });
-typedef $$FavoritesTableUpdateCompanionBuilder =
-    FavoritesCompanion Function({
-      Value<String> contentCode,
-      Value<String> contentType,
-      Value<DateTime> createdAt,
-      Value<int> rowid,
-    });
+typedef $$FavoritesTableCreateCompanionBuilder = FavoritesCompanion Function({
+  required String contentCode,
+  required String contentType,
+  required DateTime createdAt,
+  Value<int> rowid,
+});
+typedef $$FavoritesTableUpdateCompanionBuilder = FavoritesCompanion Function({
+  Value<String> contentCode,
+  Value<String> contentType,
+  Value<DateTime> createdAt,
+  Value<int> rowid,
+});
 
 class $$FavoritesTableFilterComposer
     extends Composer<_$CareerSpeakDatabase, $FavoritesTable> {

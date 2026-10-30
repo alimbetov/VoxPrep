@@ -88,7 +88,7 @@ void main() {
   });
 
   test(
-    'CURRENT pack without learner payload is omitted so same root repairs it',
+    'CURRENT canonical pack stays represented while same root repairs payload',
     () async {
       await database
           .into(database.contentManifestStates)
@@ -144,7 +144,8 @@ void main() {
 
       final local = (await journal.readLocalSnapshot()).getOrThrow();
       expect(local.currentContentVersion, 108);
-      expect(local.currentPacks, isEmpty);
+      expect(local.currentPacks, hasLength(1));
+      expect(local.contentPayloadRepairPacks, hasLength(1));
 
       final remote = RootContentManifest(
         schemaVersion: 1,

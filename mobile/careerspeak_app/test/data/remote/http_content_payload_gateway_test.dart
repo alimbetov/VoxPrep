@@ -30,10 +30,7 @@ void main() {
       expect(result, isA<Success<ContentPayload>>());
       final request = apiClient.requests.single;
       expect(request.method, ApiMethod.get);
-      expect(
-        request.path,
-        '/api/v1/content/interview/JAVA_Q_001/revisions/3',
-      );
+      expect(request.path, '/api/v1/content/interview/JAVA_Q_001/revisions/3');
       expect(request.authentication, ApiAuthentication.installation);
     });
 
@@ -94,20 +91,14 @@ void main() {
       final result = await gateway.fetch(_target());
 
       expect(result, isA<FailureResult<ContentPayload>>());
-      expect(
-        (result as FailureResult<ContentPayload>).failure,
-        same(failure),
-      );
+      expect((result as FailureResult<ContentPayload>).failure, same(failure));
     });
   });
 }
 
 ContentPayloadRef _target() {
   return ContentPayloadRef(
-    identity: ContentIdentity(
-      code: 'JAVA_Q_001',
-      type: ContentType.interview,
-    ),
+    identity: ContentIdentity(code: 'JAVA_Q_001', type: ContentType.interview),
     revision: 3,
     checksum: _contentHash,
   );

@@ -26,8 +26,7 @@ void main() {
     expect(
       violations,
       isEmpty,
-      reason:
-          'HTTP package types belong in the data/composition layers and must not leak into domain, application contracts, or feature presentation.',
+      reason: 'HTTP package types belong in the data/composition layers and must not leak into domain, application contracts, or feature presentation.',
     );
   });
 }

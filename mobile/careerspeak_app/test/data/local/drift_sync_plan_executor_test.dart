@@ -39,172 +39,164 @@ void main() {
     await database.close();
   });
 
-  test(
-    'stages exact payload and atomically activates CURRENT root',
-    () async {
-      final target = _targetPack();
-      final root = _root(contentVersion: 109, pack: target);
-      final plan = const ContentSyncPlanner()
-          .plan(
-            local: SyncLocalSnapshot(
-              currentContentVersion: null,
-              currentManifestChecksum: null,
-              etag: null,
-              currentPacks: const <PackRevisionRef>[],
-            ),
-            remote: root,
-          )
-          .getOrThrow();
-      final journal = DriftSyncJournal(database, now: () => now);
-      await _prepareRun(journal, plan);
+  test('stages exact payload and atomically activates CURRENT root', () async {
+    final target = _targetPack();
+    final root = _root(contentVersion: 109, pack: target);
+    final plan = const ContentSyncPlanner()
+        .plan(
+          local: SyncLocalSnapshot(
+            currentContentVersion: null,
+            currentManifestChecksum: null,
+            etag: null,
+            currentPacks: const <PackRevisionRef>[],
+          ),
+          remote: root,
+        )
+        .getOrThrow();
+    final journal = DriftSyncJournal(database, now: () => now);
+    await _prepareRun(journal, plan);
 
-      await database
-          .into(database.favorites)
-          .insert(
-            FavoritesCompanion.insert(
-              contentCode: 'JAVA_Q_001',
-              contentType: 'INTERVIEW',
-              createdAt: now,
-            ),
-          );
+    await database
+        .into(database.favorites)
+        .insert(
+          FavoritesCompanion.insert(
+            contentCode: 'JAVA_Q_001',
+            contentType: 'INTERVIEW',
+            createdAt: now,
+          ),
+        );
 
-      final executor = DriftSyncPlanExecutor(
-        database,
-        _PackGateway(_packManifest(target)),
-        const _PayloadGateway(),
-        now: () => now,
-      );
-      final result = await executor.execute(runId: 'run-1', plan: plan);
+    final executor = DriftSyncPlanExecutor(
+      database,
+      _PackGateway(_packManifest(target)),
+      const _PayloadGateway(),
+      now: () => now,
+    );
+    final result = await executor.execute(runId: 'run-1', plan: plan);
 
-      expect(result, isA<Success<void>>());
+    expect(result, isA<Success<void>>());
 
-      final manifestState = await database
-          .select(database.contentManifestStates)
-          .getSingle();
-      expect(manifestState.currentContentVersion, 109);
-      expect(manifestState.currentManifestChecksum, _root109);
+    final manifestState = await database
+        .select(database.contentManifestStates)
+        .getSingle();
+    expect(manifestState.currentContentVersion, 109);
+    expect(manifestState.currentManifestChecksum, _root109);
 
-      final pack = await database
-          .select(database.contentPackRevisions)
-          .getSingle();
-      expect(pack.state, 'CURRENT');
-      expect(pack.revision, 8);
+    final pack = await database
+        .select(database.contentPackRevisions)
+        .getSingle();
+    expect(pack.state, 'CURRENT');
+    expect(pack.revision, 8);
 
-      final content = await database
-          .select(database.localContentRecords)
-          .getSingle();
-      expect(content.snapshotState, 'CURRENT');
-      expect(content.contentCode, 'JAVA_Q_001');
+    final content = await database
+        .select(database.localContentRecords)
+        .getSingle();
+    expect(content.snapshotState, 'CURRENT');
+    expect(content.contentCode, 'JAVA_Q_001');
 
-      final payload = await database
-          .select(database.contentCatalogReads)
-          .getSingle();
-      expect(payload.contentCode, 'JAVA_Q_001');
-      expect(payload.contentType, 'INTERVIEW');
-      expect(payload.revision, 1);
-      expect(payload.checksum, _contentHash);
-      expect(payload.title, 'Dependency Injection');
-      expect(payload.minutes, 6);
+    final payload = await database
+        .select(database.contentCatalogReads)
+        .getSingle();
+    expect(payload.contentCode, 'JAVA_Q_001');
+    expect(payload.contentType, 'INTERVIEW');
+    expect(payload.revision, 1);
+    expect(payload.checksum, _contentHash);
+    expect(payload.title, 'Dependency Injection');
+    expect(payload.minutes, 6);
 
-      final asset = await database.select(database.assetCatalog).getSingle();
-      expect(asset.assetKind, 'AUDIO');
-      expect(asset.mimeType, 'audio/mpeg');
-      expect(await database.select(database.packContentRefs).get(), hasLength(1));
-      expect(
-        await database.select(database.contentAssetRefs).get(),
-        hasLength(1),
-      );
-      expect(await database.select(database.packAssetRefs).get(), hasLength(1));
+    final asset = await database.select(database.assetCatalog).getSingle();
+    expect(asset.assetKind, 'AUDIO');
+    expect(asset.mimeType, 'audio/mpeg');
+    expect(await database.select(database.packContentRefs).get(), hasLength(1));
+    expect(
+      await database.select(database.contentAssetRefs).get(),
+      hasLength(1),
+    );
+    expect(await database.select(database.packAssetRefs).get(), hasLength(1));
 
-      final update = await database.select(database.syncPackUpdates).getSingle();
-      expect(update.state, SyncPackUpdateState.committed.storageCode);
-      final run = await database.select(database.syncRuns).getSingle();
-      expect(run.state, SyncRunState.cleaning.storageCode);
-      expect(await database.select(database.favorites).get(), hasLength(1));
-    },
-  );
+    final update = await database.select(database.syncPackUpdates).getSingle();
+    expect(update.state, SyncPackUpdateState.committed.storageCode);
+    final run = await database.select(database.syncRuns).getSingle();
+    expect(run.state, SyncRunState.cleaning.storageCode);
+    expect(await database.select(database.favorites).get(), hasLength(1));
+  });
 
-  test(
-    'commit conflict keeps staged payload hidden and preserves previous CURRENT',
-    () async {
-      await _seedCurrentSnapshot(database, now);
+  test('commit conflict keeps staged payload hidden and preserves previous CURRENT', () async {
+    await _seedCurrentSnapshot(database, now);
 
-      final target = _targetPack();
-      final tombstone = ContentTombstone(
-        identity: ContentIdentity(
-          code: 'JAVA_Q_001',
-          type: ContentType.interview,
-        ),
-        revision: 1,
-        reason: 'INACTIVE',
-      );
-      final root = _root(
-        contentVersion: 109,
-        pack: target,
-        tombstones: <ContentTombstone>[tombstone],
-      );
-      final plan = const ContentSyncPlanner()
-          .plan(
-            local: SyncLocalSnapshot(
-              currentContentVersion: 108,
-              currentManifestChecksum: _root108,
-              etag: null,
-              currentPacks: <PackRevisionRef>[
-                PackRevisionRef(
-                  identity: PackIdentity(
-                    code: 'OLD_PACK',
-                    variant: 'canonical',
-                  ),
-                  revision: 1,
-                  checksum: _root108,
-                ),
-              ],
-            ),
-            remote: root,
-          )
-          .getOrThrow();
-      final journal = DriftSyncJournal(database, now: () => now);
-      await _prepareRun(journal, plan);
+    final target = _targetPack();
+    final tombstone = ContentTombstone(
+      identity: ContentIdentity(
+        code: 'JAVA_Q_001',
+        type: ContentType.interview,
+      ),
+      revision: 1,
+      reason: 'INACTIVE',
+    );
+    final root = _root(
+      contentVersion: 109,
+      pack: target,
+      tombstones: <ContentTombstone>[tombstone],
+    );
+    final plan = const ContentSyncPlanner()
+        .plan(
+          local: SyncLocalSnapshot(
+            currentContentVersion: 108,
+            currentManifestChecksum: _root108,
+            etag: null,
+            currentPacks: <PackRevisionRef>[
+              PackRevisionRef(
+                identity: PackIdentity(code: 'OLD_PACK', variant: 'canonical'),
+                revision: 1,
+                checksum: _root108,
+              ),
+            ],
+          ),
+          remote: root,
+        )
+        .getOrThrow();
+    final journal = DriftSyncJournal(database, now: () => now);
+    await _prepareRun(journal, plan);
 
-      final executor = DriftSyncPlanExecutor(
-        database,
-        _PackGateway(_packManifest(target)),
-        const _PayloadGateway(),
-        now: () => now,
-      );
-      final result = await executor.execute(runId: 'run-1', plan: plan);
+    final executor = DriftSyncPlanExecutor(
+      database,
+      _PackGateway(_packManifest(target)),
+      const _PayloadGateway(),
+      now: () => now,
+    );
+    final result = await executor.execute(runId: 'run-1', plan: plan);
 
-      expect(result, isA<FailureResult<void>>());
-      expect(
-        (result as FailureResult<void>).failure.code,
-        'TOMBSTONE_TARGET_CONFLICT',
-      );
+    expect(result, isA<FailureResult<void>>());
+    expect(
+      (result as FailureResult<void>).failure.code,
+      'TOMBSTONE_TARGET_CONFLICT',
+    );
 
-      final manifestState = await database
-          .select(database.contentManifestStates)
-          .getSingle();
-      expect(manifestState.currentContentVersion, 108);
-      final oldPack = await (database.select(
-        database.contentPackRevisions,
-      )..where((row) => row.packCode.equals('OLD_PACK'))).getSingle();
-      expect(oldPack.state, 'CURRENT');
-      final oldContent = await (database.select(
-        database.localContentRecords,
-      )..where((row) => row.contentCode.equals('OLD_Q_001'))).getSingle();
-      expect(oldContent.snapshotState, 'CURRENT');
+    final manifestState = await database
+        .select(database.contentManifestStates)
+        .getSingle();
+    expect(manifestState.currentContentVersion, 108);
+    final oldPack = await (database.select(
+      database.contentPackRevisions,
+    )..where((row) => row.packCode.equals('OLD_PACK'))).getSingle();
+    expect(oldPack.state, 'CURRENT');
+    final oldContent = await (database.select(
+      database.localContentRecords,
+    )..where((row) => row.contentCode.equals('OLD_Q_001'))).getSingle();
+    expect(oldContent.snapshotState, 'CURRENT');
 
-      final stagedContent = await (database.select(
-        database.localContentRecords,
-      )..where((row) => row.contentCode.equals('JAVA_Q_001'))).getSingle();
-      expect(stagedContent.snapshotState, 'STAGED');
-      expect(
-        await (database.select(
-          database.contentCatalogReads,
-        )..where((row) => row.contentCode.equals('JAVA_Q_001'))).get(),
-        hasLength(1),
-      );
+    final stagedContent = await (database.select(
+      database.localContentRecords,
+    )..where((row) => row.contentCode.equals('JAVA_Q_001'))).getSingle();
+    expect(stagedContent.snapshotState, 'STAGED');
+    expect(
+      await (database.select(
+        database.contentCatalogReads,
+      )..where((row) => row.contentCode.equals('JAVA_Q_001'))).get(),
+      hasLength(1),
+    );
 
-      final visible = await database.customSelect('''
+    final visible = await database.customSelect('''
         SELECT r.content_code
         FROM content_catalog_reads r
         INNER JOIN local_content_records l
@@ -214,12 +206,11 @@ void main() {
         WHERE l.snapshot_state = 'CURRENT'
         ORDER BY r.content_code
       ''').get();
-      expect(
-        visible.map((row) => row.read<String>('content_code')).toList(),
-        <String>['OLD_Q_001'],
-      );
-    },
-  );
+    expect(
+      visible.map((row) => row.read<String>('content_code')).toList(),
+      <String>['OLD_Q_001'],
+    );
+  });
 
   test('payload mismatch fails before any local pack staging', () async {
     final target = _targetPack();

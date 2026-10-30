@@ -44,7 +44,7 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
         final manifest = (fetched as Success<PackContentManifest>).value;
         _validateManifestTarget(target, manifest);
 
-        final payloadResult = await _fetchPayloads(manifest);
+        final payloadResult = await _fetchPayloads(target, manifest);
         if (payloadResult case FailureResult<List<ContentPayload>>(
           :final failure,
         )) {
@@ -101,8 +101,13 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
   }
 
   Future<Result<List<ContentPayload>>> _fetchPayloads(
+    PackRevisionRef pack,
     PackContentManifest manifest,
   ) async {
+    if (pack.identity.variant != 'canonical') {
+      return const Success<List<ContentPayload>>(<ContentPayload>[]);
+    }
+
     final payloads = <ContentPayload>[];
     for (final content in manifest.contents) {
       final target = ContentPayloadRef(
@@ -153,11 +158,13 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
           payload.ref.revision,
         ): payload,
     };
-    if (payloadByKey.length != manifest.contents.length) {
+    if (target.identity.variant == 'canonical' &&
+        payloadByKey.length != manifest.contents.length) {
       throw const _SyncExecutorInvariant(
         ApplicationFailure(
           code: 'CONTENT_PAYLOAD_SET_MISMATCH',
-          message: 'The staged content payload set is incomplete or duplicated.',
+          message:
+              'The staged content payload set is incomplete or duplicated.',
         ),
       );
     }
@@ -230,21 +237,28 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
 
       for (final content in manifest.contents) {
         final type = _contentTypeToStorage(content.identity.type);
-        final payload = payloadByKey[
-          _contentKey(content.identity.code, type, content.revision)
-        ];
-        if (payload == null || payload.ref.checksum != content.checksum) {
-          throw const _SyncExecutorInvariant(
-            ApplicationFailure(
-              code: 'CONTENT_PAYLOAD_SET_MISMATCH',
-              message:
-                  'A pack content reference has no exact staged payload revision.',
-            ),
-          );
+        ContentPayload? payload;
+        if (target.identity.variant == 'canonical') {
+          payload =
+              payloadByKey[_contentKey(
+                content.identity.code,
+                type,
+                content.revision,
+              )];
+          if (payload == null || payload.ref.checksum != content.checksum) {
+            throw const _SyncExecutorInvariant(
+              ApplicationFailure(
+                code: 'CONTENT_PAYLOAD_SET_MISMATCH',
+                message: 'A canonical pack content reference has no exact staged payload revision.',
+              ),
+            );
+          }
         }
 
         await _ensureContentRecord(content, manifest.schemaVersion, now);
-        await _ensureContentRead(payload, now);
+        if (payload != null) {
+          await _ensureContentRead(payload, now);
+        }
         await _database
             .into(_database.packContentRefs)
             .insert(
@@ -390,8 +404,7 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
       throw const _SyncExecutorInvariant(
         ApplicationFailure(
           code: 'CONTENT_PAYLOAD_IMMUTABLE_CONFLICT',
-          message:
-              'A persisted content payload conflicts with its immutable revision.',
+          message: 'A persisted content payload conflicts with its immutable revision.',
         ),
       );
     }
@@ -467,8 +480,7 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
       throw const _SyncExecutorInvariant(
         ApplicationFailure(
           code: 'CONTENT_ASSET_IMMUTABLE_CONFLICT',
-          message:
-              'Persisted content asset references conflict with immutable metadata.',
+          message: 'Persisted content asset references conflict with immutable metadata.',
         ),
       );
     }
@@ -574,31 +586,31 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
             );
           }
 
-          final payload =
-              await (_database.select(_database.contentCatalogReads)..where(
-                    (row) =>
-                        row.contentCode.equals(ref.contentCode) &
-                        row.contentType.equals(ref.contentType) &
-                        row.revision.equals(ref.contentRevision),
-                  ))
-                  .getSingleOrNull();
-          if (payload == null) {
-            throw const _SyncExecutorInvariant(
-              ApplicationFailure(
-                code: 'SYNC_TARGET_PAYLOAD_MISSING',
-                message:
-                    'A target content revision is missing its learner payload.',
-              ),
-            );
-          }
-          if (payload.checksum != local.checksum) {
-            throw const _SyncExecutorInvariant(
-              ApplicationFailure(
-                code: 'SYNC_TARGET_PAYLOAD_MISMATCH',
-                message:
-                    'The target learner payload does not match content metadata.',
-              ),
-            );
+          if (target.identity.variant == 'canonical') {
+            final payload =
+                await (_database.select(_database.contentCatalogReads)..where(
+                      (row) =>
+                          row.contentCode.equals(ref.contentCode) &
+                          row.contentType.equals(ref.contentType) &
+                          row.revision.equals(ref.contentRevision),
+                    ))
+                    .getSingleOrNull();
+            if (payload == null) {
+              throw const _SyncExecutorInvariant(
+                ApplicationFailure(
+                  code: 'SYNC_TARGET_PAYLOAD_MISSING',
+                  message: 'A canonical target content revision is missing its learner payload.',
+                ),
+              );
+            }
+            if (payload.checksum != local.checksum) {
+              throw const _SyncExecutorInvariant(
+                ApplicationFailure(
+                  code: 'SYNC_TARGET_PAYLOAD_MISMATCH',
+                  message: 'The canonical target payload does not match content metadata.',
+                ),
+              );
+            }
           }
 
           currentContentKeys.add(
@@ -616,8 +628,7 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
           throw const _SyncExecutorInvariant(
             ApplicationFailure(
               code: 'TOMBSTONE_TARGET_CONFLICT',
-              message:
-                  'A target root cannot publish and tombstone the same content.',
+              message: 'A target root cannot publish and tombstone the same content.',
             ),
           );
         }

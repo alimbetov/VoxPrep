@@ -21,59 +21,67 @@ const _content =
     'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
 
 void main() {
-  test('locale pack metadata does not fetch or duplicate canonical payload', () async {
-    final database = createTestDatabase();
-    addTearDown(database.close);
-    final now = DateTime.utc(2026, 10, 30, 12);
-    final target = PackRevisionRef(
-      identity: PackIdentity(code: 'JAVA_SENIOR', variant: 'locale:kk'),
-      revision: 4,
-      checksum: _pack,
-    );
-    final root = RootContentManifest(
-      schemaVersion: 1,
-      contentVersion: 108,
-      minimumAppContractVersion: 1,
-      publishedAt: now,
-      checksum: _root,
-      packs: <PackRevisionRef>[target],
-      tombstones: const <ContentTombstone>[],
-    );
-    final plan = const ContentSyncPlanner()
-        .plan(
-          local: SyncLocalSnapshot(
-            currentContentVersion: null,
-            currentManifestChecksum: null,
-            etag: null,
-            currentPacks: const <PackRevisionRef>[],
-          ),
-          remote: root,
-        )
-        .getOrThrow();
-    final journal = DriftSyncJournal(database, now: () => now);
-    await journal.startOrCoalesce(
-      runId: 'run-locale',
-      trigger: SyncTrigger.localeChange,
-      translationLocale: 'kk',
-    );
-    await journal.persistPlan(runId: 'run-locale', plan: plan);
+  test(
+    'locale pack metadata does not fetch or duplicate canonical payload',
+    () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      final now = DateTime.utc(2026, 10, 30, 12);
+      final target = PackRevisionRef(
+        identity: PackIdentity(code: 'JAVA_SENIOR', variant: 'locale:kk'),
+        revision: 4,
+        checksum: _pack,
+      );
+      final root = RootContentManifest(
+        schemaVersion: 1,
+        contentVersion: 108,
+        minimumAppContractVersion: 1,
+        publishedAt: now,
+        checksum: _root,
+        packs: <PackRevisionRef>[target],
+        tombstones: const <ContentTombstone>[],
+      );
+      final plan = const ContentSyncPlanner()
+          .plan(
+            local: SyncLocalSnapshot(
+              currentContentVersion: null,
+              currentManifestChecksum: null,
+              etag: null,
+              currentPacks: const <PackRevisionRef>[],
+            ),
+            remote: root,
+          )
+          .getOrThrow();
+      final journal = DriftSyncJournal(database, now: () => now);
+      await journal.startOrCoalesce(
+        runId: 'run-locale',
+        trigger: SyncTrigger.localeChange,
+        translationLocale: 'kk',
+      );
+      await journal.persistPlan(runId: 'run-locale', plan: plan);
 
-    final payloadGateway = _RejectingPayloadGateway();
-    final executor = DriftSyncPlanExecutor(
-      database,
-      _ManifestGateway(_localePack(target, now)),
-      payloadGateway,
-      now: () => now,
-    );
+      final payloadGateway = _RejectingPayloadGateway();
+      final executor = DriftSyncPlanExecutor(
+        database,
+        _ManifestGateway(_localePack(target, now)),
+        payloadGateway,
+        now: () => now,
+      );
 
-    final result = await executor.execute(runId: 'run-locale', plan: plan);
+      final result = await executor.execute(runId: 'run-locale', plan: plan);
 
-    expect(result, isA<Success<void>>());
-    expect(payloadGateway.calls, 0);
-    expect(await database.select(database.contentCatalogReads).get(), isEmpty);
-    final content = await database.select(database.localContentRecords).getSingle();
-    expect(content.snapshotState, 'CURRENT');
-  });
+      expect(result, isA<Success<void>>());
+      expect(payloadGateway.calls, 0);
+      expect(
+        await database.select(database.contentCatalogReads).get(),
+        isEmpty,
+      );
+      final content = await database
+          .select(database.localContentRecords)
+          .getSingle();
+      expect(content.snapshotState, 'CURRENT');
+    },
+  );
 }
 
 PackContentManifest _localePack(PackRevisionRef target, DateTime now) {

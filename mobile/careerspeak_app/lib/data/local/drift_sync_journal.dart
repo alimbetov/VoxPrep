@@ -40,7 +40,21 @@ final class DriftSyncJournal implements SyncJournal {
       }
 
       final packs = <PackRevisionRef>[];
+      final contentPayloadRepairPacks = <PackIdentity>{};
       for (final row in currentRows) {
+        final identity = PackIdentity(
+          code: row.packCode,
+          variant: row.variantKey,
+        );
+        packs.add(
+          PackRevisionRef(
+            identity: identity,
+            revision: row.revision,
+            checksum: row.checksum,
+          ),
+        );
+        if (row.variantKey != 'canonical') continue;
+
         final refs =
             await (_database.select(_database.packContentRefs)..where(
                   (ref) =>
@@ -49,7 +63,6 @@ final class DriftSyncJournal implements SyncJournal {
                       ref.packRevision.equals(row.revision),
                 ))
                 .get();
-        var payloadComplete = true;
         for (final ref in refs) {
           final local =
               await (_database.select(_database.localContentRecords)..where(
@@ -59,11 +72,6 @@ final class DriftSyncJournal implements SyncJournal {
                         content.revision.equals(ref.contentRevision),
                   ))
                   .getSingleOrNull();
-          if (local == null || local.snapshotState != 'CURRENT') {
-            payloadComplete = false;
-            break;
-          }
-
           final payload =
               await (_database.select(_database.contentCatalogReads)..where(
                     (content) =>
@@ -72,22 +80,14 @@ final class DriftSyncJournal implements SyncJournal {
                         content.revision.equals(ref.contentRevision),
                   ))
                   .getSingleOrNull();
-          if (payload == null || payload.checksum != local.checksum) {
-            payloadComplete = false;
+          if (local == null ||
+              local.snapshotState != 'CURRENT' ||
+              payload == null ||
+              payload.checksum != local.checksum) {
+            contentPayloadRepairPacks.add(identity);
             break;
           }
         }
-
-        if (!payloadComplete) {
-          continue;
-        }
-        packs.add(
-          PackRevisionRef(
-            identity: PackIdentity(code: row.packCode, variant: row.variantKey),
-            revision: row.revision,
-            checksum: row.checksum,
-          ),
-        );
       }
 
       return Success(
@@ -98,6 +98,7 @@ final class DriftSyncJournal implements SyncJournal {
               : manifest!.currentManifestChecksum,
           etag: currentVersion == null ? null : manifest!.etag,
           currentPacks: packs,
+          contentPayloadRepairPacks: contentPayloadRepairPacks,
         ),
       );
     } on ArgumentError catch (error) {
