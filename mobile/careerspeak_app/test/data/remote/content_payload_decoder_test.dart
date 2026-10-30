@@ -50,6 +50,23 @@ void main() {
     expect(failure.details['field'], r'$.categoryCode');
   });
 
+  test('rejects legacy taxonomy payload without stable codes', () {
+    final json = _payloadJson()
+      ..remove('categoryCode')
+      ..remove('categoryLabel')
+      ..remove('levelCode')
+      ..remove('levelLabel')
+      ..['category'] = 'Java Backend'
+      ..['level'] = 'Senior';
+
+    final result = decoder.decode(json);
+
+    expect(result, isA<FailureResult<ContentPayload>>());
+    final failure = (result as FailureResult<ContentPayload>).failure;
+    expect(failure.code, 'CONTENT_PAYLOAD_INVALID');
+    expect(failure.details['field'], r'$.categoryCode');
+  });
+
   test('rejects invalid presentation payload', () {
     final json = _payloadJson()..['minutes'] = 0;
 
