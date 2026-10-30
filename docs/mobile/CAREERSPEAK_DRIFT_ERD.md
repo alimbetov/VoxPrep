@@ -1,6 +1,6 @@
 # CareerSpeak — P0.12.4 Drift ERD
 
-**Document version:** 1.0  
+**Document version:** 1.1  
 **Status:** Normative mobile persistence baseline  
 **Applies to:** CareerSpeak v0.9+
 
@@ -9,6 +9,8 @@ Related standards:
 - [`../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md`](../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md)
 - [`CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md`](CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md)
 - [`CAREERSPEAK_ADAPTIVE_UI.md`](CAREERSPEAK_ADAPTIVE_UI.md)
+- [`CAREERSPEAK_MATERIAL_DESIGN_3.md`](CAREERSPEAK_MATERIAL_DESIGN_3.md)
+- [`CAREERSPEAK_LEARNER_CONTENT_STATE.md`](CAREERSPEAK_LEARNER_CONTENT_STATE.md)
 
 ---
 
@@ -39,6 +41,7 @@ CONTENT / CACHE
 
 LEARNER
 ├── favorite
+├── content_learning_state
 ├── recent_content
 ├── vocabulary_progress
 ├── topic_progress
@@ -51,10 +54,11 @@ LEARNER
 Rules:
 
 1. re-downloadable content/cache is separate from learner state;
-2. cache eviction never deletes progress/favorites/test history;
+2. cache eviction never deletes progress, markers, favorites or test history;
 3. published content identity uses stable business code + revision;
-4. all persisted instants use UTC semantics;
-5. installation token is never stored in Drift.
+4. learner state uses stable `content_code + content_type` rather than disposable cached revision identity where possible;
+5. all persisted instants use UTC semantics;
+6. installation token is never stored in Drift.
 
 ---
 
@@ -73,6 +77,16 @@ storage_quota_bytes   INTEGER NULL
 created_at            DATETIME NOT NULL
 updated_at            DATETIME NOT NULL
 ```
+
+`theme_code` initially supports application appearance policy such as:
+
+```text
+SYSTEM
+LIGHT
+DARK
+```
+
+Study Ambience is a separate presentation/content preference and does not create a second UI design system.
 
 ### `installation_runtime_state`
 
@@ -117,16 +131,16 @@ Locale data is represented by pack variants inside that root snapshot; it does n
 Singleton row:
 
 ```text
-id                         INTEGER PK CHECK(id = 1)
-schema_version             INTEGER NOT NULL
-current_content_version    INTEGER NOT NULL
-current_manifest_checksum  TEXT NOT NULL
+id                          INTEGER PK CHECK(id = 1)
+schema_version              INTEGER NOT NULL
+current_content_version     INTEGER NOT NULL
+current_manifest_checksum   TEXT NOT NULL
 remote_content_version_seen INTEGER NULL
-remote_manifest_checksum   TEXT NULL
-etag                       TEXT NULL
-last_checked_at            DATETIME NULL
-last_successful_sync_at    DATETIME NULL
-updated_at                 DATETIME NOT NULL
+remote_manifest_checksum    TEXT NULL
+etag                        TEXT NULL
+last_checked_at             DATETIME NULL
+last_successful_sync_at     DATETIME NULL
+updated_at                  DATETIME NOT NULL
 ```
 
 Important distinction:
@@ -147,20 +161,20 @@ The latter advances only after atomic metadata activation succeeds.
 
 ```text
 run_id                 TEXT PK
-trigger                 TEXT NOT NULL
+trigger                TEXT NOT NULL
 translation_locale     TEXT NOT NULL
 from_content_version   INTEGER NULL
 target_content_version INTEGER NULL
 target_schema_version  INTEGER NULL
-state                   TEXT NOT NULL
-resync_requested        INTEGER NOT NULL DEFAULT 0
-attempt_count           INTEGER NOT NULL DEFAULT 0
-retryable               INTEGER NOT NULL DEFAULT 0
-error_code              TEXT NULL
-error_message           TEXT NULL
-started_at              DATETIME NOT NULL
-updated_at              DATETIME NOT NULL
-finished_at             DATETIME NULL
+state                  TEXT NOT NULL
+resync_requested       INTEGER NOT NULL DEFAULT 0
+attempt_count          INTEGER NOT NULL DEFAULT 0
+retryable              INTEGER NOT NULL DEFAULT 0
+error_code             TEXT NULL
+error_message          TEXT NULL
+started_at             DATETIME NOT NULL
+updated_at             DATETIME NOT NULL
+finished_at            DATETIME NULL
 ```
 
 Triggers:
@@ -182,11 +196,11 @@ pack_code            TEXT NOT NULL
 variant_key          TEXT NOT NULL
 target_revision      INTEGER NOT NULL
 target_checksum      TEXT NOT NULL
-state                 TEXT NOT NULL
+state                TEXT NOT NULL
 required_asset_count INTEGER NOT NULL DEFAULT 0
 verified_asset_count INTEGER NOT NULL DEFAULT 0
-error_code            TEXT NULL
-updated_at            DATETIME NOT NULL
+error_code           TEXT NULL
+updated_at           DATETIME NOT NULL
 
 PK (run_id, pack_code, variant_key)
 FK run_id -> sync_run(run_id)
@@ -308,12 +322,12 @@ Typed read models share stable `(businessCode, revision)` identity and are switc
 ### `pack_content_ref`
 
 ```text
-pack_code          TEXT NOT NULL
-variant_key        TEXT NOT NULL
-pack_revision      INTEGER NOT NULL
-content_code       TEXT NOT NULL
-content_type       TEXT NOT NULL
-content_revision   INTEGER NOT NULL
+pack_code           TEXT NOT NULL
+variant_key         TEXT NOT NULL
+pack_revision       INTEGER NOT NULL
+content_code        TEXT NOT NULL
+content_type        TEXT NOT NULL
+content_revision    INTEGER NOT NULL
 
 PK (
   pack_code,
@@ -530,26 +544,76 @@ A download is `READY` only after integrity verification and atomic final-file pl
 
 Learner state uses stable content business identity and intentionally avoids destructive FK cascades into disposable content tables.
 
-### `favorite`
+### 12.1 `favorite`
+
+User-curated saved content:
 
 ```text
 content_code   TEXT NOT NULL
 content_type   TEXT NOT NULL
 created_at     DATETIME NOT NULL
+
 PK (content_code, content_type)
 ```
 
-### `recent_content`
+`favorite` is intentionally separate from progress. It does not imply listened/completed/offline-pinned state.
+
+### 12.2 `content_learning_state`
+
+Generic durable listening/completion state shared by content types:
 
 ```text
-content_code      TEXT NOT NULL
-content_type      TEXT NOT NULL
-last_opened_at    DATETIME NOT NULL
-last_revision_seen INTEGER NULL
+content_code         TEXT NOT NULL
+content_type         TEXT NOT NULL
+listened_at          DATETIME NULL
+listen_count         INTEGER NOT NULL DEFAULT 0
+last_played_at       DATETIME NULL
+last_position_ms     INTEGER NULL
+completed_at         DATETIME NULL
+completion_source    TEXT NULL
+last_revision_seen   INTEGER NULL
+updated_at           DATETIME NOT NULL
+
 PK (content_code, content_type)
 ```
 
-### `vocabulary_progress`
+Derived marker semantics:
+
+```text
+LISTENED
+= listened_at IS NOT NULL
+
+COMPLETED
+= completed_at IS NOT NULL
+```
+
+The table does not store redundant `is_listened` / `is_completed` booleans.
+
+Recommended `completion_source` values:
+
+```text
+USER_ACTION
+AUTO_FLOW
+TEST_SUBMIT
+REVIEW_POLICY
+```
+
+`last_position_ms` supports resume for long-form audio without marking partial playback as LISTENED.
+
+### 12.3 `recent_content`
+
+```text
+content_code       TEXT NOT NULL
+content_type       TEXT NOT NULL
+last_opened_at     DATETIME NOT NULL
+last_revision_seen INTEGER NULL
+
+PK (content_code, content_type)
+```
+
+### 12.4 `vocabulary_progress`
+
+Feature-specific vocabulary learning/review state:
 
 ```text
 content_code       TEXT PK
@@ -560,17 +624,22 @@ last_reviewed_at   DATETIME NULL
 updated_at         DATETIME NOT NULL
 ```
 
-### `topic_progress`
+Vocabulary may use richer `known/review` semantics in addition to the generic markers.
+
+### 12.5 `topic_progress`
+
+Feature-specific resume/detail state:
 
 ```text
 content_code       TEXT PK
-completed          INTEGER NOT NULL DEFAULT 0
 last_section_code  TEXT NULL
 last_position_ms   INTEGER NULL
 updated_at         DATETIME NOT NULL
 ```
 
-### `review_schedule`
+Generic pedagogical completion is stored in `content_learning_state.completed_at`, avoiding duplicate completion sources of truth.
+
+### 12.6 `review_schedule`
 
 ```text
 content_code       TEXT NOT NULL
@@ -579,10 +648,11 @@ review_state       TEXT NOT NULL
 next_review_at     DATETIME NULL
 last_result        TEXT NULL
 updated_at         DATETIME NOT NULL
+
 PK (content_code, content_type)
 ```
 
-### `test_attempt`
+### 12.7 `test_attempt`
 
 ```text
 attempt_id          TEXT PK
@@ -597,7 +667,9 @@ completed_at        DATETIME NULL
 updated_at          DATETIME NOT NULL
 ```
 
-### `test_attempt_question`
+A submitted/completed test may update generic `COMPLETED` through application policy, but the immutable attempt remains the detailed source of assessment history.
+
+### 12.8 `test_attempt_question`
 
 Immutable attempt snapshot:
 
@@ -607,10 +679,11 @@ position            INTEGER NOT NULL
 question_code       TEXT NOT NULL
 question_revision   INTEGER NOT NULL
 snapshot_json       TEXT NOT NULL
+
 PK (attempt_id, position)
 ```
 
-### `test_answer`
+### 12.9 `test_answer`
 
 ```text
 attempt_id          TEXT NOT NULL
@@ -618,6 +691,7 @@ position            INTEGER NOT NULL
 answer_json         TEXT NOT NULL
 is_correct          INTEGER NULL
 answered_at         DATETIME NOT NULL
+
 PK (attempt_id, position)
 ```
 
@@ -625,7 +699,41 @@ Completed/in-progress attempts remain reviewable even if the source pack is late
 
 ---
 
-## 13. Required indexes
+## 13. Learner marker composition
+
+Presentation/repositories compose:
+
+```text
+favorite
++
+content_learning_state
+```
+
+into a view/application value such as:
+
+```text
+ContentMarkerState
+├── isFavorite
+├── isListened
+├── listenedAt
+├── isCompleted
+├── completedAt
+└── lastPositionMs
+```
+
+Catalog filtering may query:
+
+```text
+Favorites
+Listened / Not listened
+Completed / Not completed
+```
+
+These filters remain device-local and require no backend learner-history API.
+
+---
+
+## 14. Required indexes
 
 At minimum qualify indexes for:
 
@@ -639,17 +747,23 @@ download_task(state, next_retry_at)
 sync_run(state, started_at)
 review_schedule(next_review_at)
 recent_content(last_opened_at)
+content_learning_state(content_type, completed_at)
+content_learning_state(content_type, listened_at)
+content_learning_state(last_played_at)
+favorite(content_type, created_at)
 ```
 
 Use a partial unique index for one `CURRENT` pack revision per `(pack_code, variant_key)` when supported by the Drift migration baseline; otherwise enforce transactionally and test it.
 
+Exact marker index shape SHALL be qualified against real feature/filter queries.
+
 ---
 
-## 14. Transaction boundaries
+## 15. Transaction boundaries
 
 Network/filesystem work never runs inside a Drift transaction.
 
-Short activation transaction may change:
+Short metadata activation transaction may change:
 
 ```text
 pack STAGING/VERIFIED → CURRENT
@@ -663,20 +777,23 @@ content_manifest_state.current_content_version
 
 Offline `READY` replacement occurs only after required files are independently verified.
 
+Learner marker writes are separate short local transactions and are never coupled to remote metadata activation.
+
 ---
 
-## 15. Migration rules
+## 16. Migration rules
 
 1. every Drift schema change increments local schema version;
 2. migrations are explicit and tested from supported previous versions;
 3. learner-state tables receive priority preservation;
 4. cache tables may be rebuilt only when safe and documented;
 5. production recovery must not require deleting the whole app database;
-6. migration failure must not silently erase learner progress.
+6. migration failure must not silently erase learner progress/markers;
+7. migration from pre-marker schema creates `content_learning_state` without rewriting/discarding existing favorites/test/review state.
 
 ---
 
-## 16. Invariants
+## 17. Invariants
 
 ```text
 DRIFT-001 token is not stored in Drift
@@ -689,11 +806,15 @@ DRIFT-007 old offline READY may coexist with newer CURRENT metadata
 DRIFT-008 physical file deletion is reference-safe
 DRIFT-009 staged rows are invisible to learner repositories
 DRIFT-010 test attempt snapshots survive source-content eviction
+DRIFT-011 FAVORITE/LISTENED/COMPLETED are independent
+DRIFT-012 favorite does not imply PINNED or EXPLICIT_DOWNLOAD
+DRIFT-013 partial playback does not imply LISTENED
+DRIFT-014 content revision replacement preserves logical learner state by stable business identity
 ```
 
 ---
 
-## 17. Acceptance scenarios
+## 18. Acceptance scenarios
 
 Must prove:
 
@@ -707,7 +828,12 @@ crash during staging
 crash after metadata commit before cleanup
 checksum mismatch
 shared asset reference safety
-tombstone with favorite/progress preservation
+tombstone with learner-marker preservation
+FAVORITE survives media/cache eviction
+partial playback remains NOT_LISTENED and resumes
+qualified playback sets LISTENED
+COMPLETED + LISTENED + FAVORITE coexist
+local marker filtering works
 in-progress test restoration
 Drift migration with learner-state preservation
 ```
