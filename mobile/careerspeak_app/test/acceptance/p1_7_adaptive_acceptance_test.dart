@@ -102,7 +102,9 @@ void main() {
               child: child ?? const SizedBox.shrink(),
             );
           },
-          home: const TestSessionScreen(code: 'JAVA_SENIOR_QUICK_001'),
+          home: const Scaffold(
+            body: TestSessionScreen(code: 'JAVA_SENIOR_QUICK_001'),
+          ),
         ),
       ),
     );
