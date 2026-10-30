@@ -6,8 +6,7 @@ class AppPreferences extends Table {
   TextColumn get translationLocale => text()();
   TextColumn get preferredAccent => text().nullable()();
   TextColumn get themeCode => text()();
-  BoolColumn get focusMode =>
-      boolean().withDefault(const Constant(false))();
+  BoolColumn get focusMode => boolean().withDefault(const Constant(false))();
   IntColumn get storageQuotaBytes => integer().nullable()();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();

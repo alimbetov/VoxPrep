@@ -45,7 +45,9 @@ void main() {
   test('singleton system tables reject ids other than one', () async {
     final now = DateTime.utc(2026, 10, 30, 10);
 
-    await database.into(database.appPreferences).insert(
+    await database
+        .into(database.appPreferences)
+        .insert(
           AppPreferencesCompanion.insert(
             id: const Value(1),
             uiLocale: 'en',
@@ -57,7 +59,9 @@ void main() {
         );
 
     expect(
-      () => database.into(database.appPreferences).insert(
+      () => database
+          .into(database.appPreferences)
+          .insert(
             AppPreferencesCompanion.insert(
               id: const Value(2),
               uiLocale: 'en',
@@ -71,31 +75,36 @@ void main() {
     );
   });
 
-  test('content pack revision identity is composite and deterministic', () async {
-    final now = DateTime.utc(2026, 10, 30, 10);
-    final row = ContentPackRevisionsCompanion.insert(
-      packCode: 'JAVA_SENIOR',
-      variantKey: 'canonical',
-      revision: 8,
-      schemaVersion: 1,
-      checksum: 'sha256:pack-8',
-      state: 'CURRENT',
-      sourceContentVersion: 108,
-      stagedAt: now,
-    );
+  test(
+    'content pack revision identity is composite and deterministic',
+    () async {
+      final now = DateTime.utc(2026, 10, 30, 10);
+      final row = ContentPackRevisionsCompanion.insert(
+        packCode: 'JAVA_SENIOR',
+        variantKey: 'canonical',
+        revision: 8,
+        schemaVersion: 1,
+        checksum: 'sha256:pack-8',
+        state: 'CURRENT',
+        sourceContentVersion: 108,
+        stagedAt: now,
+      );
 
-    await database.into(database.contentPackRevisions).insert(row);
+      await database.into(database.contentPackRevisions).insert(row);
 
-    expect(
-      () => database.into(database.contentPackRevisions).insert(row),
-      throwsA(anything),
-    );
-  });
+      expect(
+        () => database.into(database.contentPackRevisions).insert(row),
+        throwsA(anything),
+      );
+    },
+  );
 
   test('learner state remains after disposable content is deleted', () async {
     final now = DateTime.utc(2026, 10, 30, 10);
 
-    await database.into(database.localContentRecords).insert(
+    await database
+        .into(database.localContentRecords)
+        .insert(
           LocalContentRecordsCompanion.insert(
             contentCode: 'JAVA_DI_001',
             contentType: 'INTERVIEW',
@@ -107,7 +116,9 @@ void main() {
           ),
         );
 
-    await database.into(database.favorites).insert(
+    await database
+        .into(database.favorites)
+        .insert(
           FavoritesCompanion.insert(
             contentCode: 'JAVA_DI_001',
             contentType: 'INTERVIEW',
@@ -115,7 +126,9 @@ void main() {
           ),
         );
 
-    await database.into(database.contentLearningStates).insert(
+    await database
+        .into(database.contentLearningStates)
+        .insert(
           ContentLearningStatesCompanion.insert(
             contentCode: 'JAVA_DI_001',
             contentType: 'INTERVIEW',
@@ -123,9 +136,9 @@ void main() {
           ),
         );
 
-    await (database.delete(database.localContentRecords)
-          ..where((row) => row.contentCode.equals('JAVA_DI_001')))
-        .go();
+    await (database.delete(
+      database.localContentRecords,
+    )..where((row) => row.contentCode.equals('JAVA_DI_001'))).go();
 
     expect(await database.select(database.localContentRecords).get(), isEmpty);
     expect(await database.select(database.favorites).get(), hasLength(1));
@@ -135,13 +148,16 @@ void main() {
     );
   });
 
-  test('installation runtime table contains no installation credential', () async {
-    final columns = database.installationRuntimeStates.$columns
-        .map((column) => column.$name)
-        .toSet();
+  test(
+    'installation runtime table contains no installation credential',
+    () async {
+      final columns = database.installationRuntimeStates.$columns
+          .map((column) => column.$name)
+          .toSet();
 
-    expect(columns, isNot(contains('installation_id')));
-    expect(columns, isNot(contains('installation_token')));
-    expect(columns, isNot(contains('token')));
-  });
+      expect(columns, isNot(contains('installation_id')));
+      expect(columns, isNot(contains('installation_token')));
+      expect(columns, isNot(contains('token')));
+    },
+  );
 }

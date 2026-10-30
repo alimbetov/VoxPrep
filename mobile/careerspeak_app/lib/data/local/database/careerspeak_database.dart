@@ -18,18 +18,18 @@ part 'careerspeak_database.g.dart';
 )
 final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
   CareerSpeakDatabase([QueryExecutor? executor])
-      : super(executor ?? driftDatabase(name: 'careerspeak'));
+    : super(executor ?? driftDatabase(name: 'careerspeak'));
 
   @override
   int get schemaVersion => 1;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (migrator) async {
-          await migrator.createAll();
-        },
-        beforeOpen: (details) async {
-          await customStatement('PRAGMA foreign_keys = ON');
-        },
-      );
+    onCreate: (migrator) async {
+      await migrator.createAll();
+    },
+    beforeOpen: (details) async {
+      await customStatement('PRAGMA foreign_keys = ON');
+    },
+  );
 }
