@@ -1,65 +1,47 @@
 # CareerSpeak — Content Delivery, Availability & Local Retention Requirements
 
-**Document version:** 1.1  
-**Status:** Architecture baseline / normative specification  
-**Applies to:** VoxPrep / CareerSpeak v0.7+
+**Document version:** 2.0  
+**Status:** Normative specification  
+**Applies to:** CareerSpeak v0.9+
+
+Related standard:
+
+- [`../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md`](../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md)
 
 ---
 
 ## 1. Purpose
 
-This document defines how CareerSpeak delivers growing content catalogs to Flutter while preventing uncontrolled backend queries and uncontrolled device-storage growth.
+This specification defines how Backend delivers published content to Flutter and how Flutter retains/reclaims local metadata and media.
 
 It covers:
 
 ```text
+backend availability
+root/pack manifests
 cursor pagination
-publication vs availability
-manifest/tombstones
-offline packs
-TTL/LRU cleanup
-local quota
-pinning
-shared-asset reference tracking
-safe local eviction
+tombstones
+metadata CURRENT state
+offline READY state
+stream/cache behavior
+explicit offline download
+TTL/LRU/quota retention
+shared asset references
+safe eviction
 ```
 
 ---
 
-## 2. Core rules
+## 2. Backend learner-delivery rule
 
-1. Published revisions remain immutable.
-2. Publication lifecycle and learner availability are separate.
-3. Learner catalog APIs are paginated.
-4. Learner APIs expose only `PUBLISHED + ACTIVE` content.
-5. Deactivation does not destructively delete backend history.
-6. Flutter does not retain re-downloadable media forever.
-7. Local media eviction never erases learner progress.
-8. Shared assets are deleted only when no retained local content references them.
-9. Explicitly pinned/manual offline content is protected from normal automatic cleanup.
-
----
-
-## 3. Publication and availability
-
-Content revision lifecycle:
+Backend owns:
 
 ```text
-DRAFT
-READY_FOR_AUDIO
-READY_FOR_REVIEW
-PUBLISHED
-ARCHIVED
+revision_status
+availability_status
 ```
 
-Availability:
-
-```text
-ACTIVE
-INACTIVE
-```
-
-Consumer visibility condition:
+Learner-deliverable content is exactly:
 
 ```text
 revision_status = PUBLISHED
@@ -67,20 +49,22 @@ AND
 availability_status = ACTIVE
 ```
 
-Example:
+Meaning:
 
 ```text
-PUBLISHED + ACTIVE   → visible to Flutter
-PUBLISHED + INACTIVE → retained historically, hidden from learner API
+visible in learner contracts where applicable
+included in applicable manifest snapshot
+available for stream/download
+associated published assets deliverable
 ```
 
-ADMIN may deactivate and later reactivate a published revision without deleting its historical data.
+`PUBLISHED + INACTIVE` is retained for audit/history but not offered for new learner delivery.
 
 ---
 
-## 4. Learner pagination
+## 3. Learner pagination
 
-Learner collection APIs SHALL use cursor/keyset pagination.
+Learner collection APIs use cursor/keyset pagination.
 
 Example:
 
@@ -88,7 +72,7 @@ Example:
 GET /api/v1/vocabulary?cefr=B2&limit=50&cursor=...
 ```
 
-Recommended response:
+Response shape:
 
 ```json
 {
@@ -100,44 +84,18 @@ Recommended response:
 }
 ```
 
-Cursor sorting SHALL be deterministic and use a unique tie-breaker, for example:
+Sort order must be deterministic with a unique tie-breaker.
 
-```text
-sort_order + id
-```
-
-or:
-
-```text
-published_at DESC + id DESC
-```
-
-Large learner catalogs SHOULD NOT depend on deep OFFSET pagination.
+Admin Content Studio may use ordinary page/size pagination.
 
 ---
 
-## 5. Admin pagination
+## 4. Root manifest
 
-Internal Content Studio lists MAY use ordinary page/size pagination because they are low-volume administrative workflows.
-
-Example:
+Flutter uses one root learner-delivery snapshot:
 
 ```text
-/admin/vocabulary?page=0&size=50
-```
-
-ADMIN filtering may include publication status, availability, category, locale readiness and audio readiness.
-
----
-
-## 6. Root manifest
-
-Flutter uses a compact root manifest to discover changed content packs.
-
-Example:
-
-```text
-GET /api/v1/content/manifest
+contentVersion
 ```
 
 Conceptual response:
@@ -145,12 +103,19 @@ Conceptual response:
 ```json
 {
   "schemaVersion": 1,
-  "contentVersion": 107,
-  "publishedAt": "...",
+  "contentVersion": 108,
+  "publishedAt": "2026-10-30T09:30:00Z",
   "packs": [
     {
       "code": "JAVA_SENIOR",
+      "variant": "canonical",
       "revision": 8,
+      "checksum": "..."
+    },
+    {
+      "code": "JAVA_SENIOR",
+      "variant": "locale:kk",
+      "revision": 4,
       "checksum": "..."
     }
   ],
@@ -158,39 +123,111 @@ Conceptual response:
 }
 ```
 
-The root manifest SHOULD remain compact.
+Locale variants are pack members inside the root snapshot. They do not create unrelated root epochs.
 
 ---
 
-## 7. Pack manifest
-
-Large content is divided into packs such as:
-
-```text
-IELTS_VOCABULARY_B2
-IELTS_SPEAKING
-GENERAL_INTERVIEW
-JAVA_JUNIOR
-JAVA_SENIOR
-DEVOPS
-BUSINESS_ANALYST
-```
+## 5. Pack manifest
 
 Example:
 
 ```text
-GET /api/v1/content/packs/{code}/manifest
+GET /api/v1/content/packs/{code}/manifest?variant=canonical&revision=8
 ```
 
-A pack manifest may reference content metadata and immutable assets/checksums required by that pack.
+A pack manifest identifies immutable:
 
-Flutter downloads only missing/changed assets.
+```text
+pack code
+variant
+revision
+schema version
+checksum
+content identities/revisions
+asset descriptors/checksums
+required_offline flags where applicable
+```
+
+Flutter downloads only changed/missing metadata/assets required by current intent.
 
 ---
 
-## 8. Tombstones
+## 6. Flutter metadata lifecycle
 
-When previously distributed content becomes unavailable, the server SHALL communicate removal/deactivation through tombstones or equivalent manifest delta semantics.
+Flutter local metadata states:
+
+```text
+STAGING
+VERIFIED
+CURRENT
+SUPERSEDED
+FAILED
+```
+
+`CURRENT` = the local metadata/read-model revision used by learner repositories.
+
+Do not call this state `ACTIVE`; `ACTIVE` is reserved for Backend availability.
+
+Metadata switch is atomic at root `contentVersion` level for MVP.
+
+---
+
+## 7. Offline lifecycle
+
+Offline pack state is independent from metadata `CURRENT`:
+
+```text
+NOT_DOWNLOADED
+QUEUED
+DOWNLOADING
+VERIFYING
+READY
+UPDATING
+FAILED
+```
+
+`READY` means the required offline asset set is locally verified.
+
+Supported state:
+
+```text
+metadata revision 8 = CURRENT
+offline revision 7 = READY
+offline revision 8 = UPDATING
+```
+
+Revision 7 remains usable offline until rev 8 verifies successfully.
+
+---
+
+## 8. Stream/cache vs explicit download
+
+Normal learner behavior:
+
+```text
+CURRENT metadata
+→ asset requested
+→ local verified copy if present
+→ otherwise CDN stream/download
+```
+
+Normal metadata sync SHALL NOT download every audio/image file.
+
+Explicit offline behavior:
+
+```text
+user requests Download/Pin
+→ DownloadManager obtains required_offline assets
+→ checksum/size verification
+→ atomic local placement
+→ offline READY
+```
+
+---
+
+## 9. Tombstones
+
+Backend emits explicit tombstones for previously delivered content that is no longer learner-deliverable, including deactivation.
 
 Example:
 
@@ -202,288 +239,210 @@ Example:
 }
 ```
 
-Flutter SHALL:
+Flutter applies tombstones during metadata activation:
 
 ```text
-remove obsolete local content snapshot
-release its asset references
-remove unreferenced disposable assets
-preserve learner progress/history where meaningful
+remove/retire disposable CURRENT content
+release disposable references
+preserve learner history
 ```
 
-A missing object from a normal page response alone is not sufficient evidence for destructive local cleanup.
+Missing objects from paginated list responses are never interpreted as deletion.
 
 ---
 
-## 9. Local state separation
+## 10. Durable vs disposable local state
 
-Flutter persistence separates durable learner state from disposable/re-downloadable content.
-
-### Durable learner state
+Durable learner state:
 
 ```text
 favorites
 progress
-test attempts/test answers
+test attempts/answers
 review schedule
 completed topics
 settings
-selected locale
-selected ambience/focus preference
+locale/theme preferences
 ```
 
-### Disposable/re-downloadable state
+Disposable/re-downloadable state:
 
 ```text
-pack snapshots
-audio files
-remote images
-cached metadata
-future downloadable theme packs
+pack metadata snapshots
+audio/images
+cached asset bytes
+downloadable theme assets
 ```
 
-Deleting a disposable asset SHALL NOT delete the corresponding learner progress.
+Cache/media eviction never deletes durable learner state.
 
 ---
 
-## 10. Local cache entry
-
-Recommended concept:
+## 11. Retention classes
 
 ```text
-content_cache_entry
-────────────────────────────
-content_code
-content_revision
-pack_code
-downloaded_at
-last_accessed_at
-expires_at
-size_bytes
-pinned
-explicit_download
-cache_state
+AUTO_CACHE
+EXPLICIT_DOWNLOAD
+PINNED
 ```
 
-`last_accessed_at` is updated when the retained content is actually used.
+Rules:
+
+```text
+AUTO_CACHE
+→ TTL/LRU/quota eligible
+
+EXPLICIT_DOWNLOAD
+→ protected from ordinary automatic eviction
+
+PINNED
+→ protected from ordinary automatic eviction
+```
+
+Favorites are not automatically storage pins.
 
 ---
 
-## 11. Retention policy
+## 12. TTL + LRU + quota
 
-Automatic retention uses:
+Automatic disposable-storage management uses:
 
 ```text
 TTL
 +
 LRU
 +
-local storage quota
+local managed-storage quota
 ```
 
-Baseline behavior:
+Baseline cleanup priority:
 
 ```text
-AUTO_CACHE
-    → TTL/LRU/quota eligible
-
-PINNED
-    → protected from normal auto-eviction
-
-EXPLICIT_DOWNLOAD
-    → protected from normal cleanup until user removes it or an explicit emergency-storage policy is invoked
-
-INACTIVE_SERVER_CONTENT
-    → remove obsolete disposable data after manifest synchronization
-
-OLD_REVISION
-    → remove after replacement is verified and asset references are released
+1. invalid/tombstoned/obsolete disposable data
+2. expired AUTO_CACHE data
+3. least-recently-used AUTO_CACHE data
+4. protect explicit download/pinned data during normal cleanup
 ```
 
-Exact TTL and quota values are configuration/product decisions, not hardcoded domain constants.
+Exact TTL/quota values are configurable policy, not immutable domain constants.
 
 ---
 
-## 12. Favorites are not pins
+## 13. Shared asset references
 
-A learner favorite SHALL NOT automatically force every related binary asset to remain forever.
+The same immutable asset may be referenced by multiple current/offline content items.
+
+Logical model:
+
+```text
+asset_catalog
+local_asset_file
+content_asset_ref
+pack_asset_ref
+```
+
+Physical file deletion is allowed only when no retained/current/offline-ready reference requires the file.
+
+Quota accounting counts unique local physical files, not repeated logical references.
+
+---
+
+## 14. Media delivery
+
+Published learner media path:
+
+```text
+Flutter
+→ AssetResolver
+→ local verified file OR CDN/edge
+→ RustFS published origin
+```
+
+Spring Boot does not proxy normal learner MP3/image bytes.
+
+Database/domain identity does not persist environment-specific CDN hostnames.
+
+---
+
+## 15. Locale reuse
+
+Canonical English content/audio is shared across locales.
 
 Example:
 
 ```text
-favorite vocabulary item
-→ favorite/progress row retained
-→ audio may still be evicted
-→ audio can be re-downloaded later
+JAVA_SENIOR canonical rev 8
+JAVA_SENIOR locale:ru rev 5
+JAVA_SENIOR locale:kk rev 4
 ```
 
-Explicit offline pinning/manual download is the storage-retention signal.
+Changing translation locale should download the locale delta only when canonical assets are unchanged.
 
 ---
 
-## 13. TTL behavior
+## 16. Cleanup triggers
 
-For automatically cached content:
+Correctness does not depend solely on mobile OS background scheduling.
 
-```text
-expires_at = last_accessed_at + retentionPeriod
-```
-
-Access extends interest/retention.
-
-Expired content becomes an eviction candidate; expiry does not require immediate deletion if storage pressure is low.
-
----
-
-## 14. LRU and storage quota
-
-TTL alone is insufficient because a learner may download a large amount of content before TTL expiry.
-
-When local disposable storage exceeds configured quota:
+Evaluate cleanup at:
 
 ```text
-1. remove obsolete/tombstoned data
-2. remove expired unpinned data
-3. remove least-recently-used unpinned data
-4. preserve protected explicit downloads/pins
-```
-
-The application SHOULD expose a user action such as `Free space` for explicit cleanup.
-
----
-
-## 15. Shared local assets
-
-The same immutable audio/image asset may be referenced by more than one retained content item.
-
-Recommended local concepts:
-
-```text
-local_asset
-────────────────
-asset_id
-checksum
-local_path
-size_bytes
-last_accessed_at
-```
-
-```text
-content_asset_ref
-────────────────
-content_code
-content_revision
-asset_id
-```
-
-Physical deletion is allowed only when no retained reference remains.
-
-Conceptually:
-
-```text
-reference_count == 0
-```
-
----
-
-## 16. Revision replacement
-
-When pack/content revision N+1 is downloaded and verified:
-
-```text
-activate new local snapshot
-→ release references owned only by old revision N
-→ delete old unreferenced disposable assets
-```
-
-Old revisions do not need to wait for ordinary TTL once a replacement is safely installed.
-
----
-
-## 17. Cleanup triggers
-
-Do not rely solely on mobile background scheduling.
-
-Cleanup SHOULD be evaluated at predictable points:
-
-```text
-application startup
-manifest synchronization
-after pack update
+startup
+manifest sync
+pack replacement
 after large download
-when quota is exceeded
+quota pressure
 user-triggered Free space
 ```
 
-OS background tasks may be supplementary, not required for correctness.
-
 ---
 
-## 18. Media delivery
+## 17. HTTP/cache behavior
 
-Published media path:
+May use:
 
 ```text
-Flutter
-→ CDN/edge
-→ RustFS published origin
+ETag / If-None-Match
+immutable CDN caching
+local Drift/filesystem cache
 ```
 
-Spring Boot SHALL NOT proxy normal learner MP3/image bytes.
-
-Immutable versioned asset keys allow aggressive caching.
+Do not add Redis solely for MVP learner catalog caching.
 
 ---
 
-## 19. API/cache behavior
+## 18. Acceptance scenarios
 
-Published catalog/content responses MAY use HTTP cache validators such as ETag where useful.
-
-Do not add Redis solely for catalog caching in MVP.
-
-Primary caching layers are:
+Must prove:
 
 ```text
-Flutter local DB/files
-HTTP cache semantics
-CDN/edge for immutable media
-PostgreSQL internal caching/buffers
+cursor traversal without duplicate/skip corruption
+PUBLISHED + INACTIVE absent from learner delivery
+deactivation produces tombstone/current removal
+metadata N→N+1 atomic CURRENT transition
+streaming works without full offline bundle
+offline READY rev N survives update to CURRENT rev N+1
+offline READY switches only after verification
+progress survives tombstone/cache eviction
+favorites do not force permanent media retention
+quota cleanup removes LRU auto-cache
+shared file survives while another reference exists
+locale change reuses English audio
 ```
 
 ---
 
-## 20. Acceptance scenarios
-
-The implementation SHALL prove at least:
-
-1. cursor pagination returns stable non-duplicated traversal;
-2. concurrent new publication does not corrupt cursor traversal semantics;
-3. `PUBLISHED + INACTIVE` is absent from learner lists;
-4. deactivation produces a manifest/tombstone change;
-5. Flutter removes disposable data for tombstoned content;
-6. learner progress survives media eviction;
-7. pinned/manual download survives normal TTL cleanup;
-8. quota cleanup removes LRU unpinned content;
-9. shared audio is not deleted while another retained content item references it;
-10. old pack revision assets are reclaimed after safe replacement.
-
----
-
-## 21. Summary
+## 19. Standard terminology
 
 ```text
-Backend
-→ PUBLISHED + ACTIVE only
-→ cursor pagination
-→ root/pack manifests
-→ tombstones
+Backend ACTIVE
+= deliverable/downloadable
 
-Flutter
-→ durable learner state
-→ disposable content/assets
-→ TTL + LRU + quota
-→ pin protection
-→ reference-safe deletion
+Flutter CURRENT
+= selected local metadata revision
+
+Flutter offline READY
+= complete locally verified offline bundle
 ```
 
-This is the authoritative content-delivery/local-retention baseline for CareerSpeak v0.7.
+This terminology is mandatory.
