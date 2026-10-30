@@ -1,5 +1,9 @@
 final class InstallationId {
-  InstallationId(String value) : value = _requireNonBlank(value, 'installationId');
+  factory InstallationId(String value) {
+    return InstallationId._(_requireNonBlank(value, 'installationId'));
+  }
+
+  const InstallationId._(this.value);
 
   final String value;
 
@@ -15,18 +19,33 @@ final class InstallationId {
 }
 
 final class InstallationCredentials {
-  InstallationCredentials({
-    required this.installationId,
+  factory InstallationCredentials({
+    required InstallationId installationId,
     required String installationToken,
-  }) : installationToken =
-            _requireNonBlank(installationToken, 'installationToken');
+  }) {
+    return InstallationCredentials._(
+      installationId: installationId,
+      installationToken: _requireNonBlank(
+        installationToken,
+        'installationToken',
+      ),
+    );
+  }
+
+  const InstallationCredentials._({
+    required this.installationId,
+    required this.installationToken,
+  });
 
   final InstallationId installationId;
   final String installationToken;
 
   @override
-  String toString() =>
-      'InstallationCredentials(installationId: $installationId, installationToken: <redacted>)';
+  String toString() {
+    return 'InstallationCredentials('
+        'installationId: $installationId, '
+        'installationToken: <redacted>)';
+  }
 }
 
 String _requireNonBlank(String value, String fieldName) {
