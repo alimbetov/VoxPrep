@@ -41,7 +41,9 @@ final class InstallationIdentityService {
     );
   }
 
-  Future<void> saveInstallationToken(InstallationToken installationToken) async {
+  Future<void> saveInstallationToken(
+    InstallationToken installationToken,
+  ) async {
     final installationId = await _store.readInstallationId();
     if (installationId == null) {
       throw StateError(

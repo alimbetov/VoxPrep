@@ -19,7 +19,9 @@ void main() {
           source.contains('mock_content_repository.dart') ||
           source.contains('mock_test_repository.dart') ||
           source.contains('drift_learner_state_repository.dart') ||
-          source.contains('flutter_secure_installation_credential_store.dart')) {
+          source.contains(
+            'flutter_secure_installation_credential_store.dart',
+          )) {
         violations.add(entity.path);
       }
     }

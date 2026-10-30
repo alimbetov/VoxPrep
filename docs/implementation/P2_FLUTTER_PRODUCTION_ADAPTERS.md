@@ -312,6 +312,100 @@ P2.2 is accepted only when:
 9. Drift schema/codegen/lockfile reproducibility gates remain green without schema changes;
 10. pinned Flutter format/analyze/full-test CI is green on the exact P2.2 SHA.
 
+## P2.3 — installation identity + Secure Storage
+
+P2.3 establishes the durable installation identity boundary used by the API layer in P2.4. It deliberately does **not** perform network registration.
+
+Architecture:
+
+```text
+Riverpod composition root
+        ↓
+InstallationIdentityService
+        ↓
+InstallationCredentialStore
+        ↓
+FlutterSecureInstallationCredentialStore
+        ↓
+platform Secure Storage
+        ├── careerspeak.installation.id.v1
+        └── careerspeak.installation.token.v1
+```
+
+The lifecycle is intentionally split because installation identity exists before backend registration, while the installation token exists only after a successful registration/refresh response:
+
+```text
+first launch
+    ↓
+ensureInstallationId()
+    ↓
+read existing InstallationId
+    │
+    └── missing → generate secure UUID v4 → persist
+
+P2.4 registration
+    ↓
+backend returns token
+    ↓
+saveInstallationToken(token)
+```
+
+### P2.3 invariants
+
+1. `InstallationId` and `InstallationToken` are separate typed values;
+2. both reject blank values;
+3. token values are redacted by `toString()` and must not be exposed through diagnostics;
+4. concurrent first-launch callers share one `ensureInstallationId()` operation and cannot create competing identities;
+5. an existing installation ID is reused across service/adapter recreation;
+6. token persistence is rejected until an installation ID exists;
+7. an orphan token without an installation ID is treated as corrupted state and fails closed;
+8. clearing a token preserves the installation ID so authentication can be renewed without rotating device identity;
+9. a full installation reset removes the token before removing the installation ID and permits generation of a new identity afterward;
+10. `installation_runtime_states` remains operational metadata only and contains no identity/token fields;
+11. no installation credential is written to Drift or any `data/local/**` adapter;
+12. feature presentation must not import `data/secure/**` or the concrete Secure Storage adapter;
+13. `CareerSpeakDatabase.schemaVersion` remains exactly `1` because P2.3 adds no database persistence;
+14. network registration, token refresh HTTP calls and authorization headers remain owned by P2.4.
+
+Production composition:
+
+```text
+secureStorageProvider
+    → FlutterSecureStorage
+
+installationCredentialStoreProvider
+    → FlutterSecureInstallationCredentialStore
+
+installationIdentityServiceProvider
+    → InstallationIdentityService
+
+installationIdProvider
+    → ensureInstallationId()
+```
+
+Secure Storage dependency is pinned for the slice:
+
+```text
+flutter_secure_storage 11.2.0
+```
+
+### P2.3 qualification
+
+P2.3 is accepted only when all of the following are true on one exact branch SHA:
+
+1. the application contract supports independent installation-ID and token lifecycle;
+2. `InstallationIdentityService` creates identity once, reuses persisted identity and fails closed for corrupted token-only state;
+3. `FlutterSecureInstallationCredentialStore` survives adapter recreation in storage-backed tests;
+4. token clearing preserves identity and full reset clears both values;
+5. Riverpod composition selects the production Secure Storage adapter;
+6. architecture guards reject feature → secure-adapter imports and local/Drift credential persistence;
+7. Drift schema remains version `1` and generated schema/code stays reproducible;
+8. `pubspec.lock` is reproducible with pinned Flutter `3.47.9`;
+9. `dart format`, `flutter analyze` and full `flutter test` are green;
+10. the qualification SHA is produced with the normal read-only workflow, not the temporary dependency-normalization workflow used during implementation.
+
+The exact accepted P2.3 SHA is recorded only after the normal read-only CI run succeeds.
+
 ## Architecture rule
 
 Presentation code may depend on domain/application contracts and Riverpod composition providers. It must not choose a concrete persistence or transport implementation.

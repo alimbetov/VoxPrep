@@ -5,34 +5,37 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('InstallationIdentityService', () {
-    test('creates installation id once and reuses persisted identity', () async {
-      final store = _MemoryInstallationCredentialStore();
-      var generatedCount = 0;
-      final service = InstallationIdentityService(
-        store,
-        installationIdFactory: () {
-          generatedCount += 1;
-          return InstallationId('install-generated');
-        },
-      );
+    test(
+      'creates installation id once and reuses persisted identity',
+      () async {
+        final store = _MemoryInstallationCredentialStore();
+        var generatedCount = 0;
+        final service = InstallationIdentityService(
+          store,
+          installationIdFactory: () {
+            generatedCount += 1;
+            return InstallationId('install-generated');
+          },
+        );
 
-      final ids = await Future.wait(<Future<InstallationId>>[
-        service.ensureInstallationId(),
-        service.ensureInstallationId(),
-      ]);
+        final ids = await Future.wait(<Future<InstallationId>>[
+          service.ensureInstallationId(),
+          service.ensureInstallationId(),
+        ]);
 
-      expect(ids, everyElement(InstallationId('install-generated')));
-      expect(generatedCount, 1);
+        expect(ids, everyElement(InstallationId('install-generated')));
+        expect(generatedCount, 1);
 
-      final recreated = InstallationIdentityService(
-        store,
-        installationIdFactory: () => InstallationId('must-not-replace'),
-      );
-      expect(
-        await recreated.ensureInstallationId(),
-        InstallationId('install-generated'),
-      );
-    });
+        final recreated = InstallationIdentityService(
+          store,
+          installationIdFactory: () => InstallationId('must-not-replace'),
+        );
+        expect(
+          await recreated.ensureInstallationId(),
+          InstallationId('install-generated'),
+        );
+      },
+    );
 
     test('does not expose complete credentials before registration', () async {
       final store = _MemoryInstallationCredentialStore();
@@ -46,16 +49,19 @@ void main() {
       expect(await service.readCredentials(), isNull);
     });
 
-    test('rejects token persistence before installation identity exists', () async {
-      final service = InstallationIdentityService(
-        _MemoryInstallationCredentialStore(),
-      );
+    test(
+      'rejects token persistence before installation identity exists',
+      () async {
+        final service = InstallationIdentityService(
+          _MemoryInstallationCredentialStore(),
+        );
 
-      await expectLater(
-        service.saveInstallationToken(InstallationToken('token-1')),
-        throwsStateError,
-      );
-    });
+        await expectLater(
+          service.saveInstallationToken(InstallationToken('token-1')),
+          throwsStateError,
+        );
+      },
+    );
 
     test('projects credentials only after token is persisted', () async {
       final store = _MemoryInstallationCredentialStore();
@@ -104,22 +110,25 @@ void main() {
       expect(await service.ensureInstallationId(), InstallationId('install-2'));
     });
 
-    test('default identity generator produces RFC 4122 version 4 shape', () async {
-      final service = InstallationIdentityService(
-        _MemoryInstallationCredentialStore(),
-      );
+    test(
+      'default identity generator produces RFC 4122 version 4 shape',
+      () async {
+        final service = InstallationIdentityService(
+          _MemoryInstallationCredentialStore(),
+        );
 
-      final installationId = await service.ensureInstallationId();
+        final installationId = await service.ensureInstallationId();
 
-      expect(
-        installationId.value,
-        matches(
-          RegExp(
-            r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+        expect(
+          installationId.value,
+          matches(
+            RegExp(
+              r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+            ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   });
 }
 
