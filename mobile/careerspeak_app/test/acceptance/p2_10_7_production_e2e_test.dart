@@ -51,7 +51,10 @@ void main() {
           runId: 'e2e-startup-1',
         );
 
-        expect(firstBootstrap.credentials.installationId.value, _installationId);
+        expect(
+          firstBootstrap.credentials.installationId.value,
+          _installationId,
+        );
         expect(firstBootstrap.credentials.installationToken.value, _token);
         expect(backend.registrationCalls, 1);
         expect(backend.rootManifestCalls, 1);
@@ -73,7 +76,10 @@ void main() {
           runId: 'e2e-startup-2',
         );
 
-        expect(secondBootstrap.credentials.installationId.value, _installationId);
+        expect(
+          secondBootstrap.credentials.installationId.value,
+          _installationId,
+        );
         expect(secondBootstrap.credentials.installationToken.value, _token);
         expect(backend.registrationCalls, 1);
         expect(backend.rootManifestCalls, 2);
@@ -210,7 +216,9 @@ final class _MemoryCredentialStore implements InstallationCredentialStore {
   }
 
   @override
-  Future<void> writeInstallationToken(InstallationToken installationToken) async {
+  Future<void> writeInstallationToken(
+    InstallationToken installationToken,
+  ) async {
     _installationToken = installationToken;
   }
 }
@@ -222,7 +230,8 @@ final class _LearnerApiFixture {
   int contentPayloadCalls = 0;
 
   Future<http.Response> handle(http.Request request) async {
-    if (request.method == 'POST' && request.url.path == '/api/v1/installations') {
+    if (request.method == 'POST' &&
+        request.url.path == '/api/v1/installations') {
       registrationCalls += 1;
       if (request.headers.containsKey('authorization')) {
         throw StateError('Installation registration must be anonymous.');
@@ -242,9 +251,10 @@ final class _LearnerApiFixture {
       if (request.url.queryParameters['locale'] != 'ru') {
         throw StateError('Startup sync must use persisted translation locale.');
       }
-      return _jsonResponse(_rootManifest, headers: <String, String>{
-        'etag': '"content-v1"',
-      });
+      return _jsonResponse(
+        _rootManifest,
+        headers: <String, String>{'etag': '"content-v1"'},
+      );
     }
 
     if (request.method == 'GET' &&
@@ -264,15 +274,17 @@ final class _LearnerApiFixture {
       return _jsonResponse(_contentPayload);
     }
 
-    return _jsonResponse(
-      <String, Object?>{'code': 'NOT_FOUND', 'message': 'Unexpected request'},
-      statusCode: 404,
-    );
+    return _jsonResponse(<String, Object?>{
+      'code': 'NOT_FOUND',
+      'message': 'Unexpected request',
+    }, statusCode: 404);
   }
 
   void _requireBearer(http.Request request) {
     if (request.headers['authorization'] != 'Bearer $_token') {
-      throw StateError('Authenticated learner request is missing bearer token.');
+      throw StateError(
+        'Authenticated learner request is missing bearer token.',
+      );
     }
   }
 }
