@@ -11,14 +11,15 @@ void main() {
     controller.setUiLanguage(MockUiLanguage.kazakh);
     controller.setTranslationLanguage(MockTranslationLanguage.russian);
     controller.setAccent(MockAccent.uk);
-    controller.setLargeTextPreview(true);
+    controller.setTextScale(MockTextScalePreview.extraLarge);
     controller.setRtlPreview(true);
 
     final state = container.read(mockVisualPreferencesProvider);
     expect(state.uiLanguage, MockUiLanguage.kazakh);
     expect(state.translationLanguage, MockTranslationLanguage.russian);
     expect(state.accent, MockAccent.uk);
-    expect(state.largeTextPreview, isTrue);
+    expect(state.textScale, MockTextScalePreview.extraLarge);
+    expect(state.textScale.factor, 2.0);
     expect(state.rtlPreview, isTrue);
   });
 }
