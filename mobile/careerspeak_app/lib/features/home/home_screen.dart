@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/learner_state_providers.dart';
 import '../../app/repository_providers.dart';
+import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
 import '../../domain/content_marker_state.dart';
 import '../shared/content_card.dart';
@@ -18,7 +20,11 @@ class HomeScreen extends ConsumerWidget {
     return contentPage.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, stackTrace) => _HomeLoadError(error: error),
-      data: (page) => _HomeContent(items: page.items, markers: markers),
+      data: (page) => markers.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) => _HomeLoadError(error: error),
+        data: (values) => _HomeContent(items: page.items, markers: values),
+      ),
     );
   }
 }
@@ -27,24 +33,21 @@ class _HomeContent extends StatelessWidget {
   const _HomeContent({required this.items, required this.markers});
 
   final List<ContentItem> items;
-  final Map<String, ContentMarkerState> markers;
+  final Map<ContentIdentity, ContentMarkerState> markers;
+
+  ContentMarkerState markerFor(ContentItem item) =>
+      markers[ContentIdentity.fromItem(item)] ?? const ContentMarkerState();
 
   @override
   Widget build(BuildContext context) {
-    final completed = items
-        .where((item) => markers[item.code]?.completed ?? false)
-        .length;
-    final listened = items
-        .where((item) => markers[item.code]?.listened ?? false)
-        .length;
-    final favorites = items
-        .where((item) => markers[item.code]?.favorite ?? false)
-        .length;
+    final completed = items.where((item) => markerFor(item).completed).length;
+    final listened = items.where((item) => markerFor(item).listened).length;
+    final favorites = items.where((item) => markerFor(item).favorite).length;
     final due = items.length - completed;
 
     ContentItem? continueItem;
     for (final item in items) {
-      if (!(markers[item.code]?.completed ?? false)) {
+      if (!markerFor(item).completed) {
         continueItem = item;
         break;
       }
