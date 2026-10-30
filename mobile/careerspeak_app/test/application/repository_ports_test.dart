@@ -1,5 +1,4 @@
 import 'package:careerspeak_app/app/learner_state_providers.dart';
-import 'package:careerspeak_app/app/repository_providers.dart';
 import 'package:careerspeak_app/application/ports/content_repository.dart';
 import 'package:careerspeak_app/application/ports/learner_state_repository.dart';
 import 'package:careerspeak_app/application/ports/practice_test_repository.dart';
@@ -16,18 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('content repository port supports explicit test adapter', () async {
-    final container = ProviderContainer(
-      overrides: [
-        contentRepositoryProvider.overrideWithValue(
-          const MockContentRepository(),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    final repository = container.read(contentRepositoryProvider);
-
-    expect(repository, isA<ContentRepository>());
+    const ContentRepository repository = MockContentRepository();
 
     final page = (await repository.watchContent(const ContentQuery()).first)
         .getOrThrow();
@@ -45,18 +33,7 @@ void main() {
   });
 
   test('assessment repository port supports explicit test adapter', () async {
-    final container = ProviderContainer(
-      overrides: [
-        practiceTestRepositoryProvider.overrideWithValue(
-          const MockTestRepository(),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
-
-    final repository = container.read(practiceTestRepositoryProvider);
-
-    expect(repository, isA<PracticeTestRepository>());
+    const PracticeTestRepository repository = MockTestRepository();
 
     final page =
         (await repository.watchTests(const PracticeTestQuery()).first)
