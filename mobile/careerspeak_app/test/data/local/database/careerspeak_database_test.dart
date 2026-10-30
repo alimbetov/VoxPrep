@@ -24,6 +24,11 @@ void main() {
         .getSingle();
     expect(userVersion.read<int>('user_version'), 1);
 
+    final foreignKeys = await database
+        .customSelect('PRAGMA foreign_keys')
+        .getSingle();
+    expect(foreignKeys.read<int>('foreign_keys'), 1);
+
     final tableNames = database.allTables
         .map((table) => table.actualTableName)
         .toSet();
@@ -42,7 +47,7 @@ void main() {
     );
   });
 
-  test('singleton system tables reject ids other than one', () async {
+  test('all singleton foundation tables enforce id equals one', () async {
     final now = DateTime.utc(2026, 10, 30, 10);
 
     await database
@@ -58,8 +63,8 @@ void main() {
           ),
         );
 
-    expect(
-      () => database
+    await expectLater(
+      database
           .into(database.appPreferences)
           .insert(
             AppPreferencesCompanion.insert(
@@ -68,6 +73,56 @@ void main() {
               translationLocale: 'kk',
               themeCode: 'SYSTEM',
               createdAt: now,
+              updatedAt: now,
+            ),
+          ),
+      throwsA(anything),
+    );
+
+    await database
+        .into(database.installationRuntimeStates)
+        .insert(
+          InstallationRuntimeStatesCompanion.insert(
+            id: const Value(1),
+            registrationState: 'UNREGISTERED',
+            updatedAt: now,
+          ),
+        );
+
+    await expectLater(
+      database
+          .into(database.installationRuntimeStates)
+          .insert(
+            InstallationRuntimeStatesCompanion.insert(
+              id: const Value(2),
+              registrationState: 'UNREGISTERED',
+              updatedAt: now,
+            ),
+          ),
+      throwsA(anything),
+    );
+
+    await database
+        .into(database.contentManifestStates)
+        .insert(
+          ContentManifestStatesCompanion.insert(
+            id: const Value(1),
+            schemaVersion: 1,
+            currentContentVersion: 0,
+            currentManifestChecksum: 'bootstrap',
+            updatedAt: now,
+          ),
+        );
+
+    await expectLater(
+      database
+          .into(database.contentManifestStates)
+          .insert(
+            ContentManifestStatesCompanion.insert(
+              id: const Value(2),
+              schemaVersion: 1,
+              currentContentVersion: 0,
+              currentManifestChecksum: 'bootstrap',
               updatedAt: now,
             ),
           ),
@@ -92,12 +147,63 @@ void main() {
 
       await database.into(database.contentPackRevisions).insert(row);
 
-      expect(
-        () => database.into(database.contentPackRevisions).insert(row),
+      await expectLater(
+        database.into(database.contentPackRevisions).insert(row),
         throwsA(anything),
       );
     },
   );
+
+  test('local content identity includes revision', () async {
+    final now = DateTime.utc(2026, 10, 30, 10);
+
+    LocalContentRecordsCompanion row(int revision) =>
+        LocalContentRecordsCompanion.insert(
+          contentCode: 'JAVA_DI_001',
+          contentType: 'INTERVIEW',
+          revision: revision,
+          checksum: 'sha256:content-$revision',
+          snapshotState: 'CURRENT',
+          sourceSchemaVersion: 1,
+          createdAt: now,
+        );
+
+    await database.into(database.localContentRecords).insert(row(1));
+    await database.into(database.localContentRecords).insert(row(2));
+
+    expect(await database.select(database.localContentRecords).get(), hasLength(2));
+
+    await expectLater(
+      database.into(database.localContentRecords).insert(row(1)),
+      throwsA(anything),
+    );
+  });
+
+  test('learner identities reject duplicate business keys', () async {
+    final now = DateTime.utc(2026, 10, 30, 10);
+
+    final favorite = FavoritesCompanion.insert(
+      contentCode: 'JAVA_DI_001',
+      contentType: 'INTERVIEW',
+      createdAt: now,
+    );
+    await database.into(database.favorites).insert(favorite);
+    await expectLater(
+      database.into(database.favorites).insert(favorite),
+      throwsA(anything),
+    );
+
+    final learningState = ContentLearningStatesCompanion.insert(
+      contentCode: 'JAVA_DI_001',
+      contentType: 'INTERVIEW',
+      updatedAt: now,
+    );
+    await database.into(database.contentLearningStates).insert(learningState);
+    await expectLater(
+      database.into(database.contentLearningStates).insert(learningState),
+      throwsA(anything),
+    );
+  });
 
   test('learner state remains after disposable content is deleted', () async {
     final now = DateTime.utc(2026, 10, 30, 10);
