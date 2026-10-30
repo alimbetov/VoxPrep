@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/mock/mock_test_repository.dart';
+import '../../app/repository_providers.dart';
 import '../../domain/mock_practice_test.dart';
 import 'mock_test_session_controller.dart';
 
@@ -12,11 +12,11 @@ class TestSessionScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(mockTestRepositoryProvider);
+    final repository = ref.watch(practiceTestRepositoryProvider);
     final test = repository.byCode(code);
 
     if (test == null) {
-      return const Center(child: Text('Mock test not found.'));
+      return const Center(child: Text('Test not found.'));
     }
 
     final session = ref.watch(mockTestSessionProvider);
@@ -64,14 +64,17 @@ class _TestIntro extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Mock session', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Practice session',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 12),
                 Text('${test.questions.length} questions'),
                 const SizedBox(height: 6),
                 Text('Mode: ${test.mode.name.toUpperCase()}'),
                 const SizedBox(height: 12),
                 const Text(
-                  'Answers stay in Riverpod memory only. This qualifies the assessment UX before Drift persistence is connected.',
+                  'Session state remains in Riverpod during P2. Persistent attempt storage is introduced by a later production adapter slice.',
                 ),
               ],
             ),
@@ -83,7 +86,7 @@ class _TestIntro extends StatelessWidget {
           child: FilledButton.icon(
             onPressed: onStart,
             icon: const Icon(Icons.play_arrow),
-            label: const Text('Start mock test'),
+            label: const Text('Start test'),
           ),
         ),
       ],
@@ -130,7 +133,8 @@ class _QuestionSession extends ConsumerWidget {
             total: test.questions.length,
             current: session.currentIndex,
             answered: session.answers.keys.toSet(),
-            onSelect: (index) => controller.goTo(index, test.questions.length),
+            onSelect: (index) =>
+                controller.goTo(index, test.questions.length),
           ),
         ),
       ],
@@ -201,7 +205,10 @@ class _QuestionPane extends StatelessWidget {
           value: (session.currentIndex + 1) / test.questions.length,
         ),
         const SizedBox(height: 28),
-        Text(question.prompt, style: Theme.of(context).textTheme.headlineSmall),
+        Text(
+          question.prompt,
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
         const SizedBox(height: 20),
         RadioGroup<int>(
           groupValue: selected,
@@ -387,7 +394,10 @@ class _TestResult extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-        Text('Review answers', style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          'Review answers',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 12),
         for (var index = 0; index < test.questions.length; index++)
           _AnswerReview(
@@ -414,9 +424,8 @@ class _AnswerReview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final correct = selectedIndex == question.correctIndex;
-    final selectedText = selectedIndex == null
-        ? 'No answer'
-        : question.options[selectedIndex!];
+    final selectedText =
+        selectedIndex == null ? 'No answer' : question.options[selectedIndex!];
     final correctText = question.options[question.correctIndex];
 
     return Card(
