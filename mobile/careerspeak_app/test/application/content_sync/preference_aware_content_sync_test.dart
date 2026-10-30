@@ -4,6 +4,7 @@ import 'package:careerspeak_app/application/content_sync/content_sync_planner.da
 import 'package:careerspeak_app/application/content_sync/preference_aware_content_sync.dart';
 import 'package:careerspeak_app/application/content_sync/sync_models.dart';
 import 'package:careerspeak_app/application/ports/app_preferences_repository.dart';
+import 'package:careerspeak_app/application/ports/content_manifest_gateway.dart';
 import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/domain/application_preferences.dart';
 import 'package:flutter_test/flutter_test.dart';
