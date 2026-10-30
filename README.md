@@ -1,6 +1,6 @@
 # CareerSpeak
 
-**CareerSpeak** is a global mobile learning application for IELTS preparation and professional English/job interview training.
+**CareerSpeak** is a mobile application for IELTS preparation, professional English and international job-interview training.
 
 Repository codename: **VoxPrep**.
 
@@ -10,9 +10,9 @@ Repository codename: **VoxPrep**.
 LEARN → LISTEN → REPEAT → TEST → REVIEW
 ```
 
-The product is designed as a low-runtime-cost, content-driven platform with pre-recorded English audio, curated learning content, profession-specific interview preparation and reusable mock tests.
+CareerSpeak is an English-only learning product. Other supported languages are used for UI localization, translations, hints and explanations.
 
-## MVP domains
+## Core product areas
 
 - IELTS Vocabulary, collocations and contextual examples
 - IELTS Speaking and IELTS-style Mock Tests
@@ -20,103 +20,126 @@ The product is designed as a low-runtime-cost, content-driven platform with pre-
 - General / HR / Behavioral / STAR interviews
 - Profession-specific interview tracks
 - Reusable Question Bank and Practice Tests
-- Favorites, progress and review stored locally by default
+- Local favorites, progress and review
 - Offline content packs
-- Python Moderator Desktop
+- Web-based Content Studio
+- Pre-generated reviewed audio
 
-## Globalization model
-
-CareerSpeak teaches **English**. Other supported languages are used for:
-
-- application UI;
-- vocabulary translation;
-- localized hints;
-- localized explanations and supporting guidance.
-
-Initial locales:
+## Architecture baseline v0.4
 
 ```text
-en  English
-ru  Russian
-kk  Kazakh
+Learners
+   │
+   ▼
+Flutter Mobile
+   │
+   ├──────────────► CareerSpeak REST API
+   │                       │
+   │                       ▼
+   │                   PostgreSQL
+   │
+   └──────────────► CDN / DigitalOcean Spaces
+
+Content team
+   │
+   ▼
+Browser
+   │
+   ▼
+Spring MVC Content Studio
+   │
+   ▼
+PostgreSQL TTS Jobs
+   │
+   ▼
+Local Headless Piper Worker
+Python + Piper + FFmpeg
+   │
+   ▼
+DigitalOcean Spaces / CDN
 ```
 
-Planned expansion includes Uzbek, Kyrgyz, Ukrainian, Turkish, Spanish, Portuguese, Hindi, Urdu, Arabic, Bengali, Indonesian, Vietnamese, French and German.
+The backend is a **Spring Boot modular monolith**. MVP does not require Eureka, a separate API Gateway, RabbitMQ, Kafka, Redis, Kubernetes, JavaFX or a PySide6 moderator UI.
 
-The application does not require GPS solely to select a locale. Locale selection is based on explicit app settings and OS locale/region with English fallback.
+## Technology baseline
+
+- Flutter — learner mobile application
+- Java 21 + Spring Boot — backend
+- Spring MVC + Thymeleaf + HTMX — Content Studio
+- Spring Security — moderator/admin security
+- PostgreSQL + Liquibase — persistence
+- Python + Piper + FFmpeg — headless TTS worker
+- DigitalOcean Managed PostgreSQL — production database target
+- DigitalOcean Spaces + CDN — published media target
+- Docker — backend packaging
+
+## TTS model
+
+TTS is a **content-production pipeline**, not a learner runtime dependency.
+
+```text
+DRAFT
+  ↓
+READY_FOR_AUDIO
+  ↓
+AUDIO_PENDING
+  ↓
+AUDIO_GENERATING
+  ↓
+AUDIO_READY
+  ↓
+REVIEW
+  ↓
+PUBLISHED
+```
+
+The worker runs independently, claims durable jobs over authenticated HTTPS, generates speech with Piper, converts/validates it with FFmpeg, uploads production media, and reports completion. Learners consume already-published immutable audio from CDN.
 
 ## Privacy model
 
-CareerSpeak does not require a personal learner account.
+CareerSpeak does not require a personal learner account in MVP.
 
-A random technical `installationId` may be generated for security, entitlement and API abuse protection. It is not derived from hardware identifiers and is not used to build a server-side learning profile.
+Learner state such as favorites, progress, test attempts and downloads remains local by default.
 
-Learning history, favorites, test results, review state and preferences are local-first.
+A random `installationId` may be used only for technical purposes such as entitlement/security/abuse protection and must not become a learner profile.
 
-## Architecture
+Locale selection uses explicit user choice and OS locale/region; GPS is not required for language selection.
 
-Initial target stack:
+## Specifications
 
-- Flutter — mobile application
-- Python + PySide6 — moderator desktop
-- Java 21 + Spring Boot — backend
-- PostgreSQL
-- RustFS — S3-compatible media origin
-- CDN/edge layer for global audio delivery
-- Liquibase
-- Docker
-- DigitalOcean production infrastructure
+- [System Requirements & Architecture Specification v0.4](docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
+- [Globalization & Localization Requirements](docs/specification/CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
+- [Spring MVC + Local Headless Piper Worker Architecture](docs/architecture/CAREERSPEAK_TTS_PIPELINE.md)
 
-The MVP backend is planned as a modular Spring Boot application with logical domains:
+## Current stage
 
 ```text
-ADMINISTRATION
-LOCALIZATION
-CONTENT
-ASSESSMENT
-MEDIA
-INSTALLATION SECURITY
+P0 — System Design
 ```
 
-Microservice decomposition, Eureka and Spring Cloud Gateway are optional later decisions rather than mandatory MVP infrastructure.
+Next deliverables:
 
-## Specification
-
-Core architecture and product requirements:
-
-[`docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md`](docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
-
-Globalization, localization and privacy requirements:
-
-[`docs/specification/CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md`](docs/specification/CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
-
-Current specification set: **0.3**.
-
-The globalization document is a normative extension of the original v0.2 system-requirements baseline and clarifies that English is the fixed learning language; other languages are presentation/translation locales.
-
-## Current status
-
-```text
-P0 — Foundation / System Design
-```
-
-Next design deliverables:
-
-1. C4 System Context diagram
-2. C4 Container diagram
-3. Bounded Context Map
-4. PostgreSQL ERD
-5. Locale and translation ERD
-6. Hint localization model
-7. Installation identity/security flow
-8. Content Publishing sequence
-9. File upload/download sequence
-10. Mock Test execution sequence
-11. Offline synchronization and locale-delta design
-12. Initial OpenAPI contracts
-13. ADR baseline
-14. P0 implementation backlog
+1. Domain map
+2. PostgreSQL ERD
+3. Content revision model
+4. Localization model
+5. Assessment model
+6. TTS/job ERD
+7. Media model
+8. Content manifest/offline pack model
+9. API contracts
+10. ADR baseline
+11. P0 implementation backlog
 
 ## Commercial model
 
-Initial product strategy: one-time paid application, no mandatory subscription and no mandatory AI/STT/TTS runtime cost per learner.
+Initial strategy:
+
+```text
+One-time purchase
+No mandatory subscription
+No ads
+No learner runtime AI/STT/TTS cost
+```
+
+The product differentiator is curated English content for IELTS and profession-specific international interviews, supported by reusable tests, multilingual hints and pre-generated audio.
