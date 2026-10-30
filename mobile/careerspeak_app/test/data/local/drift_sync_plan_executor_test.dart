@@ -1,7 +1,9 @@
 import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
+import 'package:careerspeak_app/application/content_delivery/content_payload.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_planner.dart';
 import 'package:careerspeak_app/application/content_sync/sync_models.dart';
 import 'package:careerspeak_app/application/ports/content_manifest_gateway.dart';
+import 'package:careerspeak_app/application/ports/content_payload_gateway.dart';
 import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart'
     hide ContentAssetRef, PackContentRef;
@@ -37,79 +39,93 @@ void main() {
     await database.close();
   });
 
-  test('stages pack metadata and atomically activates CURRENT root', () async {
-    final target = _targetPack();
-    final root = _root(contentVersion: 109, pack: target);
-    final plan = const ContentSyncPlanner()
-        .plan(
-          local: SyncLocalSnapshot(
-            currentContentVersion: null,
-            currentManifestChecksum: null,
-            etag: null,
-            currentPacks: const <PackRevisionRef>[],
-          ),
-          remote: root,
-        )
-        .getOrThrow();
-    final journal = DriftSyncJournal(database, now: () => now);
-    await _prepareRun(journal, plan);
+  test(
+    'stages exact payload and atomically activates CURRENT root',
+    () async {
+      final target = _targetPack();
+      final root = _root(contentVersion: 109, pack: target);
+      final plan = const ContentSyncPlanner()
+          .plan(
+            local: SyncLocalSnapshot(
+              currentContentVersion: null,
+              currentManifestChecksum: null,
+              etag: null,
+              currentPacks: const <PackRevisionRef>[],
+            ),
+            remote: root,
+          )
+          .getOrThrow();
+      final journal = DriftSyncJournal(database, now: () => now);
+      await _prepareRun(journal, plan);
 
-    await database
-        .into(database.favorites)
-        .insert(
-          FavoritesCompanion.insert(
-            contentCode: 'JAVA_Q_001',
-            contentType: 'INTERVIEW',
-            createdAt: now,
-          ),
-        );
+      await database
+          .into(database.favorites)
+          .insert(
+            FavoritesCompanion.insert(
+              contentCode: 'JAVA_Q_001',
+              contentType: 'INTERVIEW',
+              createdAt: now,
+            ),
+          );
 
-    final executor = DriftSyncPlanExecutor(
-      database,
-      _PackGateway(_packManifest(target)),
-      now: () => now,
-    );
-    final result = await executor.execute(runId: 'run-1', plan: plan);
+      final executor = DriftSyncPlanExecutor(
+        database,
+        _PackGateway(_packManifest(target)),
+        const _PayloadGateway(),
+        now: () => now,
+      );
+      final result = await executor.execute(runId: 'run-1', plan: plan);
 
-    expect(result, isA<Success<void>>());
+      expect(result, isA<Success<void>>());
 
-    final manifestState = await database
-        .select(database.contentManifestStates)
-        .getSingle();
-    expect(manifestState.currentContentVersion, 109);
-    expect(manifestState.currentManifestChecksum, _root109);
+      final manifestState = await database
+          .select(database.contentManifestStates)
+          .getSingle();
+      expect(manifestState.currentContentVersion, 109);
+      expect(manifestState.currentManifestChecksum, _root109);
 
-    final pack = await database
-        .select(database.contentPackRevisions)
-        .getSingle();
-    expect(pack.state, 'CURRENT');
-    expect(pack.revision, 8);
+      final pack = await database
+          .select(database.contentPackRevisions)
+          .getSingle();
+      expect(pack.state, 'CURRENT');
+      expect(pack.revision, 8);
 
-    final content = await database
-        .select(database.localContentRecords)
-        .getSingle();
-    expect(content.snapshotState, 'CURRENT');
-    expect(content.contentCode, 'JAVA_Q_001');
+      final content = await database
+          .select(database.localContentRecords)
+          .getSingle();
+      expect(content.snapshotState, 'CURRENT');
+      expect(content.contentCode, 'JAVA_Q_001');
 
-    final asset = await database.select(database.assetCatalog).getSingle();
-    expect(asset.assetKind, 'AUDIO');
-    expect(asset.mimeType, 'audio/mpeg');
-    expect(await database.select(database.packContentRefs).get(), hasLength(1));
-    expect(
-      await database.select(database.contentAssetRefs).get(),
-      hasLength(1),
-    );
-    expect(await database.select(database.packAssetRefs).get(), hasLength(1));
+      final payload = await database
+          .select(database.contentCatalogReads)
+          .getSingle();
+      expect(payload.contentCode, 'JAVA_Q_001');
+      expect(payload.contentType, 'INTERVIEW');
+      expect(payload.revision, 1);
+      expect(payload.checksum, _contentHash);
+      expect(payload.title, 'Dependency Injection');
+      expect(payload.minutes, 6);
 
-    final update = await database.select(database.syncPackUpdates).getSingle();
-    expect(update.state, SyncPackUpdateState.committed.storageCode);
-    final run = await database.select(database.syncRuns).getSingle();
-    expect(run.state, SyncRunState.cleaning.storageCode);
-    expect(await database.select(database.favorites).get(), hasLength(1));
-  });
+      final asset = await database.select(database.assetCatalog).getSingle();
+      expect(asset.assetKind, 'AUDIO');
+      expect(asset.mimeType, 'audio/mpeg');
+      expect(await database.select(database.packContentRefs).get(), hasLength(1));
+      expect(
+        await database.select(database.contentAssetRefs).get(),
+        hasLength(1),
+      );
+      expect(await database.select(database.packAssetRefs).get(), hasLength(1));
+
+      final update = await database.select(database.syncPackUpdates).getSingle();
+      expect(update.state, SyncPackUpdateState.committed.storageCode);
+      final run = await database.select(database.syncRuns).getSingle();
+      expect(run.state, SyncRunState.cleaning.storageCode);
+      expect(await database.select(database.favorites).get(), hasLength(1));
+    },
+  );
 
   test(
-    'commit conflict rolls back and preserves previous CURRENT snapshot',
+    'commit conflict keeps staged payload hidden and preserves previous CURRENT',
     () async {
       await _seedCurrentSnapshot(database, now);
 
@@ -153,6 +169,7 @@ void main() {
       final executor = DriftSyncPlanExecutor(
         database,
         _PackGateway(_packManifest(target)),
+        const _PayloadGateway(),
         now: () => now,
       );
       final result = await executor.execute(runId: 'run-1', plan: plan);
@@ -175,8 +192,69 @@ void main() {
         database.localContentRecords,
       )..where((row) => row.contentCode.equals('OLD_Q_001'))).getSingle();
       expect(oldContent.snapshotState, 'CURRENT');
+
+      final stagedContent = await (database.select(
+        database.localContentRecords,
+      )..where((row) => row.contentCode.equals('JAVA_Q_001'))).getSingle();
+      expect(stagedContent.snapshotState, 'STAGED');
+      expect(
+        await (database.select(
+          database.contentCatalogReads,
+        )..where((row) => row.contentCode.equals('JAVA_Q_001'))).get(),
+        hasLength(1),
+      );
+
+      final visible = await database.customSelect('''
+        SELECT r.content_code
+        FROM content_catalog_reads r
+        INNER JOIN local_content_records l
+          ON l.content_code = r.content_code
+         AND l.content_type = r.content_type
+         AND l.revision = r.revision
+        WHERE l.snapshot_state = 'CURRENT'
+        ORDER BY r.content_code
+      ''').get();
+      expect(
+        visible.map((row) => row.read<String>('content_code')).toList(),
+        <String>['OLD_Q_001'],
+      );
     },
   );
+
+  test('payload mismatch fails before any local pack staging', () async {
+    final target = _targetPack();
+    final root = _root(contentVersion: 109, pack: target);
+    final plan = const ContentSyncPlanner()
+        .plan(
+          local: SyncLocalSnapshot(
+            currentContentVersion: null,
+            currentManifestChecksum: null,
+            etag: null,
+            currentPacks: const <PackRevisionRef>[],
+          ),
+          remote: root,
+        )
+        .getOrThrow();
+    final journal = DriftSyncJournal(database, now: () => now);
+    await _prepareRun(journal, plan);
+
+    final executor = DriftSyncPlanExecutor(
+      database,
+      _PackGateway(_packManifest(target)),
+      const _PayloadGateway(mismatched: true),
+      now: () => now,
+    );
+    final result = await executor.execute(runId: 'run-1', plan: plan);
+
+    expect(result, isA<FailureResult<void>>());
+    expect(
+      (result as FailureResult<void>).failure.code,
+      'CONTENT_PAYLOAD_MISMATCH',
+    );
+    expect(await database.select(database.contentPackRevisions).get(), isEmpty);
+    expect(await database.select(database.localContentRecords).get(), isEmpty);
+    expect(await database.select(database.contentCatalogReads).get(), isEmpty);
+  });
 }
 
 Future<void> _prepareRun(DriftSyncJournal journal, SyncPlan plan) async {
@@ -298,6 +376,24 @@ Future<void> _seedCurrentSnapshot(
         ),
       );
   await database
+      .into(database.contentCatalogReads)
+      .insert(
+        ContentCatalogReadsCompanion.insert(
+          contentCode: 'OLD_Q_001',
+          contentType: 'INTERVIEW',
+          revision: 1,
+          checksum: _contentHash,
+          title: 'Old question',
+          subtitle: 'Previous revision',
+          description: 'Last-known-good learner payload',
+          category: 'Java Backend',
+          level: 'Senior',
+          minutes: 5,
+          hasAudio: true,
+          createdAt: now,
+        ),
+      );
+  await database
       .into(database.packContentRefs)
       .insert(
         PackContentRefsCompanion.insert(
@@ -331,5 +427,32 @@ final class _PackGateway implements ContentManifestGateway {
     PackRevisionRef target,
   ) async {
     return Success(pack);
+  }
+}
+
+final class _PayloadGateway implements ContentPayloadGateway {
+  const _PayloadGateway({this.mismatched = false});
+
+  final bool mismatched;
+
+  @override
+  Future<Result<ContentPayload>> fetch(ContentPayloadRef target) async {
+    final ref = ContentPayloadRef(
+      identity: target.identity,
+      revision: target.revision,
+      checksum: mismatched ? _root108 : target.checksum,
+    );
+    return Success<ContentPayload>(
+      ContentPayload(
+        ref: ref,
+        title: 'Dependency Injection',
+        subtitle: 'Java Backend',
+        description: 'Explain constructor injection and its tradeoffs.',
+        category: 'Java Backend',
+        level: 'Senior',
+        minutes: 6,
+        hasAudio: true,
+      ),
+    );
   }
 }
