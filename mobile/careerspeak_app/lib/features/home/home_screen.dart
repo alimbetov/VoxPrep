@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/mock/mock_content_repository.dart';
+import '../../app/repository_providers.dart';
 import '../../domain/content_marker_state.dart';
 import '../shared/content_card.dart';
 
@@ -11,7 +11,7 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(mockContentRepositoryProvider);
+    final repository = ref.watch(contentRepositoryProvider);
     final markers = ref.watch(contentMarkersProvider);
     final items = repository.all;
 
