@@ -23,9 +23,27 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final repository = ref.watch(contentRepositoryProvider);
+    final contentPage = ref.watch(contentPageProvider);
     final markers = ref.watch(contentMarkersProvider);
-    final filtered = repository.all.where((item) {
+
+    return contentPage.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('Unable to load learning content.\n$error'),
+        ),
+      ),
+      data: (page) => _buildContent(context, page.items, markers),
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context,
+    List<ContentItem> items,
+    Map<String, ContentMarkerState> markers,
+  ) {
+    final filtered = items.where((item) {
       final marker = markers[item.code] ?? const ContentMarkerState();
       final normalizedQuery = query.toLowerCase();
       final matchesQuery = query.isEmpty ||
@@ -39,7 +57,7 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
         _LearnFilter.notListened => !marker.listened,
         _LearnFilter.notCompleted => !marker.completed,
       };
-    }).toList();
+    }).toList(growable: false);
 
     final wide = MediaQuery.sizeOf(context).width >= 840;
     if (!wide) {
@@ -153,7 +171,7 @@ class _CatalogList extends StatelessWidget {
         if (filtered.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 48),
-            child: Center(child: Text('No mock content matches this filter.')),
+            child: Center(child: Text('No content matches this filter.')),
           )
         else
           for (final item in filtered)
