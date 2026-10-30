@@ -42,7 +42,9 @@ final class ContentPayload {
     required String title,
     required String subtitle,
     required String description,
+    required String categoryCode,
     required String category,
+    required String levelCode,
     required String level,
     required int minutes,
     required bool hasAudio,
@@ -55,7 +57,9 @@ final class ContentPayload {
       title: _requireNonBlank(title, 'title'),
       subtitle: _requireNonBlank(subtitle, 'subtitle'),
       description: _requireNonBlank(description, 'description'),
+      categoryCode: _requireStableCode(categoryCode, 'categoryCode'),
       category: _requireNonBlank(category, 'category'),
+      levelCode: _requireStableCode(levelCode, 'levelCode'),
       level: _requireNonBlank(level, 'level'),
       minutes: minutes,
       hasAudio: hasAudio,
@@ -67,7 +71,9 @@ final class ContentPayload {
     required this.title,
     required this.subtitle,
     required this.description,
+    required this.categoryCode,
     required this.category,
+    required this.levelCode,
     required this.level,
     required this.minutes,
     required this.hasAudio,
@@ -77,7 +83,9 @@ final class ContentPayload {
   final String title;
   final String subtitle;
   final String description;
+  final String categoryCode;
   final String category;
+  final String levelCode;
   final String level;
   final int minutes;
   final bool hasAudio;
@@ -106,4 +114,17 @@ String _requireNonBlank(String value, String fieldName) {
   return normalized;
 }
 
+String _requireStableCode(String value, String fieldName) {
+  final normalized = value.trim();
+  if (!_stableCodePattern.hasMatch(normalized)) {
+    throw ArgumentError.value(
+      value,
+      fieldName,
+      'must be an uppercase stable business code',
+    );
+  }
+  return normalized;
+}
+
 final _sha256Pattern = RegExp(r'^[0-9a-f]{64}$');
+final _stableCodePattern = RegExp(r'^[A-Z0-9][A-Z0-9._-]*$');
