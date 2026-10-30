@@ -55,7 +55,7 @@ jobs:
         run: python -m compileall -q src tests
 
       - name: Run worker tests with production-path coverage gate
-        run: pytest --cov=voxprep_tts_worker --cov-branch --cov-report=term-missing --cov-fail-under=85
+        run: pytest --cov=voxprep_tts_worker --cov-branch --cov-report=term-missing --cov-fail-under=90
 
   container:
     runs-on: ubuntu-latest
