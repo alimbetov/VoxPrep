@@ -7,7 +7,11 @@ from contextlib import nullcontext
 from pathlib import Path
 
 from voxprep_tts_worker.application.heartbeat import LeaseHeartbeat
-from voxprep_tts_worker.domain.errors import LeaseLostError, WorkerError
+from voxprep_tts_worker.domain.errors import (
+    BackendTransportError,
+    LeaseLostError,
+    WorkerError,
+)
 from voxprep_tts_worker.domain.job import ClaimedJob
 from voxprep_tts_worker.ports.backend import BackendPort, ModelCachePort
 from voxprep_tts_worker.ports.synthesizer import PostprocessorPort, SynthesizerPort
@@ -76,7 +80,7 @@ class JobProcessor:
                     output_mp3=output_mp3,
                 )
                 if heartbeat is not None:
-                    heartbeat.assert_owned()
+                    heartbeat.revalidate()
 
                 self._backend.upload_output(
                     worker_id=self._worker_id,
@@ -88,6 +92,12 @@ class JobProcessor:
                 "lease lost; result will not be finalized",
                 extra={"worker_id": self._worker_id, "job_id": job.job_id, "file_id": job.file_id},
             )
+        except BackendTransportError:
+            logger.warning(
+                "backend unavailable; job will recover through lease semantics",
+                extra={"worker_id": self._worker_id, "job_id": job.job_id, "file_id": job.file_id},
+                exc_info=True,
+            )
         except WorkerError as exc:
             logger.exception(
                 "classified worker failure",
@@ -95,7 +105,7 @@ class JobProcessor:
             )
             try:
                 if heartbeat is not None:
-                    heartbeat.assert_owned()
+                    heartbeat.revalidate()
                 self._backend.fail(
                     worker_id=self._worker_id,
                     job=job,
@@ -106,6 +116,12 @@ class JobProcessor:
                 logger.warning(
                     "lease lost before failure could be reported",
                     extra={"worker_id": self._worker_id, "job_id": job.job_id},
+                )
+            except BackendTransportError:
+                logger.warning(
+                    "backend unavailable while reporting failure; lease recovery will retry the job",
+                    extra={"worker_id": self._worker_id, "job_id": job.job_id},
+                    exc_info=True,
                 )
         finally:
             shutil.rmtree(job_dir, ignore_errors=True)
