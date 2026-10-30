@@ -71,8 +71,8 @@ class MockVisualPreferences {
 
 final mockVisualPreferencesProvider =
     NotifierProvider<MockVisualPreferencesController, MockVisualPreferences>(
-  MockVisualPreferencesController.new,
-);
+      MockVisualPreferencesController.new,
+    );
 
 class MockVisualPreferencesController extends Notifier<MockVisualPreferences> {
   @override

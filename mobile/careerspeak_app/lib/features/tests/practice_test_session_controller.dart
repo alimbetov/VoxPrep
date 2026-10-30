@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class MockTestSessionState {
-  const MockTestSessionState({
+class PracticeTestSessionState {
+  const PracticeTestSessionState({
     this.testCode,
     this.currentIndex = 0,
     this.answers = const {},
@@ -15,13 +15,13 @@ class MockTestSessionState {
 
   bool get started => testCode != null;
 
-  MockTestSessionState copyWith({
+  PracticeTestSessionState copyWith({
     String? testCode,
     int? currentIndex,
     Map<int, int>? answers,
     bool? submitted,
   }) {
-    return MockTestSessionState(
+    return PracticeTestSessionState(
       testCode: testCode ?? this.testCode,
       currentIndex: currentIndex ?? this.currentIndex,
       answers: answers ?? this.answers,
@@ -30,17 +30,17 @@ class MockTestSessionState {
   }
 }
 
-final mockTestSessionProvider =
-    NotifierProvider<MockTestSessionController, MockTestSessionState>(
-  MockTestSessionController.new,
-);
+final practiceTestSessionProvider =
+    NotifierProvider<PracticeTestSessionController, PracticeTestSessionState>(
+      PracticeTestSessionController.new,
+    );
 
-class MockTestSessionController extends Notifier<MockTestSessionState> {
+class PracticeTestSessionController extends Notifier<PracticeTestSessionState> {
   @override
-  MockTestSessionState build() => const MockTestSessionState();
+  PracticeTestSessionState build() => const PracticeTestSessionState();
 
   void start(String testCode) {
-    state = MockTestSessionState(testCode: testCode);
+    state = PracticeTestSessionState(testCode: testCode);
   }
 
   void selectAnswer(int optionIndex) {
@@ -71,6 +71,6 @@ class MockTestSessionController extends Notifier<MockTestSessionState> {
   }
 
   void reset() {
-    state = const MockTestSessionState();
+    state = const PracticeTestSessionState();
   }
 }

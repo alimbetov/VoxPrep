@@ -1,0 +1,64 @@
+name: Flutter Production Adapters
+
+on:
+  push:
+    branches:
+      - feat/p2-flutter-production-adapters
+    paths:
+      - 'mobile/careerspeak_app/**'
+      - '.github/workflows/flutter-production-adapters.yml'
+  pull_request:
+    paths:
+      - 'mobile/careerspeak_app/**'
+      - '.github/workflows/flutter-production-adapters.yml'
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Lockfile reproducibility
+        run: git diff --exit-code -- pubspec.lock
+
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Drift codegen
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Drift schema snapshot
+        run: |
+          dart run drift_dev schema dump \
+            lib/data/local/database/careerspeak_database.dart \
+            drift_schemas/drift_schema_v1.json
+
+      - name: Generated baseline reproducibility
+        run: |
+          git diff --exit-code -- \
+            lib/data/local/database/careerspeak_database.g.dart \
+            drift_schemas/drift_schema_v1.json
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test

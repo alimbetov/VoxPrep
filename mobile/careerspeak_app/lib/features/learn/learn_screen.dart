@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/mock/mock_content_repository.dart';
+import '../../app/learner_state_providers.dart';
+import '../../app/repository_providers.dart';
+import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
 import '../../domain/content_marker_state.dart';
 import '../content/content_detail_panel.dart';
@@ -23,23 +25,56 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final repository = ref.watch(mockContentRepositoryProvider);
+    final contentPage = ref.watch(contentPageProvider);
     final markers = ref.watch(contentMarkersProvider);
-    final filtered = repository.all.where((item) {
-      final marker = markers[item.code] ?? const ContentMarkerState();
-      final normalizedQuery = query.toLowerCase();
-      final matchesQuery = query.isEmpty ||
-          item.title.toLowerCase().contains(normalizedQuery) ||
-          item.subtitle.toLowerCase().contains(normalizedQuery);
-      if (!matchesQuery) return false;
 
-      return switch (filter) {
-        _LearnFilter.all => true,
-        _LearnFilter.favorites => marker.favorite,
-        _LearnFilter.notListened => !marker.listened,
-        _LearnFilter.notCompleted => !marker.completed,
-      };
-    }).toList();
+    return contentPage.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('Unable to load learning content.\n$error'),
+        ),
+      ),
+      data: (page) => markers.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text('Unable to load learner state.\n$error'),
+          ),
+        ),
+        data: (values) => _buildContent(context, page.items, values),
+      ),
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context,
+    List<ContentItem> items,
+    Map<ContentIdentity, ContentMarkerState> markers,
+  ) {
+    ContentMarkerState markerFor(ContentItem item) =>
+        markers[ContentIdentity.fromItem(item)] ?? const ContentMarkerState();
+
+    final filtered = items
+        .where((item) {
+          final marker = markerFor(item);
+          final normalizedQuery = query.toLowerCase();
+          final matchesQuery =
+              query.isEmpty ||
+              item.title.toLowerCase().contains(normalizedQuery) ||
+              item.subtitle.toLowerCase().contains(normalizedQuery);
+          if (!matchesQuery) return false;
+
+          return switch (filter) {
+            _LearnFilter.all => true,
+            _LearnFilter.favorites => marker.favorite,
+            _LearnFilter.notListened => !marker.listened,
+            _LearnFilter.notCompleted => !marker.completed,
+          };
+        })
+        .toList(growable: false);
 
     final wide = MediaQuery.sizeOf(context).width >= 840;
     if (!wide) {
@@ -53,7 +88,9 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
     }
 
     final selectedItem = _effectiveSelection(filtered);
-    final catalogueWidth = MediaQuery.sizeOf(context).width >= 1200 ? 420.0 : 360.0;
+    final catalogueWidth = MediaQuery.sizeOf(context).width >= 1200
+        ? 420.0
+        : 360.0;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -152,14 +189,16 @@ class _CatalogList extends StatelessWidget {
         if (filtered.isEmpty)
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 48),
-            child: Center(child: Text('No mock content matches this filter.')),
+            child: Center(child: Text('No content matches this filter.')),
           )
         else
           for (final item in filtered)
             ContentCard(
               item: item,
               selected: item.code == selectedCode,
-              onTap: onItemSelected == null ? null : () => onItemSelected!(item),
+              onTap: onItemSelected == null
+                  ? null
+                  : () => onItemSelected!(item),
             ),
       ],
     );

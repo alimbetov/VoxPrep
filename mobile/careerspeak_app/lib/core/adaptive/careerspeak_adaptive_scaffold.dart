@@ -18,13 +18,19 @@ class CareerSpeakAdaptiveScaffold extends StatelessWidget {
     _Destination('/learn', 'Learn', Icons.school_outlined, Icons.school),
     _Destination('/tests', 'Tests', Icons.quiz_outlined, Icons.quiz),
     _Destination('/review', 'Review', Icons.replay_outlined, Icons.replay),
-    _Destination('/settings', 'Settings', Icons.settings_outlined, Icons.settings),
+    _Destination(
+      '/settings',
+      'Settings',
+      Icons.settings_outlined,
+      Icons.settings,
+    ),
   ];
 
   int get _selectedIndex {
     if (location.startsWith('/content/')) return 1;
     final index = _destinations.indexWhere(
-      (destination) => destination.path != '/' && location.startsWith(destination.path),
+      (destination) =>
+          destination.path != '/' && location.startsWith(destination.path),
     );
     return index < 0 ? 0 : index;
   }
@@ -65,7 +71,9 @@ class CareerSpeakAdaptiveScaffold extends StatelessWidget {
             NavigationRail(
               selectedIndex: _selectedIndex,
               extended: large,
-              labelType: large ? NavigationRailLabelType.none : NavigationRailLabelType.all,
+              labelType: large
+                  ? NavigationRailLabelType.none
+                  : NavigationRailLabelType.all,
               onDestinationSelected: (index) => _go(context, index),
               destinations: [
                 for (final destination in _destinations)
@@ -86,12 +94,7 @@ class CareerSpeakAdaptiveScaffold extends StatelessWidget {
 }
 
 class _Destination {
-  const _Destination(
-    this.path,
-    this.label,
-    this.icon,
-    this.selectedIcon,
-  );
+  const _Destination(this.path, this.label, this.icon, this.selectedIcon);
 
   final String path;
   final String label;

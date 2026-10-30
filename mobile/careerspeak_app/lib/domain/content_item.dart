@@ -1,10 +1,4 @@
-enum ContentType {
-  vocabulary,
-  interview,
-  topic,
-  shadowing,
-  phrase,
-}
+enum ContentType { vocabulary, interview, topic, shadowing, phrase }
 
 class ContentItem {
   const ContentItem({

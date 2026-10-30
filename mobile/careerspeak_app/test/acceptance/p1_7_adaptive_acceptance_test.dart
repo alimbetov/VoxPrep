@@ -1,6 +1,9 @@
 import 'package:careerspeak_app/app/careerspeak_app.dart';
+import 'package:careerspeak_app/app/learner_state_providers.dart';
 import 'package:careerspeak_app/app/mock_visual_preferences.dart';
+import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/features/tests/test_session_screen.dart';
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,34 +18,30 @@ void main() {
 
   for (final width in widths) {
     for (final scale in scales) {
-      testWidgets(
-        'P1.7 no overflow at ${width.toInt()} px / ${scale.label}',
-        (tester) async {
-          await _pumpApp(tester, width: width, textScale: scale);
-          _expectNoFlutterException(tester);
+      testWidgets('P1.7 no overflow at ${width.toInt()} px / ${scale.label}', (
+        tester,
+      ) async {
+        await _pumpApp(tester, width: width, textScale: scale);
+        _expectNoFlutterException(tester);
 
-          for (final destination in const [
-            'Learn',
-            'Tests',
-            'Review',
-            'Settings',
-            'Home',
-          ]) {
-            await _navigate(tester, destination);
-            _expectNoFlutterException(tester);
-          }
-        },
-      );
+        for (final destination in const [
+          'Learn',
+          'Tests',
+          'Review',
+          'Settings',
+          'Home',
+        ]) {
+          await _navigate(tester, destination);
+          _expectNoFlutterException(tester);
+        }
+      });
     }
   }
 
-  testWidgets('detail route and marker state survive compact-to-large resize',
-      (tester) async {
-    await _pumpApp(
-      tester,
-      width: 360,
-      textScale: MockTextScalePreview.normal,
-    );
+  testWidgets('detail route and marker state survive compact-to-large resize', (
+    tester,
+  ) async {
+    await _pumpApp(tester, width: 360, textScale: MockTextScalePreview.normal);
 
     await _navigate(tester, 'Learn');
     await tester.tap(find.text('Dependency Injection').first);
@@ -52,7 +51,7 @@ void main() {
     expect(find.byIcon(Icons.favorite_border), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.favorite_border));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.byIcon(Icons.favorite), findsOneWidget);
 
     tester.view.physicalSize = const Size(1200, 1000);
@@ -65,13 +64,10 @@ void main() {
     _expectNoFlutterException(tester);
   });
 
-  testWidgets('compact and non-compact navigation switch at 600 px',
-      (tester) async {
-    await _pumpApp(
-      tester,
-      width: 360,
-      textScale: MockTextScalePreview.normal,
-    );
+  testWidgets('compact and non-compact navigation switch at 600 px', (
+    tester,
+  ) async {
+    await _pumpApp(tester, width: 360, textScale: MockTextScalePreview.normal);
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.byType(NavigationRail), findsNothing);
 
@@ -83,8 +79,9 @@ void main() {
     _expectNoFlutterException(tester);
   });
 
-  testWidgets('assessment remains usable at 360 px and 2.0× text scale',
-      (tester) async {
+  testWidgets('assessment remains usable at 360 px and 2.0× text scale', (
+    tester,
+  ) async {
     tester.view.devicePixelRatio = 1;
     tester.view.physicalSize = const Size(360, 1000);
     addTearDown(tester.view.resetPhysicalSize);
@@ -111,7 +108,7 @@ void main() {
     await tester.pumpAndSettle();
     _expectNoFlutterException(tester);
 
-    await _tapScrollableText(tester, 'Start mock test');
+    await _tapScrollableText(tester, 'Start test');
     _expectNoFlutterException(tester);
 
     for (var index = 0; index < 4; index++) {
@@ -135,9 +132,13 @@ Future<void> _pumpApp(
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
 
+  final database = CareerSpeakDatabase(NativeDatabase.memory());
+  addTearDown(database.close);
+
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        careerSpeakDatabaseProvider.overrideWithValue(database),
         mockVisualPreferencesProvider.overrideWith(
           () => _AcceptanceVisualPreferencesController(textScale),
         ),
@@ -190,7 +191,6 @@ class _AcceptanceVisualPreferencesController
   final MockTextScalePreview initialTextScale;
 
   @override
-  MockVisualPreferences build() => MockVisualPreferences(
-        textScale: initialTextScale,
-      );
+  MockVisualPreferences build() =>
+      MockVisualPreferences(textScale: initialTextScale);
 }

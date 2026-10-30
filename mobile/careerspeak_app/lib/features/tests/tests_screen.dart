@@ -2,25 +2,36 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../data/mock/mock_test_repository.dart';
-import '../../domain/mock_practice_test.dart';
+import '../../app/repository_providers.dart';
+import '../../domain/practice_test.dart';
 
 class TestsScreen extends ConsumerWidget {
   const TestsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tests = ref.watch(mockTestRepositoryProvider).all;
+    final testsPage = ref.watch(practiceTestPageProvider);
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Text('Tests', style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 8),
-        const Text('Mock assessment catalogue for interaction and adaptive-layout qualification.'),
-        const SizedBox(height: 20),
-        for (final test in tests) _TestCard(test: test),
-      ],
+    return testsPage.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('Unable to load tests.\n$error'),
+        ),
+      ),
+      data: (page) => ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          Text('Tests', style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 8),
+          const Text(
+            'Assessment catalogue qualified against repository ports before production persistence is connected.',
+          ),
+          const SizedBox(height: 20),
+          for (final test in page.items) _TestCard(test: test),
+        ],
+      ),
     );
   }
 }
@@ -28,7 +39,7 @@ class TestsScreen extends ConsumerWidget {
 class _TestCard extends StatelessWidget {
   const _TestCard({required this.test});
 
-  final MockPracticeTest test;
+  final PracticeTestSummary test;
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +54,10 @@ class _TestCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(test.title, style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    test.title,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   const SizedBox(height: 4),
                   Text(test.subtitle),
                 ],
@@ -59,11 +73,11 @@ class _TestCard extends StatelessWidget {
     );
   }
 
-  IconData _iconFor(MockTestMode mode) {
+  IconData _iconFor(PracticeTestMode mode) {
     return switch (mode) {
-      MockTestMode.learn => Icons.school,
-      MockTestMode.exam => Icons.assignment,
-      MockTestMode.quick => Icons.bolt,
+      PracticeTestMode.learn => Icons.school,
+      PracticeTestMode.exam => Icons.assignment,
+      PracticeTestMode.quick => Icons.bolt,
     };
   }
 }

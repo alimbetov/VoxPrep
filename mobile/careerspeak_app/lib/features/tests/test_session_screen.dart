@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/mock/mock_test_repository.dart';
-import '../../domain/mock_practice_test.dart';
-import 'mock_test_session_controller.dart';
+import '../../app/repository_providers.dart';
+import '../../domain/practice_test.dart';
+import 'practice_test_session_controller.dart';
 
 class TestSessionScreen extends ConsumerWidget {
   const TestSessionScreen({required this.code, super.key});
@@ -12,39 +12,49 @@ class TestSessionScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(mockTestRepositoryProvider);
-    final test = repository.byCode(code);
+    final testAsync = ref.watch(practiceTestByCodeProvider(code));
 
-    if (test == null) {
-      return const Center(child: Text('Mock test not found.'));
-    }
+    return testAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('Unable to load test.\n$error'),
+        ),
+      ),
+      data: (test) {
+        if (test == null) {
+          return const Center(child: Text('Test not found.'));
+        }
 
-    final session = ref.watch(mockTestSessionProvider);
-    final controller = ref.read(mockTestSessionProvider.notifier);
+        final session = ref.watch(practiceTestSessionProvider);
+        final controller = ref.read(practiceTestSessionProvider.notifier);
 
-    if (session.testCode != code) {
-      return _TestIntro(
-        test: test,
-        onStart: () => controller.start(test.code),
-      );
-    }
+        if (session.testCode != code) {
+          return _TestIntro(
+            test: test,
+            onStart: () => controller.start(test.code),
+          );
+        }
 
-    if (session.submitted) {
-      return _TestResult(
-        test: test,
-        session: session,
-        onRetake: () => controller.start(test.code),
-      );
-    }
+        if (session.submitted) {
+          return _TestResult(
+            test: test,
+            session: session,
+            onRetake: () => controller.start(test.code),
+          );
+        }
 
-    return _QuestionSession(test: test, session: session);
+        return _QuestionSession(test: test, session: session);
+      },
+    );
   }
 }
 
 class _TestIntro extends StatelessWidget {
   const _TestIntro({required this.test, required this.onStart});
 
-  final MockPracticeTest test;
+  final PracticeTest test;
   final VoidCallback onStart;
 
   @override
@@ -64,14 +74,17 @@ class _TestIntro extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Mock session', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Practice session',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 12),
                 Text('${test.questions.length} questions'),
                 const SizedBox(height: 6),
                 Text('Mode: ${test.mode.name.toUpperCase()}'),
                 const SizedBox(height: 12),
                 const Text(
-                  'Answers stay in Riverpod memory only. This qualifies the assessment UX before Drift persistence is connected.',
+                  'Session state remains in Riverpod during P2. Persistent attempt storage is introduced by a later production adapter slice.',
                 ),
               ],
             ),
@@ -83,7 +96,7 @@ class _TestIntro extends StatelessWidget {
           child: FilledButton.icon(
             onPressed: onStart,
             icon: const Icon(Icons.play_arrow),
-            label: const Text('Start mock test'),
+            label: const Text('Start test'),
           ),
         ),
       ],
@@ -94,12 +107,12 @@ class _TestIntro extends StatelessWidget {
 class _QuestionSession extends ConsumerWidget {
   const _QuestionSession({required this.test, required this.session});
 
-  final MockPracticeTest test;
-  final MockTestSessionState session;
+  final PracticeTest test;
+  final PracticeTestSessionState session;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final controller = ref.read(mockTestSessionProvider.notifier);
+    final controller = ref.read(practiceTestSessionProvider.notifier);
     final question = test.questions[session.currentIndex];
     final selected = session.answers[session.currentIndex];
     final wide = MediaQuery.sizeOf(context).width >= 840;
@@ -150,9 +163,9 @@ class _QuestionPane extends StatelessWidget {
     required this.onSubmit,
   });
 
-  final MockPracticeTest test;
-  final MockQuestion question;
-  final MockTestSessionState session;
+  final PracticeTest test;
+  final PracticeQuestion question;
+  final PracticeTestSessionState session;
   final int? selected;
   final ValueChanged<int> onSelect;
   final VoidCallback onPrevious;
@@ -179,11 +192,7 @@ class _QuestionPane extends StatelessWidget {
             if (stacked) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  progressText,
-                  const SizedBox(height: 8),
-                  skill,
-                ],
+                children: [progressText, const SizedBox(height: 8), skill],
               );
             }
 
@@ -245,21 +254,11 @@ class _QuestionPane extends StatelessWidget {
             if (stacked) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  previous,
-                  const SizedBox(height: 12),
-                  next,
-                ],
+                children: [previous, const SizedBox(height: 12), next],
               );
             }
 
-            return Row(
-              children: [
-                previous,
-                const Spacer(),
-                next,
-              ],
-            );
+            return Row(children: [previous, const Spacer(), next]);
           },
         ),
       ],
@@ -316,13 +315,13 @@ class _TestResult extends StatelessWidget {
     required this.onRetake,
   });
 
-  final MockPracticeTest test;
-  final MockTestSessionState session;
+  final PracticeTest test;
+  final PracticeTestSessionState session;
   final VoidCallback onRetake;
 
   @override
   Widget build(BuildContext context) {
-    final score = calculateMockTestScore(test, session.answers);
+    final score = calculatePracticeTestScore(test, session.answers);
     final percent = ((score / test.questions.length) * 100).round();
     final textScale = MediaQuery.textScalerOf(context).scale(1);
 
@@ -358,10 +357,7 @@ class _TestResult extends StatelessWidget {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        radius: 32,
-                        child: Text('$percent%'),
-                      ),
+                      CircleAvatar(radius: 32, child: Text('$percent%')),
                       const SizedBox(height: 16),
                       scoreSummary,
                       const SizedBox(height: 16),
@@ -372,10 +368,7 @@ class _TestResult extends StatelessWidget {
 
                 return Row(
                   children: [
-                    CircleAvatar(
-                      radius: 32,
-                      child: Text('$percent%'),
-                    ),
+                    CircleAvatar(radius: 32, child: Text('$percent%')),
                     const SizedBox(width: 20),
                     Expanded(child: scoreSummary),
                     const SizedBox(width: 16),
@@ -408,7 +401,7 @@ class _AnswerReview extends StatelessWidget {
   });
 
   final int number;
-  final MockQuestion question;
+  final PracticeQuestion question;
   final int? selectedIndex;
 
   @override

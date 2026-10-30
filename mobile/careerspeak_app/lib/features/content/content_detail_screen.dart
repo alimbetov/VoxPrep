@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/mock/mock_content_repository.dart';
+import '../../app/repository_providers.dart';
 import 'content_detail_panel.dart';
 
 class ContentDetailScreen extends ConsumerWidget {
@@ -11,13 +11,19 @@ class ContentDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(mockContentRepositoryProvider);
-    final item = repository.byCode(code);
+    final item = ref.watch(contentByCodeProvider(code));
 
-    if (item == null) {
-      return const Center(child: Text('Mock content not found.'));
-    }
-
-    return ContentDetailPanel(item: item);
+    return item.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('Unable to load content.\n$error'),
+        ),
+      ),
+      data: (value) => value == null
+          ? const Center(child: Text('Content not found.'))
+          : ContentDetailPanel(item: value),
+    );
   }
 }

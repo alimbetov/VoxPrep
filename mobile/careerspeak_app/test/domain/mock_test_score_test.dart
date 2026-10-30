@@ -1,15 +1,15 @@
-import 'package:careerspeak_app/domain/mock_practice_test.dart';
+import 'package:careerspeak_app/domain/practice_test.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('score counts only exact correct answers', () {
-    const testModel = MockPracticeTest(
+    const testModel = PracticeTest(
       code: 'TEST',
       title: 'Test',
-      subtitle: 'Mock',
-      mode: MockTestMode.quick,
+      subtitle: 'Qualification',
+      mode: PracticeTestMode.quick,
       questions: [
-        MockQuestion(
+        PracticeQuestion(
           code: 'Q1',
           prompt: 'Q1',
           options: ['A', 'B'],
@@ -17,7 +17,7 @@ void main() {
           skill: 'Skill',
           explanation: 'E1',
         ),
-        MockQuestion(
+        PracticeQuestion(
           code: 'Q2',
           prompt: 'Q2',
           options: ['A', 'B'],
@@ -28,8 +28,8 @@ void main() {
       ],
     );
 
-    expect(calculateMockTestScore(testModel, {0: 1, 1: 1}), 1);
-    expect(calculateMockTestScore(testModel, {0: 1, 1: 0}), 2);
-    expect(calculateMockTestScore(testModel, const {}), 0);
+    expect(calculatePracticeTestScore(testModel, {0: 1, 1: 1}), 1);
+    expect(calculatePracticeTestScore(testModel, {0: 1, 1: 0}), 2);
+    expect(calculatePracticeTestScore(testModel, const {}), 0);
   });
 }
