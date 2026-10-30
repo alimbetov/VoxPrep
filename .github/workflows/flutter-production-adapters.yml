@@ -6,10 +6,12 @@ on:
       - feat/p2-flutter-production-adapters
     paths:
       - 'mobile/careerspeak_app/**'
+      - 'contracts/**'
       - '.github/workflows/flutter-production-adapters.yml'
   pull_request:
     paths:
       - 'mobile/careerspeak_app/**'
+      - 'contracts/**'
       - '.github/workflows/flutter-production-adapters.yml'
 
 jobs:
