@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import '../../domain/application_preferences.dart';
 import '../ports/app_preferences_repository.dart';
 import '../result/result.dart';
