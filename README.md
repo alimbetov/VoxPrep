@@ -1,6 +1,6 @@
 # CareerSpeak
 
-CareerSpeak is a mobile application for IELTS preparation, professional English and international job-interview training.
+CareerSpeak is an offline-first Flutter application for IELTS preparation, professional English and international job-interview training.
 
 Repository codename: **VoxPrep**.
 
@@ -10,107 +10,117 @@ Repository codename: **VoxPrep**.
 READ → LISTEN → REPEAT → TEST → REVIEW
 ```
 
-CareerSpeak teaches English only. Other languages are used for UI, translations, hints and explanations.
+CareerSpeak teaches English only. Other languages support UI, translations, hints and explanations.
 
-## Architecture baseline v0.8
+## Architecture baseline v0.9
 
 ```text
-Flutter
-  │
+Flutter App
   ├── installation token ──► Spring Boot REST API ──► PostgreSQL
-  │
   └── media ───────────────► CDN/Edge ─────────────► RustFS
 
 ADMIN Browser
-  │
   └── session ─────────────► Spring MVC Content Studio
-                                │
                                 ├── PostgreSQL
                                 └── RustFS
 
 TTS Worker
-  │
   ├── machine token ───────► Backend Job API
-  ├── exact Piper model ◄── RustFS / local cache
+  ├── exact Piper model ◄── RustFS/local cache
   ├── Piper + FFmpeg
   └── generated audio ─────► RustFS
 ```
 
-The backend is a **Spring Boot modular monolith**.
+Backend is one **Spring Boot modular monolith**.
 
 ## Three actors only
 
-### ADMIN
-
-One secured administrative account:
-
 ```text
-fixed username
-strong deployment-managed password hash
-Spring Security server-side session
+ADMIN
+FLUTTER INSTALLATION
+TTS WORKER
 ```
 
-ADMIN performs all authoring, localization, TTS model/voice management, audio review, publication and activation/deactivation.
+### ADMIN
+
+One fixed secured account with server-side session. No Moderator/Editor/Reviewer hierarchy, OAuth, LDAP, Keycloak or RBAC tables in MVP.
 
 ### Flutter Installation
 
-No personal learner account:
-
 ```text
-first launch
-→ random installationId
+random installationId
 → backend registration
 → backend-issued installation token
-→ Secure Storage
+→ platform Secure Storage
 ```
 
-Learner progress/favorites/test history stay local by default.
+No personal learner account. Progress/favorites/test history remain local-first.
 
 ### TTS Worker
 
 Server-managed long-running Python process/container:
 
 ```text
-Python + Piper + FFmpeg
+Piper + FFmpeg
 machine token
-auto-start / auto-restart
-local immutable model cache
+auto-start/restart
+local exact-model cache
 ```
 
-## Backend stack
+No direct PostgreSQL credentials and no permanent RustFS credentials.
+
+## Standard lifecycle vocabulary
 
 ```text
-Java 21
-Spring Boot
-Spring MVC
-Spring Security
-Spring Data JPA
-Hibernate
-HikariCP
-PostgreSQL
-Liquibase
-Thymeleaf
-HTMX
-OpenAPI
-Micrometer / Actuator
-Testcontainers
-Docker
+Backend:
+PUBLISHED + ACTIVE
+= learner-deliverable/downloadable
+
+Flutter metadata:
+CURRENT
+= local metadata revision currently used
+
+Flutter offline:
+READY
+= complete required offline asset set locally verified
 ```
 
-Not required initially:
+These are deliberately separate state machines.
+
+## Content versioning
+
+Backend publishes one root:
 
 ```text
-R2DBC / WebFlux
-Redis
-Caffeine
-RabbitMQ
-Kafka
-Eureka
-Kubernetes
-Elasticsearch
+contentVersion
 ```
 
-## Flutter mobile baseline
+The root references exact pack variants:
+
+```text
+JAVA_SENIOR / canonical / rev 8
+JAVA_SENIOR / locale:kk / rev 4
+```
+
+Locale deltas do not create independent root epochs.
+
+Flutter stages/verifies metadata and atomically switches to the new `CURRENT` root snapshot.
+
+## Offline replacement
+
+Metadata and offline binaries are separate.
+
+Valid state:
+
+```text
+metadata rev 8 = CURRENT
+offline rev 7 = READY
+offline rev 8 = UPDATING
+```
+
+The old READY bundle remains usable until replacement verifies.
+
+## Flutter baseline
 
 ```text
 Flutter + Dart
@@ -119,189 +129,52 @@ go_router
 Drift + SQLite
 Secure Storage
 local filesystem
-HTTP API adapter
-shared audio playback abstraction
-```
-
-Feature-first modules include:
-
-```text
-onboarding
-home
-vocabulary
-interview
-topics
-phrases
-shadowing
-assessment
-review
-favorites
-downloads
-settings
-storage_management
-```
-
-Shared mobile services:
-
-```text
 ContentSyncCoordinator
 DownloadManager
 AssetResolver
-StorageRetentionManager
 AudioPlaybackController
+StorageRetentionManager
 ReviewScheduler
 ```
 
-## Language support
+## Adaptive UI
 
-CareerSpeak separates application UI localization from educational content localization.
-
-### UI strings
+Layout is based on current available window width, not device names:
 
 ```text
-ARB
-Flutter gen-l10n
+COMPACT   < 600
+MEDIUM    600–839
+EXPANDED  840–1199
+LARGE     >= 1200
 ```
 
-Initial UI locales:
+The same route/domain state is preserved across phone/tablet/landscape/split-screen layouts.
+
+Large text, RTL and mixed RTL guidance + LTR English learning text are qualification requirements.
+
+## Local data
+
+Drift separates:
 
 ```text
-en
-ru
-kk
+SYSTEM / SYNC STATE
+VERSIONED CONTENT / CACHE
+DURABLE LEARNER STATE
 ```
 
-### Content translation
-
-Backend-driven:
+Automatic disposable-storage management:
 
 ```text
-translation
-hint
-explanation
-localized labels
+TTL + LRU + quota + pin/download protection + reference-safe deletion
 ```
 
-Flutter distinguishes:
-
-```text
-uiLocale
-translationLocale
-preferredAccent
-```
-
-English remains the fixed learning language. Content locale changes use locale deltas and SHOULD NOT redownload unchanged English audio.
-
-## Offline-first mobile flow
-
-```text
-START
-→ open Drift/local files
-→ load settings/locale/theme
-→ load cached content
-→ render UI immediately
-→ sync manifests in parallel
-```
-
-Content updates use:
-
-```text
-root manifest
-pack manifests
-locale deltas
-tombstones
-checksums
-staging + verification + atomic activation
-```
-
-A failed update never replaces the last known-good local snapshot.
-
-## Downloads and assets
-
-`DownloadManager` handles:
-
-```text
-QUEUED
-DOWNLOADING
-VERIFYING
-READY
-PAUSED
-FAILED
-CANCELLED
-```
-
-`AssetResolver` hides storage source:
-
-```text
-verified local file
-or
-CDN/Edge → RustFS
-```
-
-## Audio / Shadowing
-
-Shared playback supports:
-
-```text
-play/pause/seek
-0.75x / 1.0x / 1.25x
-repeat 1 / 3 / 5 / infinite
-skip back/forward
-segment repeat where deterministic segmentation exists
-```
-
-Shadowing uses backend-published stable segment/order metadata rather than punctuation guessing.
-
-## Content lifecycle
-
-```text
-DRAFT
-→ READY_FOR_AUDIO
-→ READY_FOR_REVIEW
-→ PUBLISHED
-→ ARCHIVED
-```
-
-Availability is separate:
-
-```text
-ACTIVE
-INACTIVE
-```
-
-Learner API exposes only:
-
-```text
-PUBLISHED + ACTIVE
-```
-
-## Content delivery and retention
-
-Learner collections use cursor/keyset pagination.
-
-Flutter keeps durable progress separate from re-downloadable content/media.
-
-Automatic cleanup uses:
-
-```text
-TTL
-+
-LRU
-+
-local storage quota
-+
-pin/manual-download protection
-+
-reference-safe shared-asset deletion
-```
-
-Media eviction never removes learner progress.
+Cache/media eviction never deletes learner progress.
 
 ## TTS queue
 
 PostgreSQL is the durable queue.
 
-Worker claim uses an atomic transaction based on:
+Atomic claim uses:
 
 ```sql
 FOR UPDATE SKIP LOCKED
@@ -318,42 +191,76 @@ attempt_count
 fingerprint
 ```
 
-## Specifications
+RabbitMQ is not required initially.
 
-- [System Requirements & Architecture Specification v0.8](docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
-- [Flutter Mobile Application Requirements v1.0](docs/specification/CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md)
-- [Globalization & Localization Requirements v0.5](docs/specification/CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
-- [Content Delivery, Availability & Local Retention Requirements v1.1](docs/specification/CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md)
-- [TTS Worker & Audio Production Architecture v1.2](docs/architecture/CAREERSPEAK_TTS_PIPELINE.md)
-- [P0 Domain & Contract Design Plan v1.2](docs/architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md)
-
-## Current stage
+## Backend stack
 
 ```text
-P0 — Domain & Contract Design
-branch: feat/p0-domain-contracts
+Java 21
+Spring Boot
+Spring MVC
+Spring Security
+Spring Data JPA / Hibernate
+HikariCP
+PostgreSQL
+Liquibase
+Thymeleaf + HTMX
+OpenAPI
+Micrometer / Actuator
+Testcontainers
+Docker
 ```
 
-Execution order:
+Not required initially:
 
 ```text
-P0.0  Common Contracts
-P0.1  Revision / Publication / Availability
+R2DBC/WebFlux
+Redis
+RabbitMQ
+Kafka
+Eureka
+Kubernetes
+Elasticsearch/OpenSearch
+```
+
+## Normative specifications
+
+- [System Requirements & Architecture Specification v0.9](docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
+- [Cross-System Contract Standard v1.0](docs/architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md)
+- [Flutter Mobile Application Requirements v2.0](docs/specification/CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md)
+- [Globalization & Localization Requirements v1.0](docs/specification/CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
+- [Content Delivery & Local Retention Requirements v2.0](docs/specification/CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md)
+- [TTS Worker & Audio Production Architecture v2.0](docs/architecture/CAREERSPEAK_TTS_PIPELINE.md)
+- [P0 Domain & Contract Design Plan v2.0](docs/architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md)
+
+## Mobile detailed design
+
+- [P0.12.4 Drift ERD v1.0](docs/mobile/CAREERSPEAK_DRIFT_ERD.md)
+- [P0.12.7 ContentSyncCoordinator v1.0](docs/mobile/CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md)
+- [Adaptive / Responsive UI Contract v0.1](docs/mobile/CAREERSPEAK_ADAPTIVE_UI.md)
+
+## Current P0 direction
+
+Before executable implementation, freeze:
+
+```text
+P0.0  Common contracts
+P0.1  Publication / Availability
 P0.2  Profession / Catalog
 P0.3  Localization
 P0.4  Media / RustFS
 P0.5  TTS
 P0.6  Interview
 P0.7  Vocabulary
-P0.8  Topic / Phrase / Shadowing Content
+P0.8  Topic / Phrase / Shadowing
 P0.9  Assessment
 P0.10 Manifest / Content Delivery
-P0.11 Pagination Contract
+P0.11 Pagination
 P0.12 Flutter Application Contract
 P0.13 Security / Installation
 P0.14 Content Studio
-P0.15 Integrated ERD + Mobile ERD + OpenAPI
+P0.15 Integrated ERD + OpenAPI
 P0.16 Architecture Freeze
 ```
 
-P0.12 includes feature boundaries, Riverpod ownership, navigation, Drift ERD, installation/API client, localization/RTL, manifest sync, downloads, asset resolution, audio/shadowing, assessment, review scheduling, retention and recovery behavior.
+The product differentiator is curated profession-specific and IELTS English content with reviewed audio, deterministic assessment, offline-first consumption and a deliberately simple runtime architecture.
