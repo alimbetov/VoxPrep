@@ -184,17 +184,24 @@ class _QuestionPane extends StatelessWidget {
         const SizedBox(height: 28),
         Text(question.prompt, style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 20),
-        for (var index = 0; index < question.options.length; index++)
-          Card(
-            child: RadioListTile<int>(
-              value: index,
-              groupValue: selected,
-              onChanged: (value) {
-                if (value != null) onSelect(value);
-              },
-              title: Text(question.options[index]),
-            ),
+        RadioGroup<int>(
+          groupValue: selected,
+          onChanged: (value) {
+            if (value != null) onSelect(value);
+          },
+          child: Column(
+            children: [
+              for (var index = 0; index < question.options.length; index++)
+                Card(
+                  child: RadioListTile<int>(
+                    value: index,
+                    selected: selected == index,
+                    title: Text(question.options[index]),
+                  ),
+                ),
+            ],
           ),
+        ),
         const SizedBox(height: 24),
         Row(
           children: [
