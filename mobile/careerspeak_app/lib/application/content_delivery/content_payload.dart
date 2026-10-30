@@ -1,6 +1,8 @@
 import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
 
+const unspecifiedTaxonomyCode = 'UNSPECIFIED';
+
 final class ContentPayloadRef {
   factory ContentPayloadRef({
     required ContentIdentity identity,
@@ -42,9 +44,9 @@ final class ContentPayload {
     required String title,
     required String subtitle,
     required String description,
-    required String categoryCode,
+    String categoryCode = unspecifiedTaxonomyCode,
     required String category,
-    required String levelCode,
+    String levelCode = unspecifiedTaxonomyCode,
     required String level,
     required int minutes,
     required bool hasAudio,
