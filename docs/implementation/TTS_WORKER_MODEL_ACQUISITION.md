@@ -9,6 +9,8 @@ The TTS Worker downloads Piper models only through the Backend identified by `BA
 
 The Worker does not receive RustFS credentials, RustFS endpoints, presigned URLs, or model files baked into the container image.
 
+Each Worker replica owns its own persistent local model cache. Cache storage is never shared between Worker replicas or machines.
+
 ```text
 BASE_URL
    │
@@ -22,7 +24,7 @@ BASE_URL
           │
           ├─ verify SHA-256
           ├─ atomic install
-          └─ persistent local model cache
+          └─ private persistent local model cache
 ```
 
 ## Backend endpoints
@@ -184,21 +186,35 @@ A checksum mismatch MUST delete the temporary candidate and MUST NOT fall back s
 
 ## Persistent volume semantics
 
-The model cache is mounted outside the container writable layer:
+Every Worker replica has its own cache volume or its own local host directory mounted at:
+
+```text
+/var/lib/voxprep/tts/models
+```
+
+Example for one Worker instance:
 
 ```bash
--v voxprep-tts-models:/var/lib/voxprep/tts/models
+-v voxprep-tts-models-worker-01:/var/lib/voxprep/tts/models
+```
+
+A second Worker uses a different volume:
+
+```bash
+-v voxprep-tts-models-worker-02:/var/lib/voxprep/tts/models
 ```
 
 Therefore:
 
 ```text
-container restart
+container restart on the same Worker host/storage
 → verified model remains installed
 → next matching job is cache hit
 ```
 
-Replacing the Worker image does not require re-downloading unchanged model revisions as long as the cache volume is retained.
+Replacing the Worker image does not require re-downloading unchanged model revisions as long as that Worker's own cache volume is retained.
+
+A newly provisioned Worker starts with an empty local cache and downloads required models lazily from `BASE_URL` on its first matching jobs.
 
 ## Image boundary
 
@@ -229,13 +245,57 @@ voice model revision
 Backend environment
 ```
 
-## Concurrency
+## Cache ownership and concurrency
 
-The first Worker implementation processes one job at a time, so one process will not download the same model twice concurrently.
+Cache ownership is intentionally isolated:
 
-If multiple worker containers share one model-cache volume later, cache installation must add an inter-process lock or equivalent atomic coordination before that deployment mode is qualified.
+```text
+Worker A → cache A
+Worker B → cache B
+Worker C → cache C
+```
 
-Until then, recommended deployment is one persistent cache volume per worker replica or otherwise isolated cache ownership.
+The following deployment is forbidden:
+
+```text
+Worker A ─┐
+Worker B ─┼─→ shared NFS/SMB/shared Docker volume
+Worker C ─┘
+```
+
+No distributed cache lock protocol is required because Worker replicas never coordinate cache writes with each other.
+
+The first Worker implementation processes one job at a time. If a future single Worker process gains internal concurrency, synchronization is local to that Worker and its private cache only.
+
+This design intentionally trades duplicate model copies across machines for simpler failure isolation, independent scaling and removal of shared-storage dependency.
+
+## Horizontal scaling behavior
+
+Adding a Worker requires only:
+
+```text
+same immutable image
+BASE_URL
+WORKER_TOKEN
+private cache volume/directory
+```
+
+Startup does not require preloading models.
+
+Example:
+
+```text
+Server A / Worker A
+cache miss → download model X → local cache A
+
+Server B / Worker B
+cache miss → download model X → local cache B
+
+later jobs
+→ each Worker independently reuses its own verified copy
+```
+
+A Worker machine can therefore be added, restarted or removed without affecting model availability on any other Worker.
 
 ## W3 acceptance
 
@@ -250,7 +310,9 @@ config SHA-256 mismatch is rejected
 partial download is never installed
 failed install leaves no valid final cache directory
 successful install is atomic
-container restart reuses mounted cached model
+container restart reuses that Worker's mounted cached model
+new Worker with empty cache can bootstrap from BASE_URL
 Worker never needs RustFS address or credentials
 claimed voiceModelId is never silently substituted
+no shared cache volume is required or supported across Worker replicas
 ```
