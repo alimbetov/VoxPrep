@@ -20,12 +20,26 @@ void main() {
     expect(error.details['contentCode'], 'JAVA_Q_001');
   });
 
+  test('malformed api error envelope remains safe for status fallbacks', () {
+    const decoder = ApiErrorDecoder();
+
+    final error = decoder.decode('not-an-object');
+
+    expect(error.code, isNull);
+    expect(error.message, isNull);
+    expect(error.traceId, isNull);
+    expect(error.details, isEmpty);
+  });
+
   test('installation registration request matches the shared fixture', () {
     const mapper = InstallationRegistrationMapper();
 
     final request = mapper.request(InstallationId('installation-123'));
 
-    expect(request.toJson(), _fixture('installation_registration_request_v1.json'));
+    expect(
+      request.toJson(),
+      _fixture('installation_registration_request_v1.json'),
+    );
   });
 
   test('installation registration response maps to a domain token', () {
