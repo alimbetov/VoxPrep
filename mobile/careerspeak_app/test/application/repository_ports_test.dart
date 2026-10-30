@@ -6,6 +6,8 @@ import 'package:careerspeak_app/application/ports/practice_test_repository.dart'
 import 'package:careerspeak_app/application/query/content_query.dart';
 import 'package:careerspeak_app/application/query/practice_test_query.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
+import 'package:careerspeak_app/data/mock/mock_content_repository.dart';
+import 'package:careerspeak_app/data/mock/mock_test_repository.dart';
 import 'package:careerspeak_app/domain/content_identity.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
 import 'package:drift/native.dart';
@@ -13,53 +15,59 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test(
-    'composition root exposes reactive content repository through port',
-    () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+  test('content repository port supports explicit test adapter', () async {
+    final container = ProviderContainer(
+      overrides: [
+        contentRepositoryProvider.overrideWithValue(
+          const MockContentRepository(),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
 
-      final repository = container.read(contentRepositoryProvider);
+    final repository = container.read(contentRepositoryProvider);
 
-      expect(repository, isA<ContentRepository>());
+    expect(repository, isA<ContentRepository>());
 
-      final page = (await repository.watchContent(const ContentQuery()).first)
-          .getOrThrow();
-      expect(page.items, isNotEmpty);
+    final page = (await repository.watchContent(const ContentQuery()).first)
+        .getOrThrow();
+    expect(page.items, isNotEmpty);
 
-      final item = (await repository.getByIdentity(
-        const ContentIdentity(code: 'JAVA_DI_001', type: ContentType.interview),
-      )).getOrThrow();
-      expect(item?.title, 'Dependency Injection');
+    final item = (await repository.getByIdentity(
+      const ContentIdentity(code: 'JAVA_DI_001', type: ContentType.interview),
+    )).getOrThrow();
+    expect(item?.title, 'Dependency Injection');
 
-      final wrongType = (await repository.getByIdentity(
-        const ContentIdentity(code: 'JAVA_DI_001', type: ContentType.topic),
-      )).getOrThrow();
-      expect(wrongType, isNull);
-    },
-  );
+    final wrongType = (await repository.getByIdentity(
+      const ContentIdentity(code: 'JAVA_DI_001', type: ContentType.topic),
+    )).getOrThrow();
+    expect(wrongType, isNull);
+  });
 
-  test(
-    'composition root exposes reactive assessment repository through port',
-    () async {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
+  test('assessment repository port supports explicit test adapter', () async {
+    final container = ProviderContainer(
+      overrides: [
+        practiceTestRepositoryProvider.overrideWithValue(
+          const MockTestRepository(),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
 
-      final repository = container.read(practiceTestRepositoryProvider);
+    final repository = container.read(practiceTestRepositoryProvider);
 
-      expect(repository, isA<PracticeTestRepository>());
+    expect(repository, isA<PracticeTestRepository>());
 
-      final page =
-          (await repository.watchTests(const PracticeTestQuery()).first)
-              .getOrThrow();
-      expect(page.items, isNotEmpty);
+    final page =
+        (await repository.watchTests(const PracticeTestQuery()).first)
+            .getOrThrow();
+    expect(page.items, isNotEmpty);
 
-      final test = (await repository.getByCode(
-        'JAVA_SENIOR_QUICK_001',
-      )).getOrThrow();
-      expect(test?.questions.length, 5);
-    },
-  );
+    final test = (await repository.getByCode(
+      'JAVA_SENIOR_QUICK_001',
+    )).getOrThrow();
+    expect(test?.questions.length, 5);
+  });
 
   test('composition root exposes Drift learner state through port', () async {
     final database = CareerSpeakDatabase(NativeDatabase.memory());
