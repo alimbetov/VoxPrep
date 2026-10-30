@@ -219,32 +219,40 @@ Study Mode may use themed backgrounds; Focus/Exam modes prefer minimal presentat
 
 ## Specifications
 
-- [System Requirements & Architecture Specification v0.5](docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
+- [System Requirements & Architecture Specification](docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
 - [Content Delivery, Availability & Local Retention Requirements v1.0 — v0.6 normative addendum](docs/specification/CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md)
 - [Globalization & Localization Requirements](docs/specification/CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
 - [Spring MVC + Local Headless Piper Worker Architecture v1.1](docs/architecture/CAREERSPEAK_TTS_PIPELINE.md)
+- [P0 Domain & Contract Design Plan](docs/architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md)
 
 ## Current stage
 
 ```text
-P0 — Architecture Freeze / System Design
+P0 — Domain & Contract Design
+branch: feat/p0-domain-contracts
 ```
 
-Next deliverables:
+Execution order:
 
-1. Domain map
-2. Full PostgreSQL ERD
-3. Content revision/publication/availability model
-4. Localization model
-5. Assessment snapshot model
-6. TTS voice/model/job ERD
-7. RustFS FileAsset/model storage model
-8. Cursor-pagination query/index model
-9. Content manifest, tombstones and offline-pack model
-10. Flutter local retention/cache schema
-11. OpenAPI contracts
-12. ADR baseline
-13. P0 implementation backlog
+1. P0.0 Common Contract & Domain Conventions
+2. P0.1 Revision / Publication / Availability
+3. P0.2 Profession / Catalog
+4. P0.3 Localization
+5. P0.4 Media / RustFS
+6. P0.5 TTS
+7. P0.6 Interview
+8. P0.7 Vocabulary
+9. P0.8 Topic / Phrase / Shadowing
+10. P0.9 Assessment
+11. P0.10 Manifest / Content Delivery
+12. P0.11 Pagination Contract
+13. P0.12 Flutter Local Domain / Retention
+14. P0.13 Security / Installation
+15. P0.14 Content Studio
+16. P0.15 Integrated ERD + OpenAPI
+17. P0.16 Architecture Freeze
+
+A bounded context is not implementation-ready until its ownership, aggregates, invariants, lifecycle, persistence model, contracts, errors, concurrency behavior and acceptance tests are agreed.
 
 ## Commercial model
 
