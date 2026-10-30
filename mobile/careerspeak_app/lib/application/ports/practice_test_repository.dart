@@ -1,7 +1,10 @@
-import '../../domain/mock_practice_test.dart';
+import '../../domain/practice_test.dart';
+import '../query/page.dart';
+import '../query/practice_test_query.dart';
+import '../result/result.dart';
 
 abstract interface class PracticeTestRepository {
-  List<MockPracticeTest> get all;
+  Stream<Result<Page<PracticeTestSummary>>> watchTests(PracticeTestQuery query);
 
-  MockPracticeTest? byCode(String code);
+  Future<Result<PracticeTest?>> getByCode(String code);
 }
