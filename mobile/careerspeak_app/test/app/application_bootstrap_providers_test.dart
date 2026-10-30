@@ -13,9 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('composition root selects HTTP installation registration adapter', () {
     final container = ProviderContainer(
-      overrides: <Override>[
-        apiClientProvider.overrideWithValue(_UnusedApiClient()),
-      ],
+      overrides: [apiClientProvider.overrideWithValue(_UnusedApiClient())],
     );
     addTearDown(container.dispose);
 
@@ -32,7 +30,7 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
-        overrides: <Override>[
+        overrides: [
           applicationBootstrapProvider.overrideWith((ref) => gate.future),
         ],
         child: const MaterialApp(
