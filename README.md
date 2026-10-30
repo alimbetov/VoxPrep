@@ -12,7 +12,7 @@ READ → LISTEN → REPEAT → TEST → REVIEW
 
 CareerSpeak teaches English only. Other languages support UI, translations, hints and explanations.
 
-## Architecture baseline v0.9
+## Architecture baseline v0.10
 
 ```text
 Flutter App
@@ -87,6 +87,34 @@ READY
 
 These are deliberately separate state machines.
 
+## Learner markers
+
+Flutter keeps independent durable local markers:
+
+```text
+FAVORITE  = explicit user curation
+LISTENED  = qualified audio consumption
+COMPLETED = pedagogical completion
+```
+
+Any valid combination is allowed, including:
+
+```text
+FAVORITE + LISTENED + COMPLETED
+```
+
+Markers survive metadata refresh and cache/media eviction.
+
+Catalogs may filter by:
+
+```text
+Favorites
+Listened / Not listened
+Completed / Not completed
+```
+
+Favorite does not automatically pin offline media.
+
 ## Content versioning
 
 Backend publishes one root:
@@ -124,6 +152,7 @@ The old READY bundle remains usable until replacement verifies.
 
 ```text
 Flutter + Dart
+Material Design 3
 Riverpod
 go_router
 Drift + SQLite
@@ -135,6 +164,32 @@ AssetResolver
 AudioPlaybackController
 StorageRetentionManager
 ReviewScheduler
+LearnerContentStateRepository
+```
+
+## Material Design 3
+
+Material Design 3 is the **single CareerSpeak UI design system** on Android and iOS.
+
+```text
+Material Design 3
+        ↓
+CareerSpeak Theme + Design Tokens
+        ↓
+CareerSpeak reusable Material components
+        ↓
+Adaptive feature UI
+```
+
+Baseline rules:
+
+```text
+ThemeData / ColorScheme
+System / Light / Dark
+NavigationBar / NavigationRail
+central spacing/radius/type/motion tokens
+Material components before bespoke replacements
+Study Ambience is decorative, not a second UI system
 ```
 
 ## Adaptive UI
@@ -148,7 +203,7 @@ EXPANDED  840–1199
 LARGE     >= 1200
 ```
 
-The same route/domain state is preserved across phone/tablet/landscape/split-screen layouts.
+The same route/domain/audio/test/marker state is preserved across phone/tablet/landscape/split-screen layouts.
 
 Large text, RTL and mixed RTL guidance + LTR English learning text are qualification requirements.
 
@@ -162,13 +217,24 @@ VERSIONED CONTENT / CACHE
 DURABLE LEARNER STATE
 ```
 
+Durable learner state includes:
+
+```text
+FAVORITE
+LISTENED
+COMPLETED
+feature progress
+review schedule
+test history
+```
+
 Automatic disposable-storage management:
 
 ```text
 TTL + LRU + quota + pin/download protection + reference-safe deletion
 ```
 
-Cache/media eviction never deletes learner progress.
+Cache/media eviction never deletes learner progress or markers.
 
 ## TTS queue
 
@@ -225,19 +291,21 @@ Elasticsearch/OpenSearch
 
 ## Normative specifications
 
-- [System Requirements & Architecture Specification v0.9](docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
+- [System Requirements & Architecture Specification v0.10](docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
 - [Cross-System Contract Standard v1.0](docs/architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md)
-- [Flutter Mobile Application Requirements v2.0](docs/specification/CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md)
+- [Flutter Mobile Application Requirements v2.1](docs/specification/CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md)
 - [Globalization & Localization Requirements v1.0](docs/specification/CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
 - [Content Delivery & Local Retention Requirements v2.0](docs/specification/CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md)
 - [TTS Worker & Audio Production Architecture v2.0](docs/architecture/CAREERSPEAK_TTS_PIPELINE.md)
-- [P0 Domain & Contract Design Plan v2.0](docs/architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md)
+- [P0 Domain & Contract Design Plan v2.1](docs/architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md)
 
 ## Mobile detailed design
 
-- [P0.12.4 Drift ERD v1.0](docs/mobile/CAREERSPEAK_DRIFT_ERD.md)
+- [P0.12.4 Drift ERD v1.1](docs/mobile/CAREERSPEAK_DRIFT_ERD.md)
 - [P0.12.7 ContentSyncCoordinator v1.0](docs/mobile/CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md)
 - [Adaptive / Responsive UI Contract v0.1](docs/mobile/CAREERSPEAK_ADAPTIVE_UI.md)
+- [Material Design 3 Design System v1.0](docs/mobile/CAREERSPEAK_MATERIAL_DESIGN_3.md)
+- [Learner Content State & Markers v1.0](docs/mobile/CAREERSPEAK_LEARNER_CONTENT_STATE.md)
 
 ## Current P0 direction
 
@@ -257,6 +325,9 @@ P0.9  Assessment
 P0.10 Manifest / Content Delivery
 P0.11 Pagination
 P0.12 Flutter Application Contract
+      ├── Material Design 3
+      ├── Adaptive UI
+      └── Learner markers
 P0.13 Security / Installation
 P0.14 Content Studio
 P0.15 Integrated ERD + OpenAPI
