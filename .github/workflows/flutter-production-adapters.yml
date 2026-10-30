@@ -50,7 +50,7 @@ jobs:
           while IFS= read -r path; do
             [ -z "$path" ] && continue
             mkdir -p "format_artifact/files/$(dirname "$path")"
-            cp "$path" "format_artifact/files/$path"
+            cp "$GITHUB_WORKSPACE/$path" "format_artifact/files/$path"
           done < format_artifact/paths.txt
 
       - name: Upload formatter repair
