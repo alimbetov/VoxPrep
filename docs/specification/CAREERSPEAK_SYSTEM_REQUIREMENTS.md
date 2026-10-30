@@ -3,7 +3,7 @@
 **Repository:** `alimbetov/VoxPrep`  
 **Product name:** CareerSpeak  
 **Codename:** VoxPrep  
-**Document version:** 0.4  
+**Document version:** 0.5  
 **Status:** Architecture Baseline / Draft for implementation  
 **Target platforms:** Android, iOS  
 **Business model:** one-time paid application; initial target price — USD 2.99  
@@ -25,7 +25,7 @@ CareerSpeak is a mobile application for practical English learning with two prim
 
 CareerSpeak is an **English-only learning product**. Other supported languages are presentation/localization languages used for UI, translations, hints and explanations.
 
-The product is content-driven. English text, vocabulary, model answers, mock-test questions and audio are prepared and reviewed before publication.
+The product is content-driven. English text, vocabulary, model answers, mock-test questions and audio are prepared, validated and reviewed before publication.
 
 The learner runtime does not require AI, Speech-to-Text, pronunciation scoring or runtime TTS.
 
@@ -45,7 +45,9 @@ The learner runtime does not require AI, Speech-to-Text, pronunciation scoring o
 10. **Published content is immutable by revision.**
 11. **Audio is generated before publication and served as immutable media.**
 12. **Learner progress remains local by default.**
-13. **Simple infrastructure first.** New infrastructure components are added only after measured need.
+13. **Privacy first:** no personal learner account is required for MVP.
+14. **Simple infrastructure first:** infrastructure components are added only after measured need.
+15. **Visual ambience must never reduce readability:** themed backgrounds are decorative and optional.
 
 ---
 
@@ -102,7 +104,8 @@ CareerSpeak shall provide:
 - Recently opened;
 - Local Progress;
 - Offline downloads;
-- Daily / Quick Test mode.
+- Daily / Quick Test mode;
+- optional Study Ambience / visual themes.
 
 ---
 
@@ -127,8 +130,13 @@ Do not implement for MVP:
 - Kubernetes;
 - Eureka;
 - API Gateway as a separate deployable service;
+- R2DBC/WebFlux;
 - JavaFX moderator application;
-- PySide6 moderator application.
+- PySide6 moderator application;
+- server-side learner progress synchronization;
+- DRM-style audio protection.
+
+Caffeine is not required for MVP. It may be introduced later for small immutable/reference datasets only after profiling demonstrates benefit.
 
 ---
 
@@ -145,7 +153,8 @@ Uses Flutter to:
 - complete mock tests;
 - save favorites;
 - keep progress locally;
-- download content for offline usage.
+- download content for offline usage;
+- choose a visual ambience theme or Focus Mode.
 
 ### 5.2 Moderator / Content Editor
 
@@ -158,6 +167,7 @@ Uses the web-based CareerSpeak Content Studio to:
 - create Question Bank items;
 - assemble Mock Tests;
 - edit translations/hints;
+- select/override TTS voice policies;
 - trigger audio generation;
 - preview generated audio;
 - approve/reject/regenerate audio;
@@ -166,17 +176,30 @@ Uses the web-based CareerSpeak Content Studio to:
 
 ### 5.3 Administrator
 
-Manages moderator accounts, roles, voice registry, operational configuration and publication policy.
+Manages:
+
+- moderator accounts and roles;
+- TTS voice registry;
+- Piper model registry;
+- model versions and lifecycle;
+- TTS voice pools/policies;
+- RustFS object-storage configuration;
+- operational configuration;
+- publication policy.
 
 ### 5.4 TTS Worker
 
 A headless machine client that:
 
 - claims pending TTS jobs;
+- resolves the exact immutable voice model required by the job;
+- downloads missing Piper models from RustFS through temporary authorization;
+- verifies model checksums;
+- caches approved models locally;
 - generates speech with Piper;
 - post-processes audio with FFmpeg;
 - validates output;
-- uploads assets using temporary authorization;
+- uploads generated media to RustFS;
 - reports job completion/failure.
 
 ---
@@ -210,7 +233,8 @@ CareerSpeak
     ├── Test Results
     ├── Review
     ├── Progress
-    └── Downloads
+    ├── Downloads
+    └── Appearance / Ambience
 ```
 
 ---
@@ -268,107 +292,30 @@ A question may map to multiple seniority levels.
 
 ---
 
-## 9. Core learning scenarios
+## 9. Architecture decision — modular monolith
 
-### Topic
-
-```text
-Read
- ↓
-Listen
- ↓
-Repeat / Shadow
- ↓
-Continue
-```
-
-### Vocabulary
-
-```text
-Word
- ↓
-Meaning / localized hint
- ↓
-Collocations
- ↓
-Context sentence
- ↓
-Listen
- ↓
-Repeat
- ↓
-Review locally
-```
-
-### Job Interview
-
-```text
-Question
- ↓
-Listen
- ↓
-Answer aloud independently
- ↓
-Reveal model answer
- ↓
-Listen
- ↓
-Repeat / Shadow
-```
-
-### Mock Test — Learn Mode
-
-```text
-Question
- ↓
-Answer
- ↓
-Immediate result
- ↓
-Explanation / hint
- ↓
-Related content
-```
-
-### Mock Test — Exam Mode
-
-```text
-Question 1..N
- ↓
-Finish
- ↓
-Score
- ↓
-Skill breakdown
- ↓
-Review incorrect answers
-```
-
----
-
-## 10. Architecture decision — modular monolith
-
-CareerSpeak MVP SHALL use a single Spring Boot deployable backend.
+CareerSpeak MVP SHALL use one Spring Boot deployable backend.
 
 ```text
 careerspeak-backend
 │
 ├── admin
 ├── assessment
-├── audio
 ├── catalog
 ├── interview
 ├── localization
+├── manifest
 ├── media
 ├── profession
 ├── publication
 ├── security
 ├── topic
 ├── tts
-└── vocabulary
+├── vocabulary
+└── installation
 ```
 
-Logical boundaries are preserved as modules, but no distributed-service boundary is introduced until justified by measured scale or operational requirements.
+Logical boundaries are preserved as modules. No distributed-service boundary is introduced until justified by measured scale or operational requirements.
 
 Reasons:
 
@@ -377,101 +324,119 @@ Reasons:
 - no service-discovery dependency;
 - fewer network failure modes;
 - simpler CI/CD;
-- lower DigitalOcean cost;
-- easier content publication consistency.
+- lower infrastructure cost;
+- easier publication consistency;
+- easier end-to-end testing.
+
+Module boundaries SHOULD be enforceable with ArchUnit or Spring Modulith-style architecture tests.
 
 ---
 
-## 11. Target runtime architecture
+## 10. Target runtime architecture
 
 ```text
-                    GLOBAL LEARNERS
+                         GLOBAL LEARNERS
 
-                       Flutter App
-                           │
-              ┌────────────┴────────────┐
-              ▼                         ▼
-      CareerSpeak REST API             CDN
-              │                         │
-              ▼                         ▼
-       Spring Boot Backend      DigitalOcean Spaces
-              │
-              ▼
-          PostgreSQL
+                            Flutter App
+                                │
+                   ┌────────────┴────────────┐
+                   ▼                         ▼
+          CareerSpeak REST API              CDN
+                   │                         │
+                   ▼                         ▼
+           Spring Boot Backend        Published RustFS Assets
+                   │
+                   ▼
+               PostgreSQL
 
 
-                    CONTENT TEAM
+                         CONTENT TEAM
 
-                       Browser
-                          │
-                          ▼
-              Spring MVC Content Studio
-                          │
-                          ▼
-                      PostgreSQL
-                          │
-                          ▼
-                       TTS Jobs
-                          │
-                  outbound HTTPS polling
-                          ▼
-                  Local Piper Worker
-                    Python + FFmpeg
-                          │
-                          ▼
-                DigitalOcean Spaces
+                            Browser
+                               │
+                               ▼
+                   Spring MVC Content Studio
+                               │
+                   ┌───────────┴───────────┐
+                   ▼                       ▼
+               PostgreSQL                RustFS
+                 TTS jobs           models/draft/assets
+                   │
+                   │ outbound HTTPS polling
+                   ▼
+                Local TTS Worker
+             Python + Piper + FFmpeg
+                   │
+                   ├── model cache
+                   └── generated audio
+                               │
+                               ▼
+                             RustFS
 ```
 
-The learner path does not depend on Piper availability.
+The learner path does not depend on Piper or worker availability.
 
 ---
 
-## 12. Technology baseline
+## 11. Technology baseline
 
 ### Backend
 
 - Java 21 LTS;
-- Spring Boot 4.x;
+- Spring Boot 4.x baseline; exact minor version pinned during implementation qualification;
 - Spring MVC;
 - Spring Security;
 - Spring Data JPA;
+- Hibernate;
+- HikariCP;
 - PostgreSQL;
 - Liquibase;
 - OpenAPI;
 - Micrometer / Actuator;
 - Thymeleaf;
 - HTMX;
-- Docker.
+- Docker;
+- Testcontainers.
+
+### Explicit persistence decision
+
+```text
+Spring MVC + JPA/JDBC + HikariCP + PostgreSQL
+```
+
+R2DBC/WebFlux is not required for MVP. TTS job claiming and publication workflows rely on ordinary transactional SQL and may use `FOR UPDATE SKIP LOCKED` where appropriate.
 
 ### Mobile
 
 - Flutter;
 - local SQLite/Drift storage;
 - audio playback;
-- offline pack management.
+- offline pack management;
+- local appearance/ambience preferences.
 
 ### Content production
 
 - Python 3.x headless worker;
 - Piper TTS;
-- FFmpeg.
+- FFmpeg;
+- local immutable model cache.
 
 ### Production infrastructure
 
 - DigitalOcean application runtime;
 - DigitalOcean Managed PostgreSQL;
-- DigitalOcean Spaces;
-- CDN.
+- RustFS S3-compatible object storage;
+- CDN/reverse-proxy layer in front of published learner assets.
+
+RustFS is the baseline object store. Backend domain code SHALL access it through an `ObjectStorage` abstraction rather than hardcoded RustFS URLs.
 
 ---
 
-## 13. Persistence strategy
+## 12. Persistence strategy
 
 MVP uses one PostgreSQL database owned by the modular monolith.
 
-Suggested logical schemas or clear package ownership MAY be used, but distributed database ownership is not required.
-
-Core domains:
+Core logical domains:
 
 ```text
 content
@@ -480,13 +445,16 @@ localization
 media
 admin
 tts
+publication
 ```
 
 Liquibase owns all schema migrations.
 
+JPA entities SHALL NOT be exposed as public API DTOs.
+
 ---
 
-## 14. Core aggregates
+## 13. Core aggregates
 
 ```text
 Profession
@@ -507,21 +475,27 @@ PhraseCategory
 QuestionBankItem
 QuestionRevision
 PracticeTest
+PracticeTestRevision
 FileAsset
 TtsJob
 TtsVoice
+TtsVoiceModel
+TtsVoicePool
+TtsVoicePolicy
+TtsWorker
+TtsWorkerCapability
 PronunciationRule
+ContentManifest
+ContentPack
 ```
 
 Learner progress/test history is not part of the server-side MVP aggregate model.
 
 ---
 
-## 15. Revision model
+## 14. Revision and publication model
 
 Published English content is immutable by revision.
-
-Example:
 
 ```text
 InterviewQuestion Q100
@@ -530,19 +504,33 @@ InterviewQuestion Q100
 └── revision 3 DRAFT
 ```
 
-A revision owns or references its exact required audio version.
+Rules:
 
-Changing text does not modify an already published revision.
+1. Published revisions are not edited in place.
+2. A revision references exact media assets required for that revision.
+3. A revision that changes TTS-relevant text produces a new audio fingerprint.
+4. Stale worker results MUST NOT replace media for a newer revision.
+5. Test publication uses revision snapshots.
+
+Assessment example:
+
+```text
+PracticeTestRevision #7
+├── QuestionRevision #14
+├── QuestionRevision #31
+└── QuestionRevision #88
+```
+
+An already-published test therefore remains reproducible after later question edits.
 
 ---
 
-## 16. Profession and career track
+## 15. Core content model
 
-Recommended entities:
+### Profession / career track
 
 ```text
 profession
-────────────────────────
 id
 code
 status
@@ -553,7 +541,6 @@ updated_at
 
 ```text
 career_track
-────────────────────────
 id
 profession_id
 code
@@ -563,17 +550,12 @@ created_at
 updated_at
 ```
 
-Human-readable localized names/descriptions belong in localization tables, not duplicated columns such as `name_ru`, `name_kk`, etc.
+Localized names/descriptions belong in typed localization tables.
 
-Stable `code` values are immutable after external use.
-
----
-
-## 17. Interview model
+### Interview
 
 ```text
 interview_question
-────────────────────────
 id
 code
 status
@@ -583,7 +565,6 @@ updated_at
 
 ```text
 interview_question_revision
-────────────────────────
 id
 question_id
 revision
@@ -598,26 +579,10 @@ created_at
 published_at
 ```
 
-Mappings MAY include:
-
-```text
-question_profession
-question_career_track
-question_category
-question_seniority
-question_skill
-question_tag
-```
-
-Common questions must be reusable and not copied for each profession.
-
----
-
-## 18. Vocabulary model
+### Vocabulary
 
 ```text
 vocabulary_word
-────────────────────────
 id
 code
 word
@@ -625,13 +590,10 @@ phonetic
 part_of_speech
 cefr_level
 status
-created_at
-updated_at
 ```
 
 ```text
 vocabulary_localization
-────────────────────────
 word_id
 locale
 translation
@@ -639,86 +601,13 @@ hint
 explanation
 ```
 
-```text
-vocabulary_example
-────────────────────────
-id
-word_id
-sentence
-tts_text nullable
-example_type
-sort_order
-status
-```
+### Topics
 
-```text
-vocabulary_collocation
-────────────────────────
-id
-word_id
-text
-tts_text nullable
-sort_order
-status
-```
+Topic content SHALL be revisioned. Topic sections may contain optional `tts_text` overrides separate from learner-visible English text.
 
 ---
 
-## 19. Topics and Phrase Bank
-
-Topic content is revisioned.
-
-```text
-topic
-────────────────────────
-id
-code
-category_id
-status
-sort_order
-```
-
-```text
-topic_revision
-────────────────────────
-id
-topic_id
-revision
-status
-created_at
-published_at
-```
-
-```text
-topic_section
-────────────────────────
-id
-topic_revision_id
-title
-text
-tts_text nullable
-sort_order
-```
-
-Phrase Bank SHALL support categories such as:
-
-```text
-STARTING_ANSWER
-THINKING
-CLARIFICATION
-AGREEMENT
-DISAGREEMENT
-SALARY
-RELOCATION
-PRESENTATION
-MEETING
-TECHNICAL_EXPLANATION
-CUSTOMER_COMMUNICATION
-```
-
----
-
-## 20. Assessment domain
+## 16. Assessment domain
 
 Assessment is a first-class module inside the monolith.
 
@@ -750,54 +639,6 @@ ORDERING
 
 Questions are reusable through a shared Question Bank.
 
----
-
-## 21. Question Bank
-
-```text
-question_bank_item
-────────────────────────
-id
-code
-question_type
-status
-created_at
-updated_at
-```
-
-```text
-question_revision
-────────────────────────
-id
-question_id
-revision
-question_text
-question_tts_text nullable
-explanation
-difficulty
-cefr_level
-status
-created_at
-published_at
-```
-
-```text
-test_answer_option
-────────────────────────
-id
-question_revision_id
-text
-is_correct
-feedback
-sort_order
-```
-
-Validation rules are enforced before publication.
-
----
-
-## 22. Skill taxonomy
-
 Skills enable deterministic result analysis without AI.
 
 Examples:
@@ -815,13 +656,11 @@ IELTS_VOCABULARY
 IELTS_SPEAKING
 ```
 
-Questions may map to one or more skills.
-
-Flutter may calculate local skill breakdown and local recommendations from test results.
+Flutter may calculate skill breakdown and recommendations locally from completed test snapshots.
 
 ---
 
-## 23. Globalization model
+## 17. Globalization model
 
 Canonical learning content is English.
 
@@ -842,25 +681,21 @@ ru
 kk
 ```
 
-Planned expansion is defined in `CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md`.
+Locale identifiers SHOULD follow BCP-47 compatible values so regional forms can be introduced later, for example `pt-BR` and `pt-PT`.
 
 Do not create a multi-learning-language engine in MVP.
 
-Do not store columns such as:
-
-```text
-title_ru
-title_kk
-title_es
-```
+Do not store duplicated language columns such as `title_ru`, `title_kk`, `title_es`.
 
 Use typed localization tables.
+
+Locale-specific content MAY have independent readiness state so missing translation for one locale does not block canonical English publication where policy allows it.
 
 RTL readiness must be considered for planned Arabic/Urdu support.
 
 ---
 
-## 24. Locale selection and privacy
+## 18. Locale selection and privacy
 
 CareerSpeak SHALL NOT request GPS/precise location solely to select language.
 
@@ -888,7 +723,7 @@ test history
 
 ---
 
-## 25. Installation identity
+## 19. Installation identity and local learner state
 
 CareerSpeak MAY generate a cryptographically random `installationId` for technical purposes such as abuse protection or entitlement support.
 
@@ -904,10 +739,6 @@ hardware serial
 
 The installation identity SHALL NOT become a learner profile and SHALL NOT be joined to learning history in MVP.
 
----
-
-## 26. Local learner state
-
 Flutter stores locally:
 
 ```text
@@ -920,6 +751,9 @@ review schedule
 completed topics
 downloads
 content manifest
+selected locale
+selected ambience theme
+focus mode
 ```
 
 Recommended persistence:
@@ -928,13 +762,11 @@ Recommended persistence:
 SQLite + Drift
 ```
 
-Deletion of the application may remove local progress unless a future explicit backup/sync feature is introduced by a separate ADR.
-
 ---
 
-## 27. Content Studio
+## 20. Content Studio
 
-The moderator UI is a server-rendered web application:
+The moderator UI is a server-rendered internal application:
 
 ```text
 Spring MVC
@@ -955,6 +787,8 @@ Initial routes:
 /admin/tests
 /admin/localization
 /admin/audio
+/admin/tts/voices
+/admin/tts/models
 /admin/publication
 ```
 
@@ -967,11 +801,13 @@ The Content Studio SHOULD support:
 - missing/stale-audio detection;
 - audio preview;
 - bulk generation status;
+- TTS voice/model administration;
+- model upload/validation/activation;
 - publication qualification.
 
 ---
 
-## 28. TTS architecture
+## 21. TTS architecture
 
 CareerSpeak SHALL use asynchronous content-production TTS.
 
@@ -983,65 +819,278 @@ Key rules:
 
 1. Piper does not execute in learner request paths.
 2. Piper does not execute synchronously inside Spring MVC requests.
-3. A headless worker claims jobs over HTTPS.
+3. A headless worker claims jobs over authenticated HTTPS.
 4. The worker does not receive PostgreSQL credentials.
-5. The worker uses Piper for synthesis and FFmpeg for production encoding.
-6. Audio is fingerprinted for idempotency/staleness detection.
-7. Newly generated audio is technically validated and reviewed before publication.
-8. Learners consume published immutable audio from CDN/object storage.
+5. The worker does not require permanent RustFS credentials; presigned URLs are preferred.
+6. Piper produces temporary WAV; FFmpeg creates delivery audio.
+7. Audio is fingerprinted for idempotency/staleness detection.
+8. Newly generated audio is technically validated and reviewed before publication.
+9. Every job resolves to an exact immutable `voice_model_id` before generation.
+10. A worker MUST NOT silently substitute another voice/model.
 
 ---
 
-## 29. TTS lifecycle
+## 22. Voice and model governance
+
+Logical voice and physical model are separate concepts.
+
+### `tts_voice`
+
+Represents moderator-facing characteristics:
 
 ```text
-DRAFT
-  ↓
-READY_FOR_AUDIO
-  ↓
-AUDIO_PENDING
-  ↓
-AUDIO_GENERATING
-  ├────────► AUDIO_FAILED
-  ↓
-AUDIO_READY
-  ↓
-REVIEW
-  ↓
-PUBLISHED
-  ↓
-ARCHIVED
+id
+code
+display_name
+language
+accent
+gender
+style
+enabled
+default_model_id
 ```
 
-Generation should occur on explicit workflow transition/bulk action, not on every draft keystroke/save.
+Examples:
+
+```text
+EN_US_FEMALE_LESSAC
+EN_US_MALE_RYAN
+EN_GB_FEMALE_ALBA
+```
+
+### `tts_voice_model`
+
+Represents an exact immutable Piper model revision:
+
+```text
+id
+code
+voice_id
+engine
+model_name
+model_version
+model_asset_id
+config_asset_id
+model_sha256
+config_sha256
+model_size_bytes
+status
+license_name
+license_reference
+commercial_use_reviewed
+created_at
+approved_at
+```
+
+Model lifecycle:
+
+```text
+UPLOADING
+  ↓
+UPLOADED
+  ↓
+VALIDATING
+  ↓
+READY_FOR_REVIEW
+  ↓
+APPROVED
+  ↓
+ACTIVE
+  ↓
+DEPRECATED
+```
+
+Failure states MAY include:
+
+```text
+INVALID
+QUARANTINED
+```
+
+A model version SHALL never be overwritten in place.
 
 ---
 
-## 30. TTS job reliability
+## 23. Voice pools and policies
 
-Jobs are durable in PostgreSQL.
+The moderator MAY choose a voice manually or use an automatic policy.
 
-Required concepts:
+Recommended concepts:
 
 ```text
+tts_voice_pool
+tts_voice_pool_member
+tts_voice_policy
+```
+
+Possible metadata:
+
+```text
+accent = US / UK
+gender = FEMALE / MALE
+style = NEUTRAL / PROFESSIONAL / WARM / ACADEMIC / CALM
+```
+
+Gender/accent/style are selection metadata; they do not replace the need to resolve an exact model.
+
+Automatic resolution SHOULD be deterministic for the same content revision and policy.
+
+The final `tts_job` SHALL store the resolved `voice_id` and immutable `voice_model_id`.
+
+---
+
+## 24. RustFS object-storage architecture
+
+RustFS is the baseline S3-compatible object store.
+
+Recommended buckets:
+
+```text
+careerspeak-models   private
+careerspeak-draft    private
+careerspeak-audio    published media origin
+careerspeak-images   covers/backgrounds/assets
+```
+
+TTS models SHALL be private.
+
+Example object layout:
+
+```text
+careerspeak-models/
+└── piper/
+    └── en/
+        └── en_US-lessac-high/
+            └── v1/
+                ├── model.onnx
+                └── model.onnx.json
+```
+
+Model object keys are immutable. New binary content requires a new model version or content-addressed object key.
+
+PostgreSQL stores only metadata/object keys/checksums, not ONNX binary data.
+
+The backend SHALL expose storage through an abstraction similar to:
+
+```text
+ObjectStorage
+├── createUploadUrl
+├── createDownloadUrl
+├── getMetadata
+└── delete
+```
+
+The implementation baseline is `RustFsObjectStorage`.
+
+---
+
+## 25. TTS model upload and worker distribution
+
+### Admin upload flow
+
+```text
+Moderator/Admin
+    ↓
+Create model metadata
+    ↓
+Backend creates presigned PUT
+    ↓
+Browser uploads ONNX/config directly to RustFS
+    ↓
+Backend completes upload
+    ↓
+checksum/metadata validation
+    ↓
+worker runtime qualification
+    ↓
+moderator approval
+    ↓
+ACTIVE
+```
+
+Large ONNX binaries SHOULD NOT be proxied through the Spring JVM when direct presigned upload is available.
+
+### Worker model flow
+
+```text
+TTS job requires voice_model_id
+        ↓
+worker checks local cache
+        ↓
+missing?
+        ├── no  → load exact cached model
+        └── yes → request presigned GET
+                  ↓
+                RustFS
+                  ↓
+             download model
+                  ↓
+             verify SHA-256
+                  ↓
+             install local cache
+                  ↓
+                 Piper
+```
+
+The worker MUST fail with an explicit model error if the exact required model cannot be obtained or validated. Silent fallback is forbidden.
+
+---
+
+## 26. TTS job reliability
+
+Recommended model:
+
+```text
+tts_job
+id
+content_type
+content_revision_id
+audio_role
+voice_id
+voice_model_id
+speaker_id nullable
+fingerprint
 status
 attempt_count
 worker_id
+lease_token
 lease_until
-fingerprint
+created_at
+started_at
+completed_at
 error_code
 error_message
 ```
 
-A crashed worker SHALL NOT require manual database repair.
+Status baseline:
 
-Expired leases allow retry.
+```text
+PENDING
+RUNNING
+READY
+FAILED
+CANCELLED
+SUPERSEDED
+```
 
-Duplicate completion and stale-result scenarios must be idempotently handled.
+A successful claim SHALL issue a unique `lease_token`.
+
+Heartbeat may extend `lease_until` for long operations.
+
+Completion MUST validate:
+
+```text
+job id
+lease token
+current revision/fingerprint
+expected voice_model_id
+```
+
+A stale completion MUST NOT overwrite a newer revision or association.
 
 ---
 
-## 31. TTS text and pronunciation
+## 27. TTS text, pronunciation and fingerprint
 
 The system SHALL support:
 
@@ -1068,36 +1117,29 @@ WebFlux
 Kubernetes
 ```
 
-The learner-visible canonical English must not be distorted to accommodate TTS pronunciation.
-
----
-
-## 32. TTS voice governance
-
-The voice registry SHALL record at least:
+Recommended fingerprint input:
 
 ```text
-code
-engine
-accent
-model_name
-model_version
-model_checksum
-license_name
-license_reference
-commercial_use_reviewed
-enabled
+normalized_tts_text
+voice_model_id
+voice_model_checksum
+speaker_id
+engine_version
+speaking_rate
+postprocess_profile_version
 ```
 
-Production use requires both technical-quality approval and license review.
+Algorithm:
+
+```text
+SHA-256
+```
+
+Changing voice/model/settings produces a new fingerprint and therefore a new immutable audio asset.
 
 ---
 
-## 33. Audio production profile
-
-Piper WAV is an intermediate artifact.
-
-Production pipeline:
+## 28. Audio production profile
 
 ```text
 Piper
@@ -1112,7 +1154,7 @@ Production MP3
  ↓
 Technical QC
  ↓
-Upload
+Upload to RustFS
  ↓
 Human review
  ↓
@@ -1130,23 +1172,15 @@ speech-oriented sample rate
 
 Final values must be selected through listening qualification and recorded in an ADR.
 
-WAV delivery to learners is not required.
+Temporary WAV SHOULD be deleted after successful production encoding/upload unless retained for diagnostics.
 
 ---
 
-## 34. Media and storage
+## 29. Media and CDN delivery
 
-Recommended production storage:
-
-```text
-DigitalOcean Spaces + CDN
-```
-
-Recommended metadata:
+Recommended `file_asset` metadata:
 
 ```text
-file_asset
-────────────────────────
 id
 storage_provider
 bucket
@@ -1155,12 +1189,14 @@ mime_type
 size_bytes
 checksum_sha256
 duration_ms
+codec
+bitrate
 status
 created_at
 updated_at
 ```
 
-Do not store environment-specific permanent origin URLs in content tables.
+Do not store environment-specific permanent origin URLs in domain tables.
 
 Published object keys are immutable/versioned, for example:
 
@@ -1168,11 +1204,19 @@ Published object keys are immutable/versioned, for example:
 audio/interview/Q100/rev-3/<fingerprint>.mp3
 ```
 
+Normal learner playback path:
+
+```text
+Flutter → CDN → RustFS origin
+```
+
 Media bytes SHALL NOT be proxied through Spring Boot in the normal learner playback path.
+
+The concrete CDN provider remains a deployment decision and is not part of the content domain.
 
 ---
 
-## 35. Content manifest and offline packs
+## 30. Content manifest and offline packs
 
 Flutter SHALL use a content manifest rather than repeatedly rebuilding all catalogs from many API calls.
 
@@ -1185,6 +1229,7 @@ GET /api/v1/content/manifest
 Manifest concepts:
 
 ```text
+schemaVersion
 contentVersion
 publishedAt
 packs
@@ -1204,11 +1249,41 @@ DEVOPS
 BUSINESS_ANALYST
 ```
 
-Delta updates should download only changed content/assets.
+MVP delta behavior may be asset-level: unchanged assets are not downloaded again.
 
 ---
 
-## 36. Search
+## 31. Study Ambience / visual themes
+
+Visual themes are a Flutter UX concern in MVP and SHALL NOT complicate backend publication.
+
+Initial theme candidates:
+
+```text
+MINIMAL
+NATURE
+COSMOS
+LIBRARY
+COFFEE_STUDY
+PROFESSIONAL
+```
+
+Rules:
+
+1. text readability has priority over decoration;
+2. text is rendered on a controlled readable surface/card;
+3. Study Mode may use ambience backgrounds;
+4. Focus Mode uses minimal/solid presentation;
+5. Exam/Mock Test mode SHOULD default to minimal visuals;
+6. background selection within a theme SHOULD be deterministic, e.g. hash of `contentCode + themeCode`;
+7. initial backgrounds MAY ship as Flutter assets for full offline availability;
+8. selected theme/focus mode remains local learner preference.
+
+Remote downloadable theme packs MAY be introduced later through a separate ADR.
+
+---
+
+## 32. Search and caching
 
 PostgreSQL is sufficient for MVP search.
 
@@ -1220,11 +1295,22 @@ PostgreSQL full-text search
 pg_trgm
 ```
 
-Do not add Elasticsearch until Postgres search fails measured requirements.
+Do not add Elasticsearch until Postgres fails measured requirements.
+
+Caching baseline:
+
+```text
+Flutter local storage
+HTTP caching / ETag where appropriate
+CDN for immutable media
+PostgreSQL buffer/cache
+```
+
+Redis and Caffeine are not required initially.
 
 ---
 
-## 37. API design
+## 33. API design
 
 Learner REST API examples:
 
@@ -1238,15 +1324,34 @@ Learner REST API examples:
 /api/v1/search
 ```
 
-The API SHOULD be coarse-grained for mobile screens to reduce round trips.
+Worker endpoints include:
 
-JPA entities SHALL NOT be exposed directly.
+```text
+POST /internal/v1/tts/jobs/claim
+POST /internal/v1/tts/jobs/{id}/heartbeat
+POST /internal/v1/tts/jobs/{id}/complete
+POST /internal/v1/tts/jobs/{id}/fail
+POST /internal/v1/tts/models/{id}/download
+```
 
-Stable DTO/contracts isolate Flutter from persistence changes.
+Admin model endpoints include concepts such as:
+
+```text
+POST /admin/api/tts/voices
+POST /admin/api/tts/models
+POST /admin/api/tts/models/{id}/upload-url
+POST /admin/api/tts/models/{id}/complete
+POST /admin/api/tts/models/{id}/validate
+POST /admin/api/tts/models/{id}/approve
+POST /admin/api/tts/models/{id}/activate
+POST /admin/api/tts/models/{id}/deprecate
+```
+
+The mobile API SHOULD be coarse-grained to reduce round trips.
 
 ---
 
-## 38. Admin and worker security
+## 34. Security
 
 Moderator authentication:
 
@@ -1255,17 +1360,20 @@ Spring Security
 server-side session
 HttpOnly cookie
 CSRF
+roles: ADMIN / EDITOR / REVIEWER
 ```
 
 TTS worker uses separate machine authentication.
 
 The worker SHALL NOT expose public inbound endpoints and SHALL use outbound HTTPS.
 
-Permanent Spaces credentials SHOULD NOT be embedded in the worker when temporary upload authorization can be used.
+Permanent RustFS credentials SHOULD NOT be embedded in the worker when presigned GET/PUT authorization can be used.
+
+TTS model buckets SHALL remain private.
 
 ---
 
-## 39. Observability
+## 35. Observability
 
 Backend minimum:
 
@@ -1286,13 +1394,26 @@ tts.jobs.ready
 tts.jobs.failed
 tts.job.duration
 tts.retry.count
+tts.models.active
+tts.model.download.failures
 ```
 
-Media/backend metrics SHOULD avoid unnecessary persistent learner identifiers.
+Worker logs SHOULD include:
+
+```text
+jobId
+workerId
+voiceCode
+voiceModelId
+fingerprint
+stage
+duration
+errorCode
+```
 
 ---
 
-## 40. CI/CD
+## 36. CI/CD
 
 ### Backend
 
@@ -1300,6 +1421,7 @@ Media/backend metrics SHOULD avoid unnecessary persistent learner identifiers.
 compile
 format/static analysis
 unit tests
+architecture/module tests
 integration tests
 Testcontainers PostgreSQL
 Liquibase validation
@@ -1312,8 +1434,10 @@ build container
 ```text
 lint
 unit tests
+model registry tests
 Piper smoke synthesis test
 FFmpeg conversion test
+checksum verification test
 job-protocol integration test
 ```
 
@@ -1329,59 +1453,77 @@ build
 
 ---
 
-## 41. Mandatory failure tests for TTS
+## 37. Mandatory TTS failure tests
 
-Before production acceptance, verify:
+Before production acceptance, verify at least:
 
 1. worker killed during synthesis;
 2. worker killed during FFmpeg conversion;
-3. network loss before upload;
-4. network loss after upload but before completion callback;
-5. duplicate completion callback;
-6. expired upload authorization;
-7. invalid voice/model configuration;
-8. corrupt generated media;
-9. backend restart with pending/running jobs;
-10. two workers attempting concurrent claims;
-11. text changed while old generation is running;
-12. stale worker result received after a newer revision exists.
+3. network loss before/after upload;
+4. duplicate completion callback;
+5. expired presigned URL;
+6. invalid voice/model configuration;
+7. missing model in local cache;
+8. model download failure;
+9. model checksum mismatch;
+10. corrupt generated media;
+11. backend restart with pending/running jobs;
+12. two workers attempting concurrent claims;
+13. expired lease followed by old worker completion;
+14. text changed while old generation is running;
+15. stale result after a newer revision/fingerprint exists;
+16. active logical voice changed to model v2 while an old job still references model v1.
 
-A stale result MUST NOT overwrite the current revision's required asset.
+A stale or incorrectly leased result MUST NOT overwrite current publication data.
 
 ---
 
-## 42. Production deployment — initial target
+## 38. Production deployment — initial target
 
 ```text
 DigitalOcean
 │
 ├── CareerSpeak Backend
 ├── Managed PostgreSQL
-└── Spaces + CDN
+├── RustFS
+│   ├── private TTS models
+│   ├── private draft assets
+│   └── published audio/images origin
+└── CDN / edge layer for published assets
 ```
 
 The first release does not require Kubernetes or a service mesh.
 
-The local TTS worker may run on a controlled Windows content-production machine. If content throughput increases, the same worker protocol may be deployed to cloud workers without changing the learner runtime.
+The local TTS worker may run on a controlled Windows content-production machine. If throughput increases, the same authenticated worker protocol may be deployed to additional local/cloud workers without changing learner runtime.
 
 ---
 
-## 43. MVP acceptance criteria
+## 39. MVP acceptance criteria
 
 MVP architecture is considered functional when this full path works repeatedly:
 
 ```text
+Admin uploads/activates an approved Piper model in RustFS
+        ↓
 Moderator creates/edits English content
         ↓
 adds localization/hints
         ↓
+selects voice or automatic voice policy
+        ↓
 marks revision READY_FOR_AUDIO
+        ↓
+backend resolves exact voice_model_id
         ↓
 backend creates only required TTS jobs
         ↓
-local worker generates + converts + validates audio
+worker claims job with lease token
         ↓
-asset is uploaded
+worker downloads/verifies model if not cached
+        ↓
+Piper generates + FFmpeg converts + QC validates audio
+        ↓
+asset uploads to RustFS
         ↓
 moderator previews and approves audio
         ↓
@@ -1395,37 +1537,42 @@ learner reads/listens/tests
         ↓
 progress remains local
         ↓
-published audio plays from CDN
+published audio plays through CDN from RustFS origin
 ```
 
 The learner experience MUST remain available when the local TTS worker is offline.
 
 ---
 
-## 44. Roadmap
+## 40. Roadmap
 
-### P0 — System Design
+### P0 — Architecture Freeze
 
 ```text
 Domain map
-ERD
+Full PostgreSQL ERD
+Revision/publication model
 Localization model
-Revision model
-Assessment model
-TTS/job model
-Media model
-Content manifest
+Assessment snapshot model
+TTS voice/model/job ERD
+RustFS media/model model
+Content manifest/offline-pack model
+OpenAPI contracts
 ADR baseline
 ```
 
-### P1 — Backend Foundation
+### P1 — Executable Foundation
 
 ```text
+monorepo skeleton
 Spring Boot modular monolith
 PostgreSQL
 Liquibase
-Security
+Spring Security
 Spring MVC Content Studio shell
+RustFS adapter
+CI
+Testcontainers
 ```
 
 ### P2 — Content Core
@@ -1444,34 +1591,36 @@ Revision/publication lifecycle
 
 ```text
 Question Bank
-Practice Tests
+Question/Test revisions
 Mock Tests
 Skills
 Scoring rules
 ```
 
-### P4 — Media + TTS
+### P4 — TTS Model Registry + Media
 
 ```text
 FileAsset
-Spaces abstraction
-TtsJob
-worker protocol
-Piper worker
-FFmpeg pipeline
-voice registry
-pronunciation rules
-QC/review
+RustFS presigned upload/download
+TtsVoice
+TtsVoiceModel
+model lifecycle
+voice pools/policies
+model upload/qualification
+worker model cache protocol
 ```
 
-### P5 — Content Production Qualification
+### P5 — TTS Jobs + Content Production
 
 ```text
-bulk import
+TtsJob
+lease token/heartbeat
+Piper worker
+FFmpeg pipeline
+pronunciation rules
+QC/review
 bulk TTS
-sample production content
-voice qualification
-failure/recovery tests
+failure/recovery qualification
 ```
 
 ### P6 — Flutter Foundation
@@ -1481,6 +1630,7 @@ catalog
 local DB
 manifest
 settings/locales
+ambience/focus mode
 ```
 
 ### P7 — Learning UX
@@ -1500,8 +1650,8 @@ local progress
 ```text
 pack manifests
 downloads
-delta updates
-asset verification
+asset-level delta updates
+checksum verification
 ```
 
 ### P9 — Globalization
@@ -1519,9 +1669,10 @@ translation QA
 ```text
 DigitalOcean deployment
 Managed PostgreSQL
-Spaces/CDN
+RustFS
+CDN/edge
 monitoring
-backup
+backup/restore
 CI/CD
 ```
 
@@ -1538,10 +1689,10 @@ release qualification
 
 ---
 
-## 45. Architecture summary
+## 41. Architecture summary
 
-The CareerSpeak MVP architecture is deliberately conservative:
+The CareerSpeak v0.5 baseline is deliberately conservative and reproducible:
 
-> One Spring Boot modular monolith manages content and the web-based Content Studio. A separate headless local Piper worker performs asynchronous TTS production over an authenticated job protocol. PostgreSQL is the durable source of truth and job store. DigitalOcean Spaces/CDN serves immutable reviewed media. Flutter keeps learner state locally and consumes versioned content/offline packs.
+> One Spring Boot modular monolith manages content, assessment, publication and the web-based Content Studio. PostgreSQL is the durable source of truth and TTS job store. RustFS is the S3-compatible object store for immutable Piper models, draft assets and published media origin. A separate headless Python/Piper/FFmpeg worker claims leased jobs over HTTPS, downloads the exact immutable model revision required by each job, verifies checksums, caches models locally, generates reviewed audio and uploads it to RustFS. Flutter stores learner state locally, consumes versioned content/offline packs and plays published media through a CDN in front of RustFS.
 
-This architecture is the current implementation baseline for VoxPrep v0.4.
+This architecture is the current implementation baseline for VoxPrep v0.5.
