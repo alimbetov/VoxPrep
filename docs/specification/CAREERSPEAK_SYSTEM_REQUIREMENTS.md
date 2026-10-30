@@ -3,7 +3,7 @@
 **Repository:** `alimbetov/VoxPrep`  
 **Product name:** CareerSpeak  
 **Codename:** VoxPrep  
-**Document version:** 0.9  
+**Document version:** 0.10  
 **Status:** Consolidated P0 architecture baseline  
 **Target platforms:** Android, iOS  
 **Primary learning model:** Read → Listen → Repeat → Test → Review
@@ -22,6 +22,8 @@ Mobile detailed contracts:
 - [`../mobile/CAREERSPEAK_DRIFT_ERD.md`](../mobile/CAREERSPEAK_DRIFT_ERD.md)
 - [`../mobile/CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md`](../mobile/CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md)
 - [`../mobile/CAREERSPEAK_ADAPTIVE_UI.md`](../mobile/CAREERSPEAK_ADAPTIVE_UI.md)
+- [`../mobile/CAREERSPEAK_MATERIAL_DESIGN_3.md`](../mobile/CAREERSPEAK_MATERIAL_DESIGN_3.md)
+- [`../mobile/CAREERSPEAK_LEARNER_CONTENT_STATE.md`](../mobile/CAREERSPEAK_LEARNER_CONTENT_STATE.md)
 
 ---
 
@@ -57,7 +59,9 @@ server can deactivate content without destructive deletion
 pre-generated reviewed audio
 simple infrastructure until measured need
 adaptive mobile UI
+Material Design 3 as the single UI design system
 privacy-first installation identity
+durable local learner markers
 ```
 
 ---
@@ -109,6 +113,7 @@ social/messaging/leaderboards
 complex gamification
 server learner-progress sync
 multi-user admin identity platform
+parallel custom iOS design system
 RabbitMQ
 Kafka
 Redis
@@ -181,6 +186,7 @@ Baseline:
 
 ```text
 Flutter + Dart
+Material Design 3
 Riverpod
 go_router
 Drift + SQLite
@@ -199,6 +205,7 @@ AssetResolver
 StorageRetentionManager
 AudioPlaybackController
 ReviewScheduler
+LearnerContentStateRepository
 ```
 
 Adaptive width classes:
@@ -214,7 +221,38 @@ Adaptive presentation never forks business logic by device type.
 
 ---
 
-## 7. Production topology
+## 7. UI design system
+
+CareerSpeak uses exactly one learner UI design system:
+
+```text
+Material Design 3
+        ↓
+CareerSpeak Theme + Design Tokens
+        ↓
+CareerSpeak reusable Material components
+        ↓
+Adaptive feature presentation
+```
+
+Requirements:
+
+```text
+ThemeData / ColorScheme is the theme source
+System / Light / Dark modes
+Material NavigationBar / NavigationRail adaptive mapping
+central spacing/radius/type/motion tokens
+Material components before bespoke replacements
+Study Ambience is decorative, not a second design system
+large-text and accessibility qualification
+RTL/mixed-direction support
+```
+
+No separate visual framework is created for iOS, Shadowing, Assessment or tablets.
+
+---
+
+## 8. Production topology
 
 ```text
 ADMIN Browser
@@ -238,7 +276,7 @@ Initial deployment may run Backend, TTS Worker, RustFS and reverse proxy on one 
 
 ---
 
-## 8. Backend content lifecycle
+## 9. Backend content lifecycle
 
 Revision status:
 
@@ -267,7 +305,7 @@ Meaning: visible/deliverable/downloadable according to learner contracts.
 
 ---
 
-## 9. Flutter lifecycle terminology
+## 10. Flutter lifecycle terminology
 
 Local metadata states:
 
@@ -301,7 +339,45 @@ Flutter READY = complete offline bundle locally verified
 
 ---
 
-## 10. Content versioning and manifest
+## 11. Learner content markers
+
+Flutter owns three independent durable learner markers:
+
+```text
+FAVORITE
+= explicit learner curation
+
+LISTENED
+= qualified audio consumption completed
+
+COMPLETED
+= pedagogical unit completed according to feature policy
+```
+
+The states are independent:
+
+```text
+FAVORITE + LISTENED + COMPLETED
+```
+
+is valid.
+
+Rules:
+
+```text
+markers use stable content_code + content_type
+markers survive app restart and cache/media eviction
+Favorite does not imply offline pinning
+Listened does not imply Completed
+Completed does not replace detailed test/review history
+markers remain local in MVP
+```
+
+Catalogs may filter by Favorites, Listened/Not listened and Completed/Not completed.
+
+---
+
+## 12. Content versioning and manifest
 
 Backend publishes one root learner snapshot:
 
@@ -326,7 +402,7 @@ Metadata update is atomic; optional media bytes do not block normal metadata act
 
 ---
 
-## 11. Offline bundle replacement
+## 13. Offline bundle replacement
 
 Explicit offline bundle has independent readiness.
 
@@ -342,7 +418,7 @@ Old READY bundle remains usable until replacement verifies.
 
 ---
 
-## 12. Publication/assessment reproducibility
+## 14. Publication/assessment reproducibility
 
 Published content revisions are immutable.
 
@@ -352,7 +428,7 @@ Flutter test attempts persist exact test/question revisions/snapshots so complet
 
 ---
 
-## 13. Localization
+## 15. Localization
 
 ```text
 learningLanguage = en
@@ -386,7 +462,7 @@ BCP-47-compatible identifiers and RTL readiness are required.
 
 ---
 
-## 14. RustFS / media
+## 16. RustFS / media
 
 RustFS stores binary objects; PostgreSQL stores metadata/lifecycle.
 
@@ -411,7 +487,7 @@ Do not persist CDN hostname as durable domain identity.
 
 ---
 
-## 15. TTS architecture
+## 17. TTS architecture
 
 Logical `TtsVoice` and exact immutable `TtsVoiceModel` are separate.
 
@@ -433,7 +509,7 @@ Worker never publishes content.
 
 ---
 
-## 16. TTS queue
+## 18. TTS queue
 
 PostgreSQL durable queue using atomic claim with:
 
@@ -458,7 +534,7 @@ RabbitMQ is not required initially.
 
 ---
 
-## 17. Content delivery
+## 19. Content delivery
 
 Learner lists use cursor/keyset pagination.
 
@@ -476,7 +552,7 @@ Tombstones explicitly retire content; absence from a paginated list never implie
 
 ---
 
-## 18. Local persistence and retention
+## 20. Local persistence and retention
 
 Drift separates:
 
@@ -486,17 +562,27 @@ versioned content/cache
 learner durable state
 ```
 
+Durable learner state includes:
+
+```text
+favorites
+LISTENED / COMPLETED markers
+feature progress
+review schedules
+test history
+```
+
 Disposable storage management:
 
 ```text
 TTL + LRU + quota + pin/download protection + reference-safe deletion
 ```
 
-Cache/media eviction never erases learner progress.
+Cache/media eviction never erases learner progress or markers.
 
 ---
 
-## 19. Adaptive UI
+## 21. Adaptive UI
 
 CareerSpeak adapts to available window width, including phone, tablet, split-screen and landscape windows.
 
@@ -504,18 +590,18 @@ Core requirements:
 
 ```text
 one shared business state across layouts
-bottom navigation on compact where appropriate
-navigation rail on wider layouts
+NavigationBar on compact where appropriate
+NavigationRail on wider layouts
 master/detail only for natural master-detail domains
 reading width constrained on tablets
 large text support
 RTL/mixed-direction support
-resize without route/test/audio state loss
+resize without route/test/audio/marker state loss
 ```
 
 ---
 
-## 20. Security zones
+## 22. Security zones
 
 ```text
 /admin/**
@@ -533,7 +619,7 @@ private RustFS
 
 ---
 
-## 21. Failure isolation
+## 23. Failure isolation
 
 ```text
 Backend down
@@ -552,9 +638,11 @@ Worker crash
 → lease expires/reclaim
 ```
 
+Durable learner markers remain intact across recoverable sync/cache failures.
+
 ---
 
-## 22. P0 acceptance
+## 24. P0 acceptance
 
 Before implementation freeze, accept:
 
@@ -566,6 +654,8 @@ root manifest/pack variant version contract
 Drift ERD
 ContentSyncCoordinator state machine
 adaptive UI contract
+Material Design 3 single-system contract
+LISTENED/COMPLETED/FAVORITE learner-state contract
 localization/RTL contract
 TTS claim/lease/recovery contract
 PostgreSQL integrated ERD
@@ -574,4 +664,4 @@ OpenAPI learner/worker contracts
 failure/recovery qualification matrix
 ```
 
-This is the authoritative system baseline for CareerSpeak v0.9.
+This is the authoritative system baseline for CareerSpeak v0.10.
