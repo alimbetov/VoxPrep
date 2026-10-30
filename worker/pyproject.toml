@@ -1,17 +1,19 @@
 [build-system]
-requires = ["setuptools>=75"]
+requires = ["setuptools==84.2.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "voxprep-tts-worker"
 version = "0.1.0"
 description = "VoxPrep backend-controlled TTS worker"
-requires-python = ">=3.12"
-dependencies = []
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "piper-tts==1.4.2",
+]
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=8.3,<9",
+  "pytest==8.4.2",
 ]
 
 [project.scripts]
