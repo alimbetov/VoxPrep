@@ -3,8 +3,14 @@ from __future__ import annotations
 import threading
 from datetime import datetime, timezone
 
+import pytest
+
 from voxprep_tts_worker.application.worker_loop import WorkerLoop
-from voxprep_tts_worker.domain.errors import BackendTransportError
+from voxprep_tts_worker.domain.errors import (
+    BackendAuthenticationError,
+    BackendProtocolError,
+    BackendTransportError,
+)
 from voxprep_tts_worker.domain.job import ClaimedJob
 
 
@@ -36,9 +42,14 @@ class QueueBackend:
         return self.jobs.pop(0) if self.jobs else None
 
 
-class UnavailableBackend:
+class ErrorBackend:
+    def __init__(self, error: Exception) -> None:
+        self.error = error
+        self.calls = 0
+
     def claim(self, worker_id: str) -> ClaimedJob | None:
-        raise BackendTransportError("backend unavailable")
+        self.calls += 1
+        raise self.error
 
 
 class RecordingProcessor:
@@ -81,8 +92,29 @@ def test_run_once_is_idle_when_backend_has_no_job() -> None:
 def test_transient_backend_outage_is_treated_as_idle_poll() -> None:
     shutdown = threading.Event()
     processor = RecordingProcessor()
+    backend = ErrorBackend(BackendTransportError("backend unavailable"))
 
-    assert _loop(UnavailableBackend(), processor, shutdown).run_once() is False
+    assert _loop(backend, processor, shutdown).run_once() is False
+    assert backend.calls == 1
+    assert processor.jobs == []
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        BackendAuthenticationError("bad token"),
+        BackendProtocolError("bad contract"),
+    ],
+)
+def test_non_transient_backend_errors_fail_fast(error: Exception) -> None:
+    shutdown = threading.Event()
+    processor = RecordingProcessor()
+    backend = ErrorBackend(error)
+
+    with pytest.raises(type(error), match=str(error)):
+        _loop(backend, processor, shutdown).run_once()
+
+    assert backend.calls == 1
     assert processor.jobs == []
 
 
