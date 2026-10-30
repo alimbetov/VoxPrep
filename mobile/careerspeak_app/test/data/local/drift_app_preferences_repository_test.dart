@@ -4,7 +4,7 @@ import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_app_preferences_repository.dart';
 import 'package:careerspeak_app/domain/application_preferences.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -78,7 +78,7 @@ void main() {
         .into(database.appPreferences)
         .insert(
           AppPreferencesCompanion.insert(
-            id: 1,
+            id: const Value<int>(1),
             uiLocale: 'unsupported',
             translationLocale: 'ru',
             preferredAccent: const Value<String?>('en-US'),
