@@ -418,10 +418,18 @@ Presentation/audio asks for an asset by immutable identity.
 ```text
 verified local file exists?
 ├── yes → local file
-└── no  → CDN/edge delivery URI
+└── no  → explicit resolution policy
+          ├── localOnly → ASSET_NOT_AVAILABLE_OFFLINE
+          └── downloadIfMissing → CDN/edge download
+                                  → verify size + SHA-256
+                                  → local file
 ```
 
 Feature UI does not implement separate online/offline playback paths.
+
+P2.8 returns verified local sources only. A CDN URI is used internally by
+DownloadManager, not returned directly to the player. Streaming is outside this
+slice. See [P2.8 implementation contract](../implementation/P2_8_ASSET_RESOLVER.md).
 
 ---
 
