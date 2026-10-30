@@ -3,7 +3,7 @@
 **Repository:** `alimbetov/VoxPrep`  
 **Product name:** CareerSpeak  
 **Codename:** VoxPrep  
-**Document version:** 0.10  
+**Document version:** 0.11  
 **Status:** Consolidated P0 architecture baseline  
 **Target platforms:** Android, iOS  
 **Primary learning model:** Read → Listen → Repeat → Test → Review
@@ -16,6 +16,10 @@ Normative documents:
 - [`CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md`](CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md)
 - [`../architecture/CAREERSPEAK_TTS_PIPELINE.md`](../architecture/CAREERSPEAK_TTS_PIPELINE.md)
 - [`../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md`](../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md)
+- [`../backend/CAREERSPEAK_BACKEND_TTS_REQUIREMENTS.md`](../backend/CAREERSPEAK_BACKEND_TTS_REQUIREMENTS.md)
+- [`../backend/TTS_WORKER_BACKEND_INTEGRATION.md`](../backend/TTS_WORKER_BACKEND_INTEGRATION.md)
+- [`../backend/TTS_WORKER_BACKEND_AUTH_CONTRACT.md`](../backend/TTS_WORKER_BACKEND_AUTH_CONTRACT.md)
+- [`../backend/openapi/tts-worker-v1.yaml`](../backend/openapi/tts-worker-v1.yaml)
 
 Mobile detailed contracts:
 
@@ -263,14 +267,19 @@ Spring Boot Backend
     ├── PostgreSQL
     │
     └── RustFS
-          ▲
-          │ presigned/private operations
-       TTS Worker
+
+TTS Worker
+    │ WORKER_TOKEN / HTTPS
+    └──────────────→ Spring Boot Backend
+                       │
+                       └──────────────→ RustFS
 
 Flutter
 ├── installation token → Backend REST API
 └── media → CDN/edge → RustFS published origin
 ```
+
+The TTS Worker never receives PostgreSQL or RustFS credentials and never uploads directly to RustFS. Model download and generated-audio upload both pass through Backend APIs.
 
 Initial deployment may run Backend, TTS Worker, RustFS and reverse proxy on one Docker host, with managed PostgreSQL separately.
 
@@ -497,15 +506,31 @@ Worker:
 
 ```text
 claim
-obtain/cache exact model
+obtain/cache exact model through Backend
 Piper
 FFmpeg
 technical QC
-RustFS upload
-complete/fail callback
+Backend output upload
+heartbeat / classified fail callback
 ```
 
-Worker never publishes content.
+Backend:
+
+```text
+model catalog
+job/file identity
+fingerprint
+atomic claim + lease
+model/config delivery
+RustFS persistence
+FileAsset metadata
+READY finalization
+retry/replay policy
+```
+
+Worker never publishes content and never connects directly to RustFS or PostgreSQL.
+
+Exact Backend implementation requirements are defined in `docs/backend/CAREERSPEAK_BACKEND_TTS_REQUIREMENTS.md`.
 
 ---
 
@@ -528,7 +553,16 @@ attempt_count
 fingerprint
 ```
 
+Current-owner validation requires an unexpired lease. An expired lease cannot be revived by heartbeat.
+
 Old/stale lease completion is rejected.
+
+Initial recommended Backend policy:
+
+```text
+lease duration = 60 seconds
+max attempts   = 3
+```
 
 RabbitMQ is not required initially.
 
@@ -614,7 +648,7 @@ resize without route/test/audio/marker state loss
 → worker token
 
 private RustFS
-→ presigned authorization
+→ Backend-owned credentials; learner delivery only through configured published origin/CDN path
 ```
 
 ---
@@ -664,4 +698,6 @@ OpenAPI learner/worker contracts
 failure/recovery qualification matrix
 ```
 
-This is the authoritative system baseline for CareerSpeak v0.10.
+The TTS Worker machine-readable contract is now represented by `docs/backend/openapi/tts-worker-v1.yaml`; production acceptance still requires the real Backend A01-A11 qualification.
+
+This is the authoritative system baseline for CareerSpeak v0.11.
