@@ -99,7 +99,7 @@ jobs:
             -e WORKER_ID=ci-worker-01 \
             voxprep-tts-worker:w1)
           sleep 2
-          docker stop --time 10 "$id"
+          docker stop --timeout 10 "$id"
           docker logs "$id" > /tmp/worker.log 2>&1
           docker rm "$id"
           cat /tmp/worker.log
