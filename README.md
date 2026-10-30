@@ -1,260 +1,266 @@
 # CareerSpeak
 
-**CareerSpeak** is a mobile application for IELTS preparation, professional English and international job-interview training.
+CareerSpeak is an offline-first Flutter application for IELTS preparation, professional English and international job-interview training.
 
 Repository codename: **VoxPrep**.
 
 ## Product loop
 
 ```text
-LEARN → LISTEN → REPEAT → TEST → REVIEW
+READ → LISTEN → REPEAT → TEST → REVIEW
 ```
 
-CareerSpeak is an English-only learning product. Other supported languages are used for UI localization, translations, hints and explanations.
+CareerSpeak teaches English only. Other languages support UI, translations, hints and explanations.
 
-## Core product areas
-
-- IELTS Vocabulary, collocations and contextual examples
-- IELTS Speaking and IELTS-style Mock Tests
-- English Topics and Shadowing
-- General / HR / Behavioral / STAR interviews
-- Profession-specific interview tracks
-- Reusable Question Bank and Practice Tests
-- Local favorites, progress and review
-- Offline content packs
-- Web-based Content Studio
-- Pre-generated reviewed audio
-- Optional Study Ambience themes with Focus Mode
-
-## Architecture baseline v0.6
+## Architecture baseline v0.9
 
 ```text
-Learners
-   │
-   ▼
-Flutter Mobile
-   │
-   ├──────────────► CareerSpeak REST API
-   │                       │
-   │                       ▼
-   │                   PostgreSQL
-   │
-   └──────────────► CDN / Edge
-                           │
-                           ▼
-                         RustFS
-                    published media origin
+Flutter App
+  ├── installation token ──► Spring Boot REST API ──► PostgreSQL
+  └── media ───────────────► CDN/Edge ─────────────► RustFS
 
-Content team
-   │
-   ▼
-Browser
-   │
-   ▼
-Spring MVC Content Studio
-   │
-   ├──────────────► PostgreSQL
-   │                  │
-   │                  ├── content/revisions
-   │                  ├── TTS jobs
-   │                  ├── availability state
-   │                  └── voice/model registry
-   │
-   └──────────────► RustFS
-                      ├── private Piper models
-                      ├── draft assets
-                      └── generated media
+ADMIN Browser
+  └── session ─────────────► Spring MVC Content Studio
+                                ├── PostgreSQL
+                                └── RustFS
 
-Local Headless TTS Worker
-Python + Piper + FFmpeg
-   │
-   ├── authenticated HTTPS job protocol
-   ├── local immutable model cache
-   └── presigned GET/PUT to RustFS
+TTS Worker
+  ├── machine token ───────► Backend Job API
+  ├── exact Piper model ◄── RustFS/local cache
+  ├── Piper + FFmpeg
+  └── generated audio ─────► RustFS
 ```
 
-The backend is a **Spring Boot modular monolith**. MVP does not require Eureka, a separate API Gateway, RabbitMQ, Kafka, Redis, Kubernetes, R2DBC/WebFlux, JavaFX or a PySide6 moderator UI.
+Backend is one **Spring Boot modular monolith**.
 
-## Technology baseline
-
-- Flutter — learner mobile application
-- Java 21 + Spring Boot — backend
-- Spring MVC + Thymeleaf + HTMX — Content Studio
-- Spring Security — moderator/admin security
-- Spring Data JPA + Hibernate + HikariCP — persistence layer
-- PostgreSQL + Liquibase — durable data/job store
-- Python + Piper + FFmpeg — headless TTS worker
-- RustFS — S3-compatible object storage
-- CDN/edge layer — published immutable learner media
-- DigitalOcean Managed PostgreSQL — production database target
-- Docker — backend packaging
-
-## Content delivery and availability
-
-Learner catalog APIs use cursor/keyset pagination and expose only content that is both published and active.
+## Three actors only
 
 ```text
-publication_status = PUBLISHED
-AND
-availability_status = ACTIVE
+ADMIN
+FLUTTER INSTALLATION
+TTS WORKER
 ```
 
-Publication lifecycle and learner availability are separate concepts. A published item may be deactivated without destructive deletion.
+### ADMIN
 
-Flutter synchronizes content through a compact root manifest plus pack manifests. Server-side removals/deactivations are propagated through tombstones so stale local assets can be reclaimed.
+One fixed secured account with server-side session. No Moderator/Editor/Reviewer hierarchy, OAuth, LDAP, Keycloak or RBAC tables in MVP.
 
-## Local retention
-
-Flutter keeps learner progress separately from re-downloadable content/media.
+### Flutter Installation
 
 ```text
-Durable local state
-├── favorites
-├── progress
-├── test attempts
-├── review schedule
-└── settings
-
-Disposable/re-downloadable state
-├── pack snapshots
-├── audio
-├── remote images
-└── future downloadable theme assets
+random installationId
+→ backend registration
+→ backend-issued installation token
+→ platform Secure Storage
 ```
 
-Automatic cache management uses:
+No personal learner account. Progress/favorites/test history remain local-first.
+
+### TTS Worker
+
+Server-managed long-running Python process/container:
 
 ```text
-TTL
-+
-LRU
-+
-local storage quota
-+
-pinning / explicit-download protection
-+
-asset reference tracking
+Piper + FFmpeg
+machine token
+auto-start/restart
+local exact-model cache
 ```
 
-Evicting media must not erase learner progress. Shared assets are physically removed only when no retained local content references them.
+No direct PostgreSQL credentials and no permanent RustFS credentials.
 
-## TTS model
-
-TTS is a **content-production pipeline**, not a learner runtime dependency.
+## Standard lifecycle vocabulary
 
 ```text
-DRAFT
-  ↓
-READY_FOR_AUDIO
-  ↓
-AUDIO_PENDING
-  ↓
-AUDIO_GENERATING
-  ↓
-AUDIO_READY
-  ↓
-REVIEW
-  ↓
-PUBLISHED
+Backend:
+PUBLISHED + ACTIVE
+= learner-deliverable/downloadable
+
+Flutter metadata:
+CURRENT
+= local metadata revision currently used
+
+Flutter offline:
+READY
+= complete required offline asset set locally verified
 ```
 
-### Voice governance
+These are deliberately separate state machines.
 
-CareerSpeak separates a logical moderator-facing voice from a physical immutable Piper model.
+## Content versioning
+
+Backend publishes one root:
 
 ```text
-TtsVoice
-US / Female / Lessac
-        │
-        ├── Model v1 DEPRECATED
-        └── Model v2 ACTIVE
+contentVersion
 ```
 
-Each TTS job resolves and stores an exact `voice_model_id`. A worker must never silently substitute another voice/model.
-
-### Model storage
-
-Piper `.onnx` and config files are stored privately in RustFS.
+The root references exact pack variants:
 
 ```text
-Admin upload
-    ↓
-presigned PUT
-    ↓
-RustFS
-    ↓
-checksum/runtime qualification
-    ↓
-APPROVED / ACTIVE
+JAVA_SENIOR / canonical / rev 8
+JAVA_SENIOR / locale:kk / rev 4
 ```
 
-A worker downloads an exact model revision only when it is missing from its local cache, verifies SHA-256 and then uses it for generation.
+Locale deltas do not create independent root epochs.
 
-## Privacy model
+Flutter stages/verifies metadata and atomically switches to the new `CURRENT` root snapshot.
 
-CareerSpeak does not require a personal learner account in MVP.
+## Offline replacement
 
-Learner state such as favorites, progress, test attempts and downloads remains local by default.
+Metadata and offline binaries are separate.
 
-A random `installationId` may be used only for technical purposes such as entitlement/security/abuse protection and must not become a learner profile.
-
-Locale selection uses explicit user choice and OS locale/region; GPS is not required for language selection.
-
-## Study Ambience
-
-Visual backgrounds are optional and client-side for MVP.
-
-Initial candidate themes:
+Valid state:
 
 ```text
-MINIMAL
-NATURE
-COSMOS
-LIBRARY
-COFFEE_STUDY
-PROFESSIONAL
+metadata rev 8 = CURRENT
+offline rev 7 = READY
+offline rev 8 = UPDATING
 ```
 
-Study Mode may use themed backgrounds; Focus/Exam modes prefer minimal presentation. Background selection should be deterministic and must never reduce text readability.
+The old READY bundle remains usable until replacement verifies.
 
-## Specifications
-
-- [System Requirements & Architecture Specification v0.5](docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
-- [Content Delivery, Availability & Local Retention Requirements v1.0 — v0.6 normative addendum](docs/specification/CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md)
-- [Globalization & Localization Requirements](docs/specification/CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
-- [Spring MVC + Local Headless Piper Worker Architecture v1.1](docs/architecture/CAREERSPEAK_TTS_PIPELINE.md)
-
-## Current stage
+## Flutter baseline
 
 ```text
-P0 — Architecture Freeze / System Design
+Flutter + Dart
+Riverpod
+go_router
+Drift + SQLite
+Secure Storage
+local filesystem
+ContentSyncCoordinator
+DownloadManager
+AssetResolver
+AudioPlaybackController
+StorageRetentionManager
+ReviewScheduler
 ```
 
-Next deliverables:
+## Adaptive UI
 
-1. Domain map
-2. Full PostgreSQL ERD
-3. Content revision/publication/availability model
-4. Localization model
-5. Assessment snapshot model
-6. TTS voice/model/job ERD
-7. RustFS FileAsset/model storage model
-8. Cursor-pagination query/index model
-9. Content manifest, tombstones and offline-pack model
-10. Flutter local retention/cache schema
-11. OpenAPI contracts
-12. ADR baseline
-13. P0 implementation backlog
-
-## Commercial model
-
-Initial strategy:
+Layout is based on current available window width, not device names:
 
 ```text
-One-time purchase
-No mandatory subscription
-No ads
-No learner runtime AI/STT/TTS cost
+COMPACT   < 600
+MEDIUM    600–839
+EXPANDED  840–1199
+LARGE     >= 1200
 ```
 
-The product differentiator is curated English content for IELTS and profession-specific international interviews, supported by reusable tests, multilingual hints, reviewed pre-generated audio, controlled offline storage and privacy-first learning.
+The same route/domain state is preserved across phone/tablet/landscape/split-screen layouts.
+
+Large text, RTL and mixed RTL guidance + LTR English learning text are qualification requirements.
+
+## Local data
+
+Drift separates:
+
+```text
+SYSTEM / SYNC STATE
+VERSIONED CONTENT / CACHE
+DURABLE LEARNER STATE
+```
+
+Automatic disposable-storage management:
+
+```text
+TTL + LRU + quota + pin/download protection + reference-safe deletion
+```
+
+Cache/media eviction never deletes learner progress.
+
+## TTS queue
+
+PostgreSQL is the durable queue.
+
+Atomic claim uses:
+
+```sql
+FOR UPDATE SKIP LOCKED
+```
+
+with:
+
+```text
+worker_id
+lease_token
+lease_until
+heartbeat
+attempt_count
+fingerprint
+```
+
+RabbitMQ is not required initially.
+
+## Backend stack
+
+```text
+Java 21
+Spring Boot
+Spring MVC
+Spring Security
+Spring Data JPA / Hibernate
+HikariCP
+PostgreSQL
+Liquibase
+Thymeleaf + HTMX
+OpenAPI
+Micrometer / Actuator
+Testcontainers
+Docker
+```
+
+Not required initially:
+
+```text
+R2DBC/WebFlux
+Redis
+RabbitMQ
+Kafka
+Eureka
+Kubernetes
+Elasticsearch/OpenSearch
+```
+
+## Normative specifications
+
+- [System Requirements & Architecture Specification v0.9](docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
+- [Cross-System Contract Standard v1.0](docs/architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md)
+- [Flutter Mobile Application Requirements v2.0](docs/specification/CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md)
+- [Globalization & Localization Requirements v1.0](docs/specification/CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
+- [Content Delivery & Local Retention Requirements v2.0](docs/specification/CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md)
+- [TTS Worker & Audio Production Architecture v2.0](docs/architecture/CAREERSPEAK_TTS_PIPELINE.md)
+- [P0 Domain & Contract Design Plan v2.0](docs/architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md)
+
+## Mobile detailed design
+
+- [P0.12.4 Drift ERD v1.0](docs/mobile/CAREERSPEAK_DRIFT_ERD.md)
+- [P0.12.7 ContentSyncCoordinator v1.0](docs/mobile/CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md)
+- [Adaptive / Responsive UI Contract v0.1](docs/mobile/CAREERSPEAK_ADAPTIVE_UI.md)
+
+## Current P0 direction
+
+Before executable implementation, freeze:
+
+```text
+P0.0  Common contracts
+P0.1  Publication / Availability
+P0.2  Profession / Catalog
+P0.3  Localization
+P0.4  Media / RustFS
+P0.5  TTS
+P0.6  Interview
+P0.7  Vocabulary
+P0.8  Topic / Phrase / Shadowing
+P0.9  Assessment
+P0.10 Manifest / Content Delivery
+P0.11 Pagination
+P0.12 Flutter Application Contract
+P0.13 Security / Installation
+P0.14 Content Studio
+P0.15 Integrated ERD + OpenAPI
+P0.16 Architecture Freeze
+```
+
+The product differentiator is curated profession-specific and IELTS English content with reviewed audio, deterministic assessment, offline-first consumption and a deliberately simple runtime architecture.
