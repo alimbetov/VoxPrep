@@ -2,14 +2,34 @@
 
 Containerized outbound TTS worker for VoxPrep.
 
-Current branch slice: **W2 Backend HTTP Control Adapter**.
+Current slice: **Functional TTS Worker (W3 + W4 + W5)**.
 
 The runtime boundary remains deliberately small:
 
 ```text
-Backend owns job/file identity and durable state
-Worker owns disposable compute and local model cache
+Backend owns job/file identity, model catalog and durable state
+Worker owns disposable compute and a private persistent model cache
 ```
+
+## Functional pipeline
+
+The production composition now performs:
+
+```text
+claim job from Backend
+→ resolve exact voiceModelId + checksums from claim
+→ reuse exact local model revision when cached
+→ otherwise download model/config through Backend API
+→ verify SHA-256 and atomically install cache revision
+→ synthesize temporary WAV with Piper
+→ convert to mono 24 kHz 64 kbps MP3 with FFmpeg
+→ validate MP3 with ffprobe
+→ revalidate lease
+→ upload generated audio to Backend
+→ Backend finalizes durable asset/job state
+```
+
+Worker never keeps or synchronizes a list of available models. Backend owns the model catalog. A job supplies one exact `voiceModelId`, `modelSha256` and `configSha256`; Worker either resolves that exact revision or fails. Silent fallback to another model is forbidden.
 
 ## Qualified runtime baseline
 
@@ -62,45 +82,74 @@ Authorization: Bearer <WORKER_TOKEN>
 
 The token is deployment-managed, must not be baked into the image and must never be logged.
 
-## W2 Backend HTTP control adapter
-
-`HttpBackendAdapter` implements the control-plane calls:
+## Backend APIs used by Worker
 
 ```text
 POST /internal/v1/tts/jobs/claim
 POST /internal/v1/tts/jobs/{jobId}/heartbeat
+POST /internal/v1/tts/jobs/{jobId}/output
 POST /internal/v1/tts/jobs/{jobId}/fail
+GET  /internal/v1/tts/models/{voiceModelId}/model
+GET  /internal/v1/tts/models/{voiceModelId}/config
 ```
 
-The adapter:
+A valid `WORKER_TOKEN` authenticates the process. `leaseToken` independently proves ownership of one claimed job.
+
+## Model cache
+
+Each Worker replica owns an isolated persistent cache:
 
 ```text
-preserves backend-owned jobId/fileId/leaseToken
-uses strict connect/request timeouts
-maps 401/403 to WORKER_AUTH_FAILED
-maps 409/410 on lease-sensitive calls to LEASE_LOST
-maps network/429/5xx to BACKEND_TEMPORARILY_UNAVAILABLE
-fails closed on malformed claim payloads
-performs no blind retries for mutating POST requests
+/var/lib/voxprep/tts/models/
+└── <voiceModelId>/
+    └── <modelSha256>/
+        ├── model.onnx
+        ├── model.onnx.json
+        └── installed.json
 ```
 
-Output upload remains W5.
+On cache miss Worker downloads only through `BASE_URL`, verifies both checksums and publishes the revision atomically. A partial or checksum-invalid revision is never used.
 
-Production composition intentionally continues to use the foundation adapter until W3 model acquisition, W4 Piper/FFmpeg processing and W5 output upload can complete a claimed job end-to-end. This prevents a partially implemented Worker from consuming production queue jobs.
+Do not share one cache volume between Worker replicas.
+
+## Audio output
+
+Qualified production profile:
+
+```text
+format        MP3
+MIME          audio/mpeg
+channels      mono
+sample rate   24 kHz
+bitrate       64 kbps
+profile       mp3-mono-24k-64k-v1
+```
+
+The Docker qualification runs a real WAV → FFmpeg → MP3 → ffprobe smoke test.
+
+## Failure/recovery behavior
+
+```text
+model missing on Backend          → VOICE_MODEL_NOT_FOUND
+model/config checksum mismatch    → VOICE_MODEL_CHECKSUM_MISMATCH
+Piper load/synthesis failure      → classified worker failure
+FFmpeg/QC failure                 → classified worker failure
+lease lost                        → never finalize stale output
+Backend temporarily unavailable   → do not invent FAILED; lease recovery remains authoritative
+output response lost              → do not report false failure; Backend idempotency/lease state decides recovery
+```
+
+Worker does not retry mutating HTTP calls blindly.
 
 ## Build
 
 From repository root:
 
 ```bash
-docker build -t voxprep/tts-worker:w2 ./worker
+docker build -t voxprep/tts-worker:functional ./worker
 ```
 
-The Docker build fails if the pinned FFmpeg package cannot be installed, the Python dependency graph is inconsistent, or Piper/ONNX Runtime cannot be imported.
-
 ## Run
-
-Each Worker replica owns an isolated persistent model cache volume:
 
 ```bash
 docker run --rm \
@@ -108,14 +157,10 @@ docker run --rm \
   -e WORKER_TOKEN="$WORKER_TOKEN" \
   -e WORKER_ID=tts-worker-01 \
   -v voxprep-tts-models-worker-01:/var/lib/voxprep/tts/models \
-  voxprep/tts-worker:w2
+  voxprep/tts-worker:functional
 ```
 
-Do not share one model cache volume between Worker replicas.
-
 ## Development tests
-
-Use the same Python minor series and committed constraints:
 
 ```bash
 cd worker
@@ -127,19 +172,24 @@ python -m pip check
 pytest
 ```
 
-## Dependency update procedure
+## Qualification gates
 
-A runtime dependency update is accepted only when all of the following remain green:
+A functional Worker change is accepted only when all of the following remain green:
 
 ```text
 exact Python dependency graph check
 pip check
 HTTPX + Piper + ONNX Runtime imports
-FFmpeg version check
-ffprobe version check
-full worker unit/adapter tests
+model download/cache tests
+claim/heartbeat/fail/output adapter tests
+Piper adapter tests
+FFmpeg/ffprobe production profile test
+full worker unit tests
 Docker image build
-container startup/fail-fast/SIGTERM qualification
+real in-container audio smoke
+container polling against Backend stub
+SIGTERM shutdown qualification
+WORKER_TOKEN non-leak check
 ```
 
 Piper model/audio listening qualification is additionally required before upgrading the Piper engine used for production synthesis.
