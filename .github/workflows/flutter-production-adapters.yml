@@ -14,6 +14,9 @@ on:
       - 'contracts/**'
       - '.github/workflows/flutter-production-adapters.yml'
 
+permissions:
+  contents: write
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -40,6 +43,24 @@ jobs:
 
       - name: Lockfile reproducibility
         run: git diff --exit-code -- pubspec.lock
+
+      - name: One-shot P2.10.3 formatter repair
+        if: github.event_name == 'push'
+        run: |
+          dart format \
+            lib/data/local/drift_content_repository.dart \
+            test/data/local/drift_content_repository_test.dart
+          if ! git diff --quiet -- \
+            lib/data/local/drift_content_repository.dart \
+            test/data/local/drift_content_repository_test.dart; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add \
+              lib/data/local/drift_content_repository.dart \
+              test/data/local/drift_content_repository_test.dart
+            git commit -m 'style(p2): format drift content repository'
+            git push origin HEAD:feat/p2-flutter-production-adapters
+          fi
 
       - name: Format handwritten Dart
         run: |
