@@ -162,20 +162,39 @@ class _QuestionPane extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final last = session.currentIndex == test.questions.length - 1;
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
 
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Question ${session.currentIndex + 1} of ${test.questions.length}',
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
-            Chip(label: Text(question.skill)),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final stacked = constraints.maxWidth < 520 || textScale >= 1.6;
+            final progressText = Text(
+              'Question ${session.currentIndex + 1} of ${test.questions.length}',
+              style: Theme.of(context).textTheme.titleMedium,
+            );
+            final skill = Chip(label: Text(question.skill));
+
+            if (stacked) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  progressText,
+                  const SizedBox(height: 8),
+                  skill,
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                Expanded(child: progressText),
+                const SizedBox(width: 12),
+                skill,
+              ],
+            );
+          },
         ),
         const SizedBox(height: 12),
         LinearProgressIndicator(
@@ -203,27 +222,45 @@ class _QuestionPane extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-        Row(
-          children: [
-            OutlinedButton.icon(
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final stacked = constraints.maxWidth < 360 || textScale >= 2.0;
+            final previous = OutlinedButton.icon(
               onPressed: session.currentIndex == 0 ? null : onPrevious,
               icon: const Icon(Icons.arrow_back),
               label: const Text('Previous'),
-            ),
-            const Spacer(),
-            if (last)
-              FilledButton.icon(
-                onPressed: onSubmit,
-                icon: const Icon(Icons.flag),
-                label: const Text('Submit'),
-              )
-            else
-              FilledButton.icon(
-                onPressed: onNext,
-                icon: const Icon(Icons.arrow_forward),
-                label: const Text('Next'),
-              ),
-          ],
+            );
+            final next = last
+                ? FilledButton.icon(
+                    onPressed: onSubmit,
+                    icon: const Icon(Icons.flag),
+                    label: const Text('Submit'),
+                  )
+                : FilledButton.icon(
+                    onPressed: onNext,
+                    icon: const Icon(Icons.arrow_forward),
+                    label: const Text('Next'),
+                  );
+
+            if (stacked) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  previous,
+                  const SizedBox(height: 12),
+                  next,
+                ],
+              );
+            }
+
+            return Row(
+              children: [
+                previous,
+                const Spacer(),
+                next,
+              ],
+            );
+          },
         ),
       ],
     );
@@ -287,6 +324,7 @@ class _TestResult extends StatelessWidget {
   Widget build(BuildContext context) {
     final score = calculateMockTestScore(test, session.answers);
     final percent = ((score / test.questions.length) * 100).round();
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
 
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -296,32 +334,55 @@ class _TestResult extends StatelessWidget {
         Card(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Row(
-              children: [
-                CircleAvatar(
-                  radius: 32,
-                  child: Text('$percent%'),
-                ),
-                const SizedBox(width: 20),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '$score / ${test.questions.length} correct',
-                        style: Theme.of(context).textTheme.titleLarge,
-                      ),
-                      const SizedBox(height: 6),
-                      Text('${session.answers.length} answered'),
-                    ],
-                  ),
-                ),
-                FilledButton.tonalIcon(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final stacked = constraints.maxWidth < 520 || textScale >= 1.6;
+                final scoreSummary = Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$score / ${test.questions.length} correct',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 6),
+                    Text('${session.answers.length} answered'),
+                  ],
+                );
+                final retake = FilledButton.tonalIcon(
                   onPressed: onRetake,
                   icon: const Icon(Icons.replay),
                   label: const Text('Retake'),
-                ),
-              ],
+                );
+
+                if (stacked) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CircleAvatar(
+                        radius: 32,
+                        child: Text('$percent%'),
+                      ),
+                      const SizedBox(height: 16),
+                      scoreSummary,
+                      const SizedBox(height: 16),
+                      retake,
+                    ],
+                  );
+                }
+
+                return Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 32,
+                      child: Text('$percent%'),
+                    ),
+                    const SizedBox(width: 20),
+                    Expanded(child: scoreSummary),
+                    const SizedBox(width: 16),
+                    retake,
+                  ],
+                );
+              },
             ),
           ),
         ),
