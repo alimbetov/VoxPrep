@@ -32,6 +32,10 @@ addopts = "-q"
 [tool.coverage.run]
 branch = true
 source = ["voxprep_tts_worker"]
+omit = [
+  "*/adapters/foundation.py",
+  "*/runtime_smoke.py",
+]
 
 [tool.coverage.report]
 show_missing = true
