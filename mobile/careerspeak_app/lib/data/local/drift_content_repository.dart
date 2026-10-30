@@ -19,7 +19,9 @@ final class DriftContentRepository implements ContentRepository {
   @override
   Stream<Result<Page<ContentItem>>> watchContent(ContentQuery query) {
     try {
-      final cursor = _ContentCursor.decode(query.page.cursor);
+      final cursor = query.page.cursor == null
+          ? null
+          : _ContentCursor.decode(query.page.cursor!);
       return _watchContent(query, cursor);
     } on _ContentCursorViolation catch (error) {
       return Stream<Result<Page<ContentItem>>>.value(
@@ -47,13 +49,9 @@ final class DriftContentRepository implements ContentRepository {
             _pageFromRows(rows, query.page.limit),
           );
         } on _ContentReadInvariant catch (error) {
-          yield FailureResult<Page<ContentItem>>(
-            _invalidReadModel(error),
-          );
+          yield FailureResult<Page<ContentItem>>(_invalidReadModel(error));
         } on Object catch (error) {
-          yield FailureResult<Page<ContentItem>>(
-            _readFailure(error),
-          );
+          yield FailureResult<Page<ContentItem>>(_readFailure(error));
         }
       }
     } on Object catch (error) {
@@ -168,8 +166,7 @@ final class DriftContentRepository implements ContentRepository {
         ..add(Variable<String>(cursor.contentCode));
     }
 
-    sql
-      ..write('''
+    sql.write('''
  ORDER BY
    coalesce(r.sort_order, $_nullSortOrder),
    r.content_type,
@@ -190,9 +187,7 @@ final class DriftContentRepository implements ContentRepository {
   Page<ContentItem> _pageFromRows(List<QueryRow> rows, int limit) {
     final projections = rows.map(_projection).toList(growable: false);
     final hasMore = projections.length > limit;
-    final pageItems = hasMore
-        ? projections.sublist(0, limit)
-        : projections;
+    final pageItems = hasMore ? projections.sublist(0, limit) : projections;
 
     return Page<ContentItem>(
       items: pageItems
@@ -326,10 +321,7 @@ final class _ContentCursor {
     required this.contentCode,
   });
 
-  factory _ContentCursor.decode(String? encoded) {
-    if (encoded == null) {
-      return const _ContentCursor._none();
-    }
+  factory _ContentCursor.decode(String encoded) {
     if (encoded.trim().isEmpty) {
       throw const _ContentCursorViolation('cursor must not be blank');
     }
@@ -361,11 +353,6 @@ final class _ContentCursor {
       throw const _ContentCursorViolation('cursor encoding is invalid');
     }
   }
-
-  const _ContentCursor._none()
-    : sortOrder = -1,
-      contentType = '',
-      contentCode = '';
 
   final int sortOrder;
   final String contentType;
