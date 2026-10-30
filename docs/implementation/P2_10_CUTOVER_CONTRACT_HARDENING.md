@@ -107,7 +107,51 @@ corrupt token-only state
 
 Network registration is not allowed to delete or rotate an existing installation id merely because the network is unavailable.
 
-## 4. Production mock policy
+## 4. Backend wire DTO boundary
+
+Backend JSON transport types are now explicitly separated from application/domain models:
+
+```text
+JSON
+  ↓
+wire DTO
+  ↓
+remote mapper
+  ↓
+application/domain model
+```
+
+Current wire DTOs:
+
+```text
+ContentPayloadDto
+RootContentManifestDto
+PackContentManifestDto
+ApiErrorDto
+InstallationRegistrationRequestDto
+InstallationRegistrationResponseDto
+```
+
+Rules:
+
+1. `data/remote/dto/**` owns transport shape only;
+2. `domain/**`, `application/**`, and `features/**` must not depend on remote DTOs;
+3. backend DTO evolution must not force JPA/entity structure into Flutter;
+4. shared JSON fixtures are the executable examples for both Flutter decoder tests and future Spring serialization tests;
+5. canonical English learner payload remains owned by canonical packs; locale packs contain support/localization deltas and do not duplicate canonical payload rows.
+
+Shared contract fixtures currently cover:
+
+```text
+content_payload_v1.json
+root_manifest_v1.json
+pack_manifest_v1.json
+api_error_v1.json
+installation_registration_request_v1.json
+installation_registration_response_v1.json
+```
+
+## 5. Production mock policy
 
 Mock repositories remain legal as explicit widget/acceptance-test overrides while P2.10 is under construction.
 
@@ -124,7 +168,7 @@ test/preview composition
 
 Assessment production availability is not invented during content cutover. Until the assessment read model is implemented, production composition must use an explicit unavailable/empty assessment adapter rather than silently shipping mock learner data.
 
-## 5. Next implementation order
+## 6. Next implementation order
 
 ```text
 P2.10.1  schema v4 minimal content read model
@@ -136,6 +180,8 @@ P2.10.6  production composition cutover / remove runtime mocks
 P2.10.7  end-to-end production acceptance
 ```
 
+Before P2.10.5 runtime integration, backend-facing wire contracts should remain stable enough to mirror as Spring records/OpenAPI schemas without leaking backend persistence types into Flutter.
+
 ## Acceptance for P2.10.0
 
 1. generic content lookup requires full `ContentIdentity`;
@@ -146,6 +192,9 @@ P2.10.7  end-to-end production acceptance
 6. installation bootstrap reuses existing credentials;
 7. missing token invokes registration and persists the returned token;
 8. concurrent bootstrap callers coalesce into one registration;
-9. no Drift schema change occurs;
-10. existing adaptive acceptance remains green;
-11. format, analyze, codegen baseline, and full test suite are green on one exact SHA.
+9. backend JSON is decoded through explicit remote wire DTO boundaries;
+10. shared contract fixtures decode into the same application semantics as inline contract tests;
+11. remote DTOs do not leak into domain/application/feature layers;
+12. no Drift schema change occurs;
+13. existing adaptive acceptance remains green;
+14. format, analyze, codegen baseline, and full test suite are green on one exact SHA.
