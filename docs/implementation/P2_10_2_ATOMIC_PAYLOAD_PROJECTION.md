@@ -24,7 +24,16 @@ The installation-authenticated response must match the requested:
 contentCode + contentType + revision + checksum
 ```
 
-A mismatch fails closed with `CONTENT_PAYLOAD_MISMATCH`.
+and also carries explicit taxonomy identity plus canonical labels:
+
+```text
+categoryCode  + categoryLabel
+levelCode     + levelLabel
+```
+
+`categoryCode` and `levelCode` are stable uppercase business codes. The schema-v4 learner read model continues to persist only the canonical display labels in its existing `category` and `level` columns. Codes are not inferred from labels and are not silently added to Drift during this slice.
+
+A target mismatch fails closed with `CONTENT_PAYLOAD_MISMATCH`. Invalid or missing taxonomy wire fields fail closed with `CONTENT_PAYLOAD_INVALID`.
 
 ## Staging sequence
 
@@ -37,12 +46,12 @@ pack manifest
         ↓
 fetch every exact canonical ContentPayload
         ↓
-validate identity + revision + checksum
+validate identity + revision + checksum + wire taxonomy
         ↓
 local staging transaction
    ├─ pack metadata
    ├─ local content revision metadata
-   ├─ content_catalog_reads payload
+   ├─ content_catalog_reads canonical labels
    ├─ pack membership
    └─ asset references
         ↓
@@ -96,21 +105,22 @@ Locale packs never enter `contentPayloadRepairPacks`.
 AP01 exact payload endpoint uses installation authentication
 AP02 payload decoder rejects malformed domain payloads
 AP03 response identity/revision/checksum mismatch fails closed
-AP04 canonical payloads are fetched before local pack staging
-AP05 locale packs do not fetch/duplicate canonical payload
-AP06 metadata and canonical payload stage transactionally
-AP07 immutable payload conflict never overwrites an existing revision
-AP08 commit validates canonical payload before CURRENT switching
-AP09 commit conflict preserves previous CURRENT snapshot
-AP10 staged replacement payload remains invisible after commit failure
-AP11 v3→v4 missing canonical payload produces explicit repair work
-AP12 repair keeps factual CURRENT pack represented
-AP13 same immutable root schedules canonical repair deterministically
-AP14 production composition injects HttpContentPayloadGateway
-AP15 Drift schema remains v4 with zero generated baseline drift
-AP16 format/analyze/full-test exact-SHA qualification passes
+AP04 stable categoryCode/levelCode are separated from display labels
+AP05 canonical payloads are fetched before local pack staging
+AP06 locale packs do not fetch/duplicate canonical payload
+AP07 metadata and canonical payload stage transactionally
+AP08 immutable payload conflict never overwrites an existing revision
+AP09 commit validates canonical payload before CURRENT switching
+AP10 commit conflict preserves previous CURRENT snapshot
+AP11 staged replacement payload remains invisible after commit failure
+AP12 v3→v4 missing canonical payload produces explicit repair work
+AP13 repair keeps factual CURRENT pack represented
+AP14 same immutable root schedules canonical repair deterministically
+AP15 production composition injects HttpContentPayloadGateway
+AP16 Drift schema remains v4 with zero generated baseline drift
+AP17 format/analyze/full-test exact-SHA qualification passes
 ```
 
 ## Non-goals
 
-P2.10.2 does not switch `ContentRepository` to Drift; that is P2.10.3. Locale support projections and preference-driven locale composition remain later work and must not be collapsed into the canonical read model.
+P2.10.2 does not switch `ContentRepository` to Drift; that is P2.10.3. Locale support projections and preference-driven locale composition remain later work and must not be collapsed into the canonical read model. Persisting taxonomy codes in Drift is also deferred to an explicit read-model evolution rather than hidden inside this accepted schema-v4 slice.
