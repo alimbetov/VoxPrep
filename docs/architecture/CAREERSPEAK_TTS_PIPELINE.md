@@ -1,6 +1,6 @@
 # CareerSpeak — TTS Worker & Audio Production Architecture
 
-**Document version:** 2.1  
+**Document version:** 2.2  
 **Status:** Normative TTS production baseline  
 **Applies to:** CareerSpeak v0.9+
 
@@ -21,11 +21,13 @@ FFmpeg
 local immutable model cache
 ```
 
-Production worker starts/restarts automatically under Docker/process supervision.
+The Worker is delivered as an immutable Docker/OCI image and starts/restarts automatically under container supervision.
+
+The same image is used in development, test and production; runtime environment is selected only through configuration such as `BASE_URL` and `WORKER_TOKEN`.
 
 Piper never runs in learner request paths or Spring MVC request threads.
 
-The Backend allocates persistent `jobId` and `fileId` identities before Worker claim.
+Backend allocates persistent `jobId` and `fileId` identities before Worker claim.
 
 ---
 
@@ -41,6 +43,7 @@ PostgreSQL queue
 lease ownership
 fileId/jobId allocation
 fingerprint expectation
+model artifact delivery API
 RustFS persistence
 FileAsset metadata association
 regeneration/replacement policy
@@ -51,7 +54,10 @@ Worker owns only:
 
 ```text
 claim
-model download/cache
+model cache lookup
+model/config download through Backend
+checksum verification
+atomic local model installation
 synthesis
 post-processing
 technical QC
@@ -59,30 +65,40 @@ Backend audio upload
 fail reporting
 ```
 
-Worker does not publish learner content, does not allocate persistent IDs and does not connect directly to PostgreSQL.
+Worker does not publish learner content, does not allocate persistent IDs and does not connect directly to PostgreSQL or RustFS.
 
 ---
 
-## 3. Security
+## 3. Security and network boundary
 
-Worker calls:
+Worker knows only Backend connectivity and its machine identity:
 
 ```text
-/internal/v1/tts/**
+BASE_URL
+WORKER_TOKEN
+WORKER_ID
 ```
 
-using dedicated machine token.
+Worker calls only Backend endpoints below:
+
+```text
+${BASE_URL}/internal/v1/tts/**
+```
+
+using a dedicated machine token.
 
 Worker SHALL NOT receive:
 
 ```text
 ADMIN password
 learner installation token
-PostgreSQL password
-permanent RustFS secret key
+PostgreSQL URL/password
+RustFS endpoint
+RustFS access key
+RustFS secret key
 ```
 
-Model download may use a Backend-authorized stream or short-lived download URL. Generated learner audio is uploaded through Backend API; Backend owns the RustFS write.
+Both model acquisition and generated-audio upload go through Backend APIs. Storage topology is hidden from Worker.
 
 ---
 
@@ -158,36 +174,65 @@ Only technically qualified and license-reviewed models may become ACTIVE.
 
 ---
 
-## 6. Model storage/cache
+## 6. Model acquisition and local installation
 
-Private RustFS model layout may be:
+Voice models are not baked into the Worker image.
 
-```text
-careerspeak-models/
-└── piper/en/en_US-lessac-high/v1/
-    ├── model.onnx
-    └── model.onnx.json
+Backend may internally store model artifacts in RustFS, but Worker never knows that location. Worker downloads the exact claimed model and config from `BASE_URL`:
+
+```http
+GET /internal/v1/tts/models/{voiceModelId}/model
+GET /internal/v1/tts/models/{voiceModelId}/config
+Authorization: Bearer <WORKER_TOKEN>
 ```
 
-Worker local cache:
+Claim supplies at least:
 
 ```text
-/var/lib/careerspeak/tts/models/<VOICE_MODEL_CODE>/
+voiceModelId
+voiceModelCode
+modelSha256
+configSha256
+```
+
+Recommended persistent local layout:
+
+```text
+/var/lib/voxprep/tts/models/
+└── <voiceModelId>/
+    └── <modelSha256>/
+        ├── model.onnx
+        ├── model.onnx.json
+        └── installed.json
 ```
 
 On cache miss:
 
 ```text
-request Backend model authorization
-→ download exact model/config
-→ verify SHA-256
-→ install atomically in cache
+create unique temp directory
+→ stream model from BASE_URL
+→ verify model SHA-256
+→ stream config from BASE_URL
+→ verify config SHA-256
+→ write local installation metadata
+→ fsync/close
+→ atomically rename temp directory into final cache location
 → load Piper model
 ```
 
-Checksum mismatch is a hard model-use failure; worker never chooses another voice automatically.
+A partial or checksum-invalid model is never installed into the final cache directory.
 
-A small in-memory LRU of loaded models may be used.
+Checksum mismatch is a hard model-use failure; Worker never chooses another voice automatically.
+
+The model cache SHOULD live on a persistent Docker volume so a container restart or image replacement does not re-download unchanged model revisions.
+
+A small in-memory LRU of loaded models may be used independently of the persistent disk cache.
+
+Detailed contract:
+
+```text
+docs/implementation/TTS_WORKER_MODEL_ACQUISITION.md
+```
 
 ---
 
@@ -240,7 +285,7 @@ SUPERSEDED
 
 Worker `READY` is a TTS-job result state and is unrelated to Flutter offline pack `READY`.
 
-`fileId` identifies an immutable audio asset. Regeneration creates a new `fileId`; physical overwrite of an already published/READY asset identity is forbidden.
+`fileId` identifies an immutable audio asset. Regeneration creates a new `fileId`; physical overwrite of an already READY asset identity is forbidden.
 
 ---
 
@@ -302,7 +347,8 @@ POST /internal/v1/tts/jobs/claim
 POST /internal/v1/tts/jobs/{id}/heartbeat
 POST /internal/v1/tts/jobs/{id}/output
 POST /internal/v1/tts/jobs/{id}/fail
-POST /internal/v1/tts/models/{id}/download
+GET  /internal/v1/tts/models/{id}/model
+GET  /internal/v1/tts/models/{id}/config
 ```
 
 Claim response contains enough information to generate exactly one asset, including:
@@ -315,11 +361,15 @@ audioRole
 normalizedTtsText
 language
 voiceModelId
+voiceModelCode
+modelSha256
+configSha256
 fingerprint
 leaseToken
+leaseUntil
 ```
 
-Worker uses the supplied `jobId` and `fileId` unchanged.
+Worker uses supplied persistent identities unchanged.
 
 ---
 
@@ -413,7 +463,7 @@ Piper
 → production MP3
 → QC
 → Backend output upload
-→ RustFS
+→ Backend-owned RustFS persistence
 ```
 
 Initial production delivery profile:
@@ -455,11 +505,12 @@ Invalid audio never reaches job READY.
 
 ## 16. Upload/finalization
 
-Worker uploads the generated MP3 through Backend:
+Worker uploads generated MP3 through Backend:
 
 ```http
 POST /internal/v1/tts/jobs/{jobId}/output
 Content-Type: multipart/form-data
+Authorization: Bearer <WORKER_TOKEN>
 ```
 
 Request includes at least:
@@ -533,6 +584,7 @@ Worker fail codes include:
 VOICE_MODEL_NOT_FOUND
 VOICE_MODEL_DOWNLOAD_FAILED
 VOICE_MODEL_CHECKSUM_MISMATCH
+VOICE_MODEL_CACHE_INSTALL_FAILED
 VOICE_MODEL_LOAD_FAILED
 PIPER_SYNTHESIS_FAILED
 FFMPEG_FAILED
@@ -561,21 +613,35 @@ Worker itself never changes Backend availability.
 
 ---
 
-## 20. Worker configuration
+## 20. Worker container configuration
 
-Only operational configuration such as:
+Required runtime configuration:
 
 ```text
-BACKEND_URL
-WORKER_ID
+BASE_URL
 WORKER_TOKEN
-LOCAL_MODEL_CACHE_PATH
-POLL_INTERVAL
-MAX_LOADED_MODELS
-LEASE_HEARTBEAT_INTERVAL
 ```
 
-No direct DB or permanent RustFS secrets.
+Optional/defaulted configuration:
+
+```text
+WORKER_ID=${HOSTNAME}
+MODEL_CACHE_DIR=/var/lib/voxprep/tts/models
+TEMP_DIR=/tmp/voxprep-tts
+POLL_INTERVAL_SECONDS
+MAX_LOADED_MODELS
+LEASE_HEARTBEAT_INTERVAL_SECONDS
+```
+
+No direct DB, RustFS endpoint or RustFS credentials are supplied.
+
+The Worker exposes no application port in the initial design because all communication is outbound polling HTTP to `BASE_URL`.
+
+Detailed container contract:
+
+```text
+docs/implementation/TTS_WORKER_CONTAINER_RUNTIME.md
+```
 
 ---
 
@@ -595,6 +661,8 @@ TTS Worker × N
 
 All workers use the same claim/lease protocol. `FOR UPDATE SKIP LOCKED` + leases prevent simultaneous ownership.
 
+Shared model-cache volumes require separately qualified inter-process cache locking; initial deployment may use an isolated persistent volume per Worker replica.
+
 ---
 
 ## 22. Mandatory failure qualification
@@ -603,6 +671,9 @@ Must prove:
 
 ```text
 two workers claim concurrently
+worker crash during model download
+partial model download
+model checksum mismatch
 worker crash during Piper
 worker crash during FFmpeg
 lease expiry/reclaim
@@ -610,13 +681,13 @@ stale worker output
 upload success + response loss
 duplicate output upload
 missing model
-model checksum mismatch
 corrupt output
 text/fingerprint changes during job
 model deprecated after job creation
 backend restart with queue state preserved
 RustFS temporary outage behind Backend
 regeneration while old READY asset remains playable
+container restart with persistent model cache
 ```
 
 ---
@@ -628,10 +699,12 @@ ADMIN creates/changes content
 → Backend calculates fingerprint
 → Backend allocates jobId + fileId
 → PENDING job + PENDING FileAsset
-→ Worker atomic claim
-→ exact model/cache
+→ Worker atomic claim through BASE_URL
+→ exact model cache lookup
+→ cache miss: model/config download through BASE_URL
+→ SHA-256 verification + atomic model install
 → Piper + FFmpeg + QC
-→ Worker uploads MP3(jobId, fileId, leaseToken) to Backend
+→ Worker uploads MP3(jobId, fileId, leaseToken) through BASE_URL
 → Backend validates lease/fingerprint/model/revision
 → Backend writes immutable object to RustFS
 → FileAsset READY + TTS job READY
