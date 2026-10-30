@@ -1,11 +1,14 @@
 import '../../domain/installation_credentials.dart';
 import '../content_sync/content_sync_coordinator.dart';
-import '../content_sync/preference_aware_content_sync.dart';
 import '../content_sync/sync_models.dart';
 import '../result/result.dart';
 import 'installation_bootstrap_service.dart';
 
 typedef StartupRunIdFactory = String Function();
+typedef StartupContentSynchronizer = Future<Result<ContentSyncOutcome>> Function({
+  required String runId,
+  required SyncTrigger trigger,
+});
 
 final class ApplicationBootstrapOutcome {
   const ApplicationBootstrapOutcome({
@@ -20,24 +23,24 @@ final class ApplicationBootstrapOutcome {
 final class ApplicationBootstrapService {
   factory ApplicationBootstrapService({
     required InstallationBootstrapService installationBootstrapService,
-    required PreferenceAwareContentSync contentSync,
+    required StartupContentSynchronizer synchronizeContent,
     StartupRunIdFactory? runIdFactory,
   }) {
     return ApplicationBootstrapService._(
       installationBootstrapService,
-      contentSync,
+      synchronizeContent,
       runIdFactory ?? _defaultStartupRunId,
     );
   }
 
   ApplicationBootstrapService._(
     this._installationBootstrapService,
-    this._contentSync,
+    this._synchronizeContent,
     this._runIdFactory,
   );
 
   final InstallationBootstrapService _installationBootstrapService;
-  final PreferenceAwareContentSync _contentSync;
+  final StartupContentSynchronizer _synchronizeContent;
   final StartupRunIdFactory _runIdFactory;
 
   Future<Result<ApplicationBootstrapOutcome>>? _inFlight;
@@ -67,7 +70,7 @@ final class ApplicationBootstrapService {
     final credentials =
         (credentialsResult as Success<InstallationCredentials>).value;
 
-    final syncResult = await _contentSync.synchronize(
+    final syncResult = await _synchronizeContent(
       runId: _runIdFactory(),
       trigger: SyncTrigger.startup,
     );
