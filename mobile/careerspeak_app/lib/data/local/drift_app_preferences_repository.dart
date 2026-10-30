@@ -96,18 +96,14 @@ final class DriftAppPreferencesRepository implements AppPreferencesRepository {
   @override
   Future<Result<void>> setTranslationLocale(AppTranslationLocale locale) {
     return _update(
-      AppPreferencesCompanion(
-        translationLocale: Value<String>(locale.code),
-      ),
+      AppPreferencesCompanion(translationLocale: Value<String>(locale.code)),
     );
   }
 
   @override
   Future<Result<void>> setPreferredAccent(PreferredEnglishAccent? accent) {
     return _update(
-      AppPreferencesCompanion(
-        preferredAccent: Value<String?>(accent?.code),
-      ),
+      AppPreferencesCompanion(preferredAccent: Value<String?>(accent?.code)),
     );
   }
 
@@ -120,9 +116,7 @@ final class DriftAppPreferencesRepository implements AppPreferencesRepository {
 
   @override
   Future<Result<void>> setFocusMode(bool enabled) {
-    return _update(
-      AppPreferencesCompanion(focusMode: Value<bool>(enabled)),
-    );
+    return _update(AppPreferencesCompanion(focusMode: Value<bool>(enabled)));
   }
 
   @override
@@ -145,7 +139,9 @@ final class DriftAppPreferencesRepository implements AppPreferencesRepository {
   Future<Result<void>> _ensureDefaults() async {
     try {
       final now = DateTime.now().toUtc();
-      await _database.into(_database.appPreferences).insert(
+      await _database
+          .into(_database.appPreferences)
+          .insert(
             AppPreferencesCompanion.insert(
               id: _singletonId,
               uiLocale: ApplicationPreferences.defaults.uiLocale.code,

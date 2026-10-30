@@ -6,17 +6,20 @@ import '../data/local/drift_app_preferences_repository.dart';
 import '../domain/application_preferences.dart';
 import 'learner_state_providers.dart';
 
-final appPreferencesRepositoryProvider = Provider<AppPreferencesRepository>((ref) {
+final appPreferencesRepositoryProvider = Provider<AppPreferencesRepository>((
+  ref,
+) {
   return DriftAppPreferencesRepository(ref.watch(careerSpeakDatabaseProvider));
 });
 
-final applicationPreferencesProvider =
-    StreamProvider<ApplicationPreferences>((ref) {
-      return ref
-          .watch(appPreferencesRepositoryProvider)
-          .watchPreferences()
-          .map((result) => result.getOrThrow());
-    });
+final applicationPreferencesProvider = StreamProvider<ApplicationPreferences>((
+  ref,
+) {
+  return ref
+      .watch(appPreferencesRepositoryProvider)
+      .watchPreferences()
+      .map((result) => result.getOrThrow());
+});
 
 final appPreferencesControllerProvider = Provider<AppPreferencesController>((
   ref,

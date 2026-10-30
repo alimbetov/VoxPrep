@@ -44,9 +44,8 @@ class SettingsScreen extends ConsumerWidget {
               label: const Text('Light'),
               selected: preferences.theme == AppThemePreference.light,
               onSelected: preferencesReady
-                  ? (_) => preferencesController.setTheme(
-                      AppThemePreference.light,
-                    )
+                  ? (_) =>
+                        preferencesController.setTheme(AppThemePreference.light)
                   : null,
             ),
             ChoiceChip(
@@ -54,9 +53,8 @@ class SettingsScreen extends ConsumerWidget {
               label: const Text('Dark'),
               selected: preferences.theme == AppThemePreference.dark,
               onSelected: preferencesReady
-                  ? (_) => preferencesController.setTheme(
-                      AppThemePreference.dark,
-                    )
+                  ? (_) =>
+                        preferencesController.setTheme(AppThemePreference.dark)
                   : null,
             ),
           ],

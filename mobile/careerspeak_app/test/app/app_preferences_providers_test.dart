@@ -21,7 +21,9 @@ void main() {
       isA<DriftAppPreferencesRepository>(),
     );
 
-    final preferences = await container.read(applicationPreferencesProvider.future);
+    final preferences = await container.read(
+      applicationPreferencesProvider.future,
+    );
     expect(preferences.uiLocale, ApplicationPreferences.defaults.uiLocale);
     expect(
       preferences.translationLocale,

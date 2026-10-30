@@ -74,7 +74,9 @@ void main() {
 
   test('unsupported stored preference fails closed', () async {
     final now = DateTime.utc(2026, 10, 30, 19);
-    await database.into(database.appPreferences).insert(
+    await database
+        .into(database.appPreferences)
+        .insert(
           AppPreferencesCompanion.insert(
             id: 1,
             uiLocale: 'unsupported',
@@ -107,10 +109,12 @@ void main() {
     final firstDatabase = CareerSpeakDatabase(NativeDatabase(file));
     final firstRepository = DriftAppPreferencesRepository(firstDatabase);
     (await firstRepository.setUiLocale(AppUiLocale.russian)).getOrThrow();
-    (await firstRepository.setTranslationLocale(AppTranslationLocale.kazakh))
-        .getOrThrow();
-    (await firstRepository.setPreferredAccent(PreferredEnglishAccent.australian))
-        .getOrThrow();
+    (await firstRepository.setTranslationLocale(
+      AppTranslationLocale.kazakh,
+    )).getOrThrow();
+    (await firstRepository.setPreferredAccent(
+      PreferredEnglishAccent.australian,
+    )).getOrThrow();
     (await firstRepository.setTheme(AppThemePreference.light)).getOrThrow();
     await firstDatabase.close();
 

@@ -37,11 +37,11 @@ final contentSyncCoordinatorProvider = Provider<ContentSyncCoordinator>((ref) {
   );
 });
 
-final preferenceAwareContentSyncProvider = Provider<PreferenceAwareContentSync>((
-  ref,
-) {
-  return PreferenceAwareContentSync(
-    preferencesRepository: ref.watch(appPreferencesRepositoryProvider),
-    coordinator: ref.watch(contentSyncCoordinatorProvider),
-  );
-});
+final preferenceAwareContentSyncProvider = Provider<PreferenceAwareContentSync>(
+  (ref) {
+    return PreferenceAwareContentSync(
+      preferencesRepository: ref.watch(appPreferencesRepositoryProvider),
+      coordinator: ref.watch(contentSyncCoordinatorProvider),
+    );
+  },
+);
