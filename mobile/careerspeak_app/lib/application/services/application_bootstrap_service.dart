@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import '../../domain/installation_credentials.dart';
 import '../content_sync/content_sync_coordinator.dart';
 import '../content_sync/sync_models.dart';
