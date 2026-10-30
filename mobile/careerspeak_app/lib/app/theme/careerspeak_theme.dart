@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-final themeModeProvider = NotifierProvider<ThemeModeController, ThemeMode>(
-  ThemeModeController.new,
-);
+import '../../domain/application_preferences.dart';
+import '../app_preferences_providers.dart';
 
-class ThemeModeController extends Notifier<ThemeMode> {
-  @override
-  ThemeMode build() => ThemeMode.system;
-
-  void setMode(ThemeMode mode) => state = mode;
-}
+final themeModeProvider = Provider<ThemeMode>((ref) {
+  final preferences = ref.watch(applicationPreferencesProvider).asData?.value;
+  return switch (preferences?.theme ?? AppThemePreference.system) {
+    AppThemePreference.system => ThemeMode.system,
+    AppThemePreference.light => ThemeMode.light,
+    AppThemePreference.dark => ThemeMode.dark,
+  };
+});
 
 abstract final class CareerSpeakTheme {
   static const _seed = Color(0xFF3559E0);
