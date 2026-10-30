@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import '../../application/content_delivery/content_manifest.dart';
 import '../../application/content_delivery/content_payload.dart';
 import '../../application/result/result.dart';
@@ -5,8 +7,6 @@ import 'content_payload_mapper.dart';
 import 'dto/content_payload_dto.dart';
 
 final class ContentPayloadDecoder {
-  // The public `mapper:` name is part of the injectable adapter seam.
-  // ignore: prefer_initializing_formals
   const ContentPayloadDecoder({
     ContentPayloadMapper mapper = const ContentPayloadMapper(),
   }) : _mapper = mapper;
