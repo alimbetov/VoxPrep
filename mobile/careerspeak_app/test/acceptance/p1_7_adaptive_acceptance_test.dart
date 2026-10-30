@@ -109,18 +109,15 @@ void main() {
     await tester.pumpAndSettle();
     _expectNoFlutterException(tester);
 
-    await tester.tap(find.text('Start mock test'));
-    await tester.pumpAndSettle();
+    await _tapScrollableText(tester, 'Start mock test');
     _expectNoFlutterException(tester);
 
     for (var index = 0; index < 4; index++) {
-      await tester.tap(find.text('Next'));
-      await tester.pumpAndSettle();
+      await _tapScrollableText(tester, 'Next');
       _expectNoFlutterException(tester);
     }
 
-    await tester.tap(find.text('Submit'));
-    await tester.pumpAndSettle();
+    await _tapScrollableText(tester, 'Submit');
     expect(find.text('Result'), findsOneWidget);
     _expectNoFlutterException(tester);
   });
@@ -160,6 +157,23 @@ Future<void> _navigate(WidgetTester tester, String label) async {
 
   expect(destination, findsOneWidget);
   await tester.tap(destination);
+  await tester.pumpAndSettle();
+}
+
+Future<void> _tapScrollableText(WidgetTester tester, String text) async {
+  final target = find.text(text);
+
+  for (var attempt = 0; attempt < 8 && target.evaluate().isEmpty; attempt++) {
+    final scrollables = find.byType(Scrollable);
+    expect(scrollables, findsWidgets);
+    await tester.drag(scrollables.first, const Offset(0, -300));
+    await tester.pumpAndSettle();
+  }
+
+  expect(target, findsOneWidget);
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
+  await tester.tap(target);
   await tester.pumpAndSettle();
 }
 
