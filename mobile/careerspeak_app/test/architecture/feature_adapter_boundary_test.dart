@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('feature presentation does not import concrete mock adapters', () {
+  test('feature presentation does not import concrete adapters', () {
     final featureRoot = Directory('lib/features');
     expect(featureRoot.existsSync(), isTrue);
 
@@ -14,8 +14,10 @@ void main() {
 
       final source = entity.readAsStringSync();
       if (source.contains('data/mock/') ||
+          source.contains('data/local/') ||
           source.contains('mock_content_repository.dart') ||
-          source.contains('mock_test_repository.dart')) {
+          source.contains('mock_test_repository.dart') ||
+          source.contains('drift_learner_state_repository.dart')) {
         violations.add(entity.path);
       }
     }
@@ -24,7 +26,7 @@ void main() {
       violations,
       isEmpty,
       reason:
-          'Feature presentation must depend on application ports/providers, not concrete adapters.',
+          'Feature presentation must depend on domain/application contracts and composition providers, not concrete adapters.',
     );
   });
 }
