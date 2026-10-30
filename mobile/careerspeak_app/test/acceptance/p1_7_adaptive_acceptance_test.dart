@@ -1,5 +1,6 @@
 import 'package:careerspeak_app/app/careerspeak_app.dart';
 import 'package:careerspeak_app/app/mock_visual_preferences.dart';
+import 'package:careerspeak_app/features/tests/test_session_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -79,6 +80,48 @@ void main() {
 
     expect(find.byType(NavigationBar), findsNothing);
     expect(find.byType(NavigationRail), findsOneWidget);
+    _expectNoFlutterException(tester);
+  });
+
+  testWidgets('assessment remains usable at 360 px and 2.0× text scale',
+      (tester) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(360, 1000);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        child: MaterialApp(
+          builder: (context, child) {
+            final mediaQuery = MediaQuery.of(context);
+            return MediaQuery(
+              data: mediaQuery.copyWith(
+                textScaler: const TextScaler.linear(2.0),
+              ),
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
+          home: const TestSessionScreen(code: 'JAVA_SENIOR_QUICK_001'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    _expectNoFlutterException(tester);
+
+    await tester.tap(find.text('Start mock test'));
+    await tester.pumpAndSettle();
+    _expectNoFlutterException(tester);
+
+    for (var index = 0; index < 4; index++) {
+      await tester.tap(find.text('Next'));
+      await tester.pumpAndSettle();
+      _expectNoFlutterException(tester);
+    }
+
+    await tester.tap(find.text('Submit'));
+    await tester.pumpAndSettle();
+    expect(find.text('Result'), findsOneWidget);
     _expectNoFlutterException(tester);
   });
 }
