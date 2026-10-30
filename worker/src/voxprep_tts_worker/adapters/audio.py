@@ -4,6 +4,7 @@ import hashlib
 import json
 import subprocess
 import wave
+from collections import OrderedDict
 from pathlib import Path
 
 from piper import PiperVoice
@@ -17,9 +18,17 @@ from voxprep_tts_worker.domain.errors import (
 from voxprep_tts_worker.domain.job import AudioArtifact, ClaimedJob
 
 _AUDIO_PROFILE = "mp3-mono-24k-64k-v1"
+_MIN_ACCEPTED_BIT_RATE = 60_000
+_MAX_ACCEPTED_BIT_RATE = 68_000
 
 
 class PiperSynthesizer:
+    def __init__(self, *, max_loaded_models: int = 2) -> None:
+        if max_loaded_models <= 0:
+            raise ValueError("max_loaded_models must be > 0")
+        self._max_loaded_models = max_loaded_models
+        self._voices: OrderedDict[tuple[str, str], PiperVoice] = OrderedDict()
+
     def synthesize(
         self,
         *,
@@ -32,10 +41,7 @@ class PiperSynthesizer:
         if not model_path.is_file() or not config_path.is_file():
             raise ModelLoadError("Installed Piper model is incomplete")
 
-        try:
-            voice = PiperVoice.load(model_path, config_path=config_path)
-        except Exception as exc:
-            raise ModelLoadError("Piper voice model could not be loaded") from exc
+        voice = self._load_voice(model_path=model_path, config_path=config_path)
 
         try:
             output_wav.parent.mkdir(parents=True, exist_ok=True)
@@ -47,6 +53,23 @@ class PiperSynthesizer:
         if not output_wav.is_file() or output_wav.stat().st_size <= 44:
             raise SynthesisError("Piper produced an empty WAV artifact")
         return output_wav
+
+    def _load_voice(self, *, model_path: Path, config_path: Path) -> PiperVoice:
+        key = (str(model_path.resolve()), str(config_path.resolve()))
+        cached = self._voices.pop(key, None)
+        if cached is not None:
+            self._voices[key] = cached
+            return cached
+
+        try:
+            voice = PiperVoice.load(model_path, config_path=config_path)
+        except Exception as exc:
+            raise ModelLoadError("Piper voice model could not be loaded") from exc
+
+        self._voices[key] = voice
+        while len(self._voices) > self._max_loaded_models:
+            self._voices.popitem(last=False)
+        return voice
 
 
 class FfmpegPostprocessor:
@@ -111,7 +134,7 @@ class FfmpegPostprocessor:
             "-select_streams",
             "a:0",
             "-show_entries",
-            "stream=codec_name,sample_rate,channels:format=duration",
+            "stream=codec_name,sample_rate,channels,bit_rate:format=duration",
             "-of",
             "json",
             str(output_mp3),
@@ -136,6 +159,7 @@ class FfmpegPostprocessor:
             codec_name = stream["codec_name"]
             sample_rate = int(stream["sample_rate"])
             channels = int(stream["channels"])
+            bit_rate = int(stream["bit_rate"])
         except (KeyError, IndexError, TypeError, ValueError, json.JSONDecodeError) as exc:
             raise AudioQcError("Generated MP3 metadata is invalid") from exc
 
@@ -145,6 +169,8 @@ class FfmpegPostprocessor:
             raise AudioQcError("Generated MP3 sample rate is not 24 kHz")
         if channels != 1:
             raise AudioQcError("Generated MP3 is not mono")
+        if not _MIN_ACCEPTED_BIT_RATE <= bit_rate <= _MAX_ACCEPTED_BIT_RATE:
+            raise AudioQcError("Generated MP3 bit rate is outside the 64 kbps profile")
         if duration_seconds <= 0:
             raise AudioQcError("Generated MP3 duration is not positive")
 

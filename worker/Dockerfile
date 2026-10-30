@@ -2,6 +2,8 @@ FROM python:3.12.16-slim-bookworm@sha256:e697c81897302a4c4333bade000d98038fbb21e
 
 ARG PIP_VERSION=26.2.2
 ARG FFMPEG_DEBIAN_VERSION=7:5.1.9-0+deb12u1
+ARG WORKER_UID=10001
+ARG WORKER_GID=10001
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -27,8 +29,11 @@ RUN python -m pip install --no-cache-dir "pip==${PIP_VERSION}" \
     && python -m pip check \
     && python -m pip show piper-tts | grep -F "Version: 1.4.2" \
     && python -c "import onnxruntime, piper; assert onnxruntime.__version__ == '1.31.1'; print('piper runtime import ok')" \
-    && mkdir -p "${MODEL_CACHE_DIR}" "${TEMP_DIR}"
+    && mkdir -p "${MODEL_CACHE_DIR}" "${TEMP_DIR}" \
+    && chown -R "${WORKER_UID}:${WORKER_GID}" /var/lib/voxprep "${TEMP_DIR}"
 
 VOLUME ["/var/lib/voxprep/tts/models"]
+
+USER ${WORKER_UID}:${WORKER_GID}
 
 ENTRYPOINT ["voxprep-tts-worker"]

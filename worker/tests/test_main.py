@@ -29,6 +29,7 @@ def _settings(tmp_path: Path) -> WorkerSettings:
         http_connect_timeout_seconds=5.0,
         http_request_timeout_seconds=30.0,
         max_loaded_models=2,
+        model_cache_max_bytes=123456,
         log_level="INFO",
     )
 
@@ -61,7 +62,9 @@ def test_build_production_loop_wires_real_functional_adapters(tmp_path: Path) ->
         assert processor._backend is backend
         assert isinstance(processor._model_cache, BackendModelCache)
         assert processor._model_cache._source is backend
+        assert processor._model_cache._max_cache_bytes == 123456
         assert isinstance(processor._synthesizer, PiperSynthesizer)
+        assert processor._synthesizer._max_loaded_models == 2
         assert isinstance(processor._postprocessor, FfmpegPostprocessor)
         assert processor._heartbeat_interval_seconds == 10.0
     finally:

@@ -44,13 +44,14 @@ def build_production_loop(
     model_cache = BackendModelCache(
         cache_root=settings.model_cache_dir,
         source=backend,
+        max_cache_bytes=settings.model_cache_max_bytes,
     )
     processor = JobProcessor(
         worker_id=settings.worker_id,
         temp_dir=settings.temp_dir,
         backend=backend,
         model_cache=model_cache,
-        synthesizer=PiperSynthesizer(),
+        synthesizer=PiperSynthesizer(max_loaded_models=settings.max_loaded_models),
         postprocessor=FfmpegPostprocessor(),
         heartbeat_interval_seconds=settings.lease_heartbeat_interval_seconds,
     )

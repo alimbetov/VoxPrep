@@ -28,6 +28,7 @@ def test_settings_normalize_base_url_use_hostname_and_apply_defaults(tmp_path: P
     assert settings.http_connect_timeout_seconds == 5.0
     assert settings.http_request_timeout_seconds == 30.0
     assert settings.max_loaded_models == 2
+    assert settings.model_cache_max_bytes == 5 * 1024 * 1024 * 1024
     assert settings.log_level == "INFO"
 
 
@@ -41,6 +42,7 @@ def test_explicit_worker_id_and_runtime_values_override_defaults(tmp_path: Path)
             "HTTP_CONNECT_TIMEOUT_SECONDS": "2.5",
             "HTTP_REQUEST_TIMEOUT_SECONDS": "15",
             "MAX_LOADED_MODELS": "4",
+            "MODEL_CACHE_MAX_BYTES": "123456",
             "LOG_LEVEL": "debug",
         }
     )
@@ -53,6 +55,7 @@ def test_explicit_worker_id_and_runtime_values_override_defaults(tmp_path: Path)
     assert settings.http_connect_timeout_seconds == 2.5
     assert settings.http_request_timeout_seconds == 15.0
     assert settings.max_loaded_models == 4
+    assert settings.model_cache_max_bytes == 123456
     assert settings.log_level == "DEBUG"
 
 
@@ -93,6 +96,8 @@ def test_non_http_or_non_absolute_base_url_is_rejected(tmp_path: Path, base_url:
         ("HTTP_CONNECT_TIMEOUT_SECONDS", "abc", "must be a number"),
         ("MAX_LOADED_MODELS", "0", "must be > 0"),
         ("MAX_LOADED_MODELS", "1.5", "must be an integer"),
+        ("MODEL_CACHE_MAX_BYTES", "0", "must be > 0"),
+        ("MODEL_CACHE_MAX_BYTES", "invalid", "must be an integer"),
     ],
 )
 def test_numeric_configuration_validation(

@@ -2,7 +2,7 @@
 
 Containerized outbound TTS worker for VoxPrep.
 
-Current slice: **Functional TTS Worker (W3 + W4 + W5) with test hardening**.
+Current slice: **Functional TTS Worker with production hardening**.
 
 The runtime boundary remains deliberately small:
 
@@ -21,9 +21,11 @@ claim job from Backend
 → reuse exact local model revision when cached
 → otherwise download model/config through Backend API
 → verify SHA-256 and atomically install cache revision
+→ keep only bounded disk-cache revisions by LRU
+→ reuse loaded PiperVoice instances through bounded in-memory LRU
 → synthesize temporary WAV with Piper
 → convert to mono 24 kHz 64 kbps MP3 with FFmpeg
-→ validate MP3 with ffprobe
+→ validate codec/sample-rate/channels/bitrate/duration with ffprobe
 → revalidate lease
 → upload generated audio to Backend
 → Backend finalizes durable asset/job state
@@ -53,9 +55,7 @@ pytest-cov   7.1.0
 coverage     7.17.0
 ```
 
-`worker/constraints.txt` locks the complete qualified Python runtime/test dependency graph, including HTTPX, Piper and coverage transitive dependencies.
-
-Dependency upgrades are explicit qualification changes. Do not widen or remove pins as part of unrelated feature work.
+`worker/constraints.txt` locks the complete qualified Python runtime/test dependency graph. Dependency upgrades are explicit qualification changes.
 
 The laboratory desktop stack may use `PySide6` and `PyInstaller`; neither belongs in this headless server Worker image. The Worker is distributed and deployed as an OCI/Docker image.
 
@@ -73,6 +73,7 @@ Optional:
 ```text
 WORKER_ID=${HOSTNAME}
 MODEL_CACHE_DIR=/var/lib/voxprep/tts/models
+MODEL_CACHE_MAX_BYTES=5368709120
 TEMP_DIR=/tmp/voxprep-tts
 POLL_INTERVAL_SECONDS=2
 LEASE_HEARTBEAT_INTERVAL_SECONDS=10
@@ -81,6 +82,8 @@ HTTP_REQUEST_TIMEOUT_SECONDS=30
 MAX_LOADED_MODELS=2
 LOG_LEVEL=INFO
 ```
+
+`MAX_LOADED_MODELS` bounds loaded `PiperVoice` instances with LRU eviction. `MODEL_CACHE_MAX_BYTES` bounds old on-disk model revisions with LRU cleanup; the exact model revision needed by the current job is protected from eviction even when it alone exceeds the configured cache target.
 
 Worker HTTP calls use:
 
@@ -116,7 +119,7 @@ Each Worker replica owns an isolated persistent cache:
         └── installed.json
 ```
 
-On cache miss Worker downloads only through `BASE_URL`, verifies both checksums and publishes the revision atomically. A partial or checksum-invalid revision is never used.
+On cache miss Worker downloads only through `BASE_URL`, verifies both checksums and publishes the revision atomically. A partial or checksum-invalid revision is never used. Old exact revisions are evicted least-recently-used when the configured disk-cache target is exceeded.
 
 Do not share one cache volume between Worker replicas.
 
@@ -129,11 +132,15 @@ format        MP3
 MIME          audio/mpeg
 channels      mono
 sample rate   24 kHz
-bitrate       64 kbps
+bitrate       64 kbps (QC tolerance 60-68 kbps)
 profile       mp3-mono-24k-64k-v1
 ```
 
 The Docker qualification runs a real WAV → FFmpeg → MP3 → ffprobe smoke test.
+
+## Container security
+
+The image runs as numeric non-root UID/GID `10001:10001`. The image-owned model-cache and temp directories are writable by that identity. For bind mounts, the host path must be writable by UID/GID 10001; named Docker volumes initialized from the image are preferred.
 
 ## Failure/recovery behavior
 
@@ -180,25 +187,22 @@ python -m pip check
 pytest --cov=voxprep_tts_worker --cov-branch --cov-report=term-missing --cov-fail-under=90
 ```
 
-Coverage is measured against the production Worker path. The deprecated foundation adapter and the standalone container smoke helper are not part of the coverage denominator; both remain protected by container qualification.
-
 ## Functional test matrix
-
-The test suite locks the externally observable Worker behavior rather than only individual implementation methods:
 
 ```text
 runtime config          required values, defaults, invalid values, writable paths
 Backend claim           empty queue, strict DTO parsing, auth/protocol/transport failures
 model acquisition       Backend-only download, 404, model/config checksum failures
-model cache             cache hit, corrupt cache replacement, atomic partial cleanup
-Piper                    exact model/config load, load failure, synthesis failure, empty WAV
-FFmpeg + ffprobe         production profile, process failure, malformed and invalid QC metadata
+model disk cache        hit/miss, corruption repair, atomic install, LRU size cleanup
+Piper memory cache      reuse, LRU eviction, configured loaded-model bound
+Piper synthesis         exact model/config, load failure, synthesis failure, empty WAV
+FFmpeg + ffprobe        codec, 24 kHz, mono, 64 kbps profile, duration and failures
 lease                    heartbeat success, transient outage, confirmed lease loss
 job processing           immutable IDs, failure routing, stale lease, ambiguous upload response
 output upload            multipart identity/metadata, stale lease, Backend outage
 polling                  idle queue, claimed job, transient outage, fail-fast contract errors
-production composition   real adapter wiring, shutdown signals, Backend client cleanup
-container                real WAV→MP3 smoke, Backend polling, SIGTERM, token non-leak
+production composition   real adapter wiring, cache limits, shutdown, client cleanup
+container                non-root UID/GID, writable runtime dirs, audio smoke, polling, SIGTERM
 ```
 
 ## Qualification gates
@@ -208,15 +212,13 @@ A functional Worker change is accepted only when all of the following remain gre
 ```text
 exact Python dependency graph check
 pip check
-HTTPX + Piper + ONNX Runtime imports
-model download/cache happy + failure paths
-claim/heartbeat/fail/output adapter happy + failure paths
+model/cache happy + failure paths
+Piper LRU cache qualification
+FFmpeg/ffprobe profile and bitrate QC
 lease loss and transient Backend recovery tests
-Piper load/synthesis happy + failure paths
-FFmpeg/ffprobe profile and QC failure tests
-production composition and shutdown tests
 >= 90% branch-aware production-path coverage
 Docker image build
+non-root UID/GID and writable-directory checks
 real in-container audio smoke
 container polling against Backend stub
 SIGTERM shutdown qualification

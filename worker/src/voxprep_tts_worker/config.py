@@ -7,6 +7,9 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 
+_DEFAULT_MODEL_CACHE_MAX_BYTES = 5 * 1024 * 1024 * 1024
+
+
 class ConfigurationError(ValueError):
     """Raised when worker runtime configuration is invalid."""
 
@@ -23,6 +26,7 @@ class WorkerSettings:
     http_connect_timeout_seconds: float
     http_request_timeout_seconds: float
     max_loaded_models: int
+    model_cache_max_bytes: int
     log_level: str
 
     @classmethod
@@ -56,6 +60,9 @@ class WorkerSettings:
                 env, "HTTP_REQUEST_TIMEOUT_SECONDS", 30.0
             ),
             max_loaded_models=_positive_int(env, "MAX_LOADED_MODELS", 2),
+            model_cache_max_bytes=_positive_int(
+                env, "MODEL_CACHE_MAX_BYTES", _DEFAULT_MODEL_CACHE_MAX_BYTES
+            ),
             log_level=(env.get("LOG_LEVEL", "INFO").strip().upper() or "INFO"),
         )
         settings.ensure_directories()
