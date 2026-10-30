@@ -159,7 +159,10 @@ void main() {
 
     (await firstRepository.setFavorite(identity, favorite: true)).getOrThrow();
     (await firstRepository.setListened(identity, listened: true)).getOrThrow();
-    (await firstRepository.setCompleted(identity, completed: true)).getOrThrow();
+    (await firstRepository.setCompleted(
+      identity,
+      completed: true,
+    )).getOrThrow();
     (await firstRepository.savePlaybackPosition(
       identity,
       positionMs: 42000,
