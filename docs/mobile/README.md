@@ -8,7 +8,7 @@ Working design index for the Flutter offline-first architecture.
 
 ## Current design slices
 
-- [`CAREERSPEAK_DRIFT_ERD.md`](CAREERSPEAK_DRIFT_ERD.md) — **P0.12.4 Drift ERD**, normative design v1.0
+- [`CAREERSPEAK_DRIFT_ERD.md`](CAREERSPEAK_DRIFT_ERD.md) — **P0.12.4 Drift ERD**, normative design v1.1
 - [`CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md`](CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md) — **P0.12.7 ContentSyncCoordinator state machine**, normative design v1.0
 - [`CAREERSPEAK_ADAPTIVE_UI.md`](CAREERSPEAK_ADAPTIVE_UI.md) — **Adaptive / Responsive UI contract**, working design v0.1
 - [`CAREERSPEAK_MATERIAL_DESIGN_3.md`](CAREERSPEAK_MATERIAL_DESIGN_3.md) — **Material Design 3**, normative single design-system contract v1.0
@@ -107,13 +107,12 @@ Re-downloadable content/media may be reclaimed. Favorites, listened/completed ma
 
 ```text
 P0.12.4a typed Drift feature read models
-P0.12.4b Drift migration/versioning contract
-P0.12.4c integrate content_learning_state into executable Drift schema
+P0.12.4b Drift migration/versioning qualification
 P0.12.7a root/pack manifest DTO contract alignment with backend P0.10
 P0.12.7b DownloadManager interaction contract
 P0.12.7c sync crash/failure qualification matrix
-P0.12.A1 Material 3 adaptive component primitives / design tokens
+P0.12.A1 Material 3 adaptive component primitives / design tokens implementation contract
 P0.12.A2 screen-by-screen Material/adaptive qualification
 P0.12.A3 accessibility / text-scale / RTL qualification
-P0.12.S1 learner marker repository + filter qualification
+P0.12.S1 LearnerContentStateRepository + marker filter qualification
 ```
