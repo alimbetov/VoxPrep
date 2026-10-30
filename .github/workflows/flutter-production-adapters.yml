@@ -49,7 +49,7 @@ jobs:
         run: |
           dart run drift_dev schema dump \
             lib/data/local/database/careerspeak_database.dart \
-            drift_schemas/drift_schema_v3.json
+            drift_schemas/drift_schema_v4.json
 
       - name: Drift migration test codegen
         run: |
@@ -67,6 +67,7 @@ jobs:
             drift_schemas/drift_schema_v1.json \
             drift_schemas/drift_schema_v2.json \
             drift_schemas/drift_schema_v3.json \
+            drift_schemas/drift_schema_v4.json \
             test/generated_migrations
 
       - name: Analyze
