@@ -26,11 +26,15 @@ class ApplicationFailure {
     required this.code,
     required this.message,
     this.retryable = false,
+    this.traceId,
+    this.details = const <String, Object?>{},
   });
 
   final String code;
   final String message;
   final bool retryable;
+  final String? traceId;
+  final Map<String, Object?> details;
 }
 
 class ApplicationFailureException implements Exception {
