@@ -8,16 +8,15 @@ import '../../domain/content_marker_state.dart';
 import 'database/careerspeak_database.dart';
 
 final class DriftLearnerStateRepository implements LearnerStateRepository {
-  DriftLearnerStateRepository(
-    this._database, {
-    DateTime Function()? now,
-  }) : _now = now ?? (() => DateTime.now().toUtc());
+  DriftLearnerStateRepository(this._database, {DateTime Function()? now})
+    : _now = now ?? (() => DateTime.now().toUtc());
 
   final CareerSpeakDatabase _database;
   final DateTime Function() _now;
 
   @override
-  Stream<Result<Map<ContentIdentity, ContentMarkerState>>> watchMarkers() async* {
+  Stream<Result<Map<ContentIdentity, ContentMarkerState>>>
+  watchMarkers() async* {
     final query = _database.customSelect(
       '''
 SELECT
@@ -71,7 +70,9 @@ GROUP BY content_code, content_type
         yield Success(Map.unmodifiable(markers));
       }
     } catch (error) {
-      yield FailureResult(_databaseFailure('LEARNER_STATE_WATCH_FAILED', error));
+      yield FailureResult(
+        _databaseFailure('LEARNER_STATE_WATCH_FAILED', error),
+      );
     }
   }
 
@@ -82,7 +83,9 @@ GROUP BY content_code, content_type
   }) async {
     try {
       if (favorite) {
-        await _database.into(_database.favorites).insertOnConflictUpdate(
+        await _database
+            .into(_database.favorites)
+            .insertOnConflictUpdate(
               FavoritesCompanion.insert(
                 contentCode: identity.code,
                 contentType: _contentTypeToStorage(identity.type),
@@ -115,7 +118,9 @@ GROUP BY content_code, content_type
         final now = _now();
 
         if (existing == null) {
-          await _database.into(_database.contentLearningStates).insert(
+          await _database
+              .into(_database.contentLearningStates)
+              .insert(
                 ContentLearningStatesCompanion.insert(
                   contentCode: identity.code,
                   contentType: _contentTypeToStorage(identity.type),
@@ -139,7 +144,9 @@ GROUP BY content_code, content_type
               ContentLearningStatesCompanion(
                 listenedAt: Value(listened ? now : null),
                 listenCount: Value(
-                  shouldIncrement ? existing.listenCount + 1 : existing.listenCount,
+                  shouldIncrement
+                      ? existing.listenCount + 1
+                      : existing.listenCount,
                 ),
                 lastPlayedAt: listened ? Value(now) : const Value.absent(),
                 lastRevisionSeen: lastRevisionSeen == null
@@ -168,14 +175,14 @@ GROUP BY content_code, content_type
         final now = _now();
 
         if (existing == null) {
-          await _database.into(_database.contentLearningStates).insert(
+          await _database
+              .into(_database.contentLearningStates)
+              .insert(
                 ContentLearningStatesCompanion.insert(
                   contentCode: identity.code,
                   contentType: _contentTypeToStorage(identity.type),
                   completedAt: Value(completed ? now : null),
-                  completionSource: Value(
-                    completed ? completionSource : null,
-                  ),
+                  completionSource: Value(completed ? completionSource : null),
                   lastRevisionSeen: Value(lastRevisionSeen),
                   updatedAt: now,
                 ),
@@ -191,9 +198,7 @@ GROUP BY content_code, content_type
             .write(
               ContentLearningStatesCompanion(
                 completedAt: Value(completed ? now : null),
-                completionSource: Value(
-                  completed ? completionSource : null,
-                ),
+                completionSource: Value(completed ? completionSource : null),
                 lastRevisionSeen: lastRevisionSeen == null
                     ? const Value.absent()
                     : Value(lastRevisionSeen),
@@ -228,7 +233,9 @@ GROUP BY content_code, content_type
         final now = _now();
 
         if (existing == null) {
-          await _database.into(_database.contentLearningStates).insert(
+          await _database
+              .into(_database.contentLearningStates)
+              .insert(
                 ContentLearningStatesCompanion.insert(
                   contentCode: identity.code,
                   contentType: _contentTypeToStorage(identity.type),

@@ -65,16 +65,15 @@ class ContentCard extends ConsumerWidget {
                 onPressed: () async {
                   final result = await ref
                       .read(learnerStateRepositoryProvider)
-                      .setFavorite(
-                        identity,
-                        favorite: !markerState.favorite,
-                      );
+                      .setFavorite(identity, favorite: !markerState.favorite);
                   try {
                     result.getOrThrow();
                   } catch (error) {
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Unable to update favorite: $error')),
+                      SnackBar(
+                        content: Text('Unable to update favorite: $error'),
+                      ),
                     );
                   }
                 },
