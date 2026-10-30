@@ -74,19 +74,11 @@ void main() {
     );
 
     final interview = (await repository.getByIdentity(
-      const ContentIdentity(
-        code: 'SHARED_001',
-        type: ContentType.interview,
-      ),
-    ))
-        .getOrThrow();
+      const ContentIdentity(code: 'SHARED_001', type: ContentType.interview),
+    )).getOrThrow();
     final vocabulary = (await repository.getByIdentity(
-      const ContentIdentity(
-        code: 'SHARED_001',
-        type: ContentType.vocabulary,
-      ),
-    ))
-        .getOrThrow();
+      const ContentIdentity(code: 'SHARED_001', type: ContentType.vocabulary),
+    )).getOrThrow();
 
     expect(interview?.title, 'Interview version');
     expect(interview?.revision, 3);
@@ -120,17 +112,18 @@ void main() {
       sortOrder: 2,
     );
 
-    final page = (await repository
-            .watchContent(
-              const ContentQuery(
-                search: 'SPRING',
-                types: <ContentType>{ContentType.interview},
-                category: 'Java Backend',
-                level: 'Senior',
-              ),
-            )
-            .first)
-        .getOrThrow();
+    final page =
+        (await repository
+                .watchContent(
+                  const ContentQuery(
+                    search: 'SPRING',
+                    types: <ContentType>{ContentType.interview},
+                    category: 'Java Backend',
+                    level: 'Senior',
+                  ),
+                )
+                .first)
+            .getOrThrow();
 
     expect(page.items.map((item) => item.code), <String>['JAVA_DI_001']);
   });
@@ -155,25 +148,25 @@ void main() {
       sortOrder: 10,
     );
 
-    final firstPage = (await repository
-            .watchContent(
-              const ContentQuery(page: PageRequest(limit: 1)),
-            )
-            .first)
-        .getOrThrow();
+    final firstPage =
+        (await repository
+                .watchContent(const ContentQuery(page: PageRequest(limit: 1)))
+                .first)
+            .getOrThrow();
 
     expect(firstPage.items, hasLength(1));
     expect(firstPage.hasMore, isTrue);
     expect(firstPage.nextCursor, isNotNull);
 
-    final secondPage = (await repository
-            .watchContent(
-              ContentQuery(
-                page: PageRequest(limit: 1, cursor: firstPage.nextCursor),
-              ),
-            )
-            .first)
-        .getOrThrow();
+    final secondPage =
+        (await repository
+                .watchContent(
+                  ContentQuery(
+                    page: PageRequest(limit: 1, cursor: firstPage.nextCursor),
+                  ),
+                )
+                .first)
+            .getOrThrow();
 
     expect(secondPage.items, hasLength(1));
     expect(

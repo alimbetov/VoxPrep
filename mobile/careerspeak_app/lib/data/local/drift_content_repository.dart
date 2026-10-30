@@ -62,17 +62,19 @@ final class DriftContentRepository implements ContentRepository {
   @override
   Future<Result<ContentItem?>> getByIdentity(ContentIdentity identity) async {
     try {
-      final rows = await _database.customSelect(
-        _identitySql,
-        variables: <Variable<Object>>[
-          Variable<String>(identity.code),
-          Variable<String>(identity.type.name),
-        ],
-        readsFrom: <ResultSetImplementation>{
-          _database.localContentRecords,
-          _database.contentCatalogReads,
-        },
-      ).get();
+      final rows = await _database
+          .customSelect(
+            _identitySql,
+            variables: <Variable<Object>>[
+              Variable<String>(identity.code),
+              Variable<String>(identity.type.name),
+            ],
+            readsFrom: <ResultSetImplementation>{
+              _database.localContentRecords,
+              _database.contentCatalogReads,
+            },
+          )
+          .get();
 
       if (rows.isEmpty) {
         return const Success<ContentItem?>(null);
@@ -327,7 +329,9 @@ final class _ContentCursor {
     }
 
     try {
-      final decoded = utf8.decode(base64Url.decode(base64Url.normalize(encoded)));
+      final decoded = utf8.decode(
+        base64Url.decode(base64Url.normalize(encoded)),
+      );
       final value = jsonDecode(decoded);
       if (value is! Map<String, dynamic>) {
         throw const _ContentCursorViolation('cursor payload must be an object');
