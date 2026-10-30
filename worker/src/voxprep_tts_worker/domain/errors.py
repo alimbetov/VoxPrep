@@ -5,6 +5,22 @@ class WorkerError(RuntimeError):
     code = "WORKER_ERROR"
 
 
+class BackendError(WorkerError):
+    code = "BACKEND_ERROR"
+
+
+class BackendAuthenticationError(BackendError):
+    code = "WORKER_AUTH_FAILED"
+
+
+class BackendTransportError(BackendError):
+    code = "BACKEND_TEMPORARILY_UNAVAILABLE"
+
+
+class BackendProtocolError(BackendError):
+    code = "INVALID_BACKEND_RESPONSE"
+
+
 class ModelUnavailableError(WorkerError):
     code = "VOICE_MODEL_NOT_FOUND"
 
