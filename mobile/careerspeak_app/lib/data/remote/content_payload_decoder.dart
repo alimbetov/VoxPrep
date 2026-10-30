@@ -5,6 +5,8 @@ import 'content_payload_mapper.dart';
 import 'dto/content_payload_dto.dart';
 
 final class ContentPayloadDecoder {
+  // The public `mapper:` name is part of the injectable adapter seam.
+  // ignore: prefer_initializing_formals
   const ContentPayloadDecoder({
     ContentPayloadMapper mapper = const ContentPayloadMapper(),
   }) : _mapper = mapper;
