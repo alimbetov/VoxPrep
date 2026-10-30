@@ -28,22 +28,28 @@ jobs:
         with:
           python-version: "3.12.16"
           cache: pip
-          cache-dependency-path: worker/pyproject.toml
+          cache-dependency-path: |
+            worker/pyproject.toml
+            worker/constraints.txt
 
       - name: Install pinned packaging tool
         run: python -m pip install --no-cache-dir pip==26.2.2
 
       - name: Install worker and pinned test dependencies
-        run: python -m pip install -e '.[dev]'
+        run: python -m pip install -c constraints.txt -e '.[dev]'
 
       - name: Verify Python dependency graph
         run: |
           python -m pip check
-          python -c "import onnxruntime, piper; print('piper runtime import ok')"
+          python -c "import onnxruntime, piper; assert onnxruntime.__version__ == '1.31.1'; print('piper runtime import ok')"
           python -m pip show piper-tts | grep -F "Version: 1.4.2"
 
-      - name: Emit resolved dependency set
-        run: python -m pip freeze
+      - name: Verify resolved dependency set matches lock
+        shell: bash
+        run: |
+          grep -vE '^[[:space:]]*(#|$)' constraints.txt | sort -f > /tmp/expected.txt
+          python -m pip freeze | grep -vE '^-e ' | sort -f > /tmp/actual.txt
+          diff -u /tmp/expected.txt /tmp/actual.txt
 
       - name: Compile Python sources
         run: python -m compileall -q src tests
@@ -68,7 +74,8 @@ jobs:
             ffmpeg -version | head -n 1 | grep -F "5.1.9-0+deb12u1"
             ffprobe -version | head -n 1 | grep -F "5.1.9-0+deb12u1"
             python -m pip show piper-tts | grep -F "Version: 1.4.2"
-            python -c "import onnxruntime, piper; print(onnxruntime.__version__)"
+            test "$(python -c "import onnxruntime; print(onnxruntime.__version__)")" = "1.31.1"
+            python -m pip check
           '
 
       - name: Missing configuration fails fast
