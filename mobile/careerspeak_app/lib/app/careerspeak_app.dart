@@ -24,9 +24,7 @@ class CareerSpeakApp extends ConsumerWidget {
       builder: (context, child) {
         final mediaQuery = MediaQuery.of(context);
         final scaledMediaQuery = mediaQuery.copyWith(
-          textScaler: TextScaler.linear(
-            visualPreferences.largeTextPreview ? 1.6 : 1.0,
-          ),
+          textScaler: TextScaler.linear(visualPreferences.textScale.factor),
         );
 
         return MediaQuery(
