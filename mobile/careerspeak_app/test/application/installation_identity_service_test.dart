@@ -46,13 +46,13 @@ void main() {
       expect(await service.readCredentials(), isNull);
     });
 
-    test('rejects token persistence before installation identity exists', () {
+    test('rejects token persistence before installation identity exists', () async {
       final service = InstallationIdentityService(
         _MemoryInstallationCredentialStore(),
       );
 
-      expect(
-        () => service.saveInstallationToken(InstallationToken('token-1')),
+      await expectLater(
+        service.saveInstallationToken(InstallationToken('token-1')),
         throwsStateError,
       );
     });
