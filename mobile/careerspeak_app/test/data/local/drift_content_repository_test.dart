@@ -211,6 +211,53 @@ void main() {
     );
   });
 
+  test('duplicate CURRENT revisions fail closed', () async {
+    await _seed(
+      database,
+      code: 'JAVA_DI_001',
+      type: ContentType.interview,
+      revision: 1,
+      snapshotState: 'CURRENT',
+      sortOrder: 1,
+    );
+    await _seed(
+      database,
+      code: 'JAVA_DI_001',
+      type: ContentType.interview,
+      revision: 2,
+      snapshotState: 'CURRENT',
+      sortOrder: 1,
+    );
+
+    final result = await repository.watchContent(const ContentQuery()).first;
+
+    expect(result, isA<FailureResult<Page<ContentItem>>>());
+    expect(
+      (result as FailureResult<Page<ContentItem>>).failure.code,
+      'CONTENT_READ_MODEL_INVALID',
+    );
+  });
+
+  test('CURRENT metadata without learner payload fails closed', () async {
+    await _seed(
+      database,
+      code: 'JAVA_DI_001',
+      type: ContentType.interview,
+      revision: 1,
+      snapshotState: 'CURRENT',
+      includePayload: false,
+      sortOrder: 1,
+    );
+
+    final result = await repository.watchContent(const ContentQuery()).first;
+
+    expect(result, isA<FailureResult<Page<ContentItem>>>());
+    expect(
+      (result as FailureResult<Page<ContentItem>>).failure.code,
+      'CONTENT_READ_MODEL_INVALID',
+    );
+  });
+
   test('catalog stream reacts after atomic CURRENT publication', () async {
     final iterator = StreamIterator<Result<Page<ContentItem>>>(
       repository.watchContent(const ContentQuery()),
@@ -256,6 +303,7 @@ Future<void> _seed(
   int? sortOrder,
   String metadataChecksum = _checksumA,
   String? payloadChecksum,
+  bool includePayload = true,
 }) async {
   final now = DateTime.utc(2026, 10, 30, 18);
   await database
@@ -273,6 +321,11 @@ Future<void> _seed(
           createdAt: now,
         ),
       );
+
+  if (!includePayload) {
+    return;
+  }
+
   await database
       .into(database.contentCatalogReads)
       .insert(
