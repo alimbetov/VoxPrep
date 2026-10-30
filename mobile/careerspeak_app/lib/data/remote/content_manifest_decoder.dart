@@ -4,6 +4,8 @@ import 'content_manifest_mapper.dart';
 import 'dto/content_manifest_dto.dart';
 
 final class ContentManifestDecoder {
+  // The public `mapper:` name is part of the injectable adapter seam.
+  // ignore: prefer_initializing_formals
   const ContentManifestDecoder({
     ContentManifestMapper mapper = const ContentManifestMapper(),
   }) : _mapper = mapper;
@@ -44,13 +46,13 @@ final class ContentManifestDecoder {
         );
       }
 
-      final packs = <PackRevisionDto>[];
+      final packs = <PackRevisionRefDto>[];
       final packValues = _list(object, 'packs', r'$.packs');
       for (var index = 0; index < packValues.length; index += 1) {
         final path = '\$.packs[$index]';
         final pack = _object(packValues[index], path);
         packs.add(
-          PackRevisionDto(
+          PackRevisionRefDto(
             code: _string(pack, 'code', '$path.code'),
             variant: _string(pack, 'variant', '$path.variant'),
             revision: _integer(pack, 'revision', '$path.revision'),
@@ -64,10 +66,11 @@ final class ContentManifestDecoder {
       for (var index = 0; index < tombstoneValues.length; index += 1) {
         final path = '\$.tombstones[$index]';
         final tombstone = _object(tombstoneValues[index], path);
+        final contentType = _contentType(tombstone, path);
         tombstones.add(
           ContentTombstoneDto(
             contentCode: _contentCode(tombstone, path),
-            contentType: _contentType(tombstone, path),
+            contentType: contentType,
             revision: _integer(tombstone, 'revision', '$path.revision'),
             reason: _string(tombstone, 'reason', '$path.reason'),
           ),
@@ -76,12 +79,16 @@ final class ContentManifestDecoder {
 
       final dto = RootContentManifestDto(
         schemaVersion: schemaVersion,
-        contentVersion: _integer(object, 'contentVersion', r'$.contentVersion'),
+        contentVersion: _integer(
+          object,
+          'contentVersion',
+          r'$.contentVersion',
+        ),
         minimumAppContractVersion: minimumAppContractVersion,
         publishedAt: _utcDateTime(object, 'publishedAt', r'$.publishedAt'),
         checksum: _string(object, 'checksum', r'$.checksum'),
-        packs: List<PackRevisionDto>.unmodifiable(packs),
-        tombstones: List<ContentTombstoneDto>.unmodifiable(tombstones),
+        packs: packs,
+        tombstones: tombstones,
       );
       return Success<RootContentManifest>(_mapper.mapRoot(dto));
     } on _ContractViolation catch (error) {
@@ -116,10 +123,11 @@ final class ContentManifestDecoder {
       for (var index = 0; index < contentValues.length; index += 1) {
         final path = '\$.contents[$index]';
         final content = _object(contentValues[index], path);
+        final contentType = _contentType(content, path);
         contents.add(
           PackContentRefDto(
             contentCode: _contentCode(content, path),
-            contentType: _contentType(content, path),
+            contentType: contentType,
             revision: _integer(content, 'revision', '$path.revision'),
             checksum: _string(content, 'checksum', '$path.checksum'),
             sortOrder: _optionalInteger(
@@ -170,10 +178,11 @@ final class ContentManifestDecoder {
       for (var index = 0; index < contentAssetValues.length; index += 1) {
         final path = '\$.contentAssets[$index]';
         final ref = _object(contentAssetValues[index], path);
+        final contentType = _contentType(ref, path);
         contentAssets.add(
           ContentAssetRefDto(
             contentCode: _contentCode(ref, path),
-            contentType: _contentType(ref, path),
+            contentType: contentType,
             contentRevision: _integer(
               ref,
               'contentRevision',
@@ -191,9 +200,9 @@ final class ContentManifestDecoder {
         variant: _string(object, 'variant', r'$.variant'),
         revision: _integer(object, 'revision', r'$.revision'),
         checksum: _string(object, 'checksum', r'$.checksum'),
-        contents: List<PackContentRefDto>.unmodifiable(contents),
-        assets: List<ManifestAssetDescriptorDto>.unmodifiable(assets),
-        contentAssets: List<ContentAssetRefDto>.unmodifiable(contentAssets),
+        contents: contents,
+        assets: assets,
+        contentAssets: contentAssets,
       );
       return Success<PackContentManifest>(_mapper.mapPack(dto));
     } on _ContractViolation catch (error) {
