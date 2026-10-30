@@ -1,9 +1,8 @@
 # CareerSpeak — P0 Domain & Contract Design Plan
 
-**Document version:** 2.0  
+**Document version:** 2.1  
 **Status:** Final P0 design roadmap  
-**Applies to:** CareerSpeak v0.9+  
-**Branch:** `feat/p0-domain-contracts`
+**Applies to:** CareerSpeak v0.9+
 
 ---
 
@@ -359,15 +358,39 @@ P0.12.12 Review Scheduler
 P0.12.13 Storage/Retention
 P0.12.14 Startup/Error/Recovery
 P0.12.15 Adaptive/Responsive UI
+P0.12.16 Material Design 3 system
+P0.12.17 Learner Content State / Markers
 ```
 
-Accepted detailed specs:
+Accepted/working detailed specs:
 
 ```text
 docs/mobile/CAREERSPEAK_DRIFT_ERD.md
 docs/mobile/CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md
 docs/mobile/CAREERSPEAK_ADAPTIVE_UI.md
+docs/mobile/CAREERSPEAK_MATERIAL_DESIGN_3.md
+docs/mobile/CAREERSPEAK_LEARNER_CONTENT_STATE.md
 ```
+
+Material 3 rule:
+
+```text
+ONE PRODUCT
+ONE MATERIAL 3 DESIGN SYSTEM
+ONE TOKEN LAYER
+ONE REUSABLE COMPONENT LAYER
+MANY ADAPTIVE PRESENTATIONS
+```
+
+Learner marker rule:
+
+```text
+FAVORITE  = explicit user curation
+LISTENED  = qualified audio consumption
+COMPLETED = pedagogical completion
+```
+
+The three markers are independent durable local state and do not imply offline pinning.
 
 ---
 
@@ -414,6 +437,8 @@ learner OpenAPI
 worker OpenAPI/internal contracts
 error-code catalog
 cross-system acceptance scenarios
+Material component/token contract
+learner marker repository/filter contract
 ```
 
 Cross-module calls inside monolith use application/domain ports rather than internal HTTP.
@@ -433,6 +458,8 @@ OpenAPI contracts accepted
 TTS lease/recovery accepted
 manifest/current/offline semantics accepted
 adaptive UI contract accepted
+Material Design 3 single-system contract accepted
+LISTENED/COMPLETED/FAVORITE semantics accepted
 failure/recovery matrices accepted
 implementation backlog generated
 ```
@@ -463,6 +490,9 @@ For Flutter additionally:
 [ ] Drift migration rules
 [ ] sync/download state machines
 [ ] adaptive layout qualification
+[ ] Material 3 theme/token/component qualification
+[ ] light/dark/system qualification
+[ ] LISTENED/COMPLETED/FAVORITE persistence/filter qualification
 [ ] text scale/RTL qualification
 ```
 
@@ -475,10 +505,12 @@ accepted spec
 → migration/schema
 → domain/application code
 → adapters
+→ Material UI components
 → unit tests
 → integration tests
 → architecture tests
 → OpenAPI/contract qualification
+→ adaptive/accessibility qualification
 → CI green
 ```
 
