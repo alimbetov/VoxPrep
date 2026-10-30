@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import signal
 import threading
 from pathlib import Path
 
@@ -30,6 +31,24 @@ def _settings(tmp_path: Path) -> WorkerSettings:
         max_loaded_models=2,
         log_level="INFO",
     )
+
+
+def test_signal_handlers_set_shared_shutdown_event(monkeypatch) -> None:
+    handlers: dict[int, object] = {}
+
+    def capture(signum: int, handler: object) -> None:
+        handlers[signum] = handler
+
+    monkeypatch.setattr(main_module.signal, "signal", capture)
+    shutdown = threading.Event()
+
+    main_module._install_signal_handlers(shutdown)
+
+    assert signal.SIGTERM in handlers
+    assert signal.SIGINT in handlers
+    assert shutdown.is_set() is False
+    handlers[signal.SIGTERM](signal.SIGTERM, None)  # type: ignore[operator]
+    assert shutdown.is_set() is True
 
 
 def test_build_production_loop_wires_real_functional_adapters(tmp_path: Path) -> None:
