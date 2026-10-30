@@ -1,5 +1,6 @@
 name: Flutter Production Adapters
 
+# P2.1 bootstrap: generate and commit the initial Drift baseline once.
 on:
   push:
     branches:
