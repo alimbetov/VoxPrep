@@ -7,8 +7,10 @@ final class ContentPayloadDto {
     required this.title,
     required this.subtitle,
     required this.description,
-    required this.category,
-    required this.level,
+    required this.categoryCode,
+    required this.categoryLabel,
+    required this.levelCode,
+    required this.levelLabel,
     required this.minutes,
     required this.hasAudio,
   });
@@ -20,8 +22,10 @@ final class ContentPayloadDto {
   final String title;
   final String subtitle;
   final String description;
-  final String category;
-  final String level;
+  final String categoryCode;
+  final String categoryLabel;
+  final String levelCode;
+  final String levelLabel;
   final int minutes;
   final bool hasAudio;
 }
