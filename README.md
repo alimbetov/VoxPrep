@@ -24,8 +24,9 @@ CareerSpeak is an English-only learning product. Other supported languages are u
 - Offline content packs
 - Web-based Content Studio
 - Pre-generated reviewed audio
+- Optional Study Ambience themes with Focus Mode
 
-## Architecture baseline v0.4
+## Architecture baseline v0.5
 
 ```text
 Learners
@@ -38,7 +39,11 @@ Flutter Mobile
    │                       ▼
    │                   PostgreSQL
    │
-   └──────────────► CDN / DigitalOcean Spaces
+   └──────────────► CDN / Edge
+                           │
+                           ▼
+                         RustFS
+                    published media origin
 
 Content team
    │
@@ -48,18 +53,26 @@ Browser
    ▼
 Spring MVC Content Studio
    │
-   ▼
-PostgreSQL TTS Jobs
+   ├──────────────► PostgreSQL
+   │                  │
+   │                  ├── content/revisions
+   │                  ├── TTS jobs
+   │                  └── voice/model registry
    │
-   ▼
-Local Headless Piper Worker
+   └──────────────► RustFS
+                      ├── private Piper models
+                      ├── draft assets
+                      └── generated media
+
+Local Headless TTS Worker
 Python + Piper + FFmpeg
    │
-   ▼
-DigitalOcean Spaces / CDN
+   ├── authenticated HTTPS job protocol
+   ├── local immutable model cache
+   └── presigned GET/PUT to RustFS
 ```
 
-The backend is a **Spring Boot modular monolith**. MVP does not require Eureka, a separate API Gateway, RabbitMQ, Kafka, Redis, Kubernetes, JavaFX or a PySide6 moderator UI.
+The backend is a **Spring Boot modular monolith**. MVP does not require Eureka, a separate API Gateway, RabbitMQ, Kafka, Redis, Kubernetes, R2DBC/WebFlux, JavaFX or a PySide6 moderator UI.
 
 ## Technology baseline
 
@@ -67,10 +80,12 @@ The backend is a **Spring Boot modular monolith**. MVP does not require Eureka, 
 - Java 21 + Spring Boot — backend
 - Spring MVC + Thymeleaf + HTMX — Content Studio
 - Spring Security — moderator/admin security
-- PostgreSQL + Liquibase — persistence
+- Spring Data JPA + Hibernate + HikariCP — persistence layer
+- PostgreSQL + Liquibase — durable data/job store
 - Python + Piper + FFmpeg — headless TTS worker
+- RustFS — S3-compatible object storage
+- CDN/edge layer — published immutable learner media
 - DigitalOcean Managed PostgreSQL — production database target
-- DigitalOcean Spaces + CDN — published media target
 - Docker — backend packaging
 
 ## TTS model
@@ -93,7 +108,37 @@ REVIEW
 PUBLISHED
 ```
 
-The worker runs independently, claims durable jobs over authenticated HTTPS, generates speech with Piper, converts/validates it with FFmpeg, uploads production media, and reports completion. Learners consume already-published immutable audio from CDN.
+### Voice governance
+
+CareerSpeak separates a logical moderator-facing voice from a physical immutable Piper model.
+
+```text
+TtsVoice
+US / Female / Lessac
+        │
+        ├── Model v1 DEPRECATED
+        └── Model v2 ACTIVE
+```
+
+Each TTS job resolves and stores an exact `voice_model_id`. A worker must never silently substitute another voice/model.
+
+### Model storage
+
+Piper `.onnx` and config files are stored privately in RustFS.
+
+```text
+Admin upload
+    ↓
+presigned PUT
+    ↓
+RustFS
+    ↓
+checksum/runtime qualification
+    ↓
+APPROVED / ACTIVE
+```
+
+A worker downloads an exact model revision only when it is missing from its local cache, verifies SHA-256 and then uses it for generation.
 
 ## Privacy model
 
@@ -105,29 +150,46 @@ A random `installationId` may be used only for technical purposes such as entitl
 
 Locale selection uses explicit user choice and OS locale/region; GPS is not required for language selection.
 
+## Study Ambience
+
+Visual backgrounds are optional and client-side for MVP.
+
+Initial candidate themes:
+
+```text
+MINIMAL
+NATURE
+COSMOS
+LIBRARY
+COFFEE_STUDY
+PROFESSIONAL
+```
+
+Study Mode may use themed backgrounds; Focus/Exam modes prefer minimal presentation. Background selection should be deterministic and must never reduce text readability.
+
 ## Specifications
 
-- [System Requirements & Architecture Specification v0.4](docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
+- [System Requirements & Architecture Specification v0.5](docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
 - [Globalization & Localization Requirements](docs/specification/CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
-- [Spring MVC + Local Headless Piper Worker Architecture](docs/architecture/CAREERSPEAK_TTS_PIPELINE.md)
+- [Spring MVC + Local Headless Piper Worker Architecture v1.1](docs/architecture/CAREERSPEAK_TTS_PIPELINE.md)
 
 ## Current stage
 
 ```text
-P0 — System Design
+P0 — Architecture Freeze / System Design
 ```
 
 Next deliverables:
 
 1. Domain map
-2. PostgreSQL ERD
-3. Content revision model
+2. Full PostgreSQL ERD
+3. Content revision/publication model
 4. Localization model
-5. Assessment model
-6. TTS/job ERD
-7. Media model
-8. Content manifest/offline pack model
-9. API contracts
+5. Assessment snapshot model
+6. TTS voice/model/job ERD
+7. RustFS FileAsset/model storage model
+8. Content manifest/offline-pack model
+9. OpenAPI contracts
 10. ADR baseline
 11. P0 implementation backlog
 
@@ -142,4 +204,4 @@ No ads
 No learner runtime AI/STT/TTS cost
 ```
 
-The product differentiator is curated English content for IELTS and profession-specific international interviews, supported by reusable tests, multilingual hints and pre-generated audio.
+The product differentiator is curated English content for IELTS and profession-specific international interviews, supported by reusable tests, multilingual hints, reviewed pre-generated audio and privacy-first offline learning.
