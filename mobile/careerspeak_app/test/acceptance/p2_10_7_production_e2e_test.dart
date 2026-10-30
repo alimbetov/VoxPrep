@@ -164,9 +164,7 @@ Future<void> _expectProductionUi(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [careerSpeakDatabaseProvider.overrideWithValue(database)],
-      child: const MaterialApp(
-        home: Scaffold(body: LearnScreen()),
-      ),
+      child: const MaterialApp(home: Scaffold(body: LearnScreen())),
     ),
   );
 
