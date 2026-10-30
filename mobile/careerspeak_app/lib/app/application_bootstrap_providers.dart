@@ -27,11 +27,12 @@ final installationBootstrapServiceProvider =
 
 final applicationBootstrapServiceProvider = Provider<ApplicationBootstrapService>(
   (ref) {
+    final contentSync = ref.watch(preferenceAwareContentSyncProvider);
     return ApplicationBootstrapService(
       installationBootstrapService: ref.watch(
         installationBootstrapServiceProvider,
       ),
-      contentSync: ref.watch(preferenceAwareContentSyncProvider),
+      synchronizeContent: contentSync.synchronize,
     );
   },
 );
