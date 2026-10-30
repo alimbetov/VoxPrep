@@ -23,7 +23,7 @@ void main() {
       '- categoryLabel',
       '- levelCode',
       '- levelLabel',
-      "pattern: '^[A-Z0-9][A-Z0-9._-]*$'",
+      r"pattern: '^[A-Z0-9][A-Z0-9._-]*$'",
     ]) {
       expect(
         source,
