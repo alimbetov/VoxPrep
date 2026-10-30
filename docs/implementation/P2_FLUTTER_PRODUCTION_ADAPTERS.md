@@ -114,6 +114,12 @@ flutter test
 
 ## P2.1 — Drift database foundation
 
+Accepted at exact SHA:
+
+```text
+c23a4002874b517255df946d809cccf3e9645192
+```
+
 P2.1 introduces local persistence infrastructure only. It does **not** switch learner-facing repositories to Drift yet.
 
 Dependencies are pinned for the slice:
@@ -206,6 +212,105 @@ P2.1 is accepted only when all of the following are true:
 9. `pubspec.lock` is committed;
 10. CI runs pinned Flutter, strict formatting, Drift code generation validation, `flutter analyze`, and full `flutter test`;
 11. P1.7 adaptive acceptance and P2 architecture guards remain green on the exact P2.1 SHA.
+
+## P2.2 — learner-state persistence
+
+P2.2 performs the first production persistence cutover. Catalog and assessment content remain mock-backed; only learner-owned mutable state moves to Drift.
+
+Architecture:
+
+```text
+Feature UI
+    ↓
+contentMarkersProvider
+    ↓
+LearnerStateRepository
+    ↓
+DriftLearnerStateRepository
+    ↓
+CareerSpeakDatabase
+    ├── favorites
+    └── content_learning_states
+```
+
+Stable learner identity is explicit:
+
+```text
+ContentIdentity
+├── business code
+└── ContentType
+```
+
+The database identity remains `(content_code, content_type)`. A business code reused by two content types must not merge their learner state.
+
+Repository commands are idempotent set operations rather than toggle operations:
+
+```text
+watchMarkers()
+setFavorite(identity, favorite)
+setListened(identity, listened)
+setCompleted(identity, completed)
+savePlaybackPosition(identity, positionMs)
+```
+
+The adapter persists and projects at least:
+
+```text
+FAVORITE
+LISTENED
+COMPLETED
+last_position_ms
+listen_count
+completion_source
+last_revision_seen
+```
+
+`ContentMarkerState` is a framework-agnostic domain value. Riverpod providers belong to the composition layer, not `domain/`.
+
+### P2.2 invariants
+
+1. favorite state is stored only in `favorites`;
+2. listened/completed/playback state is stored only in `content_learning_states`;
+3. replaying the same desired-state command is idempotent;
+4. setting listened to `true` twice without an intervening reset does not increment `listen_count` twice;
+5. clearing listened/completed does not destroy unrelated learner state such as playback position;
+6. `savePlaybackPosition` rejects negative positions;
+7. learner state survives closing `CareerSpeakDatabase`, constructing a new database instance for the same SQLite file, and reopening it;
+8. UI never imports `data/local/**` or `DriftLearnerStateRepository` directly;
+9. production content repositories remain mock-backed in this slice;
+10. schema version remains `1`; P2.2 uses the tables introduced in P2.1 and does not create a migration merely for adapter code.
+
+### Explicit non-goals for P2.2
+
+Do not add yet:
+
+```text
+review_schedule persistence
+test_attempt / test_answer persistence
+installation ID/token persistence
+Secure Storage
+HTTP/API client
+manifest sync
+ContentSyncCoordinator
+downloads/offline packs
+real audio engine
+backend learner profile or cloud sync
+```
+
+### P2.2 acceptance
+
+P2.2 is accepted only when:
+
+1. `LearnerStateRepository` is an application port and `DriftLearnerStateRepository` implements it;
+2. composition root selects the Drift learner-state adapter;
+3. Home, Learn, Review, ContentCard and ContentDetail read learner markers through the reactive provider;
+4. favorite/listened/completed mutations write through the repository rather than a Riverpod in-memory map;
+5. `FAVORITE`, `LISTENED`, `COMPLETED` and playback position survive a real database close/reopen test;
+6. marker projection distinguishes the same business code used by different `ContentType` values;
+7. widget acceptance uses an injected in-memory Drift database and remains green;
+8. architecture guard rejects feature imports of both mock and local concrete adapters;
+9. Drift schema/codegen/lockfile reproducibility gates remain green without schema changes;
+10. pinned Flutter format/analyze/full-test CI is green on the exact P2.2 SHA.
 
 ## Architecture rule
 
