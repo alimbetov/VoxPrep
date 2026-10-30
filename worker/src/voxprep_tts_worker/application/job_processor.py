@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+import tempfile
 from pathlib import Path
 
 from voxprep_tts_worker.domain.errors import LeaseLostError, WorkerError
@@ -31,10 +32,11 @@ class JobProcessor:
         self._postprocessor = postprocessor
 
     def process(self, job: ClaimedJob) -> None:
-        job_dir = self._temp_dir / job.job_id
+        job_dir = Path(
+            tempfile.mkdtemp(prefix=f"{job.job_id}-", dir=self._temp_dir)
+        )
         source_wav = job_dir / "source.wav"
         output_mp3 = job_dir / "output.mp3"
-        job_dir.mkdir(parents=True, exist_ok=False)
 
         logger.info(
             "processing job",
