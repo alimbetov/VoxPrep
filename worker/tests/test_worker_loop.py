@@ -52,6 +52,17 @@ class ErrorBackend:
         raise self.error
 
 
+class StopOnClaimBackend:
+    def __init__(self, shutdown: threading.Event) -> None:
+        self.shutdown = shutdown
+        self.calls = 0
+
+    def claim(self, worker_id: str) -> ClaimedJob | None:
+        self.calls += 1
+        self.shutdown.set()
+        return None
+
+
 class RecordingProcessor:
     def __init__(self) -> None:
         self.jobs: list[ClaimedJob] = []
@@ -126,4 +137,16 @@ def test_shutdown_prevents_new_claims() -> None:
 
     assert _loop(backend, processor, shutdown).run_once() is False
     assert backend.claims == []
+    assert processor.jobs == []
+
+
+def test_run_exits_cleanly_when_shutdown_is_requested_during_poll() -> None:
+    shutdown = threading.Event()
+    backend = StopOnClaimBackend(shutdown)
+    processor = RecordingProcessor()
+
+    _loop(backend, processor, shutdown).run()
+
+    assert shutdown.is_set()
+    assert backend.calls == 1
     assert processor.jobs == []
