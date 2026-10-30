@@ -3,109 +3,101 @@
 **Repository:** `alimbetov/VoxPrep`  
 **Product name:** CareerSpeak  
 **Codename:** VoxPrep  
-**Document version:** 0.8  
-**Status:** Architecture baseline / P0 domain-contract design  
+**Document version:** 0.9  
+**Status:** Consolidated P0 architecture baseline  
 **Target platforms:** Android, iOS  
 **Primary learning model:** Read → Listen → Repeat → Test → Review
 
-Related documents:
+Normative documents:
 
+- [`../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md`](../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md)
 - [`CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md`](CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md)
 - [`CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md`](CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
 - [`CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md`](CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md)
 - [`../architecture/CAREERSPEAK_TTS_PIPELINE.md`](../architecture/CAREERSPEAK_TTS_PIPELINE.md)
 - [`../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md`](../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md)
 
+Mobile detailed contracts:
+
+- [`../mobile/CAREERSPEAK_DRIFT_ERD.md`](../mobile/CAREERSPEAK_DRIFT_ERD.md)
+- [`../mobile/CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md`](../mobile/CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md)
+- [`../mobile/CAREERSPEAK_ADAPTIVE_UI.md`](../mobile/CAREERSPEAK_ADAPTIVE_UI.md)
+
 ---
 
 ## 1. Product purpose
 
-CareerSpeak is an English-learning mobile application focused on:
+CareerSpeak is an offline-first English-learning application focused on:
 
-1. IELTS preparation;
-2. international job-interview preparation by profession and seniority;
-3. professional/technical English;
-4. vocabulary, topics, phrase banks and shadowing;
-5. reusable practice/mock tests and local review.
+```text
+IELTS preparation
+international job interviews
+professional/technical English
+vocabulary/topics/phrases/shadowing
+practice/mock tests
+local review and progress
+```
 
-CareerSpeak teaches **English only**. Other languages are presentation/localization languages used for UI, translations, hints and explanations.
+CareerSpeak teaches English only. Other languages support UI, translations, hints and explanations.
 
-The learner runtime does not require runtime AI, Speech-to-Text, pronunciation scoring or runtime TTS.
+Learner runtime does not require runtime AI, STT, pronunciation scoring or runtime TTS.
 
 ---
 
 ## 2. Product principles
 
-1. One-time paid application is the initial commercial model.
-2. No ads in the initial product.
-3. No mandatory learner account.
-4. Learner progress remains local by default.
-5. Published content is immutable by revision.
-6. Content may be deactivated without destructive deletion.
-7. Audio is generated before publication.
-8. Mobile consumption is offline-first.
-9. Large learner catalogs use cursor/keyset pagination.
-10. Re-downloadable local media is automatically reclaimable.
-11. Canonical English content/audio is reused across localization languages.
-12. Infrastructure remains simple until measured requirements justify additional components.
+```text
+one-time paid app initial model
+no ads initially
+no mandatory learner account
+local-first learner progress
+offline-first consumption
+published content immutable by revision
+server can deactivate content without destructive deletion
+pre-generated reviewed audio
+simple infrastructure until measured need
+adaptive mobile UI
+privacy-first installation identity
+```
 
 ---
 
 ## 3. Technical actors
 
-CareerSpeak MVP has exactly three technical actors.
-
-### 3.1 ADMIN
-
-One human administrative account performs all Content Studio operations:
+Exactly:
 
 ```text
-authoring
-localization
-TTS voice/model management
-audio review
-publication
-activate/deactivate
-operational content configuration
+ADMIN
+FLUTTER INSTALLATION
+TTS WORKER
 ```
 
-ADMIN authentication:
+### ADMIN
+
+One fixed secured account for all Content Studio operations.
+
+No moderator/editor/reviewer hierarchy, RBAC tables, registration, password reset, OAuth, LDAP or Keycloak in MVP.
+
+### FLUTTER INSTALLATION
+
+No learner account.
 
 ```text
-fixed username
-strong deployment-managed password hash
-Spring Security server-side session
-HttpOnly/Secure/SameSite cookie
-CSRF
-```
-
-MVP does not implement Moderator/Editor/Reviewer roles, account registration, password reset, OAuth, LDAP, Keycloak or user/role tables.
-
-### 3.2 FLUTTER INSTALLATION
-
-The learner has no personal backend account.
-
-```text
-first launch
-→ random app-specific installationId
+random installationId
 → backend registration
 → backend-issued installation token
-→ platform secure storage
+→ platform Secure Storage
 ```
 
-Installation identity is not linked to learner progress/favorites/test history in MVP.
+Backend does not build a learner profile from progress/favorites/test history.
 
-### 3.3 TTS WORKER
+### TTS WORKER
 
-TTS Worker is a machine actor with a dedicated rotatable machine token.
-
-Production worker is a server-managed long-running process/container with automatic start/restart.
+Machine actor with dedicated token; server-managed long-running process/container.
 
 ---
 
-## 4. MVP non-goals
-
-Do not implement initially:
+## 4. Explicit MVP non-goals
 
 ```text
 runtime LLM chat
@@ -113,13 +105,10 @@ Speech-to-Text
 pronunciation scoring
 learner voice upload
 runtime learner TTS
-social network
-messaging
-leaderboards
+social/messaging/leaderboards
 complex gamification
-server-side learner profile/progress sync
-multi-user admin RBAC
-OAuth / social login / Keycloak / LDAP
+server learner-progress sync
+multi-user admin identity platform
 RabbitMQ
 Kafka
 Redis
@@ -128,17 +117,15 @@ separate API Gateway
 Elasticsearch/OpenSearch
 R2DBC/WebFlux
 Kubernetes
-JavaFX/PySide6 admin UI
-DRM-style audio protection
+JavaFX/PySide admin UI
+DRM-style media protection
 ```
-
-Caffeine is not required initially and may be introduced only after profiling.
 
 ---
 
 ## 5. Backend architecture
 
-CareerSpeak uses one Spring Boot modular monolith:
+One Spring Boot modular monolith:
 
 ```text
 careerspeak-backend
@@ -158,9 +145,7 @@ careerspeak-backend
 └── vocabulary
 ```
 
-One deployable JVM application owns transactional business logic. Module boundaries SHOULD be protected by architecture tests.
-
-Backend baseline:
+Baseline:
 
 ```text
 Java 21
@@ -180,21 +165,17 @@ Testcontainers
 Docker
 ```
 
-Explicit persistence decision:
+Persistence:
 
 ```text
 Spring MVC + JPA/JDBC + HikariCP + PostgreSQL
 ```
 
+Use native SQL where queue/concurrency semantics require it, notably TTS claim/lease operations.
+
 ---
 
 ## 6. Flutter architecture
-
-Flutter is the only learner-facing client.
-
-Authoritative mobile specification:
-
-[`CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md`](CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md)
 
 Baseline:
 
@@ -203,15 +184,13 @@ Flutter + Dart
 Riverpod
 go_router
 Drift + SQLite
-platform secure storage
+Secure Storage
 local filesystem
-HTTP client abstraction
-audio playback abstraction
+HTTP abstraction
+audio abstraction
 ```
 
-Mobile architecture is feature-first and offline-first.
-
-Shared mobile services include:
+Shared services:
 
 ```text
 ContentSyncCoordinator
@@ -222,63 +201,46 @@ AudioPlaybackController
 ReviewScheduler
 ```
 
+Adaptive width classes:
+
+```text
+COMPACT   < 600
+MEDIUM    600–839
+EXPANDED  840–1199
+LARGE     >= 1200
+```
+
+Adaptive presentation never forks business logic by device type.
+
 ---
 
 ## 7. Production topology
 
 ```text
-                     INTERNET
+ADMIN Browser
+    │ session
+    ▼
+Spring Boot Backend
+    │
+    ├── PostgreSQL
+    │
+    └── RustFS
+          ▲
+          │ presigned/private operations
+       TTS Worker
 
-          Flutter                 ADMIN Browser
-             │                         │
- installation token             admin session
-             │                         │
-             └────────────┬────────────┘
-                          ▼
-                  Spring Boot Backend
-                          │
-             ┌────────────┴────────────┐
-             ▼                         ▼
-        PostgreSQL                   RustFS
-     data + TTS queue       models/drafts/published assets
-                                       ▲
-                                       │
-                                 TTS Worker
-                           Python + Piper + FFmpeg
-                              auto-start / auto-restart
-
-Flutter ─────────► CDN/Edge ─────────► RustFS published assets
+Flutter
+├── installation token → Backend REST API
+└── media → CDN/edge → RustFS published origin
 ```
 
-Initial deployment may use one Docker host for backend, TTS worker, RustFS and reverse proxy, with managed PostgreSQL separately.
+Initial deployment may run Backend, TTS Worker, RustFS and reverse proxy on one Docker host, with managed PostgreSQL separately.
 
 ---
 
-## 8. Core content domains
+## 8. Backend content lifecycle
 
-```text
-Profession / CareerTrack / Catalog
-Interview
-Vocabulary
-Topic / Phrase / Shadowing
-Assessment
-Localization
-Publication / Availability
-Media / FileAsset
-TTS
-Manifest / ContentPack
-Installation
-Admin orchestration
-Flutter local domain
-```
-
-Detailed ownership/contracts are defined in the P0 domain-contract plan.
-
----
-
-## 9. Revision, publication and availability
-
-Revision lifecycle:
+Revision status:
 
 ```text
 DRAFT
@@ -288,68 +250,131 @@ PUBLISHED
 ARCHIVED
 ```
 
-Availability is separate:
+Availability:
 
 ```text
 ACTIVE
 INACTIVE
 ```
 
-Learner APIs expose only:
+Learner-delivery condition:
 
 ```text
-revision_status = PUBLISHED
-AND
-availability_status = ACTIVE
+PUBLISHED + ACTIVE
 ```
 
-Published revisions are immutable. Changes create a new revision.
+Meaning: visible/deliverable/downloadable according to learner contracts.
 
 ---
 
-## 10. Assessment reproducibility
+## 9. Flutter lifecycle terminology
+
+Local metadata states:
+
+```text
+STAGING
+VERIFIED
+CURRENT
+SUPERSEDED
+FAILED
+```
+
+Offline pack states:
+
+```text
+NOT_DOWNLOADED
+QUEUED
+DOWNLOADING
+VERIFYING
+READY
+UPDATING
+FAILED
+```
+
+Mandatory distinction:
+
+```text
+Backend ACTIVE = server allows delivery
+Flutter CURRENT = local metadata currently used
+Flutter READY = complete offline bundle locally verified
+```
+
+---
+
+## 10. Content versioning and manifest
+
+Backend publishes one root learner snapshot:
+
+```text
+contentVersion
+```
+
+Root snapshot references exact pack variants/revisions/checksums.
+
+Examples:
+
+```text
+JAVA_SENIOR / canonical / rev 8
+JAVA_SENIOR / locale:kk / rev 4
+```
+
+Locale pack variants do not create separate root epochs.
+
+Flutter distinguishes remote version seen from locally CURRENT version.
+
+Metadata update is atomic; optional media bytes do not block normal metadata activation.
+
+---
+
+## 11. Offline bundle replacement
+
+Explicit offline bundle has independent readiness.
+
+Valid state:
+
+```text
+metadata rev 8 = CURRENT
+offline rev 7 = READY
+offline rev 8 = UPDATING
+```
+
+Old READY bundle remains usable until replacement verifies.
+
+---
+
+## 12. Publication/assessment reproducibility
+
+Published content revisions are immutable.
 
 Published tests reference exact immutable `QuestionRevision` records.
 
-```text
-PracticeTestRevision
-├── QuestionRevision A
-├── QuestionRevision B
-└── QuestionRevision C
-```
-
-A completed local attempt preserves the exact test/question revision identifiers used for that attempt.
+Flutter test attempts persist exact test/question revisions/snapshots so completed attempts remain reviewable after later content changes/cache eviction.
 
 ---
 
-## 11. Localization model
-
-Canonical learning content/audio is English and stored once.
-
-Flutter distinguishes:
+## 13. Localization
 
 ```text
+learningLanguage = en
 uiLocale
 translationLocale
 preferredAccent
 ```
 
-Learning language is fixed:
+UI strings:
 
 ```text
-learningLanguage = en
+Flutter ARB / gen-l10n
 ```
 
-### UI localization
-
-System/application UI strings are Flutter-owned compile-time resources:
+Content translation/hints/explanations:
 
 ```text
-ARB
-Flutter gen-l10n
+Backend typed localization tables
+→ locale pack variants
 ```
 
-Initial UI locales:
+Initial locales:
 
 ```text
 en
@@ -357,71 +382,66 @@ ru
 kk
 ```
 
-### Content localization
-
-Backend-driven locale content includes:
-
-```text
-translation
-hint
-explanation
-data-driven localized labels
-```
-
-It is distributed through manifests/packs/locale deltas and may be updated without an application release when compatible.
-
-Locale identifiers are BCP-47 compatible and mobile architecture is RTL-ready.
+BCP-47-compatible identifiers and RTL readiness are required.
 
 ---
 
-## 12. RustFS media/model storage
+## 14. RustFS / media
 
-RustFS is the S3-compatible object store.
+RustFS stores binary objects; PostgreSQL stores metadata/lifecycle.
 
 Logical buckets:
 
 ```text
-careerspeak-models   private Piper models/config
-careerspeak-draft    private draft/generated assets
-careerspeak-audio    published audio origin
-careerspeak-images   covers/background assets
+careerspeak-models
+careerspeak-draft
+careerspeak-audio
+careerspeak-images
 ```
 
-PostgreSQL stores metadata/object keys/checksums, not large binary content.
-
-Backend accesses RustFS through an `ObjectStorage` abstraction and uses presigned GET/PUT where practical.
-
----
-
-## 13. TTS voice/model rule
-
-Logical voice and exact Piper model revision are separate.
+Published media identity:
 
 ```text
-TtsVoice
-US / Female / Lessac
-        │
-        ├── TtsVoiceModel v1 DEPRECATED
-        └── TtsVoiceModel v2 ACTIVE
+assetId
+checksumSha256
+deliveryKey
 ```
 
-Every TTS job resolves an exact immutable `voice_model_id` before execution.
-
-Worker SHALL NOT silently substitute another model.
+Do not persist CDN hostname as durable domain identity.
 
 ---
 
-## 14. TTS queue
+## 15. TTS architecture
 
-PostgreSQL is the durable TTS queue.
+Logical `TtsVoice` and exact immutable `TtsVoiceModel` are separate.
 
-Worker claiming uses an atomic SQL transaction with:
+Every job resolves exact `voice_model_id` before execution.
+
+Worker:
+
+```text
+claim
+obtain/cache exact model
+Piper
+FFmpeg
+technical QC
+RustFS upload
+complete/fail callback
+```
+
+Worker never publishes content.
+
+---
+
+## 16. TTS queue
+
+PostgreSQL durable queue using atomic claim with:
 
 ```sql
 FOR UPDATE SKIP LOCKED
 ```
 
-and:
+plus:
 
 ```text
 worker_id
@@ -432,248 +452,126 @@ attempt_count
 fingerprint
 ```
 
-RabbitMQ is not required for the initial workload.
+Old/stale lease completion is rejected.
+
+RabbitMQ is not required initially.
 
 ---
 
-## 15. Content delivery
+## 17. Content delivery
 
-Learner collection APIs use cursor/keyset pagination.
+Learner lists use cursor/keyset pagination.
 
-Flutter synchronizes through:
+Flutter syncs via:
 
 ```text
 root manifest
 pack manifests
-locale deltas
+locale variants
 tombstones
 checksums
 ```
 
-A new pack snapshot is staged and verified before atomic local activation.
-
-A failed/partial update SHALL NOT replace the last known-good local snapshot.
+Tombstones explicitly retire content; absence from a paginated list never implies deletion.
 
 ---
 
-## 16. Flutter local persistence
+## 18. Local persistence and retention
 
-Structured local state uses Drift/SQLite.
-
-Core local concepts include:
+Drift separates:
 
 ```text
-settings
-installation state
-manifest/pack state
-local content snapshot
-local asset/content-asset references
-favorites
-progress
-review schedule
-test attempts/answers
-download tasks
-sync journal
+system/sync state
+versioned content/cache
+learner durable state
 ```
 
-Installation token is stored separately in platform secure storage.
-
----
-
-## 17. Flutter local retention
-
-Durable learner state is separate from disposable/re-downloadable data.
-
-Automatic cleanup uses:
+Disposable storage management:
 
 ```text
-TTL
-+
-LRU
-+
-local quota
-+
-pinning/manual-download protection
-+
-reference-safe shared-asset deletion
+TTL + LRU + quota + pin/download protection + reference-safe deletion
 ```
 
-Media eviction SHALL NOT erase learner progress.
+Cache/media eviction never erases learner progress.
 
 ---
 
-## 18. Audio and shadowing
+## 19. Adaptive UI
 
-Audio playback is a shared mobile service and resolves either a verified local file or remote CDN asset through `AssetResolver`.
+CareerSpeak adapts to available window width, including phone, tablet, split-screen and landscape windows.
 
-MVP supports:
+Core requirements:
 
 ```text
-play/pause/seek
-0.75x / 1.0x / 1.25x
-repeat 1 / 3 / 5 / infinite
-skip back/forward
-segment repeat where deterministic segmentation exists
+one shared business state across layouts
+bottom navigation on compact where appropriate
+navigation rail on wider layouts
+master/detail only for natural master-detail domains
+reading width constrained on tablets
+large text support
+RTL/mixed-direction support
+resize without route/test/audio state loss
 ```
-
-Shadowing SHALL use backend-published stable segment/order metadata rather than client punctuation guessing.
 
 ---
 
-## 19. Offline behavior
-
-With downloaded content and local DB available, Flutter remains usable when backend/CDN/TTS Worker are offline.
-
-Offline-capable operations include:
-
-```text
-read/listen downloaded content
-complete downloaded tests
-write progress/favorites/review state
-use local search/index where available
-```
-
-Sync/new downloads are deferred until connectivity returns.
-
----
-
-## 20. Study ambience
-
-Initial themes may include:
-
-```text
-MINIMAL
-NATURE
-COSMOS
-LIBRARY
-COFFEE_STUDY
-PROFESSIONAL
-```
-
-Study Mode may use ambience backgrounds. Focus and Exam/Mock Test modes default to minimal presentation. Readability has priority.
-
----
-
-## 21. API security zones
+## 20. Security zones
 
 ```text
 /admin/**
-    → ADMIN password + server session
+→ ADMIN session
 
 /api/v1/**
-    → backend-issued installation token
+→ installation token
 
 /internal/v1/tts/**
-    → TTS worker machine token
+→ worker token
 
-RustFS private access
-    → presigned GET/PUT
+private RustFS
+→ presigned authorization
 ```
-
-These mechanisms remain separate.
 
 ---
 
-## 22. Content Studio
-
-Content Studio is server-rendered:
+## 21. Failure isolation
 
 ```text
-Spring MVC
-Thymeleaf
-HTMX
-Spring Security
-```
+Backend down
+→ existing local Flutter learning continues
 
-One ADMIN executes all authoring/localization/TTS/publication workflows.
+TTS Worker down
+→ production jobs wait; published learner content unaffected
+
+CDN/RustFS learner delivery issue
+→ verified local assets continue
+
+Flutter sync crash
+→ last CURRENT snapshot remains
+
+Worker crash
+→ lease expires/reclaim
+```
 
 ---
 
-## 23. Mobile failure/recovery requirements
+## 22. P0 acceptance
 
-Mobile acceptance SHALL include:
-
-```text
-first launch online/offline
-registration/token recovery
-backend offline with local learning
-manifest failure
-interrupted pack staging
-checksum mismatch
-unsupported schemaVersion
-tombstones
-storage pressure/LRU cleanup
-shared asset references
-in-progress test restoration
-locale change/fallback/RTL
-CDN failure with local asset
-Drift migration with progress retention
-```
-
-Raw transport/database exceptions are not learner-facing UI messages.
-
----
-
-## 24. P0 acceptance
-
-Architecture is implementation-ready only after each bounded context agrees:
+Before implementation freeze, accept:
 
 ```text
-ownership
-aggregates/value objects
-invariants
-state transitions
-DB/local schema
-constraints/indexes
-API/application contracts
-errors
-security
-idempotency
-concurrency rules
-acceptance/failure tests
-```
-
-Flutter additionally requires accepted:
-
-```text
-feature map
-Riverpod ownership conventions
-navigation
+common identifiers/time/error contracts
+Backend publication/availability lifecycle
+cross-system ACTIVE/CURRENT/READY terminology
+root manifest/pack variant version contract
 Drift ERD
-sync/download/audio state machines
-locale/RTL contract
-assessment/review local state
-retention/recovery contract
+ContentSyncCoordinator state machine
+adaptive UI contract
+localization/RTL contract
+TTS claim/lease/recovery contract
+PostgreSQL integrated ERD
+Flutter local ERD
+OpenAPI learner/worker contracts
+failure/recovery qualification matrix
 ```
 
-Integrated ERD/local ERD/OpenAPI contracts are frozen at the end of P0.
-
----
-
-## 25. Current baseline summary
-
-```text
-ADMIN
-→ Spring MVC Content Studio
-→ one fixed secured account
-
-Flutter
-→ feature-first + Riverpod + go_router
-→ Drift/SQLite + Secure Storage
-→ installationId → backend-issued token
-→ manifest/pack/locale-delta sync
-→ local-first learning
-→ AssetResolver → local file or CDN → RustFS
-→ TTL/LRU/quota retention
-
-TTS Worker
-→ server-managed long-running process
-→ Backend Job API
-→ PostgreSQL SKIP LOCKED queue
-→ exact Piper model from RustFS/cache
-→ Piper + FFmpeg
-→ RustFS
-→ ADMIN review/publish
-```
-
-This is the authoritative CareerSpeak architecture baseline for v0.8.
+This is the authoritative system baseline for CareerSpeak v0.9.
