@@ -18,27 +18,35 @@ final class InstallationId {
   String toString() => value;
 }
 
-final class InstallationCredentials {
-  factory InstallationCredentials({
-    required InstallationId installationId,
-    required String installationToken,
-  }) {
-    return InstallationCredentials._(
-      installationId: installationId,
-      installationToken: _requireNonBlank(
-        installationToken,
-        'installationToken',
-      ),
-    );
+final class InstallationToken {
+  factory InstallationToken(String value) {
+    return InstallationToken._(_requireNonBlank(value, 'installationToken'));
   }
 
-  const InstallationCredentials._({
+  const InstallationToken._(this.value);
+
+  final String value;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is InstallationToken && other.value == value;
+
+  @override
+  int get hashCode => value.hashCode;
+
+  @override
+  String toString() => '<redacted>';
+}
+
+final class InstallationCredentials {
+  const InstallationCredentials({
     required this.installationId,
     required this.installationToken,
   });
 
   final InstallationId installationId;
-  final String installationToken;
+  final InstallationToken installationToken;
 
   @override
   String toString() {
