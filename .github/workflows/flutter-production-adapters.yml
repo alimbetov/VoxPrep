@@ -1,5 +1,6 @@
 name: Flutter Production Adapters
 
+# P2.2 one-shot formatter normalization from current branch head.
 on:
   push:
     branches:
@@ -11,6 +12,9 @@ on:
     paths:
       - 'mobile/careerspeak_app/**'
       - '.github/workflows/flutter-production-adapters.yml'
+
+permissions:
+  contents: write
 
 jobs:
   quality:
@@ -40,7 +44,18 @@ jobs:
         run: git diff --exit-code -- pubspec.lock
 
       - name: Format
-        run: dart format --output=none --set-exit-if-changed lib test
+        run: dart format lib test
+
+      - name: Commit formatter output
+        if: github.event_name == 'push'
+        run: |
+          if [ -n "$(git status --porcelain -- lib test)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add lib test
+            git commit -m "style(p2): apply pinned Dart formatter"
+            git push origin HEAD:${GITHUB_REF_NAME}
+          fi
 
       - name: Drift codegen
         run: dart run build_runner build --delete-conflicting-outputs
