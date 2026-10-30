@@ -3,7 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('manifest transport implementation stays behind application boundary', () {
+  test('content delivery transport stays behind application boundary', () {
     final roots = <Directory>[
       Directory('lib/domain'),
       Directory('lib/application'),
@@ -17,7 +17,9 @@ void main() {
 
         final source = entity.readAsStringSync();
         if (source.contains('data/remote/content_manifest_decoder.dart') ||
-            source.contains('data/remote/http_content_manifest_gateway.dart')) {
+            source.contains('data/remote/http_content_manifest_gateway.dart') ||
+            source.contains('data/remote/content_payload_decoder.dart') ||
+            source.contains('data/remote/http_content_payload_gateway.dart')) {
           violations.add(entity.path);
         }
       }
@@ -27,7 +29,7 @@ void main() {
       violations,
       isEmpty,
       reason:
-          'Domain, application, and features must depend on manifest contracts, not remote manifest adapters.',
+          'Domain, application, and features must depend on content delivery contracts, not remote adapters.',
     );
   });
 }
