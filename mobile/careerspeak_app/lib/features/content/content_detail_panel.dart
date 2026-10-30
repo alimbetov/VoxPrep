@@ -120,7 +120,7 @@ class ContentDetailPanel extends ConsumerWidget {
         ),
         if (marker.lastPositionMs case final position?) ...[
           const SizedBox(height: 12),
-          Text('Saved playback position: ${position} ms'),
+          Text('Saved playback position: $position ms'),
         ],
         const SizedBox(height: 32),
         Text('Overview', style: Theme.of(context).textTheme.titleLarge),
