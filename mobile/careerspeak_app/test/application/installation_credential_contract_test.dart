@@ -6,14 +6,7 @@ void main() {
   group('installation credential contract', () {
     test('rejects blank installation identity and token values', () {
       expect(() => InstallationId('   '), throwsArgumentError);
-
-      expect(
-        () => InstallationCredentials(
-          installationId: InstallationId('install-1'),
-          installationToken: '   ',
-        ),
-        throwsArgumentError,
-      );
+      expect(() => InstallationToken('   '), throwsArgumentError);
     });
 
     test('treats installation id as an opaque value object', () {
@@ -22,51 +15,76 @@ void main() {
     });
 
     test('does not expose installation token through toString', () {
-      const token = 'secret-token-value';
+      const rawToken = 'secret-token-value';
+      final token = InstallationToken(rawToken);
       final credentials = InstallationCredentials(
         installationId: InstallationId('install-1'),
         installationToken: token,
       );
 
-      expect(credentials.toString(), isNot(contains(token)));
+      expect(token.toString(), isNot(contains(rawToken)));
+      expect(credentials.toString(), isNot(contains(rawToken)));
       expect(credentials.toString(), contains('<redacted>'));
     });
 
-    test('store port supports read write and clear lifecycle', () async {
+    test('store port supports independent id and token lifecycle', () async {
       final store = _MemoryInstallationCredentialStore();
-      final credentials = InstallationCredentials(
-        installationId: InstallationId('install-1'),
-        installationToken: 'token-1',
-      );
+      final installationId = InstallationId('install-1');
+      final installationToken = InstallationToken('token-1');
 
-      expect(await store.read(), isNull);
+      expect(await store.readInstallationId(), isNull);
+      expect(await store.readInstallationToken(), isNull);
 
-      await store.write(credentials);
-      final stored = await store.read();
+      await store.writeInstallationId(installationId);
+      expect(await store.readInstallationId(), installationId);
+      expect(await store.readInstallationToken(), isNull);
 
-      expect(stored?.installationId, InstallationId('install-1'));
-      expect(stored?.installationToken, 'token-1');
+      await store.writeInstallationToken(installationToken);
+      expect(await store.readInstallationToken(), installationToken);
+
+      await store.clearInstallationToken();
+      expect(await store.readInstallationId(), installationId);
+      expect(await store.readInstallationToken(), isNull);
 
       await store.clear();
-      expect(await store.read(), isNull);
+      expect(await store.readInstallationId(), isNull);
+      expect(await store.readInstallationToken(), isNull);
     });
   });
 }
 
 final class _MemoryInstallationCredentialStore
     implements InstallationCredentialStore {
-  InstallationCredentials? _credentials;
+  InstallationId? _installationId;
+  InstallationToken? _installationToken;
 
   @override
-  Future<void> clear() async {
-    _credentials = null;
+  Future<InstallationId?> readInstallationId() async => _installationId;
+
+  @override
+  Future<void> writeInstallationId(InstallationId installationId) async {
+    _installationId = installationId;
   }
 
   @override
-  Future<InstallationCredentials?> read() async => _credentials;
+  Future<InstallationToken?> readInstallationToken() async =>
+      _installationToken;
 
   @override
-  Future<void> write(InstallationCredentials credentials) async {
-    _credentials = credentials;
+  Future<void> writeInstallationToken(
+    InstallationToken installationToken,
+  ) async {
+    _installationToken = installationToken;
+  }
+
+  @override
+  Future<void> clearInstallationToken() async {
+    _installationToken = null;
+  }
+
+  @override
+  Future<void> clear() async {
+    _installationToken = null;
+    _installationId = null;
   }
 }
