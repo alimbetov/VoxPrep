@@ -1,6 +1,7 @@
 name: TTS Worker Foundation
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - feat/tts-worker-foundation
