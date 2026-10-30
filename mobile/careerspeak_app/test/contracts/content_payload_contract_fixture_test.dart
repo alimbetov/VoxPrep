@@ -22,6 +22,10 @@ void main() {
     expect(payload.ref.identity.type, ContentType.interview);
     expect(payload.ref.revision, 3);
     expect(payload.title, 'Dependency Injection');
+    expect(payload.categoryCode, 'JAVA_BACKEND');
+    expect(payload.category, 'Java Backend');
+    expect(payload.levelCode, 'SENIOR');
+    expect(payload.level, 'Senior');
     expect(payload.minutes, 6);
     expect(payload.hasAudio, isTrue);
   });
