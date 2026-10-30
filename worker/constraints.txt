@@ -1,0 +1,18 @@
+# Qualified dependency lock for Python 3.12.16.
+# Generated from GitHub Actions TTS Worker Foundation run #6 on 2026-10-30.
+# Update only through an explicit dependency qualification change.
+
+# Runtime dependency graph
+piper-tts==1.4.2
+onnxruntime==1.31.1
+pathvalidate==3.3.1
+flatbuffers==25.12.19
+numpy==2.5.4
+packaging==26.3
+protobuf==7.36.2
+
+# Test-only dependency graph
+pytest==8.4.2
+iniconfig==2.3.1
+pluggy==1.7.0
+Pygments==2.21.0
