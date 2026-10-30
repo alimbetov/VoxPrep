@@ -1,6 +1,9 @@
 import 'package:careerspeak_app/app/careerspeak_app.dart';
+import 'package:careerspeak_app/app/learner_state_providers.dart';
 import 'package:careerspeak_app/app/mock_visual_preferences.dart';
+import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/features/tests/test_session_screen.dart';
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -48,7 +51,7 @@ void main() {
     expect(find.byIcon(Icons.favorite_border), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.favorite_border));
-    await tester.pump();
+    await tester.pumpAndSettle();
     expect(find.byIcon(Icons.favorite), findsOneWidget);
 
     tester.view.physicalSize = const Size(1200, 1000);
@@ -129,9 +132,13 @@ Future<void> _pumpApp(
   addTearDown(tester.view.resetPhysicalSize);
   addTearDown(tester.view.resetDevicePixelRatio);
 
+  final database = CareerSpeakDatabase(NativeDatabase.memory());
+  addTearDown(database.close);
+
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        careerSpeakDatabaseProvider.overrideWithValue(database),
         mockVisualPreferencesProvider.overrideWith(
           () => _AcceptanceVisualPreferencesController(textScale),
         ),
