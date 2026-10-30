@@ -82,15 +82,14 @@ class _HomeContent extends StatelessWidget {
               label: 'Favorites',
               value: '$favorites',
             ),
-            _StatCard(
-              icon: Icons.replay_outlined,
-              label: 'Due',
-              value: '$due',
-            ),
+            _StatCard(icon: Icons.replay_outlined, label: 'Due', value: '$due'),
           ],
         ),
         const SizedBox(height: 28),
-        Text('Continue learning', style: Theme.of(context).textTheme.titleLarge),
+        Text(
+          'Continue learning',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
         const SizedBox(height: 8),
         if (continueItem == null)
           const Card(

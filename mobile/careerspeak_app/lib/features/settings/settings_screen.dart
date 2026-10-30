@@ -36,17 +36,15 @@ class SettingsScreen extends ConsumerWidget {
               avatar: const Icon(Icons.light_mode_outlined),
               label: const Text('Light'),
               selected: themeMode == ThemeMode.light,
-              onSelected: (_) => ref
-                  .read(themeModeProvider.notifier)
-                  .setMode(ThemeMode.light),
+              onSelected: (_) =>
+                  ref.read(themeModeProvider.notifier).setMode(ThemeMode.light),
             ),
             ChoiceChip(
               avatar: const Icon(Icons.dark_mode_outlined),
               label: const Text('Dark'),
               selected: themeMode == ThemeMode.dark,
-              onSelected: (_) => ref
-                  .read(themeModeProvider.notifier)
-                  .setMode(ThemeMode.dark),
+              onSelected: (_) =>
+                  ref.read(themeModeProvider.notifier).setMode(ThemeMode.dark),
             ),
           ],
         ),
@@ -117,10 +115,7 @@ class SettingsScreen extends ConsumerWidget {
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 8),
-        Text(
-          'Text scale',
-          style: Theme.of(context).textTheme.labelLarge,
-        ),
+        Text('Text scale', style: Theme.of(context).textTheme.labelLarge),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,

@@ -12,22 +12,28 @@ class ContentMarkerChips extends StatelessWidget {
     final chips = <Widget>[];
 
     if (state.listened) {
-      chips.add(const Chip(
-        avatar: Icon(Icons.headphones, size: 18),
-        label: Text('Listened'),
-      ));
+      chips.add(
+        const Chip(
+          avatar: Icon(Icons.headphones, size: 18),
+          label: Text('Listened'),
+        ),
+      );
     }
     if (state.completed) {
-      chips.add(const Chip(
-        avatar: Icon(Icons.check_circle_outline, size: 18),
-        label: Text('Completed'),
-      ));
+      chips.add(
+        const Chip(
+          avatar: Icon(Icons.check_circle_outline, size: 18),
+          label: Text('Completed'),
+        ),
+      );
     }
     if (state.favorite) {
-      chips.add(const Chip(
-        avatar: Icon(Icons.favorite_outline, size: 18),
-        label: Text('Favorite'),
-      ));
+      chips.add(
+        const Chip(
+          avatar: Icon(Icons.favorite_outline, size: 18),
+          label: Text('Favorite'),
+        ),
+      );
     }
 
     if (chips.isEmpty) return const SizedBox.shrink();

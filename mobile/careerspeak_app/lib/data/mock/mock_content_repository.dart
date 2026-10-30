@@ -89,23 +89,26 @@ class MockContentRepository implements ContentRepository {
   @override
   Stream<Result<Page<ContentItem>>> watchContent(ContentQuery query) {
     final normalizedSearch = query.search?.trim().toLowerCase();
-    final filtered = _items.where((item) {
-      if (normalizedSearch != null && normalizedSearch.isNotEmpty) {
-        final searchable = '${item.title} ${item.subtitle} ${item.description}'
-            .toLowerCase();
-        if (!searchable.contains(normalizedSearch)) return false;
-      }
-      if (query.types.isNotEmpty && !query.types.contains(item.type)) {
-        return false;
-      }
-      if (query.category != null && item.category != query.category) {
-        return false;
-      }
-      if (query.level != null && item.level != query.level) {
-        return false;
-      }
-      return true;
-    }).toList(growable: false);
+    final filtered = _items
+        .where((item) {
+          if (normalizedSearch != null && normalizedSearch.isNotEmpty) {
+            final searchable =
+                '${item.title} ${item.subtitle} ${item.description}'
+                    .toLowerCase();
+            if (!searchable.contains(normalizedSearch)) return false;
+          }
+          if (query.types.isNotEmpty && !query.types.contains(item.type)) {
+            return false;
+          }
+          if (query.category != null && item.category != query.category) {
+            return false;
+          }
+          if (query.level != null && item.level != query.level) {
+            return false;
+          }
+          return true;
+        })
+        .toList(growable: false);
 
     return Stream.value(Success(_page(filtered, query.page)));
   }

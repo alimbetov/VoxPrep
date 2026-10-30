@@ -25,21 +25,26 @@ final contentPageProvider = StreamProvider<Page<ContentItem>>((ref) {
       .map((result) => result.getOrThrow());
 });
 
-final contentByCodeProvider =
-    FutureProvider.family<ContentItem?, String>((ref, code) async {
+final contentByCodeProvider = FutureProvider.family<ContentItem?, String>((
+  ref,
+  code,
+) async {
   final repository = ref.watch(contentRepositoryProvider);
   return (await repository.getByCode(code)).getOrThrow();
 });
 
-final practiceTestPageProvider = StreamProvider<Page<PracticeTestSummary>>((ref) {
+final practiceTestPageProvider = StreamProvider<Page<PracticeTestSummary>>((
+  ref,
+) {
   final repository = ref.watch(practiceTestRepositoryProvider);
   return repository
       .watchTests(const PracticeTestQuery())
       .map((result) => result.getOrThrow());
 });
 
-final practiceTestByCodeProvider =
-    FutureProvider.family<PracticeTest?, String>((ref, code) async {
-  final repository = ref.watch(practiceTestRepositoryProvider);
-  return (await repository.getByCode(code)).getOrThrow();
-});
+final practiceTestByCodeProvider = FutureProvider.family<PracticeTest?, String>(
+  (ref, code) async {
+    final repository = ref.watch(practiceTestRepositoryProvider);
+    return (await repository.getByCode(code)).getOrThrow();
+  },
+);

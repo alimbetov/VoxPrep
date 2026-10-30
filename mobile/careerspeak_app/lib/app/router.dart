@@ -15,10 +15,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/',
     routes: [
       ShellRoute(
-        builder: (context, state, child) => CareerSpeakAdaptiveScaffold(
-          location: state.uri.path,
-          child: child,
-        ),
+        builder: (context, state, child) =>
+            CareerSpeakAdaptiveScaffold(location: state.uri.path, child: child),
         routes: [
           GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
           GoRoute(
@@ -31,9 +29,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/tests/:code',
-            builder: (context, state) => TestSessionScreen(
-              code: state.pathParameters['code']!,
-            ),
+            builder: (context, state) =>
+                TestSessionScreen(code: state.pathParameters['code']!),
           ),
           GoRoute(
             path: '/review',
@@ -45,9 +42,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/content/:code',
-            builder: (context, state) => ContentDetailScreen(
-              code: state.pathParameters['code']!,
-            ),
+            builder: (context, state) =>
+                ContentDetailScreen(code: state.pathParameters['code']!),
           ),
         ],
       ),

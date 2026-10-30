@@ -2,9 +2,11 @@ sealed class Result<T> {
   const Result();
 
   T getOrThrow() => switch (this) {
-        Success<T>(:final value) => value,
-        FailureResult<T>(:final failure) => throw ApplicationFailureException(failure),
-      };
+    Success<T>(:final value) => value,
+    FailureResult<T>(:final failure) => throw ApplicationFailureException(
+      failure,
+    ),
+  };
 }
 
 final class Success<T> extends Result<T> {

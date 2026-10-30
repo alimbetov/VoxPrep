@@ -74,7 +74,9 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
             if (items.isEmpty)
               const Padding(
                 padding: EdgeInsets.symmetric(vertical: 48),
-                child: Center(child: Text('Nothing matches this review filter.')),
+                child: Center(
+                  child: Text('Nothing matches this review filter.'),
+                ),
               )
             else
               for (final item in items) ContentCard(item: item),
@@ -88,13 +90,15 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
     List<ContentItem> all,
     Map<String, ContentMarkerState> markers,
   ) {
-    return all.where((item) {
-      final state = markers[item.code] ?? const ContentMarkerState();
-      return switch (filter) {
-        _ReviewFilter.due => !state.completed,
-        _ReviewFilter.favorites => state.favorite,
-        _ReviewFilter.notListened => item.hasAudio && !state.listened,
-      };
-    }).toList(growable: false);
+    return all
+        .where((item) {
+          final state = markers[item.code] ?? const ContentMarkerState();
+          return switch (filter) {
+            _ReviewFilter.due => !state.completed,
+            _ReviewFilter.favorites => state.favorite,
+            _ReviewFilter.notListened => item.hasAudio && !state.listened,
+          };
+        })
+        .toList(growable: false);
   }
 }

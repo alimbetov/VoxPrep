@@ -50,18 +50,15 @@ class PracticeTest {
   final List<PracticeQuestion> questions;
 
   PracticeTestSummary get summary => PracticeTestSummary(
-        code: code,
-        title: title,
-        subtitle: subtitle,
-        mode: mode,
-        questionCount: questions.length,
-      );
+    code: code,
+    title: title,
+    subtitle: subtitle,
+    mode: mode,
+    questionCount: questions.length,
+  );
 }
 
-int calculatePracticeTestScore(
-  PracticeTest test,
-  Map<int, int> answers,
-) {
+int calculatePracticeTestScore(PracticeTest test, Map<int, int> answers) {
   var score = 0;
   for (var index = 0; index < test.questions.length; index++) {
     if (answers[index] == test.questions[index].correctIndex) {

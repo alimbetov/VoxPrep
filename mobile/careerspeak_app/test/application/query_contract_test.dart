@@ -8,25 +8,25 @@ void main() {
   test('content pagination uses opaque cursor semantics', () async {
     const repository = MockContentRepository();
 
-    final first = (await repository
-            .watchContent(
-              const ContentQuery(page: PageRequest(limit: 2)),
-            )
-            .first)
-        .getOrThrow();
+    final first =
+        (await repository
+                .watchContent(const ContentQuery(page: PageRequest(limit: 2)))
+                .first)
+            .getOrThrow();
 
     expect(first.items.length, 2);
     expect(first.hasMore, isTrue);
     expect(first.nextCursor, first.items.last.code);
 
-    final second = (await repository
-            .watchContent(
-              ContentQuery(
-                page: PageRequest(limit: 2, cursor: first.nextCursor),
-              ),
-            )
-            .first)
-        .getOrThrow();
+    final second =
+        (await repository
+                .watchContent(
+                  ContentQuery(
+                    page: PageRequest(limit: 2, cursor: first.nextCursor),
+                  ),
+                )
+                .first)
+            .getOrThrow();
 
     expect(second.items.length, 2);
     expect(second.items.first.code, isNot(first.items.first.code));

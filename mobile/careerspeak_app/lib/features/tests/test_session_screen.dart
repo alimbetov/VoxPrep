@@ -143,8 +143,7 @@ class _QuestionSession extends ConsumerWidget {
             total: test.questions.length,
             current: session.currentIndex,
             answered: session.answers.keys.toSet(),
-            onSelect: (index) =>
-                controller.goTo(index, test.questions.length),
+            onSelect: (index) => controller.goTo(index, test.questions.length),
           ),
         ),
       ],
@@ -193,11 +192,7 @@ class _QuestionPane extends StatelessWidget {
             if (stacked) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  progressText,
-                  const SizedBox(height: 8),
-                  skill,
-                ],
+                children: [progressText, const SizedBox(height: 8), skill],
               );
             }
 
@@ -215,10 +210,7 @@ class _QuestionPane extends StatelessWidget {
           value: (session.currentIndex + 1) / test.questions.length,
         ),
         const SizedBox(height: 28),
-        Text(
-          question.prompt,
-          style: Theme.of(context).textTheme.headlineSmall,
-        ),
+        Text(question.prompt, style: Theme.of(context).textTheme.headlineSmall),
         const SizedBox(height: 20),
         RadioGroup<int>(
           groupValue: selected,
@@ -262,21 +254,11 @@ class _QuestionPane extends StatelessWidget {
             if (stacked) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  previous,
-                  const SizedBox(height: 12),
-                  next,
-                ],
+                children: [previous, const SizedBox(height: 12), next],
               );
             }
 
-            return Row(
-              children: [
-                previous,
-                const Spacer(),
-                next,
-              ],
-            );
+            return Row(children: [previous, const Spacer(), next]);
           },
         ),
       ],
@@ -375,10 +357,7 @@ class _TestResult extends StatelessWidget {
                   return Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      CircleAvatar(
-                        radius: 32,
-                        child: Text('$percent%'),
-                      ),
+                      CircleAvatar(radius: 32, child: Text('$percent%')),
                       const SizedBox(height: 16),
                       scoreSummary,
                       const SizedBox(height: 16),
@@ -389,10 +368,7 @@ class _TestResult extends StatelessWidget {
 
                 return Row(
                   children: [
-                    CircleAvatar(
-                      radius: 32,
-                      child: Text('$percent%'),
-                    ),
+                    CircleAvatar(radius: 32, child: Text('$percent%')),
                     const SizedBox(width: 20),
                     Expanded(child: scoreSummary),
                     const SizedBox(width: 16),
@@ -404,10 +380,7 @@ class _TestResult extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
-        Text(
-          'Review answers',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
+        Text('Review answers', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 12),
         for (var index = 0; index < test.questions.length; index++)
           _AnswerReview(
@@ -434,8 +407,9 @@ class _AnswerReview extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final correct = selectedIndex == question.correctIndex;
-    final selectedText =
-        selectedIndex == null ? 'No answer' : question.options[selectedIndex!];
+    final selectedText = selectedIndex == null
+        ? 'No answer'
+        : question.options[selectedIndex!];
     final correctText = question.options[question.correctIndex];
 
     return Card(

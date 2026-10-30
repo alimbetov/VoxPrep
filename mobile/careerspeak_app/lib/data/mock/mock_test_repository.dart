@@ -40,12 +40,7 @@ class MockTestRepository implements PracticeTestRepository {
         PracticeQuestion(
           code: 'JAVA_Q_003',
           prompt: 'Which type is designed for concurrent key/value access?',
-          options: [
-            'HashMap',
-            'TreeMap',
-            'ConcurrentHashMap',
-            'WeakHashMap',
-          ],
+          options: ['HashMap', 'TreeMap', 'ConcurrentHashMap', 'WeakHashMap'],
           correctIndex: 2,
           skill: 'Concurrency',
           explanation:
@@ -143,7 +138,9 @@ class MockTestRepository implements PracticeTestRepository {
   ];
 
   @override
-  Stream<Result<Page<PracticeTestSummary>>> watchTests(PracticeTestQuery query) {
+  Stream<Result<Page<PracticeTestSummary>>> watchTests(
+    PracticeTestQuery query,
+  ) {
     final filtered = _tests
         .where((test) => query.mode == null || test.mode == query.mode)
         .map((test) => test.summary)

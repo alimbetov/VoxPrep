@@ -24,8 +24,10 @@ class ContentMarkerState {
   }
 }
 
-final contentMarkersProvider = NotifierProvider<ContentMarkersController,
-    Map<String, ContentMarkerState>>(ContentMarkersController.new);
+final contentMarkersProvider =
+    NotifierProvider<ContentMarkersController, Map<String, ContentMarkerState>>(
+      ContentMarkersController.new,
+    );
 
 class ContentMarkersController
     extends Notifier<Map<String, ContentMarkerState>> {
@@ -47,25 +49,16 @@ class ContentMarkersController
 
   void toggleFavorite(String code) {
     final current = _current(code);
-    state = {
-      ...state,
-      code: current.copyWith(favorite: !current.favorite),
-    };
+    state = {...state, code: current.copyWith(favorite: !current.favorite)};
   }
 
   void toggleListened(String code) {
     final current = _current(code);
-    state = {
-      ...state,
-      code: current.copyWith(listened: !current.listened),
-    };
+    state = {...state, code: current.copyWith(listened: !current.listened)};
   }
 
   void toggleCompleted(String code) {
     final current = _current(code);
-    state = {
-      ...state,
-      code: current.copyWith(completed: !current.completed),
-    };
+    state = {...state, code: current.copyWith(completed: !current.completed)};
   }
 }

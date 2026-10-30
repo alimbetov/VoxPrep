@@ -1,9 +1,4 @@
-enum CareerSpeakWindowSizeClass {
-  compact,
-  medium,
-  expanded,
-  large,
-}
+enum CareerSpeakWindowSizeClass { compact, medium, expanded, large }
 
 CareerSpeakWindowSizeClass windowSizeClassFor(double width) {
   if (width < 600) return CareerSpeakWindowSizeClass.compact;

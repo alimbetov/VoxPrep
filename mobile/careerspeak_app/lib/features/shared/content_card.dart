@@ -40,7 +40,10 @@ class ContentCard extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(item.title, style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      item.title,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     const SizedBox(height: 4),
                     Text(item.subtitle),
                     const SizedBox(height: 10),
@@ -49,7 +52,9 @@ class ContentCard extends ConsumerWidget {
                 ),
               ),
               IconButton(
-                tooltip: markerState.favorite ? 'Remove favorite' : 'Add favorite',
+                tooltip: markerState.favorite
+                    ? 'Remove favorite'
+                    : 'Add favorite',
                 onPressed: () => ref
                     .read(contentMarkersProvider.notifier)
                     .toggleFavorite(item.code),

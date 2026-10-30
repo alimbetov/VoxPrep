@@ -32,8 +32,8 @@ class PracticeTestSessionState {
 
 final practiceTestSessionProvider =
     NotifierProvider<PracticeTestSessionController, PracticeTestSessionState>(
-  PracticeTestSessionController.new,
-);
+      PracticeTestSessionController.new,
+    );
 
 class PracticeTestSessionController extends Notifier<PracticeTestSessionState> {
   @override

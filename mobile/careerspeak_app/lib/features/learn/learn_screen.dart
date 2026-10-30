@@ -43,21 +43,24 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
     List<ContentItem> items,
     Map<String, ContentMarkerState> markers,
   ) {
-    final filtered = items.where((item) {
-      final marker = markers[item.code] ?? const ContentMarkerState();
-      final normalizedQuery = query.toLowerCase();
-      final matchesQuery = query.isEmpty ||
-          item.title.toLowerCase().contains(normalizedQuery) ||
-          item.subtitle.toLowerCase().contains(normalizedQuery);
-      if (!matchesQuery) return false;
+    final filtered = items
+        .where((item) {
+          final marker = markers[item.code] ?? const ContentMarkerState();
+          final normalizedQuery = query.toLowerCase();
+          final matchesQuery =
+              query.isEmpty ||
+              item.title.toLowerCase().contains(normalizedQuery) ||
+              item.subtitle.toLowerCase().contains(normalizedQuery);
+          if (!matchesQuery) return false;
 
-      return switch (filter) {
-        _LearnFilter.all => true,
-        _LearnFilter.favorites => marker.favorite,
-        _LearnFilter.notListened => !marker.listened,
-        _LearnFilter.notCompleted => !marker.completed,
-      };
-    }).toList(growable: false);
+          return switch (filter) {
+            _LearnFilter.all => true,
+            _LearnFilter.favorites => marker.favorite,
+            _LearnFilter.notListened => !marker.listened,
+            _LearnFilter.notCompleted => !marker.completed,
+          };
+        })
+        .toList(growable: false);
 
     final wide = MediaQuery.sizeOf(context).width >= 840;
     if (!wide) {
@@ -71,8 +74,9 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
     }
 
     final selectedItem = _effectiveSelection(filtered);
-    final catalogueWidth =
-        MediaQuery.sizeOf(context).width >= 1200 ? 420.0 : 360.0;
+    final catalogueWidth = MediaQuery.sizeOf(context).width >= 1200
+        ? 420.0
+        : 360.0;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -178,8 +182,9 @@ class _CatalogList extends StatelessWidget {
             ContentCard(
               item: item,
               selected: item.code == selectedCode,
-              onTap:
-                  onItemSelected == null ? null : () => onItemSelected!(item),
+              onTap: onItemSelected == null
+                  ? null
+                  : () => onItemSelected!(item),
             ),
       ],
     );
