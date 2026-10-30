@@ -63,8 +63,8 @@ final class ApplicationBootstrapService {
   }
 
   Future<Result<ApplicationBootstrapOutcome>> _bootstrap() async {
-    final credentialsResult =
-        await _installationBootstrapService.ensureCredentials();
+    final credentialsResult = await _installationBootstrapService
+        .ensureCredentials();
     if (credentialsResult is FailureResult<InstallationCredentials>) {
       return FailureResult<ApplicationBootstrapOutcome>(
         credentialsResult.failure,
