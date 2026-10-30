@@ -1,98 +1,65 @@
 # CareerSpeak — Content Delivery, Availability & Local Retention Requirements
 
-**Document version:** 1.0  
-**Status:** Architecture baseline / normative addendum  
-**Applies to:** VoxPrep / CareerSpeak v0.6+
+**Document version:** 1.1  
+**Status:** Architecture baseline / normative specification  
+**Applies to:** VoxPrep / CareerSpeak v0.7+
 
 ---
 
 ## 1. Purpose
 
-This specification defines how CareerSpeak delivers large content catalogs to Flutter clients without excessive API/database cost or uncontrolled local-storage growth.
+This document defines how CareerSpeak delivers growing content catalogs to Flutter while preventing uncontrolled backend queries and uncontrolled device-storage growth.
 
 It covers:
 
-- learner API pagination;
-- moderator pagination;
-- content publication versus availability;
-- deactivation without destructive deletion;
-- content manifests and tombstones;
-- offline pack manifests;
-- local Flutter retention;
-- TTL/LRU eviction;
-- local storage quotas;
-- pinning/manual-download protection;
-- asset reference tracking and safe deletion.
-
-This document is normative for the v0.6 architecture baseline.
+```text
+cursor pagination
+publication vs availability
+manifest/tombstones
+offline packs
+TTL/LRU cleanup
+local quota
+pinning
+shared-asset reference tracking
+safe local eviction
+```
 
 ---
 
-## 2. Design principles
+## 2. Core rules
 
-1. Published content SHALL remain immutable by revision.
-2. Publication lifecycle and learner availability SHALL be separate concepts.
-3. Consumer catalog APIs SHALL be paginated.
-4. Flutter SHALL NOT retain all downloaded media forever.
-5. Local progress SHALL be independent from local media/cache eviction.
-6. Server-side deactivation SHALL propagate to clients through manifest tombstones.
-7. Shared local assets SHALL be removed only when no retained content references them.
-8. Manual/pinned offline content SHALL be protected from normal automatic eviction.
-9. Retention decisions SHALL remain local and privacy-preserving.
-10. Cleanup SHALL be deterministic and testable.
+1. Published revisions remain immutable.
+2. Publication lifecycle and learner availability are separate.
+3. Learner catalog APIs are paginated.
+4. Learner APIs expose only `PUBLISHED + ACTIVE` content.
+5. Deactivation does not destructively delete backend history.
+6. Flutter does not retain re-downloadable media forever.
+7. Local media eviction never erases learner progress.
+8. Shared assets are deleted only when no retained local content references them.
+9. Explicitly pinned/manual offline content is protected from normal automatic cleanup.
 
 ---
 
-## 3. Publication lifecycle versus availability
+## 3. Publication and availability
 
-CareerSpeak SHALL maintain two independent state dimensions.
-
-### 3.1 Publication lifecycle
-
-Revision workflow:
+Content revision lifecycle:
 
 ```text
 DRAFT
-  ↓
 READY_FOR_AUDIO
-  ↓
-AUDIO_PENDING
-  ↓
-AUDIO_GENERATING
-  ↓
-AUDIO_READY
-  ↓
-REVIEW
-  ↓
+READY_FOR_REVIEW
 PUBLISHED
-  ↓
 ARCHIVED
 ```
 
-Publication status answers:
-
-> Is this revision valid, reviewed and historically publishable?
-
-### 3.2 Availability status
-
-Learner availability answers:
-
-> Should the currently published revision be visible/consumable by learner clients now?
-
-Initial values:
+Availability:
 
 ```text
 ACTIVE
 INACTIVE
 ```
 
-Future extension MAY include:
-
-```text
-SCHEDULED
-```
-
-A consumer-visible item normally requires:
+Consumer visibility condition:
 
 ```text
 revision_status = PUBLISHED
@@ -100,202 +67,72 @@ AND
 availability_status = ACTIVE
 ```
 
-`ACTIVE` SHALL NOT be added as another publication lifecycle status.
+Example:
+
+```text
+PUBLISHED + ACTIVE   → visible to Flutter
+PUBLISHED + INACTIVE → retained historically, hidden from learner API
+```
+
+ADMIN may deactivate and later reactivate a published revision without deleting its historical data.
 
 ---
 
-## 4. Deactivation semantics
+## 4. Learner pagination
 
-Deactivation is non-destructive.
+Learner collection APIs SHALL use cursor/keyset pagination.
 
 Example:
 
 ```text
-revision_status      = PUBLISHED
-availability_status  = INACTIVE
+GET /api/v1/vocabulary?cefr=B2&limit=50&cursor=...
 ```
 
-The record remains in PostgreSQL for:
-
-- auditability;
-- rollback;
-- historical test snapshots;
-- publication history;
-- moderation investigation.
-
-Normal deactivation SHALL NOT execute physical `DELETE` against published domain content.
-
-Reasons for deactivation MAY include:
-
-```text
-CONTENT_ERROR
-AUDIO_QUALITY
-OUTDATED_CONTENT
-LICENSE_REVIEW
-POLICY
-TEMPORARY_WITHDRAWAL
-OTHER
-```
-
-Optional metadata:
-
-```text
-deactivated_at
-deactivated_by
-deactivation_reason
-deactivation_note
-```
-
----
-
-## 5. Consumer query contract
-
-Learner-facing repositories/endpoints SHALL exclude inactive/unpublished revisions by default.
-
-Logical predicate:
-
-```text
-publication_status = PUBLISHED
-AND
-availability_status = ACTIVE
-```
-
-Administrative queries MAY include all states.
-
-The learner API SHALL NOT require the mobile client to filter unpublished/inactive rows after retrieval.
-
----
-
-## 6. Learner API pagination
-
-Large learner catalogs SHALL use cursor/keyset pagination.
-
-Examples:
-
-```text
-GET /api/v1/vocabulary?limit=50&cursor=<opaque>
-GET /api/v1/interviews?limit=30&cursor=<opaque>
-GET /api/v1/topics?limit=30&cursor=<opaque>
-GET /api/v1/tests?limit=30&cursor=<opaque>
-```
-
-Response shape:
+Recommended response:
 
 ```json
 {
   "items": [],
-  "nextCursor": "opaque-value",
-  "hasMore": true
+  "page": {
+    "nextCursor": "...",
+    "hasMore": true
+  }
 }
 ```
 
-Cursor values SHALL be opaque to Flutter.
-
-Recommended deterministic sort keys:
+Cursor sorting SHALL be deterministic and use a unique tie-breaker, for example:
 
 ```text
 sort_order + id
 ```
 
-or for time-ordered feeds:
+or:
 
 ```text
 published_at DESC + id DESC
 ```
 
-Offset pagination SHOULD NOT be the primary learner strategy for large growing datasets.
+Large learner catalogs SHOULD NOT depend on deep OFFSET pagination.
 
 ---
 
-## 7. Cursor stability
+## 5. Admin pagination
 
-Keyset pagination SHALL define a stable total ordering.
-
-The backend SHALL include a unique tie-breaker such as `id` after a non-unique sort column.
-
-Example conceptual predicate for ascending order:
-
-```text
-(sort_order > :lastSortOrder)
-OR
-(sort_order = :lastSortOrder AND id > :lastId)
-```
-
-The cursor MAY encode these values and SHOULD be integrity-protected or otherwise treated as opaque transport state.
-
-Changing filters invalidates/restarts pagination.
-
----
-
-## 8. Consumer filtering
-
-Endpoints MAY support bounded filters such as:
-
-```text
-cefr
-category
-profession
-careerTrack
-seniority
-skill
-locale
-query
-```
-
-Example:
-
-```text
-GET /api/v1/vocabulary?cefr=B2&category=TECHNOLOGY&limit=50&cursor=...
-```
-
-Database indexes SHALL be designed from actual accepted filter/sort combinations, not by adding indexes to every column.
-
----
-
-## 9. Content Studio pagination
-
-The internal Spring MVC Content Studio MAY use conventional page/size pagination because moderator traffic is low and page numbers are useful for administrative navigation.
+Internal Content Studio lists MAY use ordinary page/size pagination because they are low-volume administrative workflows.
 
 Example:
 
 ```text
 /admin/vocabulary?page=0&size=50
-/admin/interviews?page=3&size=50
 ```
 
-Spring Data `Pageable` is acceptable for this internal workflow.
-
-Admin tables SHOULD expose at least:
-
-```text
-code/title
-revision
-publication status
-availability status
-localization state
-audio state
-updated_at
-published_at
-```
-
-Admin filters SHOULD support:
-
-```text
-ACTIVE / INACTIVE
-DRAFT / PUBLISHED / ARCHIVED
-missing audio
-stale audio
-missing localization
-profession/category/skill
-```
+ADMIN filtering may include publication status, availability, category, locale readiness and audio readiness.
 
 ---
 
-## 10. Content manifest hierarchy
+## 6. Root manifest
 
-Flutter SHALL use manifests for synchronization rather than treating paginated catalog endpoints as a complete offline synchronization protocol.
-
-### 10.1 Root manifest
+Flutter uses a compact root manifest to discover changed content packs.
 
 Example:
 
@@ -308,299 +145,238 @@ Conceptual response:
 ```json
 {
   "schemaVersion": 1,
-  "contentVersion": 104,
-  "publishedAt": "2026-10-30T00:00:00Z",
+  "contentVersion": 107,
+  "publishedAt": "...",
   "packs": [
     {
       "code": "JAVA_SENIOR",
       "revision": 8,
       "checksum": "..."
-    },
-    {
-      "code": "IELTS_B2",
-      "revision": 14,
-      "checksum": "..."
     }
   ],
-  "tombstonesVersion": 17
+  "tombstones": []
 }
 ```
 
 The root manifest SHOULD remain compact.
 
-### 10.2 Pack manifests
+---
 
-Large packs SHOULD have separate manifests:
+## 7. Pack manifest
 
-```text
-GET /api/v1/content/packs/{packCode}/manifest
-```
-
-A pack manifest may include:
+Large content is divided into packs such as:
 
 ```text
-pack revision
-content records/checksums
-asset ids
-asset checksums
-asset sizes
-removed references
+IELTS_VOCABULARY_B2
+IELTS_SPEAKING
+GENERAL_INTERVIEW
+JAVA_JUNIOR
+JAVA_SENIOR
+DEVOPS
+BUSINESS_ANALYST
 ```
 
-This prevents one enormous global manifest as the catalog grows.
+Example:
+
+```text
+GET /api/v1/content/packs/{code}/manifest
+```
+
+A pack manifest may reference content metadata and immutable assets/checksums required by that pack.
+
+Flutter downloads only missing/changed assets.
 
 ---
 
-## 11. Tombstones
+## 8. Tombstones
 
-A client needs an explicit signal when previously synchronized content becomes unavailable.
+When previously distributed content becomes unavailable, the server SHALL communicate removal/deactivation through tombstones or equivalent manifest delta semantics.
 
-Manifest synchronization SHALL support tombstones/removal records.
-
-Conceptual representation:
+Example:
 
 ```json
 {
-  "contentVersion": 105,
-  "tombstones": [
-    {
-      "contentCode": "TOPIC_JAVA_014",
-      "revision": 3,
-      "reason": "INACTIVE"
-    }
-  ]
+  "code": "JAVA_QUESTION_001",
+  "revision": 3,
+  "reason": "INACTIVE"
 }
 ```
 
-Possible reasons:
+Flutter SHALL:
 
 ```text
-INACTIVE
-ARCHIVED
-REPLACED
-PACK_REMOVED
-LICENSE_WITHDRAWAL
+remove obsolete local content snapshot
+release its asset references
+remove unreferenced disposable assets
+preserve learner progress/history where meaningful
 ```
 
-Flutter SHALL use tombstones to remove obsolete cached content/media while preserving independent learner progress where appropriate.
+A missing object from a normal page response alone is not sufficient evidence for destructive local cleanup.
 
 ---
 
-## 12. Version replacement
+## 9. Local state separation
 
-When a new content/pack revision supersedes an old one:
+Flutter persistence separates durable learner state from disposable/re-downloadable content.
 
-```text
-v7 downloaded
-   ↓
-v8 available
-   ↓
-download v8
-   ↓
-verify checksums
-   ↓
-commit local v8 state atomically
-   ↓
-release unreferenced v7 assets
-```
-
-Old assets SHALL NOT be removed before the replacement is safely installed and verified.
-
----
-
-## 13. Flutter local storage domains
-
-Flutter SHALL separate learner state from disposable content/media cache.
-
-### 13.1 Durable local learner state
-
-Examples:
+### Durable learner state
 
 ```text
 favorites
-vocabulary_progress
-test_attempts
-test_answers
-review_schedule
-completed_topics
+progress
+test attempts/test answers
+review schedule
+completed topics
 settings
-selected_locale
-selected_theme
-focus_mode
+selected locale
+selected ambience/focus preference
 ```
 
-These records SHALL NOT be deleted merely because cached media expires.
-
-### 13.2 Disposable/re-downloadable state
-
-Examples:
+### Disposable/re-downloadable state
 
 ```text
-content pack metadata
-downloaded JSON/catalog snapshots
+pack snapshots
 audio files
 remote images
-covers
-future downloadable theme assets
+cached metadata
+future downloadable theme packs
 ```
 
-These records/assets are subject to retention policy.
+Deleting a disposable asset SHALL NOT delete the corresponding learner progress.
 
 ---
 
-## 14. Local cache entry model
+## 10. Local cache entry
 
-Recommended Drift/SQLite concept:
+Recommended concept:
 
 ```text
 content_cache_entry
-────────────────────────────────
+────────────────────────────
 content_code
 content_revision
-pack_code nullable
+pack_code
 downloaded_at
 last_accessed_at
-last_played_at nullable
-expires_at nullable
+expires_at
 size_bytes
 pinned
 explicit_download
 cache_state
 ```
 
-Suggested `cache_state` values:
-
-```text
-CACHED
-DOWNLOADING
-STALE
-EXPIRED
-EVICTED
-ERROR
-```
-
-`last_accessed_at` SHALL be updated on meaningful content use, not on every widget rebuild.
+`last_accessed_at` is updated when the retained content is actually used.
 
 ---
 
-## 15. TTL policy
+## 11. Retention policy
 
-Automatically cached content MAY use a sliding TTL based on learner interest.
-
-Example baseline:
+Automatic retention uses:
 
 ```text
-expires_at = last_accessed_at + retentionPeriod
-```
-
-A candidate initial retention period is:
-
-```text
-30 days
-```
-
-The exact default SHALL be configurable and qualified through usage/storage testing.
-
-Opening/listening to relevant content MAY extend the TTL.
-
-TTL applies to re-downloadable cached assets, not to the learner's durable progress/history.
-
----
-
-## 16. Storage quota
-
-TTL alone is insufficient because a learner may download a large amount of content within the TTL window.
-
-Flutter SHALL support a configurable local cache quota.
-
-Possible policy inputs:
-
-```text
-max cache bytes
-free device storage
-explicit offline downloads
-pinned content
-asset last access
-pack priority
-```
-
-When quota is exceeded, eviction is triggered even for non-expired auto-cache entries.
-
-The product SHOULD expose current downloaded/cache storage size and a `Free space` action.
-
----
-
-## 17. LRU eviction
-
-Normal automatic eviction priority SHOULD be approximately:
-
-```text
-1. server-deactivated/tombstoned assets
-2. superseded old revisions
-3. expired auto-cache entries
-4. least-recently-used unpinned auto-cache entries
-5. low-priority large packs when quota remains exceeded
-```
-
-Protected content SHALL be excluded from normal LRU selection.
-
-A future deterministic interest score MAY refine ordering, but is not required for MVP.
-
----
-
-## 18. Pinning and explicit downloads
-
-Retention classes:
-
-```text
-PINNED
-EXPLICIT_DOWNLOAD
-AUTO_CACHE
+TTL
++
+LRU
++
+local storage quota
 ```
 
 Baseline behavior:
 
 ```text
+AUTO_CACHE
+    → TTL/LRU/quota eligible
+
 PINNED
-  → never removed by normal auto-cleanup
+    → protected from normal auto-eviction
 
 EXPLICIT_DOWNLOAD
-  → retained until user removes it or an exceptional storage policy is explicitly invoked
+    → protected from normal cleanup until user removes it or an explicit emergency-storage policy is invoked
 
-AUTO_CACHE
-  → TTL + LRU + quota controlled
+INACTIVE_SERVER_CONTENT
+    → remove obsolete disposable data after manifest synchronization
+
+OLD_REVISION
+    → remove after replacement is verified and asset references are released
 ```
 
-A `favorite` flag SHALL NOT automatically imply permanent media pinning. Favorites may outnumber reasonable device-storage capacity.
+Exact TTL and quota values are configuration/product decisions, not hardcoded domain constants.
 
 ---
 
-## 19. Shared asset registry
+## 12. Favorites are not pins
 
-Content can share identical immutable assets. Flutter SHALL avoid unsafe deletion and MAY avoid duplicate storage.
+A learner favorite SHALL NOT automatically force every related binary asset to remain forever.
 
-Recommended local tables:
+Example:
+
+```text
+favorite vocabulary item
+→ favorite/progress row retained
+→ audio may still be evicted
+→ audio can be re-downloaded later
+```
+
+Explicit offline pinning/manual download is the storage-retention signal.
+
+---
+
+## 13. TTL behavior
+
+For automatically cached content:
+
+```text
+expires_at = last_accessed_at + retentionPeriod
+```
+
+Access extends interest/retention.
+
+Expired content becomes an eviction candidate; expiry does not require immediate deletion if storage pressure is low.
+
+---
+
+## 14. LRU and storage quota
+
+TTL alone is insufficient because a learner may download a large amount of content before TTL expiry.
+
+When local disposable storage exceeds configured quota:
+
+```text
+1. remove obsolete/tombstoned data
+2. remove expired unpinned data
+3. remove least-recently-used unpinned data
+4. preserve protected explicit downloads/pins
+```
+
+The application SHOULD expose a user action such as `Free space` for explicit cleanup.
+
+---
+
+## 15. Shared local assets
+
+The same immutable audio/image asset may be referenced by more than one retained content item.
+
+Recommended local concepts:
 
 ```text
 local_asset
-────────────────────────
+────────────────
 asset_id
 checksum
 local_path
 size_bytes
 last_accessed_at
-state
 ```
 
 ```text
 content_asset_ref
-────────────────────────
+────────────────
 content_code
 content_revision
 asset_id
 ```
 
-An asset file SHALL be physically deleted only when no retained local content references it.
+Physical deletion is allowed only when no retained reference remains.
 
 Conceptually:
 
@@ -608,259 +384,106 @@ Conceptually:
 reference_count == 0
 ```
 
-or equivalent referential query.
-
 ---
 
-## 20. Asset integrity
+## 16. Revision replacement
 
-Downloaded immutable assets SHALL be verified using server-provided checksum metadata where available.
-
-Failed verification SHALL NOT mark the asset as ready.
-
-Recommended states:
+When pack/content revision N+1 is downloaded and verified:
 
 ```text
-DOWNLOADING
-VERIFYING
-READY
-CORRUPT
+activate new local snapshot
+→ release references owned only by old revision N
+→ delete old unreferenced disposable assets
 ```
 
-Corrupt/incomplete files SHALL be safe to retry and SHALL NOT replace a previously valid local revision before verification succeeds.
+Old revisions do not need to wait for ordinary TTL once a replacement is safely installed.
 
 ---
 
-## 21. Cleanup triggers
+## 17. Cleanup triggers
 
-CareerSpeak SHALL NOT rely solely on background timers, because mobile platforms may suspend background execution.
+Do not rely solely on mobile background scheduling.
 
-Cleanup SHOULD run at deterministic opportunities such as:
+Cleanup SHOULD be evaluated at predictable points:
 
 ```text
 application startup
 manifest synchronization
-after successful pack update
+after pack update
 after large download
-when cache quota is exceeded
-user selects Free space
+when quota is exceeded
+user-triggered Free space
 ```
 
-Platform-supported background maintenance MAY be used as an optimization, not as the only correctness mechanism.
+OS background tasks may be supplementary, not required for correctness.
 
 ---
 
-## 22. Cleanup transaction safety
+## 18. Media delivery
 
-Local metadata and filesystem deletion SHALL be coordinated so interrupted cleanup does not corrupt the local catalog.
-
-Recommended pattern:
+Published media path:
 
 ```text
-mark asset EVICTING / remove references transactionally
-    ↓
-delete physical file
-    ↓
-remove/mark local_asset row
+Flutter
+→ CDN/edge
+→ RustFS published origin
 ```
 
-Recovery on next startup SHALL detect orphaned database records or orphaned cache files and reconcile them.
+Spring Boot SHALL NOT proxy normal learner MP3/image bytes.
+
+Immutable versioned asset keys allow aggressive caching.
 
 ---
 
-## 23. Manual storage management UI
+## 19. API/cache behavior
 
-Flutter SHOULD expose a storage screen with concepts such as:
+Published catalog/content responses MAY use HTTP cache validators such as ETag where useful.
 
-```text
-Downloaded content
-Automatic cache
-Total CareerSpeak storage
-Free space
-Downloaded packs
-Pinned packs
-```
+Do not add Redis solely for catalog caching in MVP.
 
-Possible actions:
+Primary caching layers are:
 
 ```text
-Remove pack
-Pin / Unpin
-Clear automatic cache
-Free space
-```
-
-Clearing automatic cache SHALL NOT clear learning progress, favorites or test history.
-
----
-
-## 24. Visual theme asset retention
-
-Initial Study Ambience backgrounds MAY ship inside Flutter assets and therefore do not participate in cache eviction.
-
-If remote/downloadable theme packs are introduced later, their files SHALL reuse the same local asset registry, checksum verification and quota/eviction infrastructure rather than creating a second cache subsystem.
-
----
-
-## 25. Backend indexes
-
-The ERD/index design SHALL consider consumer pagination and availability predicates.
-
-Candidate composite indexes depend on actual query patterns, for example conceptually:
-
-```text
-(availability_status, publication_status, sort_order, id)
-```
-
-or domain-specific equivalents.
-
-Indexes SHALL be validated with realistic `EXPLAIN (ANALYZE, BUFFERS)` queries once seed volume exists.
-
----
-
-## 26. HTTP caching
-
-Pagination/catalog APIs MAY use ETag/conditional requests where useful.
-
-Immutable published assets SHOULD use long-lived cache semantics at the CDN layer because object keys change when content/checksum changes.
-
-Manifest endpoints SHOULD use short/validated cache semantics suitable for rapid publication/deactivation propagation.
-
-Server deactivation correctness SHALL NOT depend on clients waiting indefinitely for a long-lived manifest cache.
-
----
-
-## 27. API examples
-
-### Vocabulary
-
-```text
-GET /api/v1/vocabulary?limit=50&cursor=...
-```
-
-### Profession interviews
-
-```text
-GET /api/v1/interviews?profession=JAVA_BACKEND_DEVELOPER&seniority=SENIOR&limit=30&cursor=...
-```
-
-### Root manifest
-
-```text
-GET /api/v1/content/manifest
-```
-
-### Pack manifest
-
-```text
-GET /api/v1/content/packs/JAVA_SENIOR/manifest
-```
-
-Administrative page-number pagination remains separate from learner cursor pagination.
-
----
-
-## 28. Observability
-
-Backend SHOULD expose metrics such as:
-
-```text
-content.api.page.requests
-content.api.page.size
-content.manifest.requests
-content.manifest.tombstones
-content.active.count
-content.inactive.count
-```
-
-Flutter SHOULD keep local diagnostic counters/logs sufficient to debug:
-
-```text
-cache bytes
-asset count
-evicted bytes
-checksum failures
-pack update failures
-```
-
-No server-side learner interest/profile collection is required for retention decisions.
-
----
-
-## 29. Mandatory tests
-
-Implementation qualification SHALL include at least:
-
-1. keyset pagination returns every item once with stable ordering;
-2. equal `sort_order` values do not lose/duplicate rows;
-3. inactive content never appears in normal learner catalog results;
-4. deactivation creates/propagates the expected tombstone;
-5. reactivation/new revision is discoverable after manifest sync;
-6. pack replacement does not delete old assets before new checksum verification;
-7. expired auto-cache is evicted while progress remains;
-8. pinned content survives normal cleanup;
-9. explicit downloads survive normal LRU cleanup;
-10. quota overflow removes least-recently-used eligible assets;
-11. shared asset survives deletion of one referencing content item;
-12. shared asset is removed after its final reference disappears;
-13. cleanup interrupted mid-file deletion recovers on startup;
-14. checksum failure does not activate corrupt content;
-15. `Free space` does not erase favorites/progress/test history;
-16. tombstoned content assets are removed even when their old TTL has not expired, unless retained by an explicit exceptional policy;
-17. server/API pagination filters and cursor ordering use supporting indexes at representative data volume.
-
----
-
-## 30. Acceptance criteria
-
-This architecture is accepted when the following scenario works repeatedly:
-
-```text
-Backend publishes ACTIVE content v7
-        ↓
-Flutter discovers it through manifest/catalog
-        ↓
-content/assets are downloaded
-        ↓
-learner uses content; last_accessed_at advances
-        ↓
-backend publishes v8
-        ↓
-Flutter downloads + verifies v8
-        ↓
-local state switches atomically to v8
-        ↓
-unreferenced v7 assets are reclaimed
-        ↓
-learner progress remains intact
-```
-
-And:
-
-```text
-Backend deactivates content
-        ↓
-manifest publishes tombstone
-        ↓
-Flutter removes obsolete content/media
-        ↓
-independent progress/history remains local
-```
-
-And:
-
-```text
-auto-cache exceeds quota
-        ↓
-expired/LRU eligible assets are removed
-        ↓
-pinned/manual downloads remain protected
-        ↓
-application storage returns below configured threshold
+Flutter local DB/files
+HTTP cache semantics
+CDN/edge for immutable media
+PostgreSQL internal caching/buffers
 ```
 
 ---
 
-## 31. Architecture rule
+## 20. Acceptance scenarios
 
-> CareerSpeak treats published content identity/history, current learner availability, and local device retention as three separate concerns. The backend controls what is currently available; manifests communicate changes and removals; Flutter controls how long re-downloadable assets remain on the device without deleting learner progress.
+The implementation SHALL prove at least:
+
+1. cursor pagination returns stable non-duplicated traversal;
+2. concurrent new publication does not corrupt cursor traversal semantics;
+3. `PUBLISHED + INACTIVE` is absent from learner lists;
+4. deactivation produces a manifest/tombstone change;
+5. Flutter removes disposable data for tombstoned content;
+6. learner progress survives media eviction;
+7. pinned/manual download survives normal TTL cleanup;
+8. quota cleanup removes LRU unpinned content;
+9. shared audio is not deleted while another retained content item references it;
+10. old pack revision assets are reclaimed after safe replacement.
+
+---
+
+## 21. Summary
+
+```text
+Backend
+→ PUBLISHED + ACTIVE only
+→ cursor pagination
+→ root/pack manifests
+→ tombstones
+
+Flutter
+→ durable learner state
+→ disposable content/assets
+→ TTL + LRU + quota
+→ pin protection
+→ reference-safe deletion
+```
+
+This is the authoritative content-delivery/local-retention baseline for CareerSpeak v0.7.
