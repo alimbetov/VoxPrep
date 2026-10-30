@@ -4,6 +4,7 @@ import logging
 import threading
 
 from voxprep_tts_worker.application.job_processor import JobProcessor
+from voxprep_tts_worker.domain.errors import BackendTransportError
 from voxprep_tts_worker.ports.backend import BackendPort
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,16 @@ class WorkerLoop:
         if self._shutdown.is_set():
             return False
 
-        job = self._backend.claim(self._worker_id)
+        try:
+            job = self._backend.claim(self._worker_id)
+        except BackendTransportError:
+            logger.warning(
+                "backend temporarily unavailable while claiming work",
+                extra={"worker_id": self._worker_id},
+                exc_info=True,
+            )
+            return False
+
         if job is None:
             return False
 
