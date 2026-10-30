@@ -33,6 +33,14 @@ class BackendPort(Protocol):
         """Report a classified worker failure while the lease is still owned."""
 
 
+class ModelSourcePort(Protocol):
+    def download_model(self, *, job: ClaimedJob, destination: Path) -> None:
+        """Stream the exact claimed ONNX model revision into destination."""
+
+    def download_config(self, *, job: ClaimedJob, destination: Path) -> None:
+        """Stream the exact claimed Piper config revision into destination."""
+
+
 class ModelCachePort(Protocol):
     def ensure_model(self, job: ClaimedJob) -> Path:
         """Return the local directory containing the exact claimed model revision."""

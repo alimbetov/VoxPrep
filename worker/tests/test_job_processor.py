@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from voxprep_tts_worker.application.job_processor import JobProcessor
-from voxprep_tts_worker.domain.errors import LeaseLostError, SynthesisError
+from voxprep_tts_worker.domain.errors import BackendTransportError, LeaseLostError, SynthesisError
 from voxprep_tts_worker.domain.job import AudioArtifact, ClaimedJob
 
 
@@ -28,13 +28,23 @@ def _job() -> ClaimedJob:
 
 
 class FakeBackend:
-    def __init__(self, *, lose_lease_on_upload: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        lose_lease_on_upload: bool = False,
+        transport_error_on_upload: bool = False,
+    ) -> None:
         self.uploaded: tuple[str, ClaimedJob, AudioArtifact] | None = None
         self.failures: list[tuple[str, ClaimedJob, str, str]] = []
         self.lose_lease_on_upload = lose_lease_on_upload
+        self.transport_error_on_upload = transport_error_on_upload
+        self.heartbeats = 0
 
     def claim(self, worker_id: str) -> ClaimedJob | None:
         raise AssertionError("claim is not used by JobProcessor tests")
+
+    def heartbeat(self, *, worker_id: str, job: ClaimedJob) -> None:
+        self.heartbeats += 1
 
     def upload_output(
         self,
@@ -45,6 +55,8 @@ class FakeBackend:
     ) -> None:
         if self.lose_lease_on_upload:
             raise LeaseLostError("stale lease")
+        if self.transport_error_on_upload:
+            raise BackendTransportError("response lost")
         self.uploaded = (worker_id, job, artifact)
 
     def fail(
@@ -108,6 +120,7 @@ def _processor(
     backend: FakeBackend,
     *,
     synthesizer: FakeSynthesizer | None = None,
+    heartbeat_interval_seconds: float | None = None,
 ) -> tuple[JobProcessor, FakeModelCache, FakeSynthesizer, FakePostprocessor]:
     temp_dir = tmp_path / "tmp"
     temp_dir.mkdir()
@@ -121,6 +134,7 @@ def _processor(
         model_cache=model_cache,
         synthesizer=synth,
         postprocessor=post,
+        heartbeat_interval_seconds=heartbeat_interval_seconds,
     )
     return processor, model_cache, synth, post
 
@@ -155,6 +169,31 @@ def test_lease_loss_never_reports_fail_or_finalizes(tmp_path: Path) -> None:
     assert backend.uploaded is None
     assert backend.failures == []
     assert list((tmp_path / "tmp").iterdir()) == []
+
+
+def test_backend_response_loss_after_upload_never_reports_false_failure(tmp_path: Path) -> None:
+    backend = FakeBackend(transport_error_on_upload=True)
+    processor, _, _, _ = _processor(tmp_path, backend)
+
+    processor.process(_job())
+
+    assert backend.uploaded is None
+    assert backend.failures == []
+    assert list((tmp_path / "tmp").iterdir()) == []
+
+
+def test_heartbeat_revalidates_lease_before_upload(tmp_path: Path) -> None:
+    backend = FakeBackend()
+    processor, _, _, _ = _processor(
+        tmp_path,
+        backend,
+        heartbeat_interval_seconds=3600,
+    )
+
+    processor.process(_job())
+
+    assert backend.uploaded is not None
+    assert backend.heartbeats == 1
 
 
 def test_classified_synthesis_failure_is_reported_and_temp_is_cleaned(tmp_path: Path) -> None:

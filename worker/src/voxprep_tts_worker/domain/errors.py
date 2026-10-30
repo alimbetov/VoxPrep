@@ -25,6 +25,22 @@ class ModelUnavailableError(WorkerError):
     code = "VOICE_MODEL_NOT_FOUND"
 
 
+class ModelDownloadError(WorkerError):
+    code = "VOICE_MODEL_DOWNLOAD_FAILED"
+
+
+class ModelChecksumError(WorkerError):
+    code = "VOICE_MODEL_CHECKSUM_MISMATCH"
+
+
+class ModelCacheInstallError(WorkerError):
+    code = "VOICE_MODEL_CACHE_INSTALL_FAILED"
+
+
+class ModelLoadError(WorkerError):
+    code = "VOICE_MODEL_LOAD_FAILED"
+
+
 class SynthesisError(WorkerError):
     code = "PIPER_SYNTHESIS_FAILED"
 
