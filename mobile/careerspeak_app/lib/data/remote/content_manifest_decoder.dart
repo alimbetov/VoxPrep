@@ -1,11 +1,11 @@
+// ignore_for_file: prefer_initializing_formals
+
 import '../../application/content_delivery/content_manifest.dart';
 import '../../application/result/result.dart';
 import 'content_manifest_mapper.dart';
 import 'dto/content_manifest_dto.dart';
 
 final class ContentManifestDecoder {
-  // The public `mapper:` name is part of the injectable adapter seam.
-  // ignore: prefer_initializing_formals
   const ContentManifestDecoder({
     ContentManifestMapper mapper = const ContentManifestMapper(),
   }) : _mapper = mapper;
@@ -46,13 +46,13 @@ final class ContentManifestDecoder {
         );
       }
 
-      final packs = <PackRevisionRefDto>[];
+      final packs = <PackRevisionDto>[];
       final packValues = _list(object, 'packs', r'$.packs');
       for (var index = 0; index < packValues.length; index += 1) {
         final path = '\$.packs[$index]';
         final pack = _object(packValues[index], path);
         packs.add(
-          PackRevisionRefDto(
+          PackRevisionDto(
             code: _string(pack, 'code', '$path.code'),
             variant: _string(pack, 'variant', '$path.variant'),
             revision: _integer(pack, 'revision', '$path.revision'),
