@@ -60,10 +60,10 @@ void main() {
 
     test('rejects non-success endpoint status', () async {
       final apiClient = _RecordingApiClient(<Result<ApiResponse>>[
-        const Success<ApiResponse>(
+        Success<ApiResponse>(
           ApiResponse(
             statusCode: 404,
-            headers: <String, String>{},
+            headers: const <String, String>{},
             jsonBody: null,
             traceId: 'trace-404',
           ),
