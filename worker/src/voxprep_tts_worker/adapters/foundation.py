@@ -6,14 +6,18 @@ from voxprep_tts_worker.domain.job import AudioArtifact, ClaimedJob
 
 
 class FoundationBackend:
-    """W1-only backend adapter.
+    """Safe foundation adapter used until the full production pipeline is ready.
 
-    It intentionally claims no work. W2 replaces this adapter with the real
-    machine-token authenticated HTTP adapter without changing orchestration.
+    It intentionally claims no work. W2 provides a real HTTP control adapter,
+    but production composition remains fail-closed until model, synthesis and
+    output-upload adapters can complete a claimed job end-to-end.
     """
 
     def claim(self, worker_id: str) -> ClaimedJob | None:
         return None
+
+    def heartbeat(self, *, worker_id: str, job: ClaimedJob) -> None:
+        raise AssertionError("foundation backend cannot heartbeat a real job")
 
     def upload_output(
         self,
@@ -22,7 +26,7 @@ class FoundationBackend:
         job: ClaimedJob,
         artifact: AudioArtifact,
     ) -> None:
-        raise AssertionError("W1 foundation backend cannot upload output")
+        raise AssertionError("foundation backend cannot upload output")
 
     def fail(
         self,
@@ -32,19 +36,19 @@ class FoundationBackend:
         error_code: str,
         error_message: str,
     ) -> None:
-        raise AssertionError("W1 foundation backend cannot report failure")
+        raise AssertionError("foundation backend cannot report failure")
 
 
 class FoundationModelCache:
     def ensure_model(self, job: ClaimedJob) -> Path:
-        raise AssertionError("W1 foundation model cache cannot resolve models")
+        raise AssertionError("foundation model cache cannot resolve models")
 
 
 class FoundationSynthesizer:
     def synthesize(self, *, job: ClaimedJob, model_dir: Path, output_wav: Path) -> Path:
-        raise AssertionError("W1 foundation synthesizer cannot synthesize")
+        raise AssertionError("foundation synthesizer cannot synthesize")
 
 
 class FoundationPostprocessor:
     def postprocess(self, *, job: ClaimedJob, input_wav: Path, output_mp3: Path) -> AudioArtifact:
-        raise AssertionError("W1 foundation postprocessor cannot process audio")
+        raise AssertionError("foundation postprocessor cannot process audio")

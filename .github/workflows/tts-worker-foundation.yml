@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
-      - feat/tts-worker-foundation
+      - feat/tts-worker-backend-http
     paths:
       - "worker/**"
       - ".github/workflows/tts-worker-foundation.yml"

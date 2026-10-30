@@ -1,5 +1,5 @@
 # Qualified dependency lock for Python 3.12.16.
-# Generated from GitHub Actions TTS Worker Foundation run #6 on 2026-10-30.
+# W2 extends the W1 baseline with the synchronous HTTP control adapter.
 # Update only through an explicit dependency qualification change.
 
 # Runtime dependency graph
@@ -10,6 +10,13 @@ flatbuffers==25.12.19
 numpy==2.5.4
 packaging==26.3
 protobuf==7.36.2
+httpx==0.28.1
+httpcore==1.0.9
+anyio==4.15.1
+certifi==2026.10.23
+idna==3.20
+h11==0.16.0
+typing_extensions==4.16.0
 
 # Test-only dependency graph
 pytest==8.4.2

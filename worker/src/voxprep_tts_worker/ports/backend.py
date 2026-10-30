@@ -10,6 +10,9 @@ class BackendPort(Protocol):
     def claim(self, worker_id: str) -> ClaimedJob | None:
         """Claim at most one backend-owned TTS job."""
 
+    def heartbeat(self, *, worker_id: str, job: ClaimedJob) -> None:
+        """Extend the current job lease or raise when ownership is lost."""
+
     def upload_output(
         self,
         *,

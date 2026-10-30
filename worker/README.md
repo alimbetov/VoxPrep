@@ -2,9 +2,9 @@
 
 Containerized outbound TTS worker for VoxPrep.
 
-Current branch slice: **W1 Runtime Foundation**.
+Current branch slice: **W2 Backend HTTP Control Adapter**.
 
-The runtime contract is intentionally stable before production adapters are enabled:
+The runtime boundary remains deliberately small:
 
 ```text
 Backend owns job/file identity and durable state
@@ -18,13 +18,14 @@ Production dependencies are intentionally pinned rather than floating:
 ```text
 Python       3.12.16
 pip          26.2.2
+httpx        0.28.1
 piper-tts    1.4.2
 FFmpeg       5.1.9-0+deb12u1
 ffprobe      5.1.9-0+deb12u1
 Debian       Bookworm
 ```
 
-`worker/constraints.txt` locks the complete currently qualified Python runtime/test dependency graph, including Piper transitive dependencies such as ONNX Runtime and NumPy.
+`worker/constraints.txt` locks the complete qualified Python runtime/test dependency graph, including HTTPX and Piper transitive dependencies.
 
 Dependency upgrades are explicit qualification changes. Do not widen or remove pins as part of unrelated feature work.
 
@@ -53,19 +54,53 @@ MAX_LOADED_MODELS=2
 LOG_LEVEL=INFO
 ```
 
+Worker HTTP calls use:
+
+```http
+Authorization: Bearer <WORKER_TOKEN>
+```
+
+The token is deployment-managed, must not be baked into the image and must never be logged.
+
+## W2 Backend HTTP control adapter
+
+`HttpBackendAdapter` implements the control-plane calls:
+
+```text
+POST /internal/v1/tts/jobs/claim
+POST /internal/v1/tts/jobs/{jobId}/heartbeat
+POST /internal/v1/tts/jobs/{jobId}/fail
+```
+
+The adapter:
+
+```text
+preserves backend-owned jobId/fileId/leaseToken
+uses strict connect/request timeouts
+maps 401/403 to WORKER_AUTH_FAILED
+maps 409/410 on lease-sensitive calls to LEASE_LOST
+maps network/429/5xx to BACKEND_TEMPORARILY_UNAVAILABLE
+fails closed on malformed claim payloads
+performs no blind retries for mutating POST requests
+```
+
+Output upload remains W5.
+
+Production composition intentionally continues to use the foundation adapter until W3 model acquisition, W4 Piper/FFmpeg processing and W5 output upload can complete a claimed job end-to-end. This prevents a partially implemented Worker from consuming production queue jobs.
+
 ## Build
 
 From repository root:
 
 ```bash
-docker build -t voxprep/tts-worker:w1 ./worker
+docker build -t voxprep/tts-worker:w2 ./worker
 ```
 
 The Docker build fails if the pinned FFmpeg package cannot be installed, the Python dependency graph is inconsistent, or Piper/ONNX Runtime cannot be imported.
 
 ## Run
 
-Each worker replica owns an isolated persistent model cache volume:
+Each Worker replica owns an isolated persistent model cache volume:
 
 ```bash
 docker run --rm \
@@ -73,14 +108,14 @@ docker run --rm \
   -e WORKER_TOKEN="$WORKER_TOKEN" \
   -e WORKER_ID=tts-worker-01 \
   -v voxprep-tts-models-worker-01:/var/lib/voxprep/tts/models \
-  voxprep/tts-worker:w1
+  voxprep/tts-worker:w2
 ```
 
-Do not share one model cache volume between worker replicas.
+Do not share one model cache volume between Worker replicas.
 
 ## Development tests
 
-Use the same Python minor series and the committed constraints:
+Use the same Python minor series and committed constraints:
 
 ```bash
 cd worker
@@ -99,18 +134,12 @@ A runtime dependency update is accepted only when all of the following remain gr
 ```text
 exact Python dependency graph check
 pip check
-Piper + ONNX Runtime import
+HTTPX + Piper + ONNX Runtime imports
 FFmpeg version check
 ffprobe version check
-full worker unit tests
+full worker unit/adapter tests
 Docker image build
 container startup/fail-fast/SIGTERM qualification
 ```
 
 Piper model/audio listening qualification is additionally required before upgrading the Piper engine used for production synthesis.
-
-## W1 limitation
-
-The image currently composes the W1 foundation backend adapter, which intentionally claims no real work. This proves configuration, package/container lifecycle, orchestration boundaries, cleanup and shutdown behavior.
-
-The next slice replaces that adapter with the real `BASE_URL` machine-token HTTP control adapter without changing the application/domain layer.
