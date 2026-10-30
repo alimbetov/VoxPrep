@@ -1,14 +1,10 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import '../../application/ports/practice_test_repository.dart';
 import '../../domain/mock_practice_test.dart';
 
-final mockTestRepositoryProvider = Provider<MockTestRepository>(
-  (ref) => const MockTestRepository(),
-);
-
-class MockTestRepository {
+class MockTestRepository implements PracticeTestRepository {
   const MockTestRepository();
 
+  @override
   List<MockPracticeTest> get all => const [
         MockPracticeTest(
           code: 'JAVA_SENIOR_QUICK_001',
@@ -22,7 +18,8 @@ class MockTestRepository {
               options: ['ArrayList', 'HashSet', 'LinkedList', 'ArrayDeque'],
               correctIndex: 1,
               skill: 'Java Collections',
-              explanation: 'HashSet stores unique elements according to equals/hashCode semantics.',
+              explanation:
+                  'HashSet stores unique elements according to equals/hashCode semantics.',
             ),
             MockQuestion(
               code: 'JAVA_Q_002',
@@ -35,15 +32,22 @@ class MockTestRepository {
               ],
               correctIndex: 1,
               skill: 'Spring Core',
-              explanation: 'Dependency injection separates dependency construction from the object that consumes it.',
+              explanation:
+                  'Dependency injection separates dependency construction from the object that consumes it.',
             ),
             MockQuestion(
               code: 'JAVA_Q_003',
               prompt: 'Which type is designed for concurrent key/value access?',
-              options: ['HashMap', 'TreeMap', 'ConcurrentHashMap', 'WeakHashMap'],
+              options: [
+                'HashMap',
+                'TreeMap',
+                'ConcurrentHashMap',
+                'WeakHashMap',
+              ],
               correctIndex: 2,
               skill: 'Concurrency',
-              explanation: 'ConcurrentHashMap provides thread-safe concurrent access without globally locking the map.',
+              explanation:
+                  'ConcurrentHashMap provides thread-safe concurrent access without globally locking the map.',
             ),
             MockQuestion(
               code: 'JAVA_Q_004',
@@ -61,10 +65,16 @@ class MockTestRepository {
             MockQuestion(
               code: 'JAVA_Q_005',
               prompt: 'Which Spring annotation marks a REST controller?',
-              options: ['@Service', '@Repository', '@RestController', '@ConfigurationProperties'],
+              options: [
+                '@Service',
+                '@Repository',
+                '@RestController',
+                '@ConfigurationProperties',
+              ],
               correctIndex: 2,
               skill: 'Spring MVC',
-              explanation: '@RestController combines @Controller semantics with response-body handling.',
+              explanation:
+                  '@RestController combines @Controller semantics with response-body handling.',
             ),
           ],
         ),
@@ -85,7 +95,8 @@ class MockTestRepository {
               ],
               correctIndex: 1,
               skill: 'Speaking coherence',
-              explanation: 'A balanced structure explicitly contrasts two perspectives.',
+              explanation:
+                  'A balanced structure explicitly contrasts two perspectives.',
             ),
             MockQuestion(
               code: 'IELTS_Q_002',
@@ -98,7 +109,8 @@ class MockTestRepository {
               ],
               correctIndex: 0,
               skill: 'Environment vocabulary',
-              explanation: 'Sustainable transport aims to meet mobility needs while reducing long-term environmental and social costs.',
+              explanation:
+                  'Sustainable transport aims to meet mobility needs while reducing long-term environmental and social costs.',
             ),
             MockQuestion(
               code: 'IELTS_Q_003',
@@ -111,20 +123,24 @@ class MockTestRepository {
               ],
               correctIndex: 2,
               skill: 'Speaking development',
-              explanation: 'Part 3 rewards developed, relevant answers supported by explanation and examples.',
+              explanation:
+                  'Part 3 rewards developed, relevant answers supported by explanation and examples.',
             ),
             MockQuestion(
               code: 'IELTS_Q_004',
-              prompt: 'Which word is closest to “significant” in an academic context?',
+              prompt:
+                  'Which word is closest to “significant” in an academic context?',
               options: ['trivial', 'substantial', 'tiny', 'irrelevant'],
               correctIndex: 1,
               skill: 'Academic vocabulary',
-              explanation: 'Substantial can mean considerable or significant in amount or importance.',
+              explanation:
+                  'Substantial can mean considerable or significant in amount or importance.',
             ),
           ],
         ),
       ];
 
+  @override
   MockPracticeTest? byCode(String code) {
     for (final test in all) {
       if (test.code == code) return test;
