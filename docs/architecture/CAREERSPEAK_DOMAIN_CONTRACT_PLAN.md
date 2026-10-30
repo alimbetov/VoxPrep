@@ -1,105 +1,180 @@
 # CareerSpeak — P0 Domain & Contract Design Plan
 
+**Document version:** 1.1  
 **Status:** Working architecture plan  
-**Applies to:** VoxPrep / CareerSpeak v0.6+  
+**Applies to:** VoxPrep / CareerSpeak v0.7+  
 **Branch:** `feat/p0-domain-contracts`
 
 ---
 
-## 1. Purpose
+## 1. Goal
 
-This document defines the implementation-readiness process for every CareerSpeak bounded context before production coding begins.
+P0 defines the domain model and contracts before production implementation begins.
 
-The project SHALL NOT treat a module as implementation-ready until its domain model, invariants, persistence model, API/application contracts and acceptance criteria are explicitly agreed.
-
-The goal is to finish P0 with an architecture freeze that reduces structural rewrites during implementation.
-
----
-
-## 2. Standard design contract for every bounded context
-
-Every bounded context SHALL be specified through the same layers:
+Each bounded context must agree:
 
 ```text
-DOMAIN SPEC
-│
-├── scope / responsibility
-├── aggregates
-├── entities
-├── value objects
-├── invariants
-├── state machines
-├── commands / use cases
-├── cross-domain dependencies
-└── non-goals
-        │
-        ▼
-DATA CONTRACT
-│
-├── tables
-├── PK / FK
-├── unique constraints
-├── indexes
-├── optimistic locking
-└── migration rules
-        │
-        ▼
-API / APPLICATION CONTRACT
-│
-├── endpoint / application port
-├── request DTO
-├── response DTO
-├── pagination
-├── filtering / sorting
-├── errors
-├── idempotency
-├── authorization
-└── versioning
-        │
-        ▼
-ACCEPTANCE CONTRACT
-├── happy path
-├── invalid states
-├── concurrency
-├── failure recovery
-└── integration tests
-```
-
-A global ERD SHALL be produced only after individual domain ownership has been agreed. The preferred sequence is:
-
-```text
-Global domain map
-    ↓
-Domain-by-domain ERD
-    ↓
-Integrated ERD
-```
-
----
-
-## 3. P0.0 — Common Contract & Domain Conventions
-
-Before the first bounded context is implemented, the project SHALL define common conventions for:
-
-```text
-technical identifiers
-stable business codes
-timestamps
-revision numbers
-API versioning
-DTO naming
-nullability
-error contract
-cursor pagination
-admin pagination
-sorting/filtering
+scope/ownership
+aggregates/entities/value objects
+invariants
+state machine
+persistence model
+constraints/indexes
+application/API contracts
+security zone
+errors
 idempotency
-optimistic concurrency
-HTTP semantics
-state-transition errors
+concurrency behavior
+acceptance/failure tests
 ```
 
-Recommended error envelope:
+A context is implementation-ready only after these are explicit.
+
+---
+
+## 2. Architecture baseline
+
+```text
+ADMIN
+→ Spring MVC Content Studio
+→ one fixed secured account/session
+
+Flutter
+→ random installationId
+→ backend-issued installation token
+→ learner REST API
+→ manifest/packs
+→ CDN/edge → RustFS
+
+TTS Worker
+→ server-managed long-running process
+→ worker machine token
+→ Backend Job API
+→ PostgreSQL SKIP LOCKED queue
+→ exact Piper model/cache
+→ Piper + FFmpeg
+→ RustFS
+```
+
+Do not introduce additional human roles in MVP.
+
+---
+
+## 3. Security actors
+
+Exactly three technical actors exist in MVP:
+
+```text
+ADMIN
+FLUTTER INSTALLATION
+TTS WORKER
+```
+
+### ADMIN
+
+- one account;
+- fixed username;
+- strong deployment-managed password hash;
+- Spring Security server-side session;
+- complete Content Studio access.
+
+Do not implement moderator/editor/reviewer roles, admin registration, user/role tables, password reset, OAuth, LDAP or Keycloak.
+
+### FLUTTER INSTALLATION
+
+- no personal account;
+- app-generated cryptographically random `installationId`;
+- backend-issued installation token;
+- token stored in platform secure storage;
+- no server learner-progress profile.
+
+### TTS WORKER
+
+- dedicated machine token;
+- no ADMIN credentials;
+- no direct PostgreSQL credentials;
+- no permanent RustFS credentials;
+- accesses only internal TTS contracts and presigned object URLs.
+
+---
+
+## 4. Standard design package per bounded context
+
+Each domain specification follows the same template.
+
+### 4.1 Domain
+
+```text
+responsibility
+aggregate roots
+entities
+value objects
+business codes
+invariants
+state transitions
+cross-domain dependencies
+non-goals
+```
+
+### 4.2 Persistence
+
+```text
+tables
+PK/FK
+unique constraints
+check constraints
+indexes
+optimistic concurrency where needed
+immutability/version rules
+migration rules
+```
+
+### 4.3 Contract
+
+```text
+commands/use cases
+REST/internal endpoints where applicable
+request/response DTOs
+pagination/filtering/sorting
+error codes
+idempotency
+security actor
+concurrency semantics
+```
+
+### 4.4 Qualification
+
+```text
+happy path
+invalid state transitions
+concurrent operations
+retries
+crash/recovery
+integration tests
+```
+
+---
+
+## 5. P0.0 — Common Contract & Domain Conventions
+
+Define once for every module:
+
+```text
+identifier types
+immutable business codes
+timestamp/time-zone rules
+revision numbering
+API versioning
+DTO naming/nullability
+error envelope
+cursor contract
+idempotency conventions
+optimistic-lock conventions
+HTTP semantics
+trace/correlation ID
+```
+
+Suggested error shape:
 
 ```json
 {
@@ -110,246 +185,184 @@ Recommended error envelope:
 }
 ```
 
-Consumer collection APIs SHALL use cursor/keyset pagination unless a domain-specific reason is documented otherwise.
+Deliverables:
 
-Internal Content Studio lists MAY use offset/page-based pagination through Spring `Pageable`.
+```text
+COMMON_CONTRACTS.md
+ERROR_CONTRACT.md
+API_CONVENTIONS.md
+```
 
 ---
 
-## 4. P0.1 — Revision / Publication / Availability
+## 6. P0.1 — Revision / Publication / Availability
 
-This is a foundational bounded context because most content domains depend on its lifecycle semantics.
+This is the foundational content lifecycle.
 
-The following concepts SHALL remain separate:
+Separate:
 
 ```text
-content identity
-content revision
+revision lifecycle
 publication state
 learner availability
 ```
 
-Example revision lifecycle:
+Baseline:
 
 ```text
 DRAFT
-  ↓
 READY_FOR_AUDIO
-  ↓
 READY_FOR_REVIEW
-  ↓
 PUBLISHED
-  ↓
 ARCHIVED
 ```
 
-Availability SHALL be modeled independently:
+Availability:
 
 ```text
 ACTIVE
 INACTIVE
 ```
 
-Example:
+Rules to freeze:
 
 ```text
-revision_status = PUBLISHED
-availability_status = ACTIVE
+when published revision becomes immutable
+how new revision is created
+when publication is allowed
+how deactivate/reactivate works
+how manifests/tombstones change
+how stale assets/jobs are handled
 ```
 
-is learner-visible, while:
-
-```text
-revision_status = PUBLISHED
-availability_status = INACTIVE
-```
-
-remains historically published but is excluded from learner catalog APIs and propagated through manifest tombstones.
-
-Required decisions:
-
-- revision ownership;
-- immutable transition point;
-- publication validation;
-- activation/deactivation permissions;
-- rollback semantics;
-- manifest impact;
-- stale media behavior;
-- archive behavior.
+All content domains depend on this contract.
 
 ---
 
-## 5. P0.2 — Profession / Catalog
+## 7. P0.2 — Profession / Catalog
 
-Core concepts:
+Define:
 
 ```text
 Profession
 CareerTrack
-Specialization
+Specialization where required
 Seniority
 Category
 Tag
-Skill taxonomy
+Skill taxonomy ownership
 ```
 
-Example hierarchy:
+Consumer examples:
 
 ```text
-Software Engineering
-    ↓
-Java Backend Developer
-    ↓
-Spring
-    ↓
-Senior
+GET /api/v1/professions
+GET /api/v1/professions/{code}
+GET /api/v1/career-tracks
 ```
 
-Required learner contracts include paginated/filterable profession and career-track catalogs.
-
-Stable external `code` values SHALL not depend on database IDs.
+Use stable business codes and cursor pagination for learner lists.
 
 ---
 
-## 6. P0.3 — Localization
+## 8. P0.3 — Localization
 
-CareerSpeak teaches English only.
+Canonical learning language remains English.
 
-Localization is presentation/support data:
+Localization owns:
 
 ```text
-UI
+UI locale metadata
 translation
 hint
 explanation
+locale readiness/fallback
 ```
 
-Required decisions:
-
-- BCP-47-compatible locale identifiers;
-- fallback chain;
-- localization readiness states;
-- whether missing locale content blocks publication;
-- RTL readiness;
-- typed localization table ownership.
-
-Example fallback:
+Freeze:
 
 ```text
-kk-KZ
-  ↓
-kk
-  ↓
-en
+BCP-47 identifiers
+fallback rules
+locale publication readiness
+RTL readiness
+typed localization tables
 ```
 
-A missing secondary localization SHOULD NOT normally block canonical English publication unless a specific pack policy requires it.
+Missing non-English localization should not automatically block canonical English publication unless an explicit pack policy requires it.
 
 ---
 
-## 7. P0.4 — Media / FileAsset / RustFS
+## 9. P0.4 — Media / RustFS
 
-Core concepts:
+Define:
 
 ```text
 FileAsset
-StorageObject
+AssetStatus
 AssetRole
-AssetLifecycle
-```
-
-Storage SHALL be accessed through an application abstraction such as:
-
-```text
-ObjectStorage
-├── createUploadUrl()
-├── createDownloadUrl()
-├── stat()
-└── delete()
-```
-
-RustFS is the initial S3-compatible adapter.
-
-Required metadata includes:
-
-```text
-bucket
-object_key
+ObjectStorage port
+RustFsObjectStorage adapter
+immutable object keys
 checksum
-mime_type
-size_bytes
-duration
-codec
-bitrate
-status
+mime/size/duration/codec
+private/public delivery rules
+presigned GET/PUT
+garbage collection rules
 ```
 
-Published object keys SHALL be immutable.
+Baseline storage:
 
-Garbage-collection rules SHALL distinguish referenced, superseded, draft and orphan assets.
+```text
+PostgreSQL metadata
+RustFS binary bytes
+CDN/edge for published learner assets
+```
 
 ---
 
-## 8. P0.5 — TTS
+## 10. P0.5 — TTS
 
-Core concepts:
+Define:
 
 ```text
 TtsVoice
 TtsVoiceModel
-TtsVoicePool
-TtsVoicePoolMember
-TtsVoicePolicy
+TtsVoicePool/TtsVoicePolicy only where needed
 PronunciationRule
 TtsJob
 TtsWorker
-TtsWorkerCapability
 ```
 
-Logical voice and immutable model revision SHALL remain separate.
-
-Every generation job SHALL resolve an exact `voice_model_id` before execution.
-
-Job states:
+Production worker:
 
 ```text
-PENDING
-RUNNING
-READY
-FAILED
-CANCELLED
-SUPERSEDED
+server-managed long-running Python process/container
+Piper
+FFmpeg
+auto-start/auto-restart
+local model cache
 ```
 
-Reliability contract includes:
+Queue contract is PostgreSQL-based:
 
 ```text
-worker_id
+atomic claim
+FOR UPDATE SKIP LOCKED
 lease_token
 lease_until
-attempt_count
-fingerprint
 heartbeat
-stale completion rejection
+bounded retry
+stale-result rejection
 ```
 
-Worker API contract SHALL cover:
-
-```text
-claim
-heartbeat
-model download authorization
-complete
-fail
-```
-
-The worker SHALL NOT connect directly to PostgreSQL and SHALL NOT silently substitute another voice/model.
+Do not add RabbitMQ for initial TTS workload.
 
 ---
 
-## 9. P0.6 — Interview
+## 11. P0.6 — Interview
 
-Core concepts:
+Define:
 
 ```text
 InterviewQuestion
@@ -360,62 +373,37 @@ Profession mapping
 CareerTrack mapping
 Seniority mapping
 Skill mapping
+Audio roles
+Localization
 ```
 
-Required design areas:
-
-- question/model-answer ownership;
-- revisioning;
-- question audio;
-- answer audio;
-- TTS voice policy;
-- localization;
-- publication qualification;
-- filters and cursor pagination.
-
-Example learner endpoints:
-
-```text
-GET /api/v1/interviews
-GET /api/v1/interviews/{code}
-```
+Freeze consumer list/detail contracts and exact publication dependencies.
 
 ---
 
-## 10. P0.7 — Vocabulary
+## 12. P0.7 — Vocabulary
 
-Core concepts:
+Define revisioned vocabulary content:
 
 ```text
-VocabularyWord
+VocabularyWord identity
 VocabularyRevision
 Definition
 Example
 Collocation
-WordFamily
-VocabularyCategory
+WordFamily if included in MVP
+Category
+Localization
+Audio roles
 ```
 
-Vocabulary content SHOULD use revision semantics rather than mutating learner-visible published content in place.
-
-A revision may own/reference:
-
-```text
-definition
-examples
-collocations
-localizations
-word audio
-example audio
-```
-
-Required contracts include CEFR/category filtering, search and cursor pagination.
+Do not allow published learner-visible vocabulary text to mutate in place.
 
 ---
 
-## 11. P0.8 — Topic / Phrase / Shadowing
+## 13. P0.8 — Topic / Phrase / Shadowing
 
-Core concepts:
+Define:
 
 ```text
 Topic
@@ -423,24 +411,19 @@ TopicRevision
 TopicSection
 Phrase
 PhraseCategory
-```
-
-Important contract fields include:
-
-```text
 display_text
 tts_text
-audio asset
-sort_order
+audio association
+sort/order semantics
 ```
 
-Shadowing requirements SHALL define how text sections map to audio assets and playback order.
+Shadowing contract must preserve deterministic text/audio segmentation where highlighting/repeat behavior depends on sections.
 
 ---
 
-## 12. P0.9 — Assessment
+## 14. P0.9 — Assessment
 
-Core concepts:
+Define:
 
 ```text
 QuestionBankItem
@@ -453,34 +436,20 @@ PracticeTestQuestion
 ScoringRule
 ```
 
-Published tests SHALL reference exact question revisions:
+Mandatory rule:
 
 ```text
-PracticeTestRevision
-    ├── QuestionRevision A
-    ├── QuestionRevision B
-    └── QuestionRevision C
+Published PracticeTestRevision
+→ exact QuestionRevision references
 ```
 
-They SHALL NOT resolve "current question" dynamically at execution time.
-
-This preserves reproducible scoring and review after future question edits.
-
-Required design areas include:
-
-- question-type invariants;
-- answer correctness rules;
-- scoring;
-- skill mapping;
-- deterministic result breakdown;
-- test revision snapshots;
-- local attempt representation in Flutter.
+Never resolve a published test against mutable current question data.
 
 ---
 
-## 13. P0.10 — Manifest / Content Delivery
+## 15. P0.10 — Manifest / Content Delivery
 
-Core concepts:
+Define:
 
 ```text
 ContentManifest
@@ -488,42 +457,26 @@ ContentPack
 PackRevision
 AssetReference
 Tombstone
+contentVersion
+checksum/version semantics
 ```
 
-Required endpoints include:
+Contracts:
 
 ```text
 GET /api/v1/content/manifest
 GET /api/v1/content/packs/{code}/manifest
 ```
 
-Example root manifest:
-
-```json
-{
-  "schemaVersion": 1,
-  "contentVersion": 105,
-  "packs": [],
-  "tombstones": []
-}
-```
-
-Manifest design SHALL support:
-
-- pack revisions;
-- asset checksums;
-- server-side deactivation propagation;
-- obsolete revision cleanup;
-- re-downloadable content;
-- offline-first startup.
+Only changed/missing assets should be downloaded.
 
 ---
 
-## 14. P0.11 — Pagination Contract
+## 16. P0.11 — Pagination Contract
 
-Pagination SHALL be defined once and reused across learner APIs.
+Learner API uses cursor/keyset pagination.
 
-Learner contract baseline:
+Response convention:
 
 ```json
 {
@@ -535,269 +488,189 @@ Learner contract baseline:
 }
 ```
 
-Cursor generation SHALL be based on stable deterministic sort keys.
+Cursor sorting must be deterministic with a unique tie-breaker.
 
-Examples:
-
-```text
-sort_order + id
-published_at + id
-```
-
-The API SHALL NOT require expensive total-count calculations when the client UX does not need them.
-
-Content Studio MAY use:
-
-```text
-page
-size
-sort
-```
-
-through `Pageable`.
+Internal ADMIN lists may use ordinary page/size pagination.
 
 ---
 
-## 15. P0.12 — Flutter Local Domain & Retention
+## 17. P0.12 — Flutter Local Domain / Retention
 
-Flutter local state is a first-class domain even though it is not stored on the backend.
-
-Core concepts:
+Define local SQLite/Drift ownership for:
 
 ```text
-LocalContent
-LocalAsset
-ContentAssetReference
-Download
 Favorite
 Progress
 TestAttempt
 ReviewSchedule
+Download
+LocalContentSnapshot
+LocalAsset
+ContentAssetReference
 CacheEntry
+Settings
 ```
 
-Retention states/policies include:
-
-```text
-AUTO_CACHE
-PINNED
-EXPLICIT_DOWNLOAD
-EXPIRED
-EVICTED
-```
-
-Automatic cleanup SHALL combine:
+Retention:
 
 ```text
 TTL
-+
 LRU
-+
 local quota
-+
-pinning protection
-+
-asset reference tracking
+pin/manual-download protection
+ref-count/reference-safe deletion
 ```
 
-Evicting downloadable content/media SHALL NOT erase learner progress, test history, favorites or review history.
-
-Shared assets SHALL be physically deleted only when no retained content references them.
-
-Cleanup SHOULD be triggered at controlled lifecycle points such as startup, manifest sync, large downloads, quota pressure and explicit "Free space" action rather than relying exclusively on background schedulers.
+Progress must survive media/cache eviction.
 
 ---
 
-## 16. P0.13 — Security / Installation
+## 18. P0.13 — Security / Installation
 
-Three security contexts SHALL remain separate.
+Keep security deliberately small.
 
-### Human admin
-
-```text
-Spring Security session
-HttpOnly cookie
-Secure
-SameSite
-CSRF
-ADMIN / EDITOR / REVIEWER
-```
-
-### TTS worker
+### ADMIN contract
 
 ```text
-machine credential
-scope
-rotation
-revocation
-outbound HTTPS only
+/admin/**
+→ fixed ADMIN username/password
+→ server-side session
+→ HttpOnly/Secure/SameSite cookie
+→ CSRF
 ```
 
-### Consumer
+No role hierarchy in MVP.
+
+### Flutter installation contract
 
 ```text
-no mandatory account
-optional random installationId
+first launch
+→ generate random installationId
+→ POST registration
+→ backend issues installation token
+→ secure local storage
+→ Bearer token for /api/v1/**
 ```
 
-`installationId` SHALL NOT be joined with learning progress, favorites, profession interests or test history in MVP.
+Token SHALL be backend-issued, not `SHA256(installationId)` or another client-computable credential.
+
+### TTS worker contract
+
+```text
+/internal/v1/tts/**
+→ dedicated machine token
+```
 
 ---
 
-## 17. P0.14 — Content Studio
+## 19. P0.14 — Content Studio
 
-Content Studio is an orchestration and content-production surface, not merely CRUD.
+Content Studio is an orchestration/admin interface, not a separate identity platform.
 
-Primary workflow:
-
-```text
-Create
-  ↓
-Validate
-  ↓
-Localize
-  ↓
-Generate audio
-  ↓
-Review
-  ↓
-Publish
-```
-
-Required platform capabilities include:
+One ADMIN executes:
 
 ```text
+create/edit
 bulk import
-bulk validation
-duplicate detection
-missing localization report
-missing/stale audio report
-TTS dashboard
-model/voice registry
-publication qualification
-pagination/filtering/search
+validate
+localize
+prepare audio
+manage voice/models
+preview audio
+publish
+activate/deactivate
 ```
+
+No multi-user workflow engine is required.
 
 ---
 
-## 18. Modular-monolith interaction rules
+## 20. P0.15 — Integrated ERD + OpenAPI
 
-Modules SHALL NOT mutate another module's persistence through foreign repositories merely because they share one PostgreSQL database.
-
-Preferred interaction:
+After individual contexts are agreed:
 
 ```text
-caller module
-    ↓
-owner application port/service
-    ↓
-owner domain/persistence
+compose complete PostgreSQL ERD
+verify aggregate ownership
+verify no duplicate source-of-truth fields
+verify FK/unique/index strategy
+freeze learner REST contracts
+freeze internal TTS contracts
+freeze admin command contracts where externalized
 ```
 
-Example conceptual boundary:
+Cross-module calls inside the modular monolith use application/domain ports rather than HTTP.
 
-```text
-Interview
-    ↓
-Publication application contract
-```
-
-rather than direct writes to publication tables.
-
-A preliminary dependency map is:
-
-```text
-                     CATALOG
-                       │
-             ┌─────────┼─────────┐
-             ▼         ▼         ▼
-         INTERVIEW VOCABULARY   TOPIC
-             │         │         │
-             └────┬────┴────┬────┘
-                  ▼         ▼
-             LOCALIZATION  ASSESSMENT
-                  │         │
-                  └────┬────┘
-                       ▼
-                  PUBLICATION
-                       │
-               ┌───────┴───────┐
-               ▼               ▼
-             MEDIA            TTS
-               │               │
-               └───────┬───────┘
-                       ▼
-                    MANIFEST
-                       │
-                       ▼
-                    FLUTTER
-```
-
-The final dependency direction SHALL be validated and minimized during domain design.
+A module SHALL NOT mutate another module's repository directly.
 
 ---
 
-## 19. Definition of Ready — bounded context
+## 21. P0.16 — Architecture Freeze
 
-A bounded context is `DOMAIN READY` only when all applicable items are agreed:
+P0 closes when:
 
 ```text
-[ ] scope and ownership
-[ ] aggregates
-[ ] entities/value objects
+all bounded contexts are Domain Ready
+integrated ERD is accepted
+OpenAPI contracts are accepted
+TTS claim/lease/recovery protocol is accepted
+manifest/retention semantics are accepted
+security actors are fixed to ADMIN / INSTALLATION / WORKER
+ADRs capture remaining irreversible decisions
+implementation backlog is generated
+```
+
+After P0.16, P1 begins executable foundation work.
+
+---
+
+## 22. Definition of Ready
+
+A bounded context is ready when all boxes are satisfied:
+
+```text
+[ ] ownership
+[ ] aggregate roots/entities/value objects
 [ ] invariants
 [ ] lifecycle/state machine
 [ ] DB schema
-[ ] PK/FK/unique constraints
+[ ] PK/FK/unique/check constraints
 [ ] indexes
-[ ] optimistic concurrency
-[ ] public/application DTOs
-[ ] API/application ports
-[ ] pagination/filtering/sorting
-[ ] authorization
+[ ] application/API contract
+[ ] pagination/filtering where applicable
+[ ] security actor
 [ ] error codes
 [ ] idempotency
-[ ] failure behavior
 [ ] concurrency behavior
 [ ] acceptance tests
+[ ] failure/recovery tests where applicable
 ```
 
 ---
 
-## 20. Definition of Done — implementation
+## 23. Definition of Done for implementation
 
-Implementation completion follows:
+Later implementation for a domain follows:
 
 ```text
-approved spec
-    ↓
-Liquibase migration
-    ↓
-domain/application implementation
-    ↓
-persistence adapters
-    ↓
-REST/Admin/internal adapters
-    ↓
-unit tests
-    ↓
-integration tests
-    ↓
-architecture tests
-    ↓
-OpenAPI/contract qualification
-    ↓
-CI green
+accepted spec
+→ Liquibase
+→ domain/application code
+→ repositories/adapters
+→ REST/admin adapter
+→ unit tests
+→ integration/Testcontainers tests
+→ architecture tests
+→ OpenAPI qualification
+→ CI green
 ```
 
 ---
 
-## 21. P0 execution order
-
-The approved design order is:
+## 24. Execution order
 
 ```text
-P0.0  Common Contract & Domain Conventions
+P0.0  Common Contracts
 P0.1  Revision / Publication / Availability
 P0.2  Profession / Catalog
 P0.3  Localization
@@ -816,21 +689,4 @@ P0.15 Integrated ERD + OpenAPI
 P0.16 Architecture Freeze
 ```
 
-`P0.0` and `P0.1` SHALL be completed before production domain entities/controllers are created because they define shared identity, revision, state, pagination, error and concurrency semantics.
-
----
-
-## 22. P0 exit criteria
-
-P0 is complete only when:
-
-1. every bounded context has a documented owner and explicit non-goals;
-2. cross-module dependencies are agreed;
-3. integrated PostgreSQL ERD is consistent with domain ownership;
-4. learner/admin/internal APIs are contractually defined;
-5. TTS/media/manifest failure semantics are documented;
-6. pagination and retention behavior are deterministic;
-7. ADRs capture the principal architecture decisions;
-8. the architecture baseline can be frozen for implementation.
-
-After P0 exit, P1 may begin with the executable Spring Boot/Flutter/TTS-worker foundation.
+The next implementation-design slice is **P0.0 Common Contract & Domain Conventions**, followed by **P0.1 Revision / Publication / Availability**.
