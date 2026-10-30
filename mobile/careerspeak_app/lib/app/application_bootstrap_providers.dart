@@ -25,17 +25,16 @@ final installationBootstrapServiceProvider =
       );
     });
 
-final applicationBootstrapServiceProvider = Provider<ApplicationBootstrapService>(
-  (ref) {
-    final contentSync = ref.watch(preferenceAwareContentSyncProvider);
-    return ApplicationBootstrapService(
-      installationBootstrapService: ref.watch(
-        installationBootstrapServiceProvider,
-      ),
-      synchronizeContent: contentSync.synchronize,
-    );
-  },
-);
+final applicationBootstrapServiceProvider =
+    Provider<ApplicationBootstrapService>((ref) {
+      final contentSync = ref.watch(preferenceAwareContentSyncProvider);
+      return ApplicationBootstrapService(
+        installationBootstrapService: ref.watch(
+          installationBootstrapServiceProvider,
+        ),
+        synchronizeContent: contentSync.synchronize,
+      );
+    });
 
 final applicationBootstrapProvider =
     FutureProvider<Result<ApplicationBootstrapOutcome>>((ref) {
