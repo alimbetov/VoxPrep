@@ -111,7 +111,7 @@ void main() {
     await tester.pumpAndSettle();
     _expectNoFlutterException(tester);
 
-    await _tapScrollableText(tester, 'Start mock test');
+    await _tapScrollableText(tester, 'Start test');
     _expectNoFlutterException(tester);
 
     for (var index = 0; index < 4; index++) {
