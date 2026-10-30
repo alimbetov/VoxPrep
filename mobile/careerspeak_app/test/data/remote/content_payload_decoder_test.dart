@@ -20,6 +20,10 @@ void main() {
     expect(payload.ref.revision, 3);
     expect(payload.ref.checksum, _contentHash);
     expect(payload.title, 'Dependency Injection');
+    expect(payload.categoryCode, 'JAVA_BACKEND');
+    expect(payload.category, 'Java Backend');
+    expect(payload.levelCode, 'SENIOR');
+    expect(payload.level, 'Senior');
     expect(payload.minutes, 6);
     expect(payload.hasAudio, isTrue);
   });
@@ -33,6 +37,17 @@ void main() {
     final failure = (result as FailureResult<ContentPayload>).failure;
     expect(failure.code, 'CONTENT_PAYLOAD_INVALID');
     expect(failure.details['field'], r'$.contentType');
+  });
+
+  test('rejects non-stable taxonomy code', () {
+    final json = _payloadJson()..['categoryCode'] = 'Java Backend';
+
+    final result = decoder.decode(json);
+
+    expect(result, isA<FailureResult<ContentPayload>>());
+    final failure = (result as FailureResult<ContentPayload>).failure;
+    expect(failure.code, 'CONTENT_PAYLOAD_INVALID');
+    expect(failure.details['field'], r'$.categoryCode');
   });
 
   test('rejects invalid presentation payload', () {
@@ -57,8 +72,10 @@ Map<String, Object?> _payloadJson() {
     'title': 'Dependency Injection',
     'subtitle': 'Java Backend',
     'description': 'Explain constructor injection and its tradeoffs.',
-    'category': 'Java Backend',
-    'level': 'Senior',
+    'categoryCode': 'JAVA_BACKEND',
+    'categoryLabel': 'Java Backend',
+    'levelCode': 'SENIOR',
+    'levelLabel': 'Senior',
     'minutes': 6,
     'hasAudio': true,
   };
