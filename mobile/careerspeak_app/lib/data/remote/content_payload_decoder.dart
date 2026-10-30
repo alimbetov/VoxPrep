@@ -1,10 +1,15 @@
 import '../../application/content_delivery/content_manifest.dart';
 import '../../application/content_delivery/content_payload.dart';
 import '../../application/result/result.dart';
-import '../../domain/content_identity.dart';
+import 'content_payload_mapper.dart';
+import 'dto/content_payload_dto.dart';
 
 final class ContentPayloadDecoder {
-  const ContentPayloadDecoder();
+  const ContentPayloadDecoder({
+    ContentPayloadMapper mapper = const ContentPayloadMapper(),
+  }) : _mapper = mapper;
+
+  final ContentPayloadMapper _mapper;
 
   Result<ContentPayload> decode(Object? value) {
     try {
@@ -18,31 +23,28 @@ final class ContentPayloadDecoder {
       }
 
       final typeName = _string(object, 'contentType');
-      final type = contentTypeFromWireName(typeName);
-      if (type == null) {
+      if (contentTypeFromWireName(typeName) == null) {
         throw const _PayloadViolation(
           r'$.contentType',
           'contains an unsupported content type',
         );
       }
 
-      final ref = ContentPayloadRef(
-        identity: ContentIdentity(code: contentCode, type: type),
+      final dto = ContentPayloadDto(
+        contentCode: contentCode,
+        contentType: typeName,
         revision: _integer(object, 'revision'),
         checksum: _string(object, 'checksum'),
+        title: _string(object, 'title'),
+        subtitle: _string(object, 'subtitle'),
+        description: _string(object, 'description'),
+        category: _string(object, 'category'),
+        level: _string(object, 'level'),
+        minutes: _integer(object, 'minutes'),
+        hasAudio: _boolean(object, 'hasAudio'),
       );
-      return Success<ContentPayload>(
-        ContentPayload(
-          ref: ref,
-          title: _string(object, 'title'),
-          subtitle: _string(object, 'subtitle'),
-          description: _string(object, 'description'),
-          category: _string(object, 'category'),
-          level: _string(object, 'level'),
-          minutes: _integer(object, 'minutes'),
-          hasAudio: _boolean(object, 'hasAudio'),
-        ),
-      );
+
+      return Success<ContentPayload>(_mapper.map(dto));
     } on _PayloadViolation catch (error) {
       return FailureResult<ContentPayload>(
         ApplicationFailure(
