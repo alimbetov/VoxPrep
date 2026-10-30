@@ -49,11 +49,7 @@ jobs:
               ! -path 'test/generated_migrations/*' \
               -print
           )
-          dart format "${dart_files[@]}"
-          if ! git diff --quiet -- "${dart_files[@]}"; then
-            git diff -- "${dart_files[@]}"
-            exit 1
-          fi
+          dart format --output=none --set-exit-if-changed "${dart_files[@]}"
 
       - name: Drift codegen
         run: dart run build_runner build --delete-conflicting-outputs
