@@ -7,6 +7,7 @@ import '../application/ports/sync_plan_executor.dart';
 import '../data/local/drift_sync_journal.dart';
 import '../data/local/drift_sync_plan_executor.dart';
 import 'content_manifest_providers.dart';
+import 'content_payload_providers.dart';
 import 'learner_state_providers.dart';
 
 final contentSyncPlannerProvider = Provider<ContentSyncPlanner>((ref) {
@@ -21,6 +22,7 @@ final syncPlanExecutorProvider = Provider<SyncPlanExecutor>((ref) {
   return DriftSyncPlanExecutor(
     ref.watch(careerSpeakDatabaseProvider),
     ref.watch(contentManifestGatewayProvider),
+    ref.watch(contentPayloadGatewayProvider),
   );
 });
 
