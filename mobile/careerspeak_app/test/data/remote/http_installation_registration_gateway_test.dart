@@ -13,9 +13,7 @@ void main() {
           ApiResponse(
             statusCode: 200,
             headers: const <String, String>{},
-            jsonBody: const <String, Object?>{
-              'installationToken': 'token-123',
-            },
+            jsonBody: const <String, Object?>{'installationToken': 'token-123'},
           ),
         ),
       );
@@ -56,28 +54,29 @@ void main() {
     );
   });
 
-  test('rejects successful HTTP status outside registration contract', () async {
-    final apiClient = _FakeApiClient(
-      Success<ApiResponse>(
-        ApiResponse(
-          statusCode: 201,
-          headers: const <String, String>{},
-          jsonBody: const <String, Object?>{
-            'installationToken': 'token-123',
-          },
+  test(
+    'rejects successful HTTP status outside registration contract',
+    () async {
+      final apiClient = _FakeApiClient(
+        Success<ApiResponse>(
+          ApiResponse(
+            statusCode: 201,
+            headers: const <String, String>{},
+            jsonBody: const <String, Object?>{'installationToken': 'token-123'},
+          ),
         ),
-      ),
-    );
-    final gateway = HttpInstallationRegistrationGateway(apiClient: apiClient);
+      );
+      final gateway = HttpInstallationRegistrationGateway(apiClient: apiClient);
 
-    final result = await gateway.register(InstallationId('installation-123'));
+      final result = await gateway.register(InstallationId('installation-123'));
 
-    expect(result, isA<FailureResult<InstallationToken>>());
-    expect(
-      (result as FailureResult<InstallationToken>).failure.code,
-      'INSTALLATION_REGISTRATION_STATUS_INVALID',
-    );
-  });
+      expect(result, isA<FailureResult<InstallationToken>>());
+      expect(
+        (result as FailureResult<InstallationToken>).failure.code,
+        'INSTALLATION_REGISTRATION_STATUS_INVALID',
+      );
+    },
+  );
 
   test('rejects malformed registration response', () async {
     final apiClient = _FakeApiClient(
