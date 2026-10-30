@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/audio_playback_providers.dart';
 import '../../app/learner_state_providers.dart';
+import '../../application/services/audio_playback_controller.dart';
 import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
 import '../../domain/content_marker_state.dart';
@@ -86,27 +88,21 @@ class ContentDetailPanel extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         ContentMarkerChips(state: marker),
+        if (item.hasAudio) ...[
+          const SizedBox(height: 24),
+          _AudioPlaybackControls(item: item, marker: marker),
+        ],
         const SizedBox(height: 24),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
-            if (item.hasAudio)
-              FilledButton.tonalIcon(
-                onPressed: () => write(() async {
-                  (await repository.setListened(
-                    identity,
-                    listened: !marker.listened,
-                  )).getOrThrow();
-                }),
-                icon: Icon(marker.listened ? Icons.replay : Icons.headphones),
-                label: Text(marker.listened ? 'Reset listened' : 'Mock listen'),
-              ),
             FilledButton.icon(
               onPressed: () => write(() async {
                 (await repository.setCompleted(
                   identity,
                   completed: !marker.completed,
+                  lastRevisionSeen: item.revision,
                 )).getOrThrow();
               }),
               icon: Icon(
@@ -120,7 +116,11 @@ class ContentDetailPanel extends ConsumerWidget {
         ),
         if (marker.lastPositionMs case final position?) ...[
           const SizedBox(height: 12),
-          Text('Saved playback position: $position ms'),
+          Text(
+            marker.lastRevisionSeen == item.revision
+                ? 'Saved playback position: ${_formatDuration(position)}'
+                : 'Saved playback position belongs to an older revision.',
+          ),
         ],
         const SizedBox(height: 32),
         Text('Overview', style: Theme.of(context).textTheme.titleLarge),
@@ -134,12 +134,12 @@ class ContentDetailPanel extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Mock learning content',
+                  'Learning content',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Content remains curated in-memory data in P2.2. Learner state is now persisted through Drift and survives application restart.',
+                  'Audio playback uses the verified local asset pipeline. Completion of audio marks the item as listened; learning completion remains a separate learner action.',
                 ),
               ],
             ),
@@ -148,4 +148,190 @@ class ContentDetailPanel extends ConsumerWidget {
       ],
     );
   }
+}
+
+class _AudioPlaybackControls extends ConsumerWidget {
+  const _AudioPlaybackControls({required this.item, required this.marker});
+
+  final ContentItem item;
+  final ContentMarkerState marker;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final playback = ref.watch(audioPlaybackStateProvider);
+    return playback.when(
+      loading: () => const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: LinearProgressIndicator(value: 0),
+        ),
+      ),
+      error: (error, stackTrace) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text('Audio player unavailable: $error'),
+        ),
+      ),
+      data: (state) => _buildControls(context, ref, state),
+    );
+  }
+
+  Widget _buildControls(
+    BuildContext context,
+    WidgetRef ref,
+    ContentPlaybackState state,
+  ) {
+    final identity = ContentIdentity.fromItem(item);
+    final isCurrent = state.isCurrent(identity, item.revision);
+    final phase = isCurrent ? state.phase : AudioPlaybackPhase.idle;
+    final savedPosition = marker.lastRevisionSeen == item.revision
+        ? marker.lastPositionMs ?? 0
+        : 0;
+    final position = isCurrent ? state.positionMs : savedPosition;
+    final duration = isCurrent ? state.durationMs : null;
+    final isPlaying = phase == AudioPlaybackPhase.playing;
+    final isResolving = phase == AudioPlaybackPhase.resolving;
+    final canControl =
+        isCurrent &&
+        (phase == AudioPlaybackPhase.playing ||
+            phase == AudioPlaybackPhase.paused);
+
+    Future<void> run(
+      Future<void> Function(AudioPlaybackController controller) operation,
+    ) async {
+      try {
+        final controller = ref.read(audioPlaybackControllerProvider);
+        await operation(controller);
+      } catch (error) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Audio playback failed: $error')),
+        );
+      }
+    }
+
+    final progress = duration != null && duration > 0
+        ? (position.clamp(0, duration) / duration).toDouble()
+        : 0.0;
+    final failure = isCurrent ? state.failure : null;
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.graphic_eq),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Audio',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    duration == null
+                        ? _formatDuration(position)
+                        : '${_formatDuration(position)} / ${_formatDuration(duration)}',
+                    textAlign: TextAlign.end,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            LinearProgressIndicator(value: progress),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                FilledButton.icon(
+                  onPressed: isResolving
+                      ? null
+                      : () => run((controller) async {
+                          if (isPlaying) {
+                            (await controller.pause()).getOrThrow();
+                          } else if (phase == AudioPlaybackPhase.paused &&
+                              isCurrent) {
+                            (await controller.resume()).getOrThrow();
+                          } else {
+                            (await controller.play(
+                              item,
+                              learnerState: marker,
+                            )).getOrThrow();
+                          }
+                        }),
+                  icon: isResolving
+                      ? const SizedBox.square(
+                          dimension: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(isPlaying ? Icons.pause : Icons.play_arrow),
+                  label: Text(
+                    isResolving
+                        ? 'Preparing'
+                        : isPlaying
+                        ? 'Pause'
+                        : phase == AudioPlaybackPhase.completed
+                        ? 'Replay'
+                        : 'Play',
+                  ),
+                ),
+                IconButton.filledTonal(
+                  tooltip: 'Back 10 seconds',
+                  onPressed: canControl
+                      ? () => run((controller) async {
+                          (await controller.seek(
+                            position - 10000,
+                          )).getOrThrow();
+                        })
+                      : null,
+                  icon: const Icon(Icons.replay_10),
+                ),
+                IconButton.filledTonal(
+                  tooltip: 'Forward 10 seconds',
+                  onPressed: canControl
+                      ? () => run((controller) async {
+                          (await controller.seek(
+                            position + 10000,
+                          )).getOrThrow();
+                        })
+                      : null,
+                  icon: const Icon(Icons.forward_10),
+                ),
+                OutlinedButton.icon(
+                  onPressed: canControl
+                      ? () => run((controller) async {
+                          (await controller.stop()).getOrThrow();
+                        })
+                      : null,
+                  icon: const Icon(Icons.stop),
+                  label: const Text('Stop'),
+                ),
+              ],
+            ),
+            if (failure != null) ...[
+              const SizedBox(height: 12),
+              Text(
+                failure.message,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _formatDuration(int milliseconds) {
+  final totalSeconds = milliseconds.clamp(0, 1 << 31) ~/ 1000;
+  final minutes = totalSeconds ~/ 60;
+  final seconds = totalSeconds % 60;
+  return '$minutes:${seconds.toString().padLeft(2, '0')}';
 }

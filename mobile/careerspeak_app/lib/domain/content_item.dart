@@ -10,8 +10,9 @@ class ContentItem {
     required this.category,
     required this.level,
     required this.minutes,
+    this.revision = 1,
     this.hasAudio = true,
-  });
+  }) : assert(revision > 0);
 
   final String code;
   final ContentType type;
@@ -21,5 +22,6 @@ class ContentItem {
   final String category;
   final String level;
   final int minutes;
+  final int revision;
   final bool hasAudio;
 }
