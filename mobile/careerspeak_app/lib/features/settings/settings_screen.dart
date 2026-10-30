@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/app_preferences_providers.dart';
 import '../../app/mock_visual_preferences.dart';
-import '../../app/theme/careerspeak_theme.dart';
+import '../../domain/application_preferences.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final themeMode = ref.watch(themeModeProvider);
+    final preferencesAsync = ref.watch(applicationPreferencesProvider);
+    final preferences =
+        preferencesAsync.asData?.value ?? ApplicationPreferences.defaults;
+    final preferencesReady = preferencesAsync.asData != null;
+    final preferencesController = ref.read(appPreferencesControllerProvider);
     final visual = ref.watch(mockVisualPreferencesProvider);
     final visualController = ref.read(mockVisualPreferencesProvider.notifier);
 
@@ -27,24 +32,32 @@ class SettingsScreen extends ConsumerWidget {
             ChoiceChip(
               avatar: const Icon(Icons.settings_suggest_outlined),
               label: const Text('System'),
-              selected: themeMode == ThemeMode.system,
-              onSelected: (_) => ref
-                  .read(themeModeProvider.notifier)
-                  .setMode(ThemeMode.system),
+              selected: preferences.theme == AppThemePreference.system,
+              onSelected: preferencesReady
+                  ? (_) => preferencesController.setTheme(
+                      AppThemePreference.system,
+                    )
+                  : null,
             ),
             ChoiceChip(
               avatar: const Icon(Icons.light_mode_outlined),
               label: const Text('Light'),
-              selected: themeMode == ThemeMode.light,
-              onSelected: (_) =>
-                  ref.read(themeModeProvider.notifier).setMode(ThemeMode.light),
+              selected: preferences.theme == AppThemePreference.light,
+              onSelected: preferencesReady
+                  ? (_) => preferencesController.setTheme(
+                      AppThemePreference.light,
+                    )
+                  : null,
             ),
             ChoiceChip(
               avatar: const Icon(Icons.dark_mode_outlined),
               label: const Text('Dark'),
-              selected: themeMode == ThemeMode.dark,
-              onSelected: (_) =>
-                  ref.read(themeModeProvider.notifier).setMode(ThemeMode.dark),
+              selected: preferences.theme == AppThemePreference.dark,
+              onSelected: preferencesReady
+                  ? (_) => preferencesController.setTheme(
+                      AppThemePreference.dark,
+                    )
+                  : null,
             ),
           ],
         ),
@@ -57,58 +70,68 @@ class SettingsScreen extends ConsumerWidget {
           children: [
             SizedBox(
               width: 280,
-              child: DropdownMenu<MockUiLanguage>(
-                initialSelection: visual.uiLanguage,
+              child: DropdownMenu<AppUiLocale>(
+                initialSelection: preferences.uiLocale,
+                enabled: preferencesReady,
                 label: const Text('UI language'),
                 expandedInsets: EdgeInsets.zero,
                 dropdownMenuEntries: [
-                  for (final value in MockUiLanguage.values)
-                    DropdownMenuEntry(value: value, label: value.label),
-                ],
-                onSelected: (value) {
-                  if (value != null) visualController.setUiLanguage(value);
-                },
-              ),
-            ),
-            SizedBox(
-              width: 280,
-              child: DropdownMenu<MockTranslationLanguage>(
-                initialSelection: visual.translationLanguage,
-                label: const Text('Translation language'),
-                expandedInsets: EdgeInsets.zero,
-                dropdownMenuEntries: [
-                  for (final value in MockTranslationLanguage.values)
+                  for (final value in AppUiLocale.values)
                     DropdownMenuEntry(value: value, label: value.label),
                 ],
                 onSelected: (value) {
                   if (value != null) {
-                    visualController.setTranslationLanguage(value);
+                    preferencesController.setUiLocale(value);
                   }
                 },
               ),
             ),
             SizedBox(
               width: 280,
-              child: DropdownMenu<MockAccent>(
-                initialSelection: visual.accent,
-                label: const Text('Preferred accent'),
+              child: DropdownMenu<AppTranslationLocale>(
+                initialSelection: preferences.translationLocale,
+                enabled: preferencesReady,
+                label: const Text('Translation language'),
                 expandedInsets: EdgeInsets.zero,
                 dropdownMenuEntries: [
-                  for (final value in MockAccent.values)
+                  for (final value in AppTranslationLocale.values)
                     DropdownMenuEntry(value: value, label: value.label),
                 ],
                 onSelected: (value) {
-                  if (value != null) visualController.setAccent(value);
+                  if (value != null) {
+                    preferencesController.setTranslationLocale(value);
+                  }
                 },
+              ),
+            ),
+            SizedBox(
+              width: 280,
+              child: DropdownMenu<PreferredEnglishAccent>(
+                initialSelection: preferences.preferredAccent,
+                enabled: preferencesReady,
+                label: const Text('Preferred accent'),
+                expandedInsets: EdgeInsets.zero,
+                dropdownMenuEntries: [
+                  for (final value in PreferredEnglishAccent.values)
+                    DropdownMenuEntry(value: value, label: value.label),
+                ],
+                onSelected: preferencesController.setPreferredAccent,
               ),
             ),
           ],
         ),
         const SizedBox(height: 8),
         Text(
-          'P1 keeps visible strings in English. These selectors qualify layout and state only; ARB localization arrives after mock acceptance.',
+          'UI, translation locale and accent are stored locally. English remains the learning language; translation locale selects support/localization content packs.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
+        if (preferencesAsync.asError case final error?) ...[
+          const SizedBox(height: 8),
+          Text(
+            'Preferences unavailable: ${error.error.runtimeType}',
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+        ],
         const SizedBox(height: 28),
         Text(
           'Accessibility preview',
@@ -131,7 +154,7 @@ class SettingsScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'P1.7 qualifies the full learner shell at 1.0×, 1.6× and 2.0×.',
+          'Text scale and RTL remain structural preview controls; they are not persisted product preferences.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 8),
@@ -140,7 +163,7 @@ class SettingsScreen extends ConsumerWidget {
           secondary: const Icon(Icons.format_textdirection_r_to_l),
           title: const Text('RTL layout preview'),
           subtitle: const Text(
-            'Flip layout direction while keeping mock English strings.',
+            'Flip layout direction while keeping English learning content LTR.',
           ),
           value: visual.rtlPreview,
           onChanged: visualController.setRtlPreview,
@@ -152,16 +175,15 @@ class SettingsScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Preview', style: Theme.of(context).textTheme.titleMedium),
+                Text('Current', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
-                Text('UI: ${visual.uiLanguage.label}'),
-                Text('Translation: ${visual.translationLanguage.label}'),
-                Text('Accent: ${visual.accent.label}'),
-                Text('Text scale: ${visual.textScale.label}'),
-                const SizedBox(height: 12),
-                const Text(
-                  'English learning text stays LTR by contract even when a future localized shell is RTL. The current toggle is a structural stress test for the mock UI.',
+                Text('UI: ${preferences.uiLocale.label}'),
+                Text('Translation: ${preferences.translationLocale.label}'),
+                Text(
+                  'Accent: ${preferences.preferredAccent?.label ?? 'Default'}',
                 ),
+                Text('Theme: ${preferences.theme.code}'),
+                Text('Text scale preview: ${visual.textScale.label}'),
               ],
             ),
           ),
@@ -171,7 +193,7 @@ class SettingsScreen extends ConsumerWidget {
           contentPadding: EdgeInsets.zero,
           leading: Icon(Icons.storage_outlined),
           title: Text('Storage'),
-          subtitle: Text('Mock data only · no files downloaded'),
+          subtitle: Text('Offline content is managed by production adapters'),
         ),
       ],
     );
