@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_learner_state_repository.dart';
 import 'package:careerspeak_app/domain/content_identity.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
+import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_database_factory.dart';
@@ -124,6 +127,55 @@ void main() {
     final markers = await _currentMarkers(repository);
     expect(markers.keys.toSet(), identities.toSet());
     expect(markers.values.every((marker) => marker.favorite), isTrue);
+  });
+
+  test('learner state survives database close and reopen', () async {
+    await database.close();
+
+    final directory = await Directory.systemTemp.createTemp(
+      'careerspeak-p2-2-reopen-',
+    );
+    addTearDown(() => directory.delete(recursive: true));
+    final file = File('${directory.path}/careerspeak.sqlite');
+
+    final firstDatabase = CareerSpeakDatabase(NativeDatabase(file));
+    final firstRepository = DriftLearnerStateRepository(
+      firstDatabase,
+      now: () => now,
+    );
+
+    (await firstRepository.setFavorite(identity, favorite: true)).getOrThrow();
+    (await firstRepository.setListened(identity, listened: true)).getOrThrow();
+    (await firstRepository.setCompleted(identity, completed: true)).getOrThrow();
+    (await firstRepository.savePlaybackPosition(
+      identity,
+      positionMs: 42000,
+    )).getOrThrow();
+
+    final beforeReopen = await _currentMarkers(firstRepository);
+    expect(beforeReopen[identity]?.favorite, isTrue);
+    expect(beforeReopen[identity]?.listened, isTrue);
+    expect(beforeReopen[identity]?.completed, isTrue);
+    expect(beforeReopen[identity]?.lastPositionMs, 42000);
+
+    await firstDatabase.close();
+
+    final reopenedDatabase = CareerSpeakDatabase(NativeDatabase(file));
+    final reopenedRepository = DriftLearnerStateRepository(
+      reopenedDatabase,
+      now: () => now.add(const Duration(minutes: 5)),
+    );
+
+    final restored = await _currentMarkers(reopenedRepository);
+    expect(restored[identity]?.favorite, isTrue);
+    expect(restored[identity]?.listened, isTrue);
+    expect(restored[identity]?.completed, isTrue);
+    expect(restored[identity]?.lastPositionMs, 42000);
+
+    await reopenedDatabase.close();
+
+    database = createTestDatabase();
+    repository = DriftLearnerStateRepository(database, now: () => now);
   });
 }
 
