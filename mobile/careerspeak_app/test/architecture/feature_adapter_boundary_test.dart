@@ -16,12 +16,14 @@ void main() {
       if (source.contains('data/mock/') ||
           source.contains('data/local/') ||
           source.contains('data/secure/') ||
+          source.contains('data/remote/') ||
           source.contains('mock_content_repository.dart') ||
           source.contains('mock_test_repository.dart') ||
           source.contains('drift_learner_state_repository.dart') ||
           source.contains(
             'flutter_secure_installation_credential_store.dart',
-          )) {
+          ) ||
+          source.contains('http_api_client.dart')) {
         violations.add(entity.path);
       }
     }
