@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/repository_providers.dart';
+import '../../domain/content_item.dart';
 import '../../domain/content_marker_state.dart';
 import '../shared/content_card.dart';
 
@@ -11,10 +12,25 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(contentRepositoryProvider);
+    final contentPage = ref.watch(contentPageProvider);
     final markers = ref.watch(contentMarkersProvider);
-    final items = repository.all;
 
+    return contentPage.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) => _HomeLoadError(error: error),
+      data: (page) => _HomeContent(items: page.items, markers: markers),
+    );
+  }
+}
+
+class _HomeContent extends StatelessWidget {
+  const _HomeContent({required this.items, required this.markers});
+
+  final List<ContentItem> items;
+  final Map<String, ContentMarkerState> markers;
+
+  @override
+  Widget build(BuildContext context) {
     final completed = items
         .where((item) => markers[item.code]?.completed ?? false)
         .length;
@@ -26,10 +42,14 @@ class HomeScreen extends ConsumerWidget {
         .length;
     final due = items.length - completed;
 
-    final continueItem = items.firstWhere(
-      (item) => !(markers[item.code]?.completed ?? false),
-      orElse: () => items.first,
-    );
+    ContentItem? continueItem;
+    for (final item in items) {
+      if (!(markers[item.code]?.completed ?? false)) {
+        continueItem = item;
+        break;
+      }
+    }
+    continueItem ??= items.isEmpty ? null : items.first;
 
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -72,34 +92,43 @@ class HomeScreen extends ConsumerWidget {
         const SizedBox(height: 28),
         Text('Continue learning', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  continueItem.title,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 6),
-                Text(continueItem.subtitle),
-                const SizedBox(height: 16),
-                LinearProgressIndicator(
-                  value: items.isEmpty ? 0 : completed / items.length,
-                ),
-                const SizedBox(height: 8),
-                Text('$completed of ${items.length} mock items completed'),
-                const SizedBox(height: 14),
-                FilledButton.icon(
-                  onPressed: () => context.push('/content/${continueItem.code}'),
-                  icon: const Icon(Icons.play_arrow),
-                  label: const Text('Continue'),
-                ),
-              ],
+        if (continueItem == null)
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Text('No learning content is available yet.'),
+            ),
+          )
+        else
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    continueItem.title,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(continueItem.subtitle),
+                  const SizedBox(height: 16),
+                  LinearProgressIndicator(
+                    value: items.isEmpty ? 0 : completed / items.length,
+                  ),
+                  const SizedBox(height: 8),
+                  Text('$completed of ${items.length} items completed'),
+                  const SizedBox(height: 14),
+                  FilledButton.icon(
+                    onPressed: () =>
+                        context.push('/content/${continueItem!.code}'),
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('Continue'),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
         const SizedBox(height: 24),
         Text('Quick access', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 8),
@@ -129,6 +158,22 @@ class HomeScreen extends ConsumerWidget {
         const SizedBox(height: 8),
         for (final item in items.take(3)) ContentCard(item: item),
       ],
+    );
+  }
+}
+
+class _HomeLoadError extends StatelessWidget {
+  const _HomeLoadError({required this.error});
+
+  final Object error;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Text('Unable to load learning content.\n$error'),
+      ),
     );
   }
 }
