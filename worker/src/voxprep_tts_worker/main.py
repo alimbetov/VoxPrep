@@ -5,12 +5,9 @@ import signal
 import sys
 import threading
 
-from voxprep_tts_worker.adapters.foundation import (
-    FoundationBackend,
-    FoundationModelCache,
-    FoundationPostprocessor,
-    FoundationSynthesizer,
-)
+from voxprep_tts_worker.adapters.audio import FfmpegPostprocessor, PiperSynthesizer
+from voxprep_tts_worker.adapters.backend_http import HttpBackendAdapter
+from voxprep_tts_worker.adapters.model_cache import BackendModelCache
 from voxprep_tts_worker.application.job_processor import JobProcessor
 from voxprep_tts_worker.application.worker_loop import WorkerLoop
 from voxprep_tts_worker.config import ConfigurationError, WorkerSettings
@@ -34,26 +31,37 @@ def _install_signal_handlers(shutdown: threading.Event) -> None:
     signal.signal(signal.SIGINT, request_shutdown)
 
 
-def build_foundation_loop(
+def build_production_loop(
     settings: WorkerSettings,
     shutdown: threading.Event,
-) -> WorkerLoop:
-    backend = FoundationBackend()
+) -> tuple[WorkerLoop, HttpBackendAdapter]:
+    backend = HttpBackendAdapter(
+        base_url=settings.base_url,
+        worker_token=settings.worker_token,
+        connect_timeout_seconds=settings.http_connect_timeout_seconds,
+        request_timeout_seconds=settings.http_request_timeout_seconds,
+    )
+    model_cache = BackendModelCache(
+        cache_root=settings.model_cache_dir,
+        source=backend,
+    )
     processor = JobProcessor(
         worker_id=settings.worker_id,
         temp_dir=settings.temp_dir,
         backend=backend,
-        model_cache=FoundationModelCache(),
-        synthesizer=FoundationSynthesizer(),
-        postprocessor=FoundationPostprocessor(),
+        model_cache=model_cache,
+        synthesizer=PiperSynthesizer(),
+        postprocessor=FfmpegPostprocessor(),
+        heartbeat_interval_seconds=settings.lease_heartbeat_interval_seconds,
     )
-    return WorkerLoop(
+    loop = WorkerLoop(
         worker_id=settings.worker_id,
         backend=backend,
         processor=processor,
         poll_interval_seconds=settings.poll_interval_seconds,
         shutdown=shutdown,
     )
+    return loop, backend
 
 
 def main() -> int:
@@ -67,13 +75,16 @@ def main() -> int:
     shutdown = threading.Event()
     _install_signal_handlers(shutdown)
 
-    logger.warning(
-        "W1 foundation runtime active; real Backend HTTP adapter is introduced in W2",
+    logger.info(
+        "functional TTS worker active",
         extra={"worker_id": settings.worker_id, "base_url": settings.base_url},
     )
 
-    loop = build_foundation_loop(settings, shutdown)
-    loop.run()
+    loop, backend = build_production_loop(settings, shutdown)
+    try:
+        loop.run()
+    finally:
+        backend.close()
     return 0
 
 
