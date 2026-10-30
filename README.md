@@ -12,7 +12,7 @@ READ → LISTEN → REPEAT → TEST → REVIEW
 
 CareerSpeak teaches English only. Other languages are used for UI, translations, hints and explanations.
 
-## Architecture baseline v0.7
+## Architecture baseline v0.8
 
 ```text
 Flutter
@@ -42,7 +42,7 @@ The backend is a **Spring Boot modular monolith**.
 
 ### ADMIN
 
-One secured administrative account for MVP.
+One secured administrative account:
 
 ```text
 fixed username
@@ -52,25 +52,23 @@ Spring Security server-side session
 
 ADMIN performs all authoring, localization, TTS model/voice management, audio review, publication and activation/deactivation.
 
-No Moderator/Editor/Reviewer hierarchy, user-role tables, OAuth, LDAP or Keycloak in MVP.
-
 ### Flutter Installation
 
-No personal learner account.
+No personal learner account:
 
 ```text
 first launch
 → random installationId
 → backend registration
 → backend-issued installation token
-→ secure local storage
+→ Secure Storage
 ```
 
 Learner progress/favorites/test history stay local by default.
 
 ### TTS Worker
 
-A server-managed long-running Python process/container:
+Server-managed long-running Python process/container:
 
 ```text
 Python + Piper + FFmpeg
@@ -78,8 +76,6 @@ machine token
 auto-start / auto-restart
 local immutable model cache
 ```
-
-The worker does not connect directly to PostgreSQL and does not hold permanent RustFS credentials.
 
 ## Backend stack
 
@@ -114,44 +110,147 @@ Kubernetes
 Elasticsearch
 ```
 
-## TTS queue
-
-TTS jobs use PostgreSQL as a durable queue.
-
-Worker claim is based on an atomic transaction using:
-
-```sql
-FOR UPDATE SKIP LOCKED
-```
-
-with:
+## Flutter mobile baseline
 
 ```text
-worker_id
-lease_token
-lease_until
-heartbeat
-attempt_count
-fingerprint
+Flutter + Dart
+Riverpod
+go_router
+Drift + SQLite
+Secure Storage
+local filesystem
+HTTP API adapter
+shared audio playback abstraction
 ```
 
-This supports one worker now and multiple workers later without introducing RabbitMQ.
-
-## TTS model storage
-
-Logical voice and exact model revision are separate:
+Feature-first modules include:
 
 ```text
-TtsVoice
-US / Female / Lessac
-        │
-        ├── Model v1 DEPRECATED
-        └── Model v2 ACTIVE
+onboarding
+home
+vocabulary
+interview
+topics
+phrases
+shadowing
+assessment
+review
+favorites
+downloads
+settings
+storage_management
 ```
 
-Every TTS job resolves an exact immutable `voice_model_id` before execution.
+Shared mobile services:
 
-Piper `.onnx` and config files are stored privately in RustFS. Worker downloads a missing exact model through temporary authorization, verifies SHA-256 and caches it locally.
+```text
+ContentSyncCoordinator
+DownloadManager
+AssetResolver
+StorageRetentionManager
+AudioPlaybackController
+ReviewScheduler
+```
+
+## Language support
+
+CareerSpeak separates application UI localization from educational content localization.
+
+### UI strings
+
+```text
+ARB
+Flutter gen-l10n
+```
+
+Initial UI locales:
+
+```text
+en
+ru
+kk
+```
+
+### Content translation
+
+Backend-driven:
+
+```text
+translation
+hint
+explanation
+localized labels
+```
+
+Flutter distinguishes:
+
+```text
+uiLocale
+translationLocale
+preferredAccent
+```
+
+English remains the fixed learning language. Content locale changes use locale deltas and SHOULD NOT redownload unchanged English audio.
+
+## Offline-first mobile flow
+
+```text
+START
+→ open Drift/local files
+→ load settings/locale/theme
+→ load cached content
+→ render UI immediately
+→ sync manifests in parallel
+```
+
+Content updates use:
+
+```text
+root manifest
+pack manifests
+locale deltas
+tombstones
+checksums
+staging + verification + atomic activation
+```
+
+A failed update never replaces the last known-good local snapshot.
+
+## Downloads and assets
+
+`DownloadManager` handles:
+
+```text
+QUEUED
+DOWNLOADING
+VERIFYING
+READY
+PAUSED
+FAILED
+CANCELLED
+```
+
+`AssetResolver` hides storage source:
+
+```text
+verified local file
+or
+CDN/Edge → RustFS
+```
+
+## Audio / Shadowing
+
+Shared playback supports:
+
+```text
+play/pause/seek
+0.75x / 1.0x / 1.25x
+repeat 1 / 3 / 5 / infinite
+skip back/forward
+segment repeat where deterministic segmentation exists
+```
+
+Shadowing uses backend-published stable segment/order metadata rather than punctuation guessing.
 
 ## Content lifecycle
 
@@ -176,23 +275,11 @@ Learner API exposes only:
 PUBLISHED + ACTIVE
 ```
 
-## Content delivery
+## Content delivery and retention
 
 Learner collections use cursor/keyset pagination.
 
-Flutter synchronizes through root/pack manifests and tombstones.
-
-Published media path:
-
-```text
-Flutter → CDN/Edge → RustFS
-```
-
-Spring Boot does not proxy normal learner media bytes.
-
-## Flutter local retention
-
-Durable learner data is separated from re-downloadable content/media.
+Flutter keeps durable progress separate from re-downloadable content/media.
 
 Automatic cleanup uses:
 
@@ -210,13 +297,35 @@ reference-safe shared-asset deletion
 
 Media eviction never removes learner progress.
 
+## TTS queue
+
+PostgreSQL is the durable queue.
+
+Worker claim uses an atomic transaction based on:
+
+```sql
+FOR UPDATE SKIP LOCKED
+```
+
+with:
+
+```text
+worker_id
+lease_token
+lease_until
+heartbeat
+attempt_count
+fingerprint
+```
+
 ## Specifications
 
-- [System Requirements & Architecture Specification v0.7](docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
-- [Globalization & Localization Requirements v0.4](docs/specification/CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
+- [System Requirements & Architecture Specification v0.8](docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
+- [Flutter Mobile Application Requirements v1.0](docs/specification/CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md)
+- [Globalization & Localization Requirements v0.5](docs/specification/CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
 - [Content Delivery, Availability & Local Retention Requirements v1.1](docs/specification/CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md)
 - [TTS Worker & Audio Production Architecture v1.2](docs/architecture/CAREERSPEAK_TTS_PIPELINE.md)
-- [P0 Domain & Contract Design Plan v1.1](docs/architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md)
+- [P0 Domain & Contract Design Plan v1.2](docs/architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md)
 
 ## Current stage
 
@@ -236,15 +345,15 @@ P0.4  Media / RustFS
 P0.5  TTS
 P0.6  Interview
 P0.7  Vocabulary
-P0.8  Topic / Phrase / Shadowing
+P0.8  Topic / Phrase / Shadowing Content
 P0.9  Assessment
 P0.10 Manifest / Content Delivery
 P0.11 Pagination Contract
-P0.12 Flutter Local Domain / Retention
+P0.12 Flutter Application Contract
 P0.13 Security / Installation
 P0.14 Content Studio
-P0.15 Integrated ERD + OpenAPI
+P0.15 Integrated ERD + Mobile ERD + OpenAPI
 P0.16 Architecture Freeze
 ```
 
-The next design slice is **P0.0 Common Contract & Domain Conventions**, followed by **P0.1 Revision / Publication / Availability**.
+P0.12 includes feature boundaries, Riverpod ownership, navigation, Drift ERD, installation/API client, localization/RTL, manifest sync, downloads, asset resolution, audio/shadowing, assessment, review scheduling, retention and recovery behavior.
