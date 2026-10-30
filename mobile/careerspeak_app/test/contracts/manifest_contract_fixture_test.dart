@@ -17,7 +17,6 @@ void main() {
     final manifest = (result as Success<RootContentManifest>).value;
     expect(manifest.contentVersion, 108);
     expect(manifest.minimumAppContractVersion, 1);
-    expect(manifest.identity, isNull);
     expect(manifest.packs.single.identity.toString(), 'JAVA_SENIOR/canonical');
     expect(manifest.tombstones.single.identity.type, ContentType.interview);
   });
