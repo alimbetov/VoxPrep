@@ -1,0 +1,489 @@
+openapi: 3.1.0
+info:
+  title: CareerSpeak Learner API
+  version: 1.0.0
+  description: >-
+    Wire contract consumed by the Flutter installation runtime. Backend persistence
+    entities are explicitly not part of this contract.
+
+paths:
+  /api/v1/installations:
+    post:
+      operationId: registerInstallation
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstallationRegistrationRequest'
+      responses:
+        '200':
+          description: Installation registered or idempotently re-registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstallationRegistrationResponse'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  /api/v1/content/manifest:
+    get:
+      operationId: getRootContentManifest
+      security:
+        - installationBearer: []
+      parameters:
+        - name: locale
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$'
+        - name: If-None-Match
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Current root content snapshot.
+          headers:
+            ETag:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RootContentManifest'
+        '304':
+          description: The supplied ETag still identifies the current snapshot.
+          headers:
+            ETag:
+              schema:
+                type: string
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  /api/v1/content/packs/{packCode}/manifest:
+    get:
+      operationId: getPackContentManifest
+      security:
+        - installationBearer: []
+      parameters:
+        - name: packCode
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/BusinessCode'
+        - name: variant
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/PackVariant'
+        - name: revision
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/PositiveRevision'
+      responses:
+        '200':
+          description: Exact immutable pack manifest revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PackContentManifest'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+  /api/v1/content/{contentType}/{contentCode}/revisions/{revision}:
+    get:
+      operationId: getCanonicalContentPayload
+      description: >-
+        Returns canonical English learner content for one exact immutable content
+        revision. Locale packs do not duplicate this payload.
+      security:
+        - installationBearer: []
+      parameters:
+        - name: contentType
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ContentType'
+        - name: contentCode
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/BusinessCode'
+        - name: revision
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/PositiveRevision'
+      responses:
+        '200':
+          description: Exact canonical learner payload revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentPayload'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+components:
+  securitySchemes:
+    installationBearer:
+      type: http
+      scheme: bearer
+      description: Opaque backend-issued installation token stored in platform Secure Storage.
+
+  responses:
+    ApiError:
+      description: Typed API failure.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
+  schemas:
+    BusinessCode:
+      type: string
+      minLength: 1
+      pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$'
+
+    StableTaxonomyCode:
+      type: string
+      minLength: 1
+      pattern: '^[A-Z0-9][A-Z0-9._-]*$'
+
+    Sha256:
+      type: string
+      pattern: '^[0-9a-f]{64}$'
+
+    PositiveRevision:
+      type: integer
+      minimum: 1
+
+    CanonicalUtcInstant:
+      type: string
+      format: date-time
+      pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$'
+
+    ContentType:
+      type: string
+      enum:
+        - vocabulary
+        - interview
+        - topic
+        - shadowing
+        - phrase
+
+    PackVariant:
+      type: string
+      pattern: '^(?:canonical|locale:[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*)$'
+
+    InstallationRegistrationRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - installationId
+      properties:
+        installationId:
+          type: string
+          minLength: 1
+
+    InstallationRegistrationResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - installationToken
+      properties:
+        installationToken:
+          type: string
+          minLength: 1
+
+    ApiError:
+      type: object
+      additionalProperties: true
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+        traceId:
+          type:
+            - string
+            - 'null'
+        details:
+          type: object
+          additionalProperties: true
+          default: {}
+
+    PackRevisionRef:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - variant
+        - revision
+        - checksum
+      properties:
+        code:
+          $ref: '#/components/schemas/BusinessCode'
+        variant:
+          $ref: '#/components/schemas/PackVariant'
+        revision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+
+    ContentTombstone:
+      type: object
+      additionalProperties: false
+      required:
+        - contentCode
+        - contentType
+        - revision
+        - reason
+      properties:
+        contentCode:
+          $ref: '#/components/schemas/BusinessCode'
+        contentType:
+          $ref: '#/components/schemas/ContentType'
+        revision:
+          $ref: '#/components/schemas/PositiveRevision'
+        reason:
+          type: string
+          minLength: 1
+
+    RootContentManifest:
+      type: object
+      additionalProperties: false
+      required:
+        - schemaVersion
+        - contentVersion
+        - minimumAppContractVersion
+        - publishedAt
+        - checksum
+        - packs
+        - tombstones
+      properties:
+        schemaVersion:
+          type: integer
+          minimum: 1
+          maximum: 1
+        contentVersion:
+          type: integer
+          minimum: 1
+        minimumAppContractVersion:
+          type: integer
+          minimum: 1
+        publishedAt:
+          $ref: '#/components/schemas/CanonicalUtcInstant'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+        packs:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackRevisionRef'
+        tombstones:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentTombstone'
+
+    PackContentRef:
+      type: object
+      additionalProperties: false
+      required:
+        - contentCode
+        - contentType
+        - revision
+        - checksum
+      properties:
+        contentCode:
+          $ref: '#/components/schemas/BusinessCode'
+        contentType:
+          $ref: '#/components/schemas/ContentType'
+        revision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+        sortOrder:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+        publishedAt:
+          oneOf:
+            - $ref: '#/components/schemas/CanonicalUtcInstant'
+            - type: 'null'
+
+    ManifestAssetDescriptor:
+      type: object
+      additionalProperties: false
+      required:
+        - assetId
+        - checksumSha256
+        - deliveryKey
+        - sizeBytes
+        - mediaType
+        - requiredOffline
+      properties:
+        assetId:
+          type: string
+          minLength: 1
+        checksumSha256:
+          $ref: '#/components/schemas/Sha256'
+        deliveryKey:
+          type: string
+          minLength: 1
+        sizeBytes:
+          type: integer
+          minimum: 1
+        mediaType:
+          type: string
+          minLength: 1
+        requiredOffline:
+          type: boolean
+
+    ContentAssetRef:
+      type: object
+      additionalProperties: false
+      required:
+        - contentCode
+        - contentType
+        - contentRevision
+        - assetId
+        - role
+      properties:
+        contentCode:
+          $ref: '#/components/schemas/BusinessCode'
+        contentType:
+          $ref: '#/components/schemas/ContentType'
+        contentRevision:
+          $ref: '#/components/schemas/PositiveRevision'
+        assetId:
+          type: string
+          minLength: 1
+        role:
+          type: string
+          minLength: 1
+
+    PackContentManifest:
+      type: object
+      additionalProperties: false
+      required:
+        - schemaVersion
+        - code
+        - variant
+        - revision
+        - checksum
+        - contents
+        - assets
+        - contentAssets
+      properties:
+        schemaVersion:
+          type: integer
+          minimum: 1
+          maximum: 1
+        code:
+          $ref: '#/components/schemas/BusinessCode'
+        variant:
+          $ref: '#/components/schemas/PackVariant'
+        revision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+        contents:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackContentRef'
+        assets:
+          type: array
+          items:
+            $ref: '#/components/schemas/ManifestAssetDescriptor'
+        contentAssets:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentAssetRef'
+
+    ContentPayload:
+      type: object
+      additionalProperties: false
+      required:
+        - contentCode
+        - contentType
+        - revision
+        - checksum
+        - title
+        - subtitle
+        - description
+        - categoryCode
+        - categoryLabel
+        - levelCode
+        - levelLabel
+        - minutes
+        - hasAudio
+      properties:
+        contentCode:
+          $ref: '#/components/schemas/BusinessCode'
+        contentType:
+          $ref: '#/components/schemas/ContentType'
+        revision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+        title:
+          type: string
+          minLength: 1
+        subtitle:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        categoryCode:
+          $ref: '#/components/schemas/StableTaxonomyCode'
+        categoryLabel:
+          type: string
+          minLength: 1
+        levelCode:
+          $ref: '#/components/schemas/StableTaxonomyCode'
+        levelLabel:
+          type: string
+          minLength: 1
+        minutes:
+          type: integer
+          minimum: 1
+        hasAudio:
+          type: boolean
