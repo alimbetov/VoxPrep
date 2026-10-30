@@ -1,99 +1,90 @@
 # CareerSpeak — P0.12.7 ContentSyncCoordinator State Machine
 
-**Document version:** 0.1  
-**Status:** Working design / P0.12.7  
-**Applies to:** CareerSpeak v0.8+  
-**Branch:** `feat/p0-domain-contracts`
+**Document version:** 1.0  
+**Status:** Normative mobile synchronization baseline  
+**Applies to:** CareerSpeak v0.9+
+
+Related standards:
+
+- [`../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md`](../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md)
+- [`CAREERSPEAK_DRIFT_ERD.md`](CAREERSPEAK_DRIFT_ERD.md)
 
 ---
 
-## 1. Goal
+## 1. Responsibility
 
-`ContentSyncCoordinator` is the single application service responsible for moving CareerSpeak from one valid local content snapshot to another without breaking offline usage.
+`ContentSyncCoordinator` moves Flutter from one valid local metadata snapshot to another while preserving offline usability.
 
-The coordinator SHALL guarantee:
+It owns:
 
 ```text
-last-known-good snapshot remains usable
-partial downloads never become active
-unsupported schema never replaces compatible local data
-crash during sync is recoverable
-content/tombstones activate atomically
-explicit offline packs remain atomically usable
-sync does not download all media by default
+root manifest check
+pack/locale-variant planning
+metadata staging
+metadata verification
+atomic CURRENT switch
+tombstone application
+sync crash recovery
+coordination with DownloadManager
+post-commit cleanup scheduling
+```
+
+It does not own:
+
+```text
+raw byte transfer mechanics
+audio playback
+learner progress
+TTS
+UI rendering
 ```
 
 ---
 
-## 2. Ownership boundaries
+## 2. Core invariants
 
 ```text
-ContentSyncCoordinator
-├── ApiClient / ManifestRepository
-├── PackRepository
-├── Drift database
-├── DownloadManager
-├── AssetResolver metadata
-├── StorageRetentionManager
-└── InstallationSession
-```
-
-The coordinator does NOT:
-
-```text
-render UI
-play audio
-perform TTS
-score tests
-own learner progress
-proxy raw HTTP into widgets
+SYNC-001 one coordinator mutation run at a time
+SYNC-002 last-known-good CURRENT snapshot survives failed sync
+SYNC-003 network/filesystem work occurs outside Drift write transactions
+SYNC-004 metadata visibility switches only in one short atomic transaction
+SYNC-005 tombstones apply during that metadata commit
+SYNC-006 repeated sync to same immutable target is idempotent
+SYNC-007 learner state is never deleted by metadata replacement
+SYNC-008 normal metadata sync does not require all media bytes
+SYNC-009 explicit offline replacement does not destroy old READY bundle early
+SYNC-010 backend ACTIVE, Flutter CURRENT and offline READY remain separate concepts
 ```
 
 ---
 
-## 3. Fundamental invariants
+## 3. Root version model
 
-### SYNC-INV-001 — One active coordinator run
+Backend publishes one root:
 
-Only one non-terminal sync run may mutate staging state at a time.
+```text
+contentVersion
+```
 
-Multiple triggers are coalesced through `resync_requested` rather than starting parallel syncs.
+The root references exact pack variants:
 
-### SYNC-INV-002 — Last-known-good remains active
+```text
+JAVA_SENIOR / canonical / rev 8
+JAVA_SENIOR / locale:kk / rev 4
+```
 
-A failed or interrupted sync SHALL NOT deactivate the currently active snapshot.
+Flutter stores:
 
-### SYNC-INV-003 — Network work outside DB transaction
+```text
+remoteContentVersionSeen
+currentContentVersion
+```
 
-No network download or long filesystem operation is performed while a Drift write transaction is held open.
-
-### SYNC-INV-004 — Short atomic activation
-
-Visibility switches only inside one short SQLite transaction after all required staging verification succeeds.
-
-### SYNC-INV-005 — Tombstones are commit data
-
-A tombstone is not destructively applied when first observed. It becomes visible only during the same activation commit as the target manifest version.
-
-### SYNC-INV-006 — Binary policy depends on retention intent
-
-Normal streaming/cache sync does not download every media file.
-
-`EXPLICIT_DOWNLOAD` / `PINNED` pack updates require all `required_offline` assets before activation.
-
-### SYNC-INV-007 — Content and learner state are independent
-
-Tombstones/supersession may remove disposable content snapshots but SHALL NOT remove favorites, progress, review history or test attempts.
-
-### SYNC-INV-008 — Repeated sync is idempotent
-
-Re-running the same target manifest/version SHALL produce the same active result without duplicated content/assets.
+`currentContentVersion` advances only after metadata activation commits.
 
 ---
 
-## 4. Sync triggers
-
-Accepted triggers:
+## 4. Triggers
 
 ```text
 STARTUP
@@ -104,17 +95,13 @@ PERIODIC_FRESHNESS
 RECOVERY
 ```
 
-Priority guidance:
+If a trigger arrives while a run is active:
 
 ```text
-RECOVERY
-MANUAL / PACK_DOWNLOAD
-LOCALE_CHANGE
-STARTUP
-PERIODIC_FRESHNESS
+resync_requested = true
 ```
 
-Priority affects scheduling only; correctness is identical.
+Do not run parallel metadata mutation coordinators.
 
 ---
 
@@ -138,82 +125,220 @@ FAILED_FATAL
 CANCELLED
 ```
 
-Terminal states:
+Terminal runs remain immutable history; a retry creates a new run.
+
+---
+
+## 6. State machine
 
 ```text
+CREATED
+   ↓
+CHECKING_LOCAL
+   ↓
+CHECKING_REMOTE
+   ├── no network ─────────► DEFERRED_OFFLINE
+   ├── unsupported schema ─► BLOCKED_SCHEMA
+   ↓
+PLANNING
+   ↓
+STAGING
+   ↓
+VERIFYING
+   ↓
+COMMITTING
+   ↓
+CLEANING
+   ↓
 SUCCEEDED
-DEFERRED_OFFLINE
-BLOCKED_SCHEMA
+```
+
+Classified failures transition to:
+
+```text
 FAILED_RETRYABLE
 FAILED_FATAL
-CANCELLED
 ```
 
-A later trigger creates a new run rather than mutating an old terminal run back to active.
+The prior CURRENT snapshot remains available whenever possible.
 
 ---
 
-## 6. Global state machine
+## 7. Startup recovery
+
+Before starting a fresh sync, inspect non-terminal `sync_run` state.
+
+### Before COMMITTING
 
 ```text
-                    ┌─────────┐
-                    │ CREATED │
-                    └────┬────┘
-                         ▼
-                 ┌───────────────┐
-                 │ CHECKING_LOCAL│
-                 └───────┬───────┘
-                         ▼
-                 ┌───────────────┐
-                 │CHECKING_REMOTE│
-                 └───┬─────┬─────┘
-                     │     │
-               offline│     │schema unsupported
-                     │     │
-                     ▼     ▼
-             DEFERRED   BLOCKED_SCHEMA
-             _OFFLINE
-                     
-                         │ remote valid
-                         ▼
-                    ┌────────┐
-                    │PLANNING│
-                    └───┬────┘
-                        ▼
-                    ┌───────┐
-                    │STAGING│
-                    └───┬───┘
-                        ▼
-                  ┌───────────┐
-                  │ VERIFYING │
-                  └─────┬─────┘
-                        ▼
-                  ┌───────────┐
-                  │COMMITTING │
-                  └─────┬─────┘
-                        ▼
-                  ┌───────────┐
-                  │ CLEANING  │
-                  └─────┬─────┘
-                        ▼
-                   ┌─────────┐
-                   │SUCCEEDED│
-                   └─────────┘
+preserve existing CURRENT snapshot
+inspect/reuse safe verified files
+clean unsafe temp files
+close interrupted run as retryable/recovery-cancelled
+start RECOVERY run when possible
 ```
 
-Errors from active stages route to `FAILED_RETRYABLE` or `FAILED_FATAL` according to classified cause.
+### During COMMITTING
+
+SQLite decides:
+
+```text
+transaction committed
+→ new CURRENT snapshot is consistent
+
+transaction rolled back
+→ old CURRENT snapshot remains consistent
+```
+
+### During CLEANING
+
+New metadata is already CURRENT. Cleanup is idempotent and resumes later.
 
 ---
 
-## 7. Pack-update states
+## 8. CHECKING_LOCAL
 
-Each changed pack/variant is tracked independently inside the run.
+Read/validate:
+
+```text
+content_manifest_state
+CURRENT pack revisions
+translationLocale
+offline pack intents
+unfinished downloads
+local schema capabilities
+```
+
+Cheap invariants:
+
+```text
+at most one CURRENT revision per pack variant
+CURRENT manifest references resolvable CURRENT pack rows
+no learner query reads STAGING content
+```
+
+Do not checksum every local file on every startup.
+
+---
+
+## 9. CHECKING_REMOTE
+
+Preconditions:
+
+```text
+network reachable
+installation token usable
+```
+
+Request:
+
+```text
+GET /api/v1/content/manifest?locale=<translationLocale>
+If-None-Match: <etag>
+```
+
+Root response must provide enough information to determine:
+
+```text
+schemaVersion
+contentVersion
+manifest checksum/etag
+pack code
+variant key
+pack revision
+pack checksum
+tombstones
+compatibility policy
+```
+
+`304 Not Modified` or equivalent may finish as no-op unless local repair/offline-download work remains.
+
+---
+
+## 10. Offline behavior
+
+If remote check fails because device is offline:
+
+```text
+CURRENT local snapshot exists
+→ DEFERRED_OFFLINE
+→ learning continues
+
+no CURRENT local snapshot
+→ DEFERRED_OFFLINE
+→ bundled/onboarding shell only
+```
+
+Offline is not data corruption.
+
+---
+
+## 11. Schema compatibility gate
+
+Before staging:
+
+```text
+remote schema supported?
+├── yes → continue
+└── no  → BLOCKED_SCHEMA
+```
+
+`BLOCKED_SCHEMA` keeps the last compatible CURRENT snapshot and may show an application-update requirement.
+
+---
+
+## 12. PLANNING
+
+Compute deterministic plan from:
+
+```text
+CURRENT root snapshot
+remote root snapshot
+CURRENT pack variants
+translationLocale
+offline pack intent
+verified local asset hashes
+```
+
+Plan contains:
+
+```text
+changed canonical variants
+changed locale variants
+tombstones
+new/changed asset descriptors
+metadata to supersede
+optional offline replacement tasks
+```
+
+Persist plan before large transfers.
+
+---
+
+## 13. Locale change
+
+UI strings are bundled with Flutter and are not synced here.
+
+When `translationLocale` changes:
+
+```text
+reuse CURRENT canonical English variant
+fetch/stage required locale variant
+reuse canonical English audio descriptors/files
+```
+
+If locale variant is unavailable offline, canonical English remains usable according to fallback policy.
+
+---
+
+## 14. Pack metadata states
+
+Per planned pack variant:
 
 ```text
 PLANNED
 FETCHING_MANIFEST
 STAGING_METADATA
-WAITING_ASSETS
 VERIFYING
 READY_TO_COMMIT
 COMMITTED
@@ -222,294 +347,19 @@ FAILED
 SUPERSEDED
 ```
 
-Pack state machine:
+Offline asset work is tracked separately in `offline_pack_state` / `download_task`.
 
-```text
-PLANNED
-  ↓
-FETCHING_MANIFEST
-  ↓
-STAGING_METADATA
-  ↓
-retention requires offline assets?
- ├── no  ───────────────┐
- └── yes → WAITING_ASSETS
-                    │
-                    ▼
-                VERIFYING
-                    ↓
-             READY_TO_COMMIT
-                    ↓
-                COMMITTED
-```
-
-`SUPERSEDED` means the remote target changed while the current staged pack was still being prepared. It is discarded without activation.
+A metadata pack does not stay blocked merely because optional streamable media is not locally present.
 
 ---
 
-## 8. Startup recovery before normal sync
+## 15. STAGING metadata
 
-Every startup calls recovery before starting a fresh remote check.
-
-Algorithm:
+For each changed variant, write staged rows in short Drift transactions:
 
 ```text
-load non-terminal sync_run
-        ↓
-none?
- ├── yes → normal startup sync
- └── no
-      ↓
-inspect state
-```
-
-Recovery rules:
-
-### Run was before COMMITTING
-
-```text
-CREATED / CHECKING_* / PLANNING / STAGING / VERIFYING
-→ preserve ACTIVE snapshot
-→ inspect/remove unsafe temporary files
-→ keep reusable VERIFIED files
-→ mark old run FAILED_RETRYABLE or CANCELLED_BY_RECOVERY
-→ start RECOVERY run when network is available
-```
-
-### Crash during COMMITTING
-
-SQLite transaction semantics decide outcome:
-
-```text
-transaction committed
-→ new active manifest/pack states are already consistent
-→ continue CLEANING
-
-transaction did not commit
-→ SQLite rollback preserved old snapshot
-→ retry staging/commit later
-```
-
-### Crash during CLEANING
-
-```text
-new snapshot is already ACTIVE
-→ cleanup is repeatable/idempotent
-→ resume cleanup
-```
-
----
-
-## 9. Phase A — acquire coordinator ownership
-
-`ContentSyncCoordinator` serializes triggers.
-
-Conceptual behavior:
-
-```text
-trigger arrives
- ↓
-active run exists?
-├── no  → create new sync_run
-└── yes → set resync_requested = true
-          return/observe current run
-```
-
-An in-memory mutex is acceptable for process-local serialization, but durable `sync_run` state remains the crash-recovery source of truth.
-
----
-
-## 10. Phase B — CHECKING_LOCAL
-
-Read:
-
-```text
-active content_manifest_state
-active content_pack_revision rows
-current translationLocale
-explicit/pinned offline pack intents
-unfinished download tasks
-local schema/app build capabilities
-```
-
-Validate local invariants cheaply:
-
-```text
-active manifest exists → active packs must resolve
-ACTIVE pack uniqueness
-required DB schema tables available
-no ACTIVE rows pointing only to failed STAGING state
-```
-
-Expensive full-file checksum scans are not required on every startup.
-
----
-
-## 11. Phase C — CHECKING_REMOTE
-
-Preconditions:
-
-```text
-network available
-installation token available/usable
-```
-
-Fetch root manifest for the current translation locale.
-
-Conceptual request:
-
-```text
-GET /api/v1/content/manifest?locale=kk
-If-None-Match: <etag when available>
-```
-
-Expected minimum data:
-
-```text
-schemaVersion
-contentVersion
-manifest checksum/etag
-pack revisions/checksums
-locale variant metadata
-tombstones
-minimum compatible app/schema policy where introduced
-```
-
-If backend returns not modified and no local repair/download intent exists, run may finish `SUCCEEDED` as a no-op.
-
----
-
-## 12. Offline behavior
-
-If remote check cannot occur because the network is unavailable:
-
-```text
-valid local active snapshot exists
-→ DEFERRED_OFFLINE
-→ learner continues normally
-
-no active snapshot exists
-→ DEFERRED_OFFLINE
-→ app may show bundled/onboarding shell only
-```
-
-Network absence is not logged as fatal application corruption.
-
----
-
-## 13. Schema compatibility gate
-
-Before planning any mutation:
-
-```text
-remote schemaVersion supported?
-├── yes → continue
-└── no  → BLOCKED_SCHEMA
-```
-
-`BLOCKED_SCHEMA` behavior:
-
-```text
-keep last compatible ACTIVE snapshot
-show/update-app guidance when appropriate
-never activate partially understood content
-```
-
-No destructive migration is attempted based only on a remote manifest.
-
----
-
-## 14. Phase D — PLANNING
-
-The coordinator calculates a deterministic plan from:
-
-```text
-active manifest state
-remote root manifest
-active pack revisions
-requested translationLocale
-explicit/pinned offline pack state
-local verified asset checksums
-```
-
-Plan items:
-
-```text
-changed canonical packs
-changed locale-delta packs
-new assets/descriptors
-required offline binaries
-tombstones
-superseded staged work
-obsolete pack revisions
-```
-
-The plan is persisted before large downloads begin.
-
----
-
-## 15. Locale-change planning
-
-UI strings are bundled and are not downloaded by `ContentSyncCoordinator`.
-
-Changing `translationLocale` may create locale-delta plan items while reusing canonical English/audio.
-
-Example:
-
-```text
-current locale: ru
-new locale: kk
-
-canonical JAVA_SENIOR rev 8 already ACTIVE
-English audio checksums already VERIFIED
-
-plan:
-→ fetch locale:kk variant
-→ stage kk translation/hint/explanation rows
-→ no duplicate English audio download
-```
-
-If offline and the new locale delta is unavailable:
-
-```text
-new translationLocale preference may remain selected
-→ localized content falls back to English
-→ previously cached other-locale data is not immediately destroyed
-```
-
----
-
-## 16. Phase E — fetch pack manifests
-
-For each changed pack/variant:
-
-```text
-PLANNED
-→ FETCHING_MANIFEST
-```
-
-Validate:
-
-```text
-pack code matches request
-target revision/checksum matches root manifest
-schema compatible
-business-code uniqueness
-asset descriptor shape valid
-content revision references valid
-```
-
-A mismatching pack manifest is a sync failure and SHALL NOT be trusted.
-
----
-
-## 17. Phase F — stage metadata
-
-Write staging rows in a short Drift transaction:
-
-```text
-content_pack_revision(state=STAGING)
-local_content_record(state=STAGED)
+content_pack_revision(STAGING)
+local_content_record(STAGED)
 pack_content_ref
 asset_catalog descriptors
 content_asset_ref
@@ -517,481 +367,312 @@ pack_asset_ref
 typed feature read-model staging rows
 ```
 
-Important:
+Learner repositories exclude STAGING rows.
 
-```text
-ACTIVE repository queries exclude STAGED rows
-```
-
-Staging may be repeated with UPSERT semantics for the same immutable target revision.
+Staging uses idempotent UPSERT semantics for the same immutable target.
 
 ---
 
-## 18. Binary-download policy
+## 16. Metadata verification
 
-This is deliberately separated from metadata synchronization.
-
-### Normal streaming/cache pack
-
-Activation does NOT require every audio/image to exist locally.
-
-Required before activation:
+A variant becomes `READY_TO_COMMIT` when:
 
 ```text
-metadata/schema valid
-asset descriptors valid
-all mandatory non-binary references resolvable
-```
-
-Missing media may be streamed through CDN later and cached on demand.
-
-### EXPLICIT_DOWNLOAD / PINNED pack
-
-If the user asked for offline availability:
-
-```text
-all assets marked required_offline
-→ DownloadManager
-→ checksum verified
-→ local_asset_file = VERIFIED
-→ only then pack may become READY_TO_COMMIT
-```
-
-This prevents an "offline downloaded" pack from becoming active in a partially usable state.
-
----
-
-## 19. DownloadManager interaction
-
-Coordinator creates/observes `download_task` rows; DownloadManager owns transfer mechanics.
-
-Coordinator SHALL NOT duplicate:
-
-```text
-byte-range resume
-HTTP transfer progress
-file temp naming
-checksum calculation
-retry backoff
-atomic final-file rename
-```
-
-It waits for the required task results.
-
-Downloaded file flow:
-
-```text
-remote bytes
-→ temporary file
-→ checksum/size verification
-→ atomic move to content-addressed final path
-→ local_asset_file VERIFIED
-```
-
----
-
-## 20. Phase G — VERIFYING
-
-A pack update becomes `READY_TO_COMMIT` only if all activation requirements are met.
-
-Verification baseline:
-
-```text
-pack manifest checksum valid
-staged content count/identity valid
-no duplicate stable business identity inside revision
+pack identity/revision/checksum matches root manifest
+schema is supported
+stable business identities are valid
 all referenced asset descriptors exist
 typed read-model validation passes
-required locale rows valid according to pack policy
-required_offline binaries verified when pack is explicit/pinned
+required locale payload policy passes
 ```
 
-Optional media for streaming packs may remain absent locally.
+This verification does not require all optional media bytes to be downloaded.
 
 ---
 
-## 21. Global activation barrier
+## 17. Root metadata barrier
 
-CareerSpeak v0.8 uses a conservative global activation barrier per target root manifest version.
-
-Meaning:
+For MVP, all changed metadata variants referenced by target root `contentVersion` must become `READY_TO_COMMIT` before switching the local root snapshot.
 
 ```text
-all changed plan items READY_TO_COMMIT
+all changed metadata READY_TO_COMMIT
         ↓
-one atomic Drift activation transaction
+one Drift activation transaction
 ```
 
-A failed unrelated pack therefore keeps the complete prior root snapshot active until the target root version is fully qualified.
+This guarantees no half-old/half-new local metadata root snapshot.
 
-This favors snapshot consistency over fastest partial publication propagation for MVP.
-
-A later ADR may allow independent pack epochs if scale/content operations justify it.
+It does not mean all audio/image files are local.
 
 ---
 
-## 22. Phase H — COMMITTING
+## 18. COMMITTING
 
-No network or filesystem work occurs in this transaction.
+No network or filesystem I/O inside the transaction.
 
-Single Drift transaction performs:
+Atomic transaction:
 
 ```text
-1. verify run still targets latest accepted manifest
-2. mark new pack revisions ACTIVE
-3. mark previous pack revisions SUPERSEDED
-4. switch typed feature read models to active revisions
-5. activate local_content_record rows
+1. verify target run/manifest is still accepted
+2. new pack revisions VERIFIED/STAGING → CURRENT
+3. previous CURRENT pack revisions → SUPERSEDED
+4. switch typed feature read-model rows
+5. local content rows → CURRENT
 6. apply tombstones
-7. release superseded pack/content asset references
-8. update content_manifest_state active content version/checksum
-9. mark sync_pack_update COMMITTED
-10. mark sync_run ready for CLEANING
+7. switch pack/content asset references
+8. update content_manifest_state.current_content_version/checksum
+9. mark pack updates COMMITTED
+10. move run to CLEANING
 ```
 
-If any DB operation fails:
+Any DB failure:
 
 ```text
 ROLLBACK
-→ prior snapshot remains completely active
+→ prior CURRENT snapshot remains intact
 ```
 
 ---
 
-## 23. Tombstone semantics
+## 19. Tombstones
 
-Tombstone processing inside commit:
+Backend emits tombstones for content no longer deliverable, including deactivated content.
+
+During metadata commit Flutter:
 
 ```text
-find disposable content snapshot by stable identity
-→ mark TOMBSTONED / remove active feature read-model row
-→ release its content/asset references
-→ DO NOT delete durable learner state
+retires CURRENT disposable content
+removes it from learner query read models
+releases disposable asset refs
+preserves learner history
 ```
 
-Preserve:
+Preserved:
 
 ```text
 favorite
 progress
 review schedule
-test history
-recent-content metadata where product UX wants historical continuity
+test attempts/answers
 ```
 
-If content later returns with a new valid revision, durable state may resolve to it again by stable business code.
+Content absence from paginated API results is never treated as a tombstone.
 
 ---
 
-## 24. Phase I — CLEANING
+## 20. Offline bundle update is independent
 
-After DB commit, cleanup is safe and repeatable.
+Backend `PUBLISHED + ACTIVE` means content/assets are available for delivery/download.
 
-Tasks:
+Metadata may become CURRENT before a newly requested offline bundle is READY.
+
+Supported transition:
 
 ```text
-delete obsolete STAGING/SUPERSEDED rows when retention window permits
-remove unreferenced local files selected by retention policy
-remove abandoned temp files
-compact old terminal sync/download rows by policy
-update storage usage metadata
+metadata rev 8 = CURRENT
+ready_revision = 7
+offline_state = UPDATING
+updating_revision = 8
 ```
 
-File deletion uses:
+DownloadManager fetches all `required_offline` assets for rev 8.
+
+Only after verification:
+
+```text
+ready_revision = 8
+offline_state = READY
+```
+
+Then rev 7-only physical assets may be released if no other references protect them.
+
+This guarantees continuous offline usability during bundle replacement.
+
+---
+
+## 21. DownloadManager boundary
+
+DownloadManager owns:
+
+```text
+HTTP bytes
+range/resume where supported
+progress
+temp-file naming
+retry/backoff
+checksum/size verification
+atomic final-file move
+```
+
+Coordinator owns intent and observes task completion.
+
+File flow:
+
+```text
+remote bytes
+→ temp file
+→ verify checksum/size
+→ atomic move to content-addressed location
+→ local_asset_file VERIFIED
+```
+
+---
+
+## 22. CLEANING
+
+After metadata commit:
+
+```text
+remove obsolete staged/superseded metadata by policy
+release unreferenced disposable files
+remove abandoned temp files
+compact terminal sync/download journal rows
+```
+
+Cleanup failure never rolls back already valid CURRENT metadata.
+
+Physical delete:
 
 ```text
 VERIFIED
 → DELETE_PENDING
 → filesystem delete
-→ delete local_asset_file row
-```
-
-A cleanup failure does not roll back the already-valid active snapshot.
-
----
-
-## 25. Manifest version advancement
-
-`active_content_version` advances only after the activation transaction commits.
-
-`remote_content_version_seen` may advance earlier after a valid remote check.
-
-This distinction prevents:
-
-```text
-"we saw version 120"
-```
-
-from being confused with:
-
-```text
-"version 120 is fully active locally"
+→ remove local_asset_file row
 ```
 
 ---
 
-## 26. Retry classification
+## 23. Retry classification
 
-### Retryable
-
-Examples:
+Retryable:
 
 ```text
 OFFLINE
 TIMEOUT
 HTTP 5xx
 CDN temporary failure
-presigned/asset URL expired when refresh contract exists
+expired temporary URL when refresh is supported
 transient filesystem busy
 ```
 
-Result:
+Fatal/blocking target:
 
 ```text
-FAILED_RETRYABLE
+unsupported schema
+persistent manifest checksum mismatch
+pack identity mismatch
+invalid immutable revision contract
+persistent local invariant violation
 ```
 
 Use bounded exponential backoff.
 
-### Fatal/blocking for this target
+---
+
+## 24. Authentication recovery
+
+For `401` learner API response:
+
+```text
+mark token refresh/re-registration required
+invoke installation credential recovery contract
+retry safe read only after credential recovery
+```
+
+Do not destroy CURRENT local learning data because authentication temporarily fails.
+
+---
+
+## 25. Superseded remote target
+
+If Backend publishes a newer root version while current target is still staging:
+
+```text
+current target may finish only if still accepted by consistency policy
+otherwise mark staged work SUPERSEDED
+set resync_requested
+plan newest root
+```
+
+Never claim an unseen/staged version as `currentContentVersion`.
+
+---
+
+## 26. Error exposure
+
+Coordinator exposes typed application state, not transport exceptions.
 
 Examples:
 
 ```text
+OFFLINE
+SYNC_FAILED
+SCHEMA_UNSUPPORTED
+AUTH_REQUIRED
+CHECKSUM_FAILED
+LOCAL_DATA_CORRUPT
+```
+
+Raw HTTP/SQLite stack details remain logs/diagnostics.
+
+---
+
+## 27. Observability
+
+Keep local operational diagnostics such as:
+
+```text
+runId
+trigger
+from/target contentVersion
+state
+started/finished time
+pack counts
+error code
+retryability
+```
+
+Do not attach learner progress/profile data to backend installation identity for telemetry.
+
+---
+
+## 28. Acceptance matrix
+
+Must prove:
+
+```text
+same-version no-op
+metadata N→N+1 atomic switch
+network loss before staging
+network loss during pack fetch
+crash before commit
+crash during commit
+crash after commit before cleanup
 unsupported schema
-manifest checksum mismatch after refetch
-pack identity mismatch
-invalid immutable revision contract
-persistent local DB invariant violation
-```
-
-Result:
-
-```text
-BLOCKED_SCHEMA
-or
-FAILED_FATAL
-```
-
-The previous ACTIVE snapshot remains usable whenever possible.
-
----
-
-## 27. Authentication failure
-
-401/403 handling:
-
-```text
-401 installation token expired/revoked
-→ delegate token refresh/re-registration contract
-→ retry safe manifest request once after credential recovery
-
-403 installation not allowed
-→ do not loop
-→ surface controlled application state
-```
-
-A credential failure SHALL NOT delete downloaded content.
-
----
-
-## 28. Content changed during sync
-
-If a newer root manifest appears while staging an older target:
-
-```text
-current run may finish only if its target remains acceptable
-or
-mark staged work SUPERSEDED and schedule resync
-```
-
-MVP conservative rule:
-
-Before COMMITTING, perform a lightweight target-validity check when practical.
-
-If root ETag/contentVersion changed:
-
-```text
-current staged target → SUPERSEDED
-resync_requested = true
-no activation
-```
-
-This prevents immediately activating a known-stale target.
-
----
-
-## 29. Idempotency rules
-
-Repeated execution is safe because:
-
-```text
-pack revisions are immutable and keyed by code+variant+revision
-asset files are content-addressed by checksum
-staging writes use deterministic keys/UPSERT
-activation checks exact target revision
-applying an already-applied tombstone is harmless
-cleanup checks actual references before deletion
+locale change reusing canonical audio
+content deactivation/tombstone
+progress survives tombstone
+CURRENT rev 8 while offline rev 7 remains READY
+successful offline rev 8 replacement
+failed offline rev 8 replacement preserving rev 7
+concurrent sync triggers coalesce
+401 credential recovery
+newer remote target appears during staging
 ```
 
 ---
 
-## 30. Concurrent triggers
-
-Examples:
+## 29. Final state distinction
 
 ```text
-startup sync running
-+ user presses Refresh
-+ locale changes
+Backend ACTIVE
+    = content is deliverable/downloadable
+
+Flutter CURRENT
+    = metadata revision currently used
+
+Flutter READY
+    = complete offline bundle locally verified
 ```
 
-Do not start three coordinators.
-
-Behavior:
-
-```text
-current run continues or is superseded according to target compatibility
-resync_requested = true
-on terminal state → immediately evaluate newest desired state
-```
-
-Locale change may invalidate the current locale-variant plan and should normally request supersession before commit if the target locale changed.
-
----
-
-## 31. Interaction with app startup
-
-Home rendering and sync are decoupled:
-
-```text
-open Drift
-→ read ACTIVE local snapshot
-→ render Home
-→ start ContentSyncCoordinator
-```
-
-UI may show unobtrusive freshness/download state but SHALL NOT block valid cached content behind sync completion.
-
----
-
-## 32. Interaction with AssetResolver
-
-After activation:
-
-```text
-feature asks for asset_id
-→ AssetResolver reads asset_catalog
-→ checksum has VERIFIED local_asset_file?
-   ├── yes → local path
-   └── no  → CDN/edge URI from delivery metadata
-```
-
-Content synchronization therefore does not require binary prefetch for normal online use.
-
----
-
-## 33. Suggested coordinator API
-
-Conceptual Dart application contract:
-
-```text
-ContentSyncCoordinator
-
-sync(trigger)
-recoverInterruptedRun()
-requestResync(trigger)
-observeState()
-```
-
-Suggested state exposed to Riverpod/UI:
-
-```text
-idle
-checking
-updating(progress)
-upToDate
-waitingForNetwork
-requiresAppUpdate
-failedRecoverable
-```
-
-UI-facing state is intentionally simpler than the persisted internal state machine.
-
----
-
-## 34. Failure simulations required
-
-Qualification SHALL include at least:
-
-1. app killed before root manifest fetch completes;
-2. app killed after plan persistence;
-3. app killed halfway through metadata staging;
-4. app killed halfway through asset download;
-5. app killed after asset verification but before commit;
-6. app killed during SQLite commit;
-7. app killed after commit but before cleanup;
-8. network lost while fetching pack manifest;
-9. CDN lost while downloading explicit offline assets;
-10. checksum mismatch;
-11. unsupported remote schema;
-12. remote root version changes before commit;
-13. tombstone arrives for favorited content;
-14. tombstone arrives for content present in completed test history;
-15. locale changes during sync;
-16. token expires during sync;
-17. disk fills during download;
-18. cleanup filesystem delete fails;
-19. two UI triggers arrive concurrently;
-20. explicit offline pack revision changes while old revision remains usable.
-
----
-
-## 35. Acceptance criteria for P0.12.7
-
-The state machine is accepted when tests prove:
-
-```text
-SYNC-001 valid local content renders before network sync completes
-SYNC-002 partial staging never becomes active
-SYNC-003 crash before commit preserves old active snapshot
-SYNC-004 crash after commit resumes cleanup without reverting content
-SYNC-005 root active_content_version advances only after successful commit
-SYNC-006 tombstones do not erase learner history
-SYNC-007 streaming sync does not eagerly download all media
-SYNC-008 explicit/pinned offline pack activates only with verified required assets
-SYNC-009 locale delta reuses canonical English/audio
-SYNC-010 unsupported schema keeps last compatible snapshot
-SYNC-011 repeated same-version sync is idempotent
-SYNC-012 concurrent triggers are serialized/coalesced
-SYNC-013 checksum mismatch blocks activation
-SYNC-014 stale remote target can be superseded before commit
-SYNC-015 cleanup never deletes referenced shared assets
-```
-
----
-
-## 36. Resulting offline-first contract
-
-```text
-REMOTE
-  ↓
-CHECK
-  ↓
-PLAN
-  ↓
-STAGE
-  ↓
-VERIFY
-  ↓
-ATOMIC COMMIT
-  ↓
-CLEAN
-
-while throughout:
-
-LAST-KNOWN-GOOD ACTIVE SNAPSHOT
-remains the learner-visible source until COMMIT succeeds.
-```
-
-This state machine is the central consistency mechanism for CareerSpeak mobile content synchronization.
+This distinction is mandatory across all CareerSpeak specifications.
