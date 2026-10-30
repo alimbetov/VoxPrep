@@ -1,13 +1,14 @@
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:drift/drift.dart';
-import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../../support/test_database_factory.dart';
 
 void main() {
   late CareerSpeakDatabase database;
 
   setUp(() {
-    database = CareerSpeakDatabase(NativeDatabase.memory());
+    database = createTestDatabase();
   });
 
   tearDown(() async {
@@ -171,7 +172,10 @@ void main() {
     await database.into(database.localContentRecords).insert(row(1));
     await database.into(database.localContentRecords).insert(row(2));
 
-    expect(await database.select(database.localContentRecords).get(), hasLength(2));
+    expect(
+      await database.select(database.localContentRecords).get(),
+      hasLength(2),
+    );
 
     await expectLater(
       database.into(database.localContentRecords).insert(row(1)),
