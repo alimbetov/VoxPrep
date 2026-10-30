@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/learner_state_providers.dart';
+import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
 import '../../domain/content_marker_state.dart';
 import 'content_marker_chips.dart';
@@ -20,8 +22,13 @@ class ContentCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final identity = ContentIdentity.fromItem(item);
     final markers = ref.watch(contentMarkersProvider);
-    final markerState = markers[item.code] ?? const ContentMarkerState();
+    final markerState = markers.when(
+      data: (value) => value[identity] ?? const ContentMarkerState(),
+      loading: () => const ContentMarkerState(),
+      error: (error, stackTrace) => const ContentMarkerState(),
+    );
     final scheme = Theme.of(context).colorScheme;
 
     return Card(
@@ -55,9 +62,22 @@ class ContentCard extends ConsumerWidget {
                 tooltip: markerState.favorite
                     ? 'Remove favorite'
                     : 'Add favorite',
-                onPressed: () => ref
-                    .read(contentMarkersProvider.notifier)
-                    .toggleFavorite(item.code),
+                onPressed: () async {
+                  final result = await ref
+                      .read(learnerStateRepositoryProvider)
+                      .setFavorite(
+                        identity,
+                        favorite: !markerState.favorite,
+                      );
+                  try {
+                    result.getOrThrow();
+                  } catch (error) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Unable to update favorite: $error')),
+                    );
+                  }
+                },
                 icon: Icon(
                   markerState.favorite ? Icons.favorite : Icons.favorite_border,
                 ),
