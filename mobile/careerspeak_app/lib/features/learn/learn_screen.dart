@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/mock/mock_content_repository.dart';
+import '../../app/repository_providers.dart';
 import '../../domain/content_item.dart';
 import '../../domain/content_marker_state.dart';
 import '../content/content_detail_panel.dart';
@@ -23,7 +23,7 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final repository = ref.watch(mockContentRepositoryProvider);
+    final repository = ref.watch(contentRepositoryProvider);
     final markers = ref.watch(contentMarkersProvider);
     final filtered = repository.all.where((item) {
       final marker = markers[item.code] ?? const ContentMarkerState();
@@ -53,7 +53,8 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
     }
 
     final selectedItem = _effectiveSelection(filtered);
-    final catalogueWidth = MediaQuery.sizeOf(context).width >= 1200 ? 420.0 : 360.0;
+    final catalogueWidth =
+        MediaQuery.sizeOf(context).width >= 1200 ? 420.0 : 360.0;
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -159,7 +160,8 @@ class _CatalogList extends StatelessWidget {
             ContentCard(
               item: item,
               selected: item.code == selectedCode,
-              onTap: onItemSelected == null ? null : () => onItemSelected!(item),
+              onTap:
+                  onItemSelected == null ? null : () => onItemSelected!(item),
             ),
       ],
     );
