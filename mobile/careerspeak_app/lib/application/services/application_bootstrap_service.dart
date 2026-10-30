@@ -5,10 +5,11 @@ import '../result/result.dart';
 import 'installation_bootstrap_service.dart';
 
 typedef StartupRunIdFactory = String Function();
-typedef StartupContentSynchronizer = Future<Result<ContentSyncOutcome>> Function({
-  required String runId,
-  required SyncTrigger trigger,
-});
+typedef StartupContentSynchronizer =
+    Future<Result<ContentSyncOutcome>> Function({
+      required String runId,
+      required SyncTrigger trigger,
+    });
 
 final class ApplicationBootstrapOutcome {
   const ApplicationBootstrapOutcome({
