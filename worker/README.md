@@ -223,4 +223,6 @@ SIGTERM shutdown qualification
 WORKER_TOKEN non-leak check
 ```
 
+Before merge, a Worker feature branch must be synchronized with the current `main` and the integrated exact HEAD must pass these gates. Qualification of an older pre-sync SHA is not sufficient.
+
 Piper model/audio listening qualification is additionally required before upgrading the Piper engine used for production synthesis.
