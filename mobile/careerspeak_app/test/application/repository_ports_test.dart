@@ -35,9 +35,8 @@ void main() {
   test('assessment repository port supports explicit test adapter', () async {
     const PracticeTestRepository repository = MockTestRepository();
 
-    final page =
-        (await repository.watchTests(const PracticeTestQuery()).first)
-            .getOrThrow();
+    final page = (await repository.watchTests(const PracticeTestQuery()).first)
+        .getOrThrow();
     expect(page.items, isNotEmpty);
 
     final test = (await repository.getByCode(
