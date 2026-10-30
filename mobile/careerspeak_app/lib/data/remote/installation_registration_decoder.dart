@@ -4,6 +4,8 @@ import 'dto/installation_registration_dto.dart';
 import 'installation_registration_mapper.dart';
 
 final class InstallationRegistrationDecoder {
+  // The public `mapper:` name is part of the injectable adapter seam.
+  // ignore: prefer_initializing_formals
   const InstallationRegistrationDecoder({
     InstallationRegistrationMapper mapper =
         const InstallationRegistrationMapper(),
