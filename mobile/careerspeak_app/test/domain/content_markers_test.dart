@@ -1,31 +1,29 @@
 import 'package:careerspeak_app/domain/content_marker_state.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('favorite listened and completed are independent markers', () {
-    final container = ProviderContainer();
-    addTearDown(container.dispose);
+  test('favorite listened completed and playback position are independent', () {
+    var state = const ContentMarkerState();
 
-    const code = 'TEST_ITEM';
-    final controller = container.read(contentMarkersProvider.notifier);
-
-    controller.toggleFavorite(code);
-    var state = container.read(contentMarkersProvider)[code]!;
+    state = state.copyWith(favorite: true);
     expect(state.favorite, isTrue);
     expect(state.listened, isFalse);
     expect(state.completed, isFalse);
+    expect(state.lastPositionMs, isNull);
 
-    controller.toggleListened(code);
-    state = container.read(contentMarkersProvider)[code]!;
+    state = state.copyWith(listened: true, lastPositionMs: 1250);
     expect(state.favorite, isTrue);
     expect(state.listened, isTrue);
     expect(state.completed, isFalse);
+    expect(state.lastPositionMs, 1250);
 
-    controller.toggleCompleted(code);
-    state = container.read(contentMarkersProvider)[code]!;
+    state = state.copyWith(completed: true);
     expect(state.favorite, isTrue);
     expect(state.listened, isTrue);
     expect(state.completed, isTrue);
+    expect(state.lastPositionMs, 1250);
+
+    state = state.copyWith(clearLastPosition: true);
+    expect(state.lastPositionMs, isNull);
   });
 }
