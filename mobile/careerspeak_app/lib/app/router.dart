@@ -1,0 +1,49 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../core/adaptive/careerspeak_adaptive_scaffold.dart';
+import '../features/content/content_detail_screen.dart';
+import '../features/home/home_screen.dart';
+import '../features/learn/learn_screen.dart';
+import '../features/review/review_screen.dart';
+import '../features/settings/settings_screen.dart';
+import '../features/tests/tests_screen.dart';
+
+final routerProvider = Provider<GoRouter>((ref) {
+  return GoRouter(
+    initialLocation: '/',
+    routes: [
+      ShellRoute(
+        builder: (context, state, child) => CareerSpeakAdaptiveScaffold(
+          location: state.uri.path,
+          child: child,
+        ),
+        routes: [
+          GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+          GoRoute(
+            path: '/learn',
+            builder: (context, state) => const LearnScreen(),
+          ),
+          GoRoute(
+            path: '/tests',
+            builder: (context, state) => const TestsScreen(),
+          ),
+          GoRoute(
+            path: '/review',
+            builder: (context, state) => const ReviewScreen(),
+          ),
+          GoRoute(
+            path: '/settings',
+            builder: (context, state) => const SettingsScreen(),
+          ),
+          GoRoute(
+            path: '/content/:code',
+            builder: (context, state) => ContentDetailScreen(
+              code: state.pathParameters['code']!,
+            ),
+          ),
+        ],
+      ),
+    ],
+  );
+});
