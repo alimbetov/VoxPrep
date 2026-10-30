@@ -90,6 +90,7 @@ final class FakeGateway implements ContentManifestGateway {
   final Result<RootManifestFetch> result;
   int calls = 0;
   final etags = <String?>[];
+  final translationLocales = <String>[];
 
   @override
   Future<Result<RootManifestFetch>> fetchRootManifest({
@@ -98,6 +99,7 @@ final class FakeGateway implements ContentManifestGateway {
   }) async {
     calls += 1;
     etags.add(etag);
+    translationLocales.add(translationLocale);
     return result;
   }
 
