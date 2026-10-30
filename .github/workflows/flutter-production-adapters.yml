@@ -41,8 +41,28 @@ jobs:
       - name: Lockfile reproducibility
         run: git diff --exit-code -- pubspec.lock
 
+      - name: Materialize formatter repair
+        run: |
+          dart format lib test
+          rm -rf format_artifact
+          mkdir -p format_artifact/files
+          git diff --name-only -- lib test > format_artifact/paths.txt
+          while IFS= read -r path; do
+            [ -z "$path" ] && continue
+            mkdir -p "format_artifact/files/$(dirname "$path")"
+            cp "$path" "format_artifact/files/$path"
+          done < format_artifact/paths.txt
+
+      - name: Upload formatter repair
+        uses: actions/upload-artifact@v4
+        with:
+          name: p2-formatter-repair
+          path: mobile/careerspeak_app/format_artifact
+          if-no-files-found: error
+          retention-days: 1
+
       - name: Format
-        run: dart format --output=none --set-exit-if-changed lib test
+        run: git diff --exit-code -- lib test
 
       - name: Drift codegen
         run: dart run build_runner build --delete-conflicting-outputs
