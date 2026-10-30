@@ -1,34 +1,34 @@
 # CareerSpeak — P0 Domain & Contract Design Plan
 
-**Document version:** 1.1  
+**Document version:** 1.2  
 **Status:** Working architecture plan  
-**Applies to:** VoxPrep / CareerSpeak v0.7+  
+**Applies to:** VoxPrep / CareerSpeak v0.8+  
 **Branch:** `feat/p0-domain-contracts`
 
 ---
 
 ## 1. Goal
 
-P0 defines the domain model and contracts before production implementation begins.
+P0 freezes domain ownership and contracts before production implementation.
 
-Each bounded context must agree:
+Every bounded context must explicitly define:
 
 ```text
 scope/ownership
 aggregates/entities/value objects
 invariants
 state machine
-persistence model
+persistence/local persistence model
 constraints/indexes
 application/API contracts
 security zone
 errors
 idempotency
-concurrency behavior
+concurrency/recovery behavior
 acceptance/failure tests
 ```
 
-A context is implementation-ready only after these are explicit.
+A context is implementation-ready only after these are agreed.
 
 ---
 
@@ -40,10 +40,13 @@ ADMIN
 → one fixed secured account/session
 
 Flutter
+→ feature-first architecture
+→ Riverpod + go_router
+→ Drift/SQLite + Secure Storage
 → random installationId
 → backend-issued installation token
 → learner REST API
-→ manifest/packs
+→ manifest/packs/locale deltas
 → CDN/edge → RustFS
 
 TTS Worker
@@ -56,13 +59,7 @@ TTS Worker
 → RustFS
 ```
 
-Do not introduce additional human roles in MVP.
-
----
-
-## 3. Security actors
-
-Exactly three technical actors exist in MVP:
+Exactly three technical actors exist:
 
 ```text
 ADMIN
@@ -70,45 +67,18 @@ FLUTTER INSTALLATION
 TTS WORKER
 ```
 
-### ADMIN
-
-- one account;
-- fixed username;
-- strong deployment-managed password hash;
-- Spring Security server-side session;
-- complete Content Studio access.
-
-Do not implement moderator/editor/reviewer roles, admin registration, user/role tables, password reset, OAuth, LDAP or Keycloak.
-
-### FLUTTER INSTALLATION
-
-- no personal account;
-- app-generated cryptographically random `installationId`;
-- backend-issued installation token;
-- token stored in platform secure storage;
-- no server learner-progress profile.
-
-### TTS WORKER
-
-- dedicated machine token;
-- no ADMIN credentials;
-- no direct PostgreSQL credentials;
-- no permanent RustFS credentials;
-- accesses only internal TTS contracts and presigned object URLs.
-
 ---
 
-## 4. Standard design package per bounded context
+## 3. Standard design package
 
 Each domain specification follows the same template.
 
-### 4.1 Domain
+### Domain
 
 ```text
 responsibility
 aggregate roots
-entities
-value objects
+entities/value objects
 business codes
 invariants
 state transitions
@@ -116,37 +86,36 @@ cross-domain dependencies
 non-goals
 ```
 
-### 4.2 Persistence
+### Persistence
 
 ```text
-tables
+tables/local tables
 PK/FK
-unique constraints
-check constraints
+unique/check constraints
 indexes
 optimistic concurrency where needed
 immutability/version rules
 migration rules
 ```
 
-### 4.3 Contract
+### Contract
 
 ```text
 commands/use cases
 REST/internal endpoints where applicable
 request/response DTOs
 pagination/filtering/sorting
-error codes
+errors
 idempotency
 security actor
 concurrency semantics
 ```
 
-### 4.4 Qualification
+### Qualification
 
 ```text
 happy path
-invalid state transitions
+invalid transitions
 concurrent operations
 retries
 crash/recovery
@@ -155,9 +124,9 @@ integration tests
 
 ---
 
-## 5. P0.0 — Common Contract & Domain Conventions
+## 4. P0.0 — Common Contract & Domain Conventions
 
-Define once for every module:
+Freeze once:
 
 ```text
 identifier types
@@ -174,7 +143,7 @@ HTTP semantics
 trace/correlation ID
 ```
 
-Suggested error shape:
+Suggested error envelope:
 
 ```json
 {
@@ -195,9 +164,7 @@ API_CONVENTIONS.md
 
 ---
 
-## 6. P0.1 — Revision / Publication / Availability
-
-This is the foundational content lifecycle.
+## 5. P0.1 — Revision / Publication / Availability
 
 Separate:
 
@@ -207,7 +174,7 @@ publication state
 learner availability
 ```
 
-Baseline:
+Baseline revision lifecycle:
 
 ```text
 DRAFT
@@ -224,22 +191,20 @@ ACTIVE
 INACTIVE
 ```
 
-Rules to freeze:
+Freeze:
 
 ```text
-when published revision becomes immutable
-how new revision is created
-when publication is allowed
-how deactivate/reactivate works
-how manifests/tombstones change
-how stale assets/jobs are handled
+published immutability
+new-revision creation
+publication qualification
+deactivate/reactivate
+manifest/tombstone effect
+stale assets/jobs
 ```
-
-All content domains depend on this contract.
 
 ---
 
-## 7. P0.2 — Profession / Catalog
+## 6. P0.2 — Profession / Catalog
 
 Define:
 
@@ -253,47 +218,33 @@ Tag
 Skill taxonomy ownership
 ```
 
-Consumer examples:
-
-```text
-GET /api/v1/professions
-GET /api/v1/professions/{code}
-GET /api/v1/career-tracks
-```
-
-Use stable business codes and cursor pagination for learner lists.
+Consumer contracts use stable business codes and cursor pagination.
 
 ---
 
-## 8. P0.3 — Localization
+## 7. P0.3 — Localization
 
 Canonical learning language remains English.
-
-Localization owns:
-
-```text
-UI locale metadata
-translation
-hint
-explanation
-locale readiness/fallback
-```
 
 Freeze:
 
 ```text
+uiLocale vs translationLocale
 BCP-47 identifiers
-fallback rules
-locale publication readiness
-RTL readiness
+Flutter ARB/gen-l10n UI resources
+backend content translations/hints/explanations
 typed localization tables
+locale readiness
+regional/base/English fallback
+RTL readiness
+locale delta packs
 ```
 
-Missing non-English localization should not automatically block canonical English publication unless an explicit pack policy requires it.
+Missing non-required localization does not block canonical English publication.
 
 ---
 
-## 9. P0.4 — Media / RustFS
+## 8. P0.4 — Media / RustFS
 
 Define:
 
@@ -306,12 +257,12 @@ RustFsObjectStorage adapter
 immutable object keys
 checksum
 mime/size/duration/codec
-private/public delivery rules
+private/public delivery
 presigned GET/PUT
-garbage collection rules
+garbage collection
 ```
 
-Baseline storage:
+Baseline:
 
 ```text
 PostgreSQL metadata
@@ -321,14 +272,14 @@ CDN/edge for published learner assets
 
 ---
 
-## 10. P0.5 — TTS
+## 9. P0.5 — TTS
 
 Define:
 
 ```text
 TtsVoice
 TtsVoiceModel
-TtsVoicePool/TtsVoicePolicy only where needed
+TtsVoicePool/TtsVoicePolicy where needed
 PronunciationRule
 TtsJob
 TtsWorker
@@ -344,7 +295,7 @@ auto-start/auto-restart
 local model cache
 ```
 
-Queue contract is PostgreSQL-based:
+Queue contract:
 
 ```text
 atomic claim
@@ -356,11 +307,9 @@ bounded retry
 stale-result rejection
 ```
 
-Do not add RabbitMQ for initial TTS workload.
-
 ---
 
-## 11. P0.6 — Interview
+## 10. P0.6 — Interview
 
 Define:
 
@@ -369,21 +318,19 @@ InterviewQuestion
 InterviewQuestionRevision
 ModelAnswer
 InterviewCategory
-Profession mapping
-CareerTrack mapping
-Seniority mapping
-Skill mapping
+Profession/CareerTrack mapping
+Seniority/Skill mapping
 Audio roles
 Localization
 ```
 
-Freeze consumer list/detail contracts and exact publication dependencies.
+Freeze list/detail, publication and audio dependencies.
 
 ---
 
-## 12. P0.7 — Vocabulary
+## 11. P0.7 — Vocabulary
 
-Define revisioned vocabulary content:
+Define revisioned vocabulary:
 
 ```text
 VocabularyWord identity
@@ -391,17 +338,17 @@ VocabularyRevision
 Definition
 Example
 Collocation
-WordFamily if included in MVP
+WordFamily if in MVP
 Category
 Localization
 Audio roles
 ```
 
-Do not allow published learner-visible vocabulary text to mutate in place.
+Published learner-visible text does not mutate in place.
 
 ---
 
-## 13. P0.8 — Topic / Phrase / Shadowing
+## 12. P0.8 — Topic / Phrase / Shadowing Content
 
 Define:
 
@@ -414,14 +361,14 @@ PhraseCategory
 display_text
 tts_text
 audio association
-sort/order semantics
+stable segment/order semantics
 ```
 
-Shadowing contract must preserve deterministic text/audio segmentation where highlighting/repeat behavior depends on sections.
+Shadowing depends on deterministic backend-published segmentation rather than client punctuation guessing.
 
 ---
 
-## 14. P0.9 — Assessment
+## 13. P0.9 — Assessment
 
 Define:
 
@@ -436,18 +383,16 @@ PracticeTestQuestion
 ScoringRule
 ```
 
-Mandatory rule:
+Mandatory:
 
 ```text
 Published PracticeTestRevision
 → exact QuestionRevision references
 ```
 
-Never resolve a published test against mutable current question data.
-
 ---
 
-## 15. P0.10 — Manifest / Content Delivery
+## 14. P0.10 — Manifest / Content Delivery
 
 Define:
 
@@ -455,9 +400,11 @@ Define:
 ContentManifest
 ContentPack
 PackRevision
+LocaleDelta
 AssetReference
 Tombstone
 contentVersion
+schemaVersion
 checksum/version semantics
 ```
 
@@ -468,15 +415,13 @@ GET /api/v1/content/manifest
 GET /api/v1/content/packs/{code}/manifest
 ```
 
-Only changed/missing assets should be downloaded.
+A staged update must be verified before replacing the current local snapshot.
 
 ---
 
-## 16. P0.11 — Pagination Contract
+## 15. P0.11 — Pagination Contract
 
-Learner API uses cursor/keyset pagination.
-
-Response convention:
+Learner API uses cursor/keyset pagination:
 
 ```json
 {
@@ -488,73 +433,237 @@ Response convention:
 }
 ```
 
-Cursor sorting must be deterministic with a unique tie-breaker.
+Sorting is deterministic with a unique tie-breaker.
 
-Internal ADMIN lists may use ordinary page/size pagination.
+ADMIN lists may use ordinary page/size pagination.
 
 ---
 
-## 17. P0.12 — Flutter Local Domain / Retention
+## 16. P0.12 — Flutter Application Contract
 
-Define local SQLite/Drift ownership for:
+This is a full mobile architecture freeze, not only a retention design.
+
+Authoritative specification:
 
 ```text
-Favorite
-Progress
-TestAttempt
-ReviewSchedule
-Download
-LocalContentSnapshot
-LocalAsset
-ContentAssetReference
-CacheEntry
-Settings
+docs/specification/CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md
 ```
 
-Retention:
+### P0.12.1 Feature/module map
+
+Freeze feature-first structure:
+
+```text
+onboarding
+home
+vocabulary
+interview
+topics
+phrases
+shadowing
+assessment
+review
+favorites
+downloads
+settings
+storage_management
+```
+
+### P0.12.2 State-management contract
+
+Baseline:
+
+```text
+Riverpod
+explicit provider/controller ownership
+no duplicate global mutable singleton state
+```
+
+### P0.12.3 Navigation contract
+
+Baseline:
+
+```text
+go_router
+stable business-code routes
+navigation restoration/deep-link readiness
+```
+
+### P0.12.4 Drift local ERD
+
+Freeze local ownership for:
+
+```text
+settings
+installation state
+manifest/pack state
+local content snapshots
+local assets/references
+favorites
+progress
+review schedule
+test attempts/answers
+download tasks
+sync journal
+```
+
+### P0.12.5 Installation/API client
+
+```text
+installationId
+backend-issued token
+Secure Storage
+one typed API client/error mapper
+```
+
+### P0.12.6 Mobile localization
+
+Freeze:
+
+```text
+uiLocale
+translationLocale
+preferredAccent
+ARB/gen-l10n UI strings
+backend content locale deltas
+fallback
+RTL mixed English/support text
+```
+
+### P0.12.7 Manifest Sync Engine
+
+Define `ContentSyncCoordinator`:
+
+```text
+last known-good local snapshot
+remote manifest
+staging
+checksum/schema validation
+atomic activation
+tombstones
+crash recovery
+```
+
+### P0.12.8 Download Manager
+
+State machine:
+
+```text
+QUEUED
+DOWNLOADING
+VERIFYING
+READY
+PAUSED
+FAILED
+CANCELLED
+```
+
+Freeze retry/resume/concurrency/storage-precheck behavior.
+
+### P0.12.9 Asset Resolver
+
+One contract resolves:
+
+```text
+verified local file
+or
+remote CDN/edge asset
+```
+
+UI/audio features do not branch on storage source.
+
+### P0.12.10 Audio / Shadowing Engine
+
+Freeze:
+
+```text
+play/pause/seek
+speed 0.75/1/1.25
+repeat 1/3/5/infinite
+skip
+segment repeat
+playback lifecycle
+stable segmentation/highlighting rules
+```
+
+### P0.12.11 Assessment local engine
+
+Freeze:
+
+```text
+Learn mode
+Exam mode
+Quick mode
+attempt persistence
+question/test revision identity
+process-death restore
+skill breakdown
+```
+
+### P0.12.12 Review scheduler
+
+Deterministic local scheduling; no AI/ML requirement.
+
+### P0.12.13 Storage / retention
 
 ```text
 TTL
 LRU
 local quota
 pin/manual-download protection
-ref-count/reference-safe deletion
+shared-asset reference-safe deletion
 ```
 
-Progress must survive media/cache eviction.
+Progress survives media eviction.
+
+### P0.12.14 Startup / errors / recovery
+
+Freeze:
+
+```text
+local-first startup
+network-independent rendering when cached
+schema incompatibility
+sync interruption
+checksum failure
+storage full
+offline mode
+user-facing error mapping
+Drift migrations
+```
+
+Flutter implementation SHALL NOT begin before P0.12 acceptance.
 
 ---
 
-## 18. P0.13 — Security / Installation
+## 17. P0.13 — Security / Installation
 
-Keep security deliberately small.
+Keep security small.
 
-### ADMIN contract
+### ADMIN
 
 ```text
 /admin/**
-→ fixed ADMIN username/password
-→ server-side session
-→ HttpOnly/Secure/SameSite cookie
+→ fixed username/password
+→ server session
+→ HttpOnly/Secure/SameSite
 → CSRF
 ```
 
-No role hierarchy in MVP.
-
-### Flutter installation contract
+### Flutter
 
 ```text
 first launch
-→ generate random installationId
-→ POST registration
-→ backend issues installation token
-→ secure local storage
-→ Bearer token for /api/v1/**
+→ random installationId
+→ backend registration
+→ backend-issued token
+→ Secure Storage
+→ /api/v1/**
 ```
 
-Token SHALL be backend-issued, not `SHA256(installationId)` or another client-computable credential.
+Token is not client-computable from installationId.
 
-### TTS worker contract
+### Worker
 
 ```text
 /internal/v1/tts/**
@@ -563,9 +672,7 @@ Token SHALL be backend-issued, not `SHA256(installationId)` or another client-co
 
 ---
 
-## 19. P0.14 — Content Studio
-
-Content Studio is an orchestration/admin interface, not a separate identity platform.
+## 18. P0.14 — Content Studio
 
 One ADMIN executes:
 
@@ -585,89 +692,88 @@ No multi-user workflow engine is required.
 
 ---
 
-## 20. P0.15 — Integrated ERD + OpenAPI
+## 19. P0.15 — Integrated ERD + Mobile ERD + OpenAPI
 
-After individual contexts are agreed:
+After contexts are agreed:
 
 ```text
-compose complete PostgreSQL ERD
+compose PostgreSQL ERD
+compose Flutter Drift ERD
 verify aggregate ownership
-verify no duplicate source-of-truth fields
+verify no duplicate sources of truth
 verify FK/unique/index strategy
-freeze learner REST contracts
+freeze learner REST
 freeze internal TTS contracts
-freeze admin command contracts where externalized
+freeze manifest/locale-delta contracts
+freeze mobile schemaVersion compatibility rules
 ```
 
-Cross-module calls inside the modular monolith use application/domain ports rather than HTTP.
-
-A module SHALL NOT mutate another module's repository directly.
+Cross-module backend calls use application/domain ports rather than HTTP.
 
 ---
 
-## 21. P0.16 — Architecture Freeze
+## 20. P0.16 — Architecture Freeze
 
 P0 closes when:
 
 ```text
-all bounded contexts are Domain Ready
-integrated ERD is accepted
-OpenAPI contracts are accepted
-TTS claim/lease/recovery protocol is accepted
-manifest/retention semantics are accepted
-security actors are fixed to ADMIN / INSTALLATION / WORKER
-ADRs capture remaining irreversible decisions
-implementation backlog is generated
+all bounded contexts Domain Ready
+PostgreSQL ERD accepted
+Flutter Drift ERD accepted
+OpenAPI accepted
+TTS claim/lease/recovery accepted
+manifest/sync/retention accepted
+mobile localization/RTL accepted
+security actors fixed
+ADRs capture irreversible decisions
+implementation backlog generated
 ```
-
-After P0.16, P1 begins executable foundation work.
 
 ---
 
-## 22. Definition of Ready
+## 21. Definition of Ready
 
-A bounded context is ready when all boxes are satisfied:
+A bounded context is ready when:
 
 ```text
 [ ] ownership
 [ ] aggregate roots/entities/value objects
 [ ] invariants
 [ ] lifecycle/state machine
-[ ] DB schema
-[ ] PK/FK/unique/check constraints
-[ ] indexes
+[ ] DB/local schema
+[ ] constraints/indexes
 [ ] application/API contract
 [ ] pagination/filtering where applicable
 [ ] security actor
 [ ] error codes
 [ ] idempotency
-[ ] concurrency behavior
+[ ] concurrency/recovery behavior
 [ ] acceptance tests
-[ ] failure/recovery tests where applicable
+[ ] failure tests
 ```
+
+Flutter additionally requires mobile screen/state/recovery contracts from P0.12.
 
 ---
 
-## 23. Definition of Done for implementation
-
-Later implementation for a domain follows:
+## 22. Definition of Done for later implementation
 
 ```text
 accepted spec
-→ Liquibase
+→ migrations/schema
 → domain/application code
 → repositories/adapters
-→ REST/admin adapter
+→ UI/REST/admin adapter
 → unit tests
-→ integration/Testcontainers tests
+→ integration tests
 → architecture tests
-→ OpenAPI qualification
+→ contract qualification
 → CI green
 ```
 
 ---
 
-## 24. Execution order
+## 23. Execution order
 
 ```text
 P0.0  Common Contracts
@@ -678,15 +784,15 @@ P0.4  Media / RustFS
 P0.5  TTS
 P0.6  Interview
 P0.7  Vocabulary
-P0.8  Topic / Phrase / Shadowing
+P0.8  Topic / Phrase / Shadowing Content
 P0.9  Assessment
 P0.10 Manifest / Content Delivery
 P0.11 Pagination Contract
-P0.12 Flutter Local Domain / Retention
+P0.12 Flutter Application Contract
 P0.13 Security / Installation
 P0.14 Content Studio
-P0.15 Integrated ERD + OpenAPI
+P0.15 Integrated ERD + Mobile ERD + OpenAPI
 P0.16 Architecture Freeze
 ```
 
-The next implementation-design slice is **P0.0 Common Contract & Domain Conventions**, followed by **P0.1 Revision / Publication / Availability**.
+The next design slice remains **P0.0 Common Contract & Domain Conventions**, followed by **P0.1 Revision / Publication / Availability**. P0.12 now has a complete mobile architecture scope rather than only retention.
