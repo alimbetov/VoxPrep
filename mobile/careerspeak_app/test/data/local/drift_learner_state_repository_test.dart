@@ -57,7 +57,7 @@ void main() {
       var row = await database
           .select(database.contentLearningStates)
           .getSingle();
-      expect(row.listenedAt, now);
+      expect(row.listenedAt?.isAtSameMomentAs(now), isTrue);
       expect(row.listenCount, 1);
       expect(row.lastRevisionSeen, 7);
 
@@ -90,7 +90,7 @@ void main() {
       final row = await database
           .select(database.contentLearningStates)
           .getSingle();
-      expect(row.completedAt, now);
+      expect(row.completedAt?.isAtSameMomentAs(now), isTrue);
       expect(row.completionSource, 'TEST');
       expect(row.lastRevisionSeen, 8);
       expect(row.lastPositionMs, 1250);
