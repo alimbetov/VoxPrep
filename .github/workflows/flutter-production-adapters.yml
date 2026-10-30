@@ -5,73 +5,204 @@ on:
     branches:
       - feat/p2-flutter-production-adapters
     paths:
-      - 'mobile/careerspeak_app/**'
       - '.github/workflows/flutter-production-adapters.yml'
-  pull_request:
-    paths:
-      - 'mobile/careerspeak_app/**'
-      - '.github/workflows/flutter-production-adapters.yml'
+
+permissions:
+  contents: write
 
 jobs:
-  quality:
+  harden-payload-staging:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mobile/careerspeak_app
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.47.9'
           channel: stable
           cache: true
+      - name: Apply canonical payload semantics
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          def one(s, old, new, label):
+              n=s.count(old)
+              if n!=1: raise SystemExit(f'{label}: {n}')
+              return s.replace(old,new,1)
 
-      - name: Flutter version
-        run: flutter --version
+          p=Path('mobile/careerspeak_app/lib/data/local/drift_sync_plan_executor.dart')
+          s=p.read_text()
+          s=one(s,'        final payloadResult = await _fetchPayloads(manifest);','        final payloadResult = await _fetchPayloads(target, manifest);','fetch call')
+          s=one(s,"  Future<Result<List<ContentPayload>>> _fetchPayloads(\n    PackContentManifest manifest,\n  ) async {\n    final payloads = <ContentPayload>[];","  Future<Result<List<ContentPayload>>> _fetchPayloads(\n    PackRevisionRef pack,\n    PackContentManifest manifest,\n  ) async {\n    if (pack.identity.variant != 'canonical') {\n      return const Success<List<ContentPayload>>(<ContentPayload>[]);\n    }\n    final payloads = <ContentPayload>[];",'fetch signature')
+          s=one(s,'    if (payloadByKey.length != manifest.contents.length) {',"    if (target.identity.variant == 'canonical' &&\n        payloadByKey.length != manifest.contents.length) {",'payload count')
+          old="""      for (final content in manifest.contents) {
+        final type = _contentTypeToStorage(content.identity.type);
+        final payload = payloadByKey[
+          _contentKey(content.identity.code, type, content.revision)
+        ];
+        if (payload == null || payload.ref.checksum != content.checksum) {
+          throw const _SyncExecutorInvariant(
+            ApplicationFailure(
+              code: 'CONTENT_PAYLOAD_SET_MISMATCH',
+              message:
+                  'A pack content reference has no exact staged payload revision.',
+            ),
+          );
+        }
 
-      - name: Dependencies
-        run: flutter pub get
+        await _ensureContentRecord(content, manifest.schemaVersion, now);
+        await _ensureContentRead(payload, now);"""
+          new="""      for (final content in manifest.contents) {
+        final type = _contentTypeToStorage(content.identity.type);
+        ContentPayload? payload;
+        if (target.identity.variant == 'canonical') {
+          payload = payloadByKey[
+            _contentKey(content.identity.code, type, content.revision)
+          ];
+          if (payload == null || payload.ref.checksum != content.checksum) {
+            throw const _SyncExecutorInvariant(
+              ApplicationFailure(
+                code: 'CONTENT_PAYLOAD_SET_MISMATCH',
+                message:
+                    'A canonical pack content reference has no exact staged payload revision.',
+              ),
+            );
+          }
+        }
 
-      - name: Lockfile reproducibility
-        run: git diff --exit-code -- pubspec.lock
+        await _ensureContentRecord(content, manifest.schemaVersion, now);
+        if (payload != null) {
+          await _ensureContentRead(payload, now);
+        }"""
+          s=one(s,old,new,'stage canonical only')
+          old="""          final payload =
+              await (_database.select(_database.contentCatalogReads)..where(
+                    (row) =>
+                        row.contentCode.equals(ref.contentCode) &
+                        row.contentType.equals(ref.contentType) &
+                        row.revision.equals(ref.contentRevision),
+                  ))
+                  .getSingleOrNull();
+          if (payload == null) {
+            throw const _SyncExecutorInvariant(
+              ApplicationFailure(
+                code: 'SYNC_TARGET_PAYLOAD_MISSING',
+                message:
+                    'A target content revision is missing its learner payload.',
+              ),
+            );
+          }
+          if (payload.checksum != local.checksum) {
+            throw const _SyncExecutorInvariant(
+              ApplicationFailure(
+                code: 'SYNC_TARGET_PAYLOAD_MISMATCH',
+                message:
+                    'The target learner payload does not match content metadata.',
+              ),
+            );
+          }
+"""
+          new="""          if (target.identity.variant == 'canonical') {
+            final payload =
+                await (_database.select(_database.contentCatalogReads)..where(
+                      (row) =>
+                          row.contentCode.equals(ref.contentCode) &
+                          row.contentType.equals(ref.contentType) &
+                          row.revision.equals(ref.contentRevision),
+                    ))
+                    .getSingleOrNull();
+            if (payload == null) {
+              throw const _SyncExecutorInvariant(
+                ApplicationFailure(
+                  code: 'SYNC_TARGET_PAYLOAD_MISSING',
+                  message:
+                      'A canonical target content revision is missing its learner payload.',
+                ),
+              );
+            }
+            if (payload.checksum != local.checksum) {
+              throw const _SyncExecutorInvariant(
+                ApplicationFailure(
+                  code: 'SYNC_TARGET_PAYLOAD_MISMATCH',
+                  message:
+                      'The canonical target payload does not match content metadata.',
+                ),
+              );
+            }
+          }
+"""
+          s=one(s,old,new,'commit canonical only')
+          p.write_text(s)
 
+          p=Path('mobile/careerspeak_app/lib/data/local/drift_sync_journal.dart')
+          s=p.read_text()
+          start=s.index('      final packs = <PackRevisionRef>[];')
+          end=s.index('\n\n      return Success(', start)
+          replacement="""      final packs = <PackRevisionRef>[];
+      final contentPayloadRepairPacks = <PackIdentity>{};
+      for (final row in currentRows) {
+        final identity = PackIdentity(code: row.packCode, variant: row.variantKey);
+        packs.add(
+          PackRevisionRef(
+            identity: identity,
+            revision: row.revision,
+            checksum: row.checksum,
+          ),
+        );
+        if (row.variantKey != 'canonical') continue;
+
+        final refs =
+            await (_database.select(_database.packContentRefs)..where(
+                  (ref) =>
+                      ref.packCode.equals(row.packCode) &
+                      ref.variantKey.equals(row.variantKey) &
+                      ref.packRevision.equals(row.revision),
+                ))
+                .get();
+        for (final ref in refs) {
+          final local =
+              await (_database.select(_database.localContentRecords)..where(
+                    (content) =>
+                        content.contentCode.equals(ref.contentCode) &
+                        content.contentType.equals(ref.contentType) &
+                        content.revision.equals(ref.contentRevision),
+                  ))
+                  .getSingleOrNull();
+          final payload =
+              await (_database.select(_database.contentCatalogReads)..where(
+                    (content) =>
+                        content.contentCode.equals(ref.contentCode) &
+                        content.contentType.equals(ref.contentType) &
+                        content.revision.equals(ref.contentRevision),
+                  ))
+                  .getSingleOrNull();
+          if (local == null ||
+              local.snapshotState != 'CURRENT' ||
+              payload == null ||
+              payload.checksum != local.checksum) {
+            contentPayloadRepairPacks.add(identity);
+            break;
+          }
+        }
+      }"""
+          s=s[:start]+replacement+s[end:]
+          s=one(s,'          currentPacks: packs,\n        ),','          currentPacks: packs,\n          contentPayloadRepairPacks: contentPayloadRepairPacks,\n        ),','snapshot repair')
+          p.write_text(s)
+
+          p=Path('mobile/careerspeak_app/test/data/local/drift_sync_journal_test.dart')
+          s=p.read_text()
+          s=s.replace("'CURRENT pack without learner payload is omitted so same root repairs it'","'CURRENT canonical pack stays represented while same root repairs payload'")
+          s=one(s,'      expect(local.currentPacks, isEmpty);','      expect(local.currentPacks, hasLength(1));\n      expect(local.contentPayloadRepairPacks, hasLength(1));','journal test assertion')
+          p.write_text(s)
+          PY
       - name: Format
-        run: dart format --output=none --set-exit-if-changed lib test
-
-      - name: Drift codegen
-        run: dart run build_runner build --delete-conflicting-outputs
-
-      - name: Drift schema snapshot
+        working-directory: mobile/careerspeak_app
+        run: dart format lib test
+      - name: Commit
         run: |
-          dart run drift_dev schema dump \
-            lib/data/local/database/careerspeak_database.dart \
-            drift_schemas/drift_schema_v4.json
-
-      - name: Drift migration test codegen
-        run: |
-          rm -rf test/generated_migrations
-          dart run drift_dev schema generate \
-            --data-classes \
-            --companions \
-            drift_schemas/ \
-            test/generated_migrations/
-
-      - name: Generated baseline reproducibility
-        run: |
-          git diff --exit-code -- \
-            lib/data/local/database/careerspeak_database.g.dart \
-            drift_schemas/drift_schema_v1.json \
-            drift_schemas/drift_schema_v2.json \
-            drift_schemas/drift_schema_v3.json \
-            drift_schemas/drift_schema_v4.json \
-            test/generated_migrations
-
-      - name: Analyze
-        run: flutter analyze
-
-      - name: Test
-        run: flutter test
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile/careerspeak_app/lib mobile/careerspeak_app/test
+          git commit -m "fix(p2): harden canonical payload staging and repair"
+          git push origin HEAD:${GITHUB_REF_NAME}

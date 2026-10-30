@@ -4,15 +4,21 @@
 
 Implementation slice for the production repository cutover. This stage connects the exact-revision content payload contract from P2.10.0 to the immutable read model introduced in P2.10.1.
 
+## Canonical ownership
+
+CareerSpeak teaches English only. Canonical English learning content and audio are stored once. `locale:<bcp47>` variants contain translation/support deltas such as hints, explanations and localized labels.
+
+`content_catalog_reads` is therefore the canonical English learner projection. Locale packs do not duplicate it and do not independently fetch canonical `ContentPayload` rows.
+
 ## Remote contract
 
-The mobile client fetches one immutable learner payload revision through:
+Canonical payload is fetched through:
 
 ```text
 GET /api/v1/content/{contentType}/{contentCode}/revisions/{revision}
 ```
 
-The request uses installation authentication. The response must match the requested:
+The installation-authenticated response must match the requested:
 
 ```text
 contentCode + contentType + revision + checksum
@@ -22,14 +28,14 @@ A mismatch fails closed with `CONTENT_PAYLOAD_MISMATCH`.
 
 ## Staging sequence
 
-For each changed pack:
+For each changed or repair-required canonical pack:
 
 ```text
 root manifest target
         ↓
 pack manifest
         ↓
-fetch every exact ContentPayload
+fetch every exact canonical ContentPayload
         ↓
 validate identity + revision + checksum
         ↓
@@ -43,9 +49,7 @@ local staging transaction
 READY_TO_COMMIT
 ```
 
-Network calls are never performed inside the Drift transaction.
-
-The complete payload set is fetched and validated before local pack staging starts. A remote payload failure therefore cannot publish a partial pack.
+Network calls are never performed inside the Drift transaction. Locale pack metadata follows the same metadata staging path but does not fetch or create canonical read rows.
 
 ## Visibility ownership
 
@@ -64,48 +68,27 @@ A staged read-model row is not learner-visible until the matching metadata revis
 
 ## Commit boundary
 
-Before switching any visible state, the existing sync commit transaction verifies that every target content reference has:
+Before switching visible state, the sync commit validates canonical target content has:
 
-1. an exact local metadata row;
-2. an exact learner payload row;
-3. a payload checksum equal to the metadata checksum.
+1. exact local metadata;
+2. exact learner payload;
+3. matching payload/metadata checksum.
 
-Only after all targets pass verification does the same transaction:
-
-```text
-old packs/content CURRENT → SUPERSEDED
-new packs/content          → CURRENT
-tombstones                 → TOMBSTONED
-root manifest              → new CURRENT version
-sync journal               → COMMITTED/CLEANING
-```
-
-This prevents a learner-visible state such as:
-
-```text
-metadata revision N+1 CURRENT
-payload revision N visible
-```
-
-## Failure semantics
-
-A failure before staging leaves no new local pack projection.
-
-A failure after staging but before commit may leave immutable new payload rows and `STAGED` metadata rows. They remain invisible because the previous last-known-good revision retains `CURRENT` ownership.
-
-An immutable payload conflict fails with `CONTENT_PAYLOAD_IMMUTABLE_CONFLICT` instead of overwriting the persisted revision.
+Only after validation does the same transaction perform CURRENT switching. A failed commit may leave immutable staged rows for later reuse, but the last-known-good CURRENT projection remains learner-visible.
 
 ## Upgrade and repair semantics
 
-Schema v4 can be opened over an existing v3 database where metadata is already `CURRENT` while `content_catalog_reads` is initially empty.
+Schema v3 → v4 preserves existing CURRENT metadata while `content_catalog_reads` starts empty.
 
-`DriftSyncJournal.readLocalSnapshot()` therefore reports a pack as locally complete only when every pack content reference has:
+`DriftSyncJournal.readLocalSnapshot()` keeps the factual CURRENT pack set unchanged and separately reports CURRENT **canonical** packs whose exact read payload is missing or checksum-inconsistent as:
 
-- exact `CURRENT` local content metadata;
-- exact read-model payload;
-- matching payload/metadata checksum.
+```text
+contentPayloadRepairPacks
+```
 
-A payload-incomplete pack is omitted from the local current-pack projection. The existing deterministic planner then schedules that exact pack as a repair even when the remote root manifest version and checksum have not changed.
+`ContentSyncPlanner` treats a repair pack as changed even when root version/checksum and pack revision are unchanged. This backfills the read model without waiting for a new backend publication.
+
+Locale packs never enter `contentPayloadRepairPacks`.
 
 ## Acceptance matrix
 
@@ -113,23 +96,21 @@ A payload-incomplete pack is omitted from the local current-pack projection. The
 AP01 exact payload endpoint uses installation authentication
 AP02 payload decoder rejects malformed domain payloads
 AP03 response identity/revision/checksum mismatch fails closed
-AP04 all payloads are fetched before local pack staging
-AP05 metadata and payload rows stage in the same Drift transaction
-AP06 payload immutable conflict never overwrites an existing revision
-AP07 commit verifies exact payload existence before CURRENT switching
-AP08 commit verifies payload checksum against metadata
-AP09 commit conflict preserves the previous CURRENT snapshot
+AP04 canonical payloads are fetched before local pack staging
+AP05 locale packs do not fetch/duplicate canonical payload
+AP06 metadata and canonical payload stage transactionally
+AP07 immutable payload conflict never overwrites an existing revision
+AP08 commit validates canonical payload before CURRENT switching
+AP09 commit conflict preserves previous CURRENT snapshot
 AP10 staged replacement payload remains invisible after commit failure
-AP11 v3→v4 payload-incomplete CURRENT pack schedules deterministic repair
-AP12 production composition injects HttpContentPayloadGateway
-AP13 Drift schema remains v4 with zero generated baseline drift
-AP14 flutter analyze passes
-AP15 full flutter test passes
-AP16 exact-SHA GitHub Actions qualification passes
+AP11 v3→v4 missing canonical payload produces explicit repair work
+AP12 repair keeps factual CURRENT pack represented
+AP13 same immutable root schedules canonical repair deterministically
+AP14 production composition injects HttpContentPayloadGateway
+AP15 Drift schema remains v4 with zero generated baseline drift
+AP16 format/analyze/full-test exact-SHA qualification passes
 ```
 
 ## Non-goals
 
-P2.10.2 does not yet switch `ContentRepository` to Drift. That happens in P2.10.3 after the atomic learner projection is qualified.
-
-It also does not add cleanup of superseded payload revisions. Retention and restart/recovery cleanup remain part of later cutover/recovery work.
+P2.10.2 does not switch `ContentRepository` to Drift; that is P2.10.3. Locale support projections and preference-driven locale composition remain later work and must not be collapsed into the canonical read model.

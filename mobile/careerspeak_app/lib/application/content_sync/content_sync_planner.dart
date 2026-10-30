@@ -70,9 +70,13 @@ final class ContentSyncPlanner {
     final changedPacks = <PackRevisionRef>[];
     for (final target in remote.packs) {
       final current = currentByIdentity[target.identity];
+      final requiresPayloadRepair = local.contentPayloadRepairPacks.contains(
+        target.identity,
+      );
       if (current == null ||
           current.revision != target.revision ||
-          current.checksum != target.checksum) {
+          current.checksum != target.checksum ||
+          requiresPayloadRepair) {
         changedPacks.add(target);
       }
     }
