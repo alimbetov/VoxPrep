@@ -22,7 +22,16 @@ void main() {
     );
 
     final preferences = await container.read(applicationPreferencesProvider.future);
-    expect(preferences, ApplicationPreferences.defaults);
+    expect(preferences.uiLocale, ApplicationPreferences.defaults.uiLocale);
+    expect(
+      preferences.translationLocale,
+      ApplicationPreferences.defaults.translationLocale,
+    );
+    expect(
+      preferences.preferredAccent,
+      ApplicationPreferences.defaults.preferredAccent,
+    );
+    expect(preferences.theme, ApplicationPreferences.defaults.theme);
   });
 
   test('translation locale provider exposes persisted sync locale', () async {
