@@ -14,9 +14,6 @@ on:
       - 'contracts/**'
       - '.github/workflows/flutter-production-adapters.yml'
 
-permissions:
-  contents: write
-
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -43,36 +40,6 @@ jobs:
 
       - name: Lockfile reproducibility
         run: git diff --exit-code -- pubspec.lock
-
-      - name: One-shot P2.10.4 formatter repair
-        if: github.event_name == 'push'
-        run: |
-          dart format \
-            lib/app/content_sync_providers.dart \
-            lib/app/app_preferences_providers.dart \
-            lib/data/local/drift_app_preferences_repository.dart \
-            lib/features/settings/settings_screen.dart \
-            test/app/app_preferences_providers_test.dart \
-            test/data/local/drift_app_preferences_repository_test.dart
-          if ! git diff --quiet -- \
-            lib/app/content_sync_providers.dart \
-            lib/app/app_preferences_providers.dart \
-            lib/data/local/drift_app_preferences_repository.dart \
-            lib/features/settings/settings_screen.dart \
-            test/app/app_preferences_providers_test.dart \
-            test/data/local/drift_app_preferences_repository_test.dart; then
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add \
-              lib/app/content_sync_providers.dart \
-              lib/app/app_preferences_providers.dart \
-              lib/data/local/drift_app_preferences_repository.dart \
-              lib/features/settings/settings_screen.dart \
-              test/app/app_preferences_providers_test.dart \
-              test/data/local/drift_app_preferences_repository_test.dart
-            git commit -m 'style(p2): format production preferences'
-            git push origin HEAD:feat/p2-flutter-production-adapters
-          fi
 
       - name: Format handwritten Dart
         run: |
