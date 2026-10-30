@@ -20,56 +20,67 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final repository = ref.watch(contentRepositoryProvider);
+    final contentPage = ref.watch(contentPageProvider);
     final markers = ref.watch(contentMarkersProvider);
-    final items = _itemsFor(repository.all, markers);
 
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Text('Review', style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 8),
-        const Text(
-          'Use learner markers to return to material that needs attention.',
+    return contentPage.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('Unable to load review content.\n$error'),
         ),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+      ),
+      data: (page) {
+        final items = _itemsFor(page.items, markers);
+        return ListView(
+          padding: const EdgeInsets.all(24),
           children: [
-            FilterChip(
-              label: const Text('Due'),
-              selected: filter == _ReviewFilter.due,
-              onSelected: (_) => setState(() => filter = _ReviewFilter.due),
+            Text('Review', style: Theme.of(context).textTheme.headlineMedium),
+            const SizedBox(height: 8),
+            const Text(
+              'Use learner markers to return to material that needs attention.',
             ),
-            FilterChip(
-              label: const Text('Favorites'),
-              selected: filter == _ReviewFilter.favorites,
-              onSelected: (_) =>
-                  setState(() => filter = _ReviewFilter.favorites),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                FilterChip(
+                  label: const Text('Due'),
+                  selected: filter == _ReviewFilter.due,
+                  onSelected: (_) => setState(() => filter = _ReviewFilter.due),
+                ),
+                FilterChip(
+                  label: const Text('Favorites'),
+                  selected: filter == _ReviewFilter.favorites,
+                  onSelected: (_) =>
+                      setState(() => filter = _ReviewFilter.favorites),
+                ),
+                FilterChip(
+                  label: const Text('Not listened'),
+                  selected: filter == _ReviewFilter.notListened,
+                  onSelected: (_) =>
+                      setState(() => filter = _ReviewFilter.notListened),
+                ),
+              ],
             ),
-            FilterChip(
-              label: const Text('Not listened'),
-              selected: filter == _ReviewFilter.notListened,
-              onSelected: (_) =>
-                  setState(() => filter = _ReviewFilter.notListened),
+            const SizedBox(height: 16),
+            Text(
+              '${items.length} items',
+              style: Theme.of(context).textTheme.titleMedium,
             ),
+            const SizedBox(height: 8),
+            if (items.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 48),
+                child: Center(child: Text('Nothing matches this review filter.')),
+              )
+            else
+              for (final item in items) ContentCard(item: item),
           ],
-        ),
-        const SizedBox(height: 16),
-        Text(
-          '${items.length} items',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 8),
-        if (items.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 48),
-            child: Center(child: Text('Nothing matches this review filter.')),
-          )
-        else
-          for (final item in items) ContentCard(item: item),
-      ],
+        );
+      },
     );
   }
 
@@ -84,6 +95,6 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         _ReviewFilter.favorites => state.favorite,
         _ReviewFilter.notListened => item.hasAudio && !state.listened,
       };
-    }).toList();
+    }).toList(growable: false);
   }
 }
