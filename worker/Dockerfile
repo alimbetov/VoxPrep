@@ -19,13 +19,14 @@ RUN apt-get update \
     && ffmpeg -version \
     && ffprobe -version
 
-COPY pyproject.toml ./
+COPY pyproject.toml constraints.txt ./
 COPY src ./src
 
 RUN python -m pip install --no-cache-dir "pip==${PIP_VERSION}" \
-    && python -m pip install --no-cache-dir . \
+    && python -m pip install --no-cache-dir -c constraints.txt . \
     && python -m pip check \
-    && python -c "import onnxruntime, piper; print('piper runtime import ok')" \
+    && python -m pip show piper-tts | grep -F "Version: 1.4.2" \
+    && python -c "import onnxruntime, piper; assert onnxruntime.__version__ == '1.31.1'; print('piper runtime import ok')" \
     && mkdir -p "${MODEL_CACHE_DIR}" "${TEMP_DIR}"
 
 VOLUME ["/var/lib/voxprep/tts/models"]
