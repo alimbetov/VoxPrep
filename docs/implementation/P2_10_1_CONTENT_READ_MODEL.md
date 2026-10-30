@@ -28,6 +28,8 @@ content_catalog_reads
 └── created_at
 ```
 
+`category` and `level` are canonical English display labels in schema v4. The backend wire contract now also carries stable `categoryCode` and `levelCode`, but those codes are intentionally not retrofitted into this already-accepted read model during contract hardening. A later taxonomy/read-model slice may persist them without changing their wire identity.
+
 Identity:
 
 ```text
@@ -63,11 +65,13 @@ A staged payload row may exist before activation, but it is not learner-visible 
 2. revision is positive;
 3. estimated minutes is positive;
 4. title/category/level are non-blank;
-5. two revisions of one identity may coexist;
-6. the same business code under different content types remains distinct;
-7. schema v3 → v4 creates an empty read model and preserves all existing learner/sync state;
-8. no repository cutover occurs in this slice;
-9. no mock adapter is deleted in this slice.
+5. schema-v4 category/level columns store display labels, not taxonomy identity;
+6. stable taxonomy identity is carried separately by the remote payload contract;
+7. two revisions of one identity may coexist;
+8. the same business code under different content types remains distinct;
+9. schema v3 → v4 creates an empty read model and preserves all existing learner/sync state;
+10. no repository cutover occurs in this slice;
+11. no mock adapter is deleted in this slice.
 
 ## Next
 
