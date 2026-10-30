@@ -30,6 +30,21 @@ final class ContentPayloadDecoder {
         );
       }
 
+      final categoryCode = _string(object, 'categoryCode');
+      if (!_stableCodePattern.hasMatch(categoryCode)) {
+        throw const _PayloadViolation(
+          r'$.categoryCode',
+          'must be an uppercase stable business code',
+        );
+      }
+      final levelCode = _string(object, 'levelCode');
+      if (!_stableCodePattern.hasMatch(levelCode)) {
+        throw const _PayloadViolation(
+          r'$.levelCode',
+          'must be an uppercase stable business code',
+        );
+      }
+
       final dto = ContentPayloadDto(
         contentCode: contentCode,
         contentType: typeName,
@@ -38,8 +53,10 @@ final class ContentPayloadDecoder {
         title: _string(object, 'title'),
         subtitle: _string(object, 'subtitle'),
         description: _string(object, 'description'),
-        category: _string(object, 'category'),
-        level: _string(object, 'level'),
+        categoryCode: categoryCode,
+        categoryLabel: _string(object, 'categoryLabel'),
+        levelCode: levelCode,
+        levelLabel: _string(object, 'levelLabel'),
         minutes: _integer(object, 'minutes'),
         hasAudio: _boolean(object, 'hasAudio'),
       );
@@ -110,6 +127,7 @@ final class ContentPayloadDecoder {
 }
 
 final _contentCodePattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._-]*$');
+final _stableCodePattern = RegExp(r'^[A-Z0-9][A-Z0-9._-]*$');
 
 final class _PayloadViolation implements Exception {
   const _PayloadViolation(this.path, this.reason);
