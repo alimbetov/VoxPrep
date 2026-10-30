@@ -29,75 +29,85 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
-  testWidgets(
-    'fresh install syncs production content to UI and survives reopen',
-    (tester) async {
-      final tempDirectory = await Directory.systemTemp.createTemp(
-        'careerspeak-p2-10-7-',
+  test('fresh install sync survives file-backed reopen', () async {
+    final tempDirectory = await Directory.systemTemp.createTemp(
+      'careerspeak-p2-10-7-',
+    );
+    final databaseFile = File('${tempDirectory.path}/careerspeak.sqlite');
+    final credentialStore = _MemoryCredentialStore();
+    final backend = _LearnerApiFixture();
+    final client = MockClient(backend.handle);
+
+    CareerSpeakDatabase? database;
+    try {
+      database = CareerSpeakDatabase(NativeDatabase(databaseFile));
+      final firstBootstrap = await _bootstrap(
+        database: database,
+        credentialStore: credentialStore,
+        client: client,
+        runId: 'e2e-startup-1',
       );
-      final databaseFile = File('${tempDirectory.path}/careerspeak.sqlite');
-      final credentialStore = _MemoryCredentialStore();
-      final backend = _LearnerApiFixture();
-      final client = MockClient(backend.handle);
 
-      CareerSpeakDatabase? database;
-      try {
-        database = CareerSpeakDatabase(NativeDatabase(databaseFile));
-        final firstBootstrap = await _bootstrap(
-          database: database,
-          credentialStore: credentialStore,
-          client: client,
-          runId: 'e2e-startup-1',
-        );
+      expect(firstBootstrap.credentials.installationId.value, _installationId);
+      expect(firstBootstrap.credentials.installationToken.value, _token);
+      expect(backend.registrationCalls, 1);
+      expect(backend.rootManifestCalls, 1);
+      expect(backend.packManifestCalls, 1);
+      expect(backend.contentPayloadCalls, 1);
+      await _expectProductionReadModel(database);
 
-        expect(
-          firstBootstrap.credentials.installationId.value,
-          _installationId,
-        );
-        expect(firstBootstrap.credentials.installationToken.value, _token);
-        expect(backend.registrationCalls, 1);
-        expect(backend.rootManifestCalls, 1);
-        expect(backend.packManifestCalls, 1);
-        expect(backend.contentPayloadCalls, 1);
+      await database.close();
+      database = null;
 
-        await _expectProductionReadModel(database);
-        await _expectProductionUi(tester, database);
+      database = CareerSpeakDatabase(NativeDatabase(databaseFile));
+      final secondBootstrap = await _bootstrap(
+        database: database,
+        credentialStore: credentialStore,
+        client: client,
+        runId: 'e2e-startup-2',
+      );
 
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump();
+      expect(secondBootstrap.credentials.installationId.value, _installationId);
+      expect(secondBootstrap.credentials.installationToken.value, _token);
+      expect(backend.registrationCalls, 1);
+      expect(backend.rootManifestCalls, 2);
+      expect(backend.packManifestCalls, 1);
+      expect(backend.contentPayloadCalls, 1);
+      await _expectProductionReadModel(database);
+    } finally {
+      if (database != null) {
         await database.close();
-
-        database = CareerSpeakDatabase(NativeDatabase(databaseFile));
-        final secondBootstrap = await _bootstrap(
-          database: database,
-          credentialStore: credentialStore,
-          client: client,
-          runId: 'e2e-startup-2',
-        );
-
-        expect(
-          secondBootstrap.credentials.installationId.value,
-          _installationId,
-        );
-        expect(secondBootstrap.credentials.installationToken.value, _token);
-        expect(backend.registrationCalls, 1);
-        expect(backend.rootManifestCalls, 2);
-        expect(backend.packManifestCalls, 1);
-        expect(backend.contentPayloadCalls, 1);
-
-        await _expectProductionReadModel(database);
-        await _expectProductionUi(tester, database);
-      } finally {
-        await tester.pumpWidget(const SizedBox.shrink());
-        await tester.pump();
-        if (database != null) {
-          await database.close();
-        }
-        client.close();
-        await tempDirectory.delete(recursive: true);
       }
-    },
-  );
+      client.close();
+      await tempDirectory.delete(recursive: true);
+    }
+  });
+
+  testWidgets('production learner UI renders synchronized Drift content', (
+    tester,
+  ) async {
+    final database = CareerSpeakDatabase(NativeDatabase.memory());
+    final credentialStore = _MemoryCredentialStore();
+    final backend = _LearnerApiFixture();
+    final client = MockClient(backend.handle);
+    addTearDown(database.close);
+    addTearDown(client.close);
+
+    await tester.runAsync(() async {
+      await _bootstrap(
+        database: database,
+        credentialStore: credentialStore,
+        client: client,
+        runId: 'e2e-ui-startup',
+      );
+    });
+
+    expect(backend.registrationCalls, 1);
+    expect(backend.rootManifestCalls, 1);
+    expect(backend.packManifestCalls, 1);
+    expect(backend.contentPayloadCalls, 1);
+    await _expectProductionUi(tester, database);
+  });
 }
 
 Future<ApplicationBootstrapOutcome> _bootstrap({
