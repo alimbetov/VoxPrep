@@ -43,6 +43,15 @@ class LeaseHeartbeat:
         if self._lease_lost.is_set():
             raise LeaseLostError("Backend lease ownership was lost")
 
+    def revalidate(self) -> None:
+        self.assert_owned()
+        try:
+            self._backend.heartbeat(worker_id=self._worker_id, job=self._job)
+        except LeaseLostError:
+            self._lease_lost.set()
+            raise
+        self.assert_owned()
+
     def _run(self) -> None:
         while not self._stop.wait(self._interval_seconds):
             try:
