@@ -1,14 +1,23 @@
 from __future__ import annotations
 
+import json
 import shutil
+import subprocess
 import wave
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from voxprep_tts_worker.adapters import audio
 from voxprep_tts_worker.adapters.audio import FfmpegPostprocessor, PiperSynthesizer
+from voxprep_tts_worker.domain.errors import (
+    AudioQcError,
+    ModelLoadError,
+    PostprocessError,
+    SynthesisError,
+)
 from voxprep_tts_worker.domain.job import ClaimedJob
 
 
@@ -39,13 +48,30 @@ class FakeVoice:
         wav_file.writeframes(b"\x00\x00" * 2205)
 
 
-def test_piper_synthesizer_loads_exact_cached_model(monkeypatch, tmp_path: Path) -> None:
+class EmptyVoice:
+    def synthesize_wav(self, text: str, wav_file: wave.Wave_write) -> None:
+        wav_file.setnchannels(1)
+        wav_file.setsampwidth(2)
+        wav_file.setframerate(22050)
+
+
+class FailingVoice:
+    def synthesize_wav(self, text: str, wav_file: wave.Wave_write) -> None:
+        raise RuntimeError("boom")
+
+
+def _installed_model(tmp_path: Path) -> Path:
     model_dir = tmp_path / "model"
     model_dir.mkdir()
+    (model_dir / "model.onnx").write_bytes(b"fake-model")
+    (model_dir / "model.onnx.json").write_text("{}", encoding="utf-8")
+    return model_dir
+
+
+def test_piper_synthesizer_loads_exact_cached_model(monkeypatch, tmp_path: Path) -> None:
+    model_dir = _installed_model(tmp_path)
     model_path = model_dir / "model.onnx"
     config_path = model_dir / "model.onnx.json"
-    model_path.write_bytes(b"fake-model")
-    config_path.write_text("{}", encoding="utf-8")
     seen: dict[str, Path] = {}
 
     def fake_load(model: Path, *, config_path: Path):
@@ -64,6 +90,147 @@ def test_piper_synthesizer_loads_exact_cached_model(monkeypatch, tmp_path: Path)
     assert output.is_file()
     assert output.stat().st_size > 44
     assert seen == {"model": model_path, "config": config_path}
+
+
+@pytest.mark.parametrize("missing_name", ["model.onnx", "model.onnx.json"])
+def test_piper_rejects_incomplete_model_installation(tmp_path: Path, missing_name: str) -> None:
+    model_dir = _installed_model(tmp_path)
+    (model_dir / missing_name).unlink()
+
+    with pytest.raises(ModelLoadError, match="incomplete"):
+        PiperSynthesizer().synthesize(
+            job=_job(),
+            model_dir=model_dir,
+            output_wav=tmp_path / "voice.wav",
+        )
+
+
+def test_piper_model_load_failure_is_classified(monkeypatch, tmp_path: Path) -> None:
+    model_dir = _installed_model(tmp_path)
+
+    def fail_load(*args, **kwargs):
+        raise RuntimeError("invalid ONNX")
+
+    monkeypatch.setattr(audio.PiperVoice, "load", fail_load)
+
+    with pytest.raises(ModelLoadError, match="could not be loaded"):
+        PiperSynthesizer().synthesize(
+            job=_job(), model_dir=model_dir, output_wav=tmp_path / "voice.wav"
+        )
+
+
+def test_piper_synthesis_failure_is_classified(monkeypatch, tmp_path: Path) -> None:
+    model_dir = _installed_model(tmp_path)
+    monkeypatch.setattr(audio.PiperVoice, "load", lambda *args, **kwargs: FailingVoice())
+
+    with pytest.raises(SynthesisError, match="Piper synthesis failed"):
+        PiperSynthesizer().synthesize(
+            job=_job(), model_dir=model_dir, output_wav=tmp_path / "voice.wav"
+        )
+
+
+def test_piper_empty_wav_is_rejected(monkeypatch, tmp_path: Path) -> None:
+    model_dir = _installed_model(tmp_path)
+    monkeypatch.setattr(audio.PiperVoice, "load", lambda *args, **kwargs: EmptyVoice())
+
+    with pytest.raises(SynthesisError, match="empty WAV"):
+        PiperSynthesizer().synthesize(
+            job=_job(), model_dir=model_dir, output_wav=tmp_path / "voice.wav"
+        )
+
+
+def test_ffmpeg_rejects_missing_input_wav(tmp_path: Path) -> None:
+    with pytest.raises(PostprocessError, match="missing or empty"):
+        FfmpegPostprocessor().postprocess(
+            job=_job(),
+            input_wav=tmp_path / "missing.wav",
+            output_mp3=tmp_path / "output.mp3",
+        )
+
+
+def test_ffmpeg_nonzero_exit_is_classified(monkeypatch, tmp_path: Path) -> None:
+    wav_path = tmp_path / "input.wav"
+    wav_path.write_bytes(b"RIFF-data")
+    monkeypatch.setattr(
+        audio.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(returncode=1, stdout="", stderr="bad input"),
+    )
+
+    with pytest.raises(PostprocessError, match="conversion failed"):
+        FfmpegPostprocessor().postprocess(
+            job=_job(), input_wav=wav_path, output_mp3=tmp_path / "output.mp3"
+        )
+
+
+def test_ffmpeg_start_failure_is_classified(monkeypatch, tmp_path: Path) -> None:
+    wav_path = tmp_path / "input.wav"
+    wav_path.write_bytes(b"RIFF-data")
+
+    def fail_start(*args, **kwargs):
+        raise OSError("ffmpeg missing")
+
+    monkeypatch.setattr(audio.subprocess, "run", fail_start)
+
+    with pytest.raises(PostprocessError, match="could not be started"):
+        FfmpegPostprocessor().postprocess(
+            job=_job(), input_wav=wav_path, output_mp3=tmp_path / "output.mp3"
+        )
+
+
+def test_ffprobe_invalid_metadata_is_rejected(monkeypatch, tmp_path: Path) -> None:
+    mp3 = tmp_path / "output.mp3"
+    mp3.write_bytes(b"mp3")
+    monkeypatch.setattr(
+        audio.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(
+            returncode=0,
+            stdout=json.dumps({"streams": [], "format": {"duration": "1.0"}}),
+            stderr="",
+        ),
+    )
+
+    with pytest.raises(AudioQcError, match="metadata is invalid"):
+        FfmpegPostprocessor()._inspect(mp3)
+
+
+@pytest.mark.parametrize(
+    ("codec", "sample_rate", "channels", "duration", "message"),
+    [
+        ("aac", "24000", 1, "1.0", "codec is not MP3"),
+        ("mp3", "48000", 1, "1.0", "sample rate is not 24 kHz"),
+        ("mp3", "24000", 2, "1.0", "not mono"),
+        ("mp3", "24000", 1, "0", "duration is not positive"),
+    ],
+)
+def test_ffprobe_profile_mismatch_is_rejected(
+    monkeypatch,
+    tmp_path: Path,
+    codec: str,
+    sample_rate: str,
+    channels: int,
+    duration: str,
+    message: str,
+) -> None:
+    mp3 = tmp_path / "output.mp3"
+    mp3.write_bytes(b"mp3")
+    payload = {
+        "streams": [
+            {"codec_name": codec, "sample_rate": sample_rate, "channels": channels}
+        ],
+        "format": {"duration": duration},
+    }
+    monkeypatch.setattr(
+        audio.subprocess,
+        "run",
+        lambda *args, **kwargs: SimpleNamespace(
+            returncode=0, stdout=json.dumps(payload), stderr=""
+        ),
+    )
+
+    with pytest.raises(AudioQcError, match=message):
+        FfmpegPostprocessor()._inspect(mp3)
 
 
 @pytest.mark.skipif(
