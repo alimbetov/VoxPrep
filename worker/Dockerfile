@@ -1,16 +1,31 @@
-FROM python:3.12-slim-bookworm
+FROM python:3.12.16-slim-bookworm
+
+ARG PIP_VERSION=26.2.2
+ARG FFMPEG_DEBIAN_VERSION=7:5.1.9-0+deb12u1
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
     MODEL_CACHE_DIR=/var/lib/voxprep/tts/models \
     TEMP_DIR=/tmp/voxprep-tts
 
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+       "ffmpeg=${FFMPEG_DEBIAN_VERSION}" \
+    && rm -rf /var/lib/apt/lists/* \
+    && ffmpeg -version \
+    && ffprobe -version
+
 COPY pyproject.toml ./
 COPY src ./src
 
-RUN pip install --no-cache-dir . \
+RUN python -m pip install --no-cache-dir "pip==${PIP_VERSION}" \
+    && python -m pip install --no-cache-dir . \
+    && python -m pip check \
+    && python -c "import onnxruntime, piper; print('piper runtime import ok')" \
     && mkdir -p "${MODEL_CACHE_DIR}" "${TEMP_DIR}"
 
 VOLUME ["/var/lib/voxprep/tts/models"]
