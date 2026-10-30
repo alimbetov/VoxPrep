@@ -120,12 +120,14 @@ class MockContentRepository implements ContentRepository {
 }
 
 Page<ContentItem> _page(List<ContentItem> items, PageRequest request) {
-  final startIndex = request.cursor == null
-      ? 0
-      : items.indexWhere((item) => item.code == request.cursor) + 1;
-  final safeStart = startIndex < 0 ? 0 : startIndex;
-  final end = (safeStart + request.limit).clamp(0, items.length);
-  final pageItems = items.sublist(safeStart, end);
+  final cursorIndex = request.cursor == null
+      ? -1
+      : items.indexWhere((item) => item.code == request.cursor);
+  final start = cursorIndex < 0 ? 0 : cursorIndex + 1;
+  final end = start + request.limit > items.length
+      ? items.length
+      : start + request.limit;
+  final pageItems = items.sublist(start, end);
   final hasMore = end < items.length;
 
   return Page(
