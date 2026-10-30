@@ -40,7 +40,7 @@ jobs:
       - name: Verify Python dependency graph
         run: |
           python -m pip check
-          python -c "import onnxruntime, piper; assert onnxruntime.__version__ == '1.31.1'; print('piper runtime import ok')"
+          python -c "import httpx, onnxruntime, piper; assert httpx.__version__ == '0.28.1'; assert onnxruntime.__version__ == '1.31.1'; print('worker runtime imports ok')"
           python -m pip show piper-tts | grep -F "Version: 1.4.2"
 
       - name: Verify resolved dependency set matches lock
@@ -62,46 +62,72 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build worker image
-        run: docker build -t voxprep-tts-worker:w1 ./worker
+        run: docker build -t voxprep-tts-worker:functional ./worker
 
       - name: Verify pinned runtime components
         shell: bash
         run: |
-          docker run --rm --entrypoint sh voxprep-tts-worker:w1 -c '
+          docker run --rm --entrypoint sh voxprep-tts-worker:functional -c '
             set -eu
             test "$(python -c "import sys; print(sys.version.split()[0])")" = "3.12.16"
             ffmpeg -version | head -n 1 | grep -F "5.1.9-0+deb12u1"
             ffprobe -version | head -n 1 | grep -F "5.1.9-0+deb12u1"
             python -m pip show piper-tts | grep -F "Version: 1.4.2"
+            test "$(python -c "import httpx; print(httpx.__version__)")" = "0.28.1"
             test "$(python -c "import onnxruntime; print(onnxruntime.__version__)")" = "1.31.1"
             python -m pip check
           '
+
+      - name: Verify production WAV to MP3 pipeline
+        run: docker run --rm --entrypoint python voxprep-tts-worker:functional -m voxprep_tts_worker.runtime_smoke
 
       - name: Missing configuration fails fast
         shell: bash
         run: |
           set +e
-          docker run --rm voxprep-tts-worker:w1 >/tmp/worker.out 2>/tmp/worker.err
+          docker run --rm voxprep-tts-worker:functional >/tmp/worker.out 2>/tmp/worker.err
           code=$?
           set -e
           cat /tmp/worker.err
           test "$code" -eq 2
           grep -q "BASE_URL is required" /tmp/worker.err
 
-      - name: Valid runtime starts and stops with SIGTERM
+      - name: Valid functional runtime polls Backend and stops with SIGTERM
         shell: bash
         run: |
+          python - <<'PY' >/tmp/backend-stub.log 2>&1 &
+          from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+          class Handler(BaseHTTPRequestHandler):
+              def do_POST(self):
+                  if self.path == "/internal/v1/tts/jobs/claim":
+                      self.send_response(204)
+                  else:
+                      self.send_response(404)
+                  self.end_headers()
+
+              def log_message(self, format, *args):
+                  return
+
+          ThreadingHTTPServer(("0.0.0.0", 18080), Handler).serve_forever()
+          PY
+          stub_pid=$!
+          trap 'kill "$stub_pid" 2>/dev/null || true' EXIT
+          sleep 1
+
           token="ci-worker-secret"
-          id=$(docker run -d \
-            -e BASE_URL=http://backend.example \
+          id=$(docker run -d --network host \
+            -e BASE_URL=http://127.0.0.1:18080 \
             -e WORKER_TOKEN="$token" \
             -e WORKER_ID=ci-worker-01 \
-            voxprep-tts-worker:w1)
+            -e POLL_INTERVAL_SECONDS=0.2 \
+            voxprep-tts-worker:functional)
           sleep 2
           docker stop --timeout 10 "$id"
           docker logs "$id" > /tmp/worker.log 2>&1
           docker rm "$id"
           cat /tmp/worker.log
+          grep -q "functional TTS worker active" /tmp/worker.log
           grep -q "worker polling started" /tmp/worker.log
           grep -q "worker polling stopped" /tmp/worker.log
           if grep -Fq "$token" /tmp/worker.log; then
