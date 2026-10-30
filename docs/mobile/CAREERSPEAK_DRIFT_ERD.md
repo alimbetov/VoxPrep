@@ -1,161 +1,84 @@
 # CareerSpeak — P0.12.4 Drift ERD
 
-**Document version:** 0.1  
-**Status:** Working design / P0.12.4  
-**Applies to:** CareerSpeak v0.8+  
-**Branch:** `feat/p0-domain-contracts`
+**Document version:** 1.0  
+**Status:** Normative mobile persistence baseline  
+**Applies to:** CareerSpeak v0.9+
+
+Related standards:
+
+- [`../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md`](../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md)
+- [`CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md`](CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md)
+- [`CAREERSPEAK_ADAPTIVE_UI.md`](CAREERSPEAK_ADAPTIVE_UI.md)
 
 ---
 
-## 1. Goal
-
-This document defines the local SQLite/Drift persistence model that forms the foundation of the CareerSpeak offline-first Flutter application.
-
-The local database has three responsibilities:
+## 1. Persistence zones
 
 ```text
-SYSTEM / SYNC STATE
-    ↓
-CONTENT SNAPSHOTS / PACKS / ASSETS
-    ↓
-DURABLE LEARNER STATE
+SYSTEM
+├── app_preferences
+└── installation_runtime_state
+
+SYNC
+├── content_manifest_state
+├── sync_run
+├── sync_pack_update
+└── sync_tombstone
+
+CONTENT / CACHE
+├── content_pack_revision
+├── local_content_record
+├── pack_content_ref
+├── asset_catalog
+├── local_asset_file
+├── content_asset_ref
+├── pack_asset_ref
+├── content_cache_entry
+├── offline_pack_state
+└── download_task
+
+LEARNER
+├── favorite
+├── recent_content
+├── vocabulary_progress
+├── topic_progress
+├── review_schedule
+├── test_attempt
+├── test_attempt_question
+└── test_answer
 ```
 
-The design SHALL keep re-downloadable content independent from durable learner progress.
+Rules:
+
+1. re-downloadable content/cache is separate from learner state;
+2. cache eviction never deletes progress/favorites/test history;
+3. published content identity uses stable business code + revision;
+4. all persisted instants use UTC semantics;
+5. installation token is never stored in Drift.
 
 ---
 
-## 2. Core decisions
+## 2. System tables
 
-1. Server numeric database IDs are not the mobile domain identity. Flutter uses stable business codes/revisions from API contracts.
-2. `installationId` and the installation token are stored in platform Secure Storage. The token is NEVER stored in Drift.
-3. Drift stores only non-secret installation runtime metadata.
-4. Content synchronization metadata is generic, but searchable learner content SHALL use typed feature read-model tables. A single giant JSON content table is not the primary learner query model.
-5. Published content revisions are immutable. Local rows are versioned by stable code + revision.
-6. Staged content never becomes visible until the sync commit transaction succeeds.
-7. Learner state tables intentionally do not cascade-delete when cached content is evicted.
-8. Physical media files are content-addressed by checksum and may be shared by multiple logical assets/content items.
-9. All persisted instants use UTC semantics. Local timezone is applied only for presentation/scheduling UX.
-10. Destructive `delete-and-recreate database` migration is not an accepted production migration strategy.
-
----
-
-## 3. Data zones
+### `app_preferences`
 
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│ SYSTEM                                                      │
-│ app_preferences                                             │
-│ installation_runtime_state                                  │
-├─────────────────────────────────────────────────────────────┤
-│ SYNC                                                        │
-│ content_manifest_state                                      │
-│ sync_run                                                    │
-│ sync_pack_update                                            │
-│ sync_tombstone                                              │
-├─────────────────────────────────────────────────────────────┤
-│ CONTENT                                                     │
-│ content_pack_revision                                       │
-│ local_content_record                                        │
-│ pack_content_ref                                            │
-│ asset_catalog                                               │
-│ local_asset_file                                            │
-│ content_asset_ref                                           │
-│ pack_asset_ref                                              │
-│ content_cache_entry                                         │
-│ offline_pack_state                                          │
-│ download_task                                               │
-│ + typed feature read models                                 │
-├─────────────────────────────────────────────────────────────┤
-│ LEARNER                                                     │
-│ favorite                                                    │
-│ recent_content                                              │
-│ vocabulary_progress                                         │
-│ topic_progress                                              │
-│ review_schedule                                             │
-│ test_attempt                                                │
-│ test_attempt_question                                       │
-│ test_answer                                                 │
-└─────────────────────────────────────────────────────────────┘
-```
-
----
-
-## 4. Relationship overview
-
-```text
-content_manifest_state
-        │
-        │ target content version
-        ▼
-     sync_run
-        │
-        ├───────────────┐
-        ▼               ▼
-sync_pack_update   sync_tombstone
-        │
-        ▼
-content_pack_revision
-        │
-   ┌────┴──────────────┐
-   ▼                   ▼
-pack_content_ref   pack_asset_ref
-   │                   │
-   ▼                   ▼
-local_content_record  asset_catalog
-   │                   │
-   └──── content_asset_ref ──┘
-                           │
-                           ▼
-                    local_asset_file
-
-local_content_record is disposable/versioned metadata.
-
-favorite / progress / review / test history reference stable business codes
-and DO NOT depend on the continued existence of cached content rows.
-```
-
----
-
-# 5. System tables
-
-## 5.1 `app_preferences`
-
-Singleton row.
-
-```text
-app_preferences
-────────────────────────────────────
 id                    INTEGER PK CHECK(id = 1)
 ui_locale             TEXT NOT NULL
 translation_locale    TEXT NOT NULL
 preferred_accent      TEXT NULL
 theme_code            TEXT NOT NULL
-focus_mode             INTEGER NOT NULL DEFAULT 0
+focus_mode            INTEGER NOT NULL DEFAULT 0
 storage_quota_bytes   INTEGER NULL
-created_at             DATETIME NOT NULL
-updated_at             DATETIME NOT NULL
+created_at            DATETIME NOT NULL
+updated_at            DATETIME NOT NULL
 ```
 
-Rules:
+### `installation_runtime_state`
+
+Operational state only:
 
 ```text
-ui_locale          = compile-time supported Flutter UI locale
-translation_locale = content translation locale
-learning language  = always English and is not persisted as a selectable value
-```
-
-`storage_quota_bytes = NULL` means use application default policy.
-
----
-
-## 5.2 `installation_runtime_state`
-
-Singleton operational metadata only.
-
-```text
-installation_runtime_state
-────────────────────────────────────
 id                       INTEGER PK CHECK(id = 1)
 registration_state       TEXT NOT NULL
 last_registration_at     DATETIME NULL
@@ -165,7 +88,7 @@ last_error_code          TEXT NULL
 updated_at               DATETIME NOT NULL
 ```
 
-Allowed `registration_state`:
+Allowed states:
 
 ```text
 UNREGISTERED
@@ -175,60 +98,54 @@ TOKEN_REFRESH_REQUIRED
 REGISTRATION_FAILED
 ```
 
-The following SHALL NOT be persisted here:
-
-```text
-installation token
-worker/admin credentials
-RustFS credentials
-```
-
-Source of truth for `installationId + installation token` is platform Secure Storage.
+Source of truth for `installationId + installationToken` is platform Secure Storage.
 
 ---
 
-# 6. Manifest and sync tables
+## 3. Root manifest state
 
-## 6.1 `content_manifest_state`
-
-Stores the last committed root-manifest state per manifest scope.
-
-A scope allows canonical content and locale-specific delta state to evolve independently.
+CareerSpeak has one backend root learner snapshot epoch:
 
 ```text
-content_manifest_state
-──────────────────────────────────────────
-scope_key                    TEXT PK
-schema_version               INTEGER NOT NULL
-active_content_version       INTEGER NOT NULL
-active_manifest_checksum     TEXT NOT NULL
-remote_content_version_seen  INTEGER NULL
-remote_manifest_checksum     TEXT NULL
-etag                         TEXT NULL
-last_checked_at              DATETIME NULL
-last_successful_sync_at      DATETIME NULL
-updated_at                   DATETIME NOT NULL
+contentVersion
 ```
 
-Initial scope examples:
+Locale data is represented by pack variants inside that root snapshot; it does not create an independent root epoch.
+
+### `content_manifest_state`
+
+Singleton row:
 
 ```text
-canonical
-locale:ru
-locale:kk
+id                         INTEGER PK CHECK(id = 1)
+schema_version             INTEGER NOT NULL
+current_content_version    INTEGER NOT NULL
+current_manifest_checksum  TEXT NOT NULL
+remote_content_version_seen INTEGER NULL
+remote_manifest_checksum   TEXT NULL
+etag                       TEXT NULL
+last_checked_at            DATETIME NULL
+last_successful_sync_at    DATETIME NULL
+updated_at                 DATETIME NOT NULL
 ```
 
-This model allows a locale delta to change without duplicating canonical English/audio state.
+Important distinction:
+
+```text
+remote_content_version_seen
+!=
+current_content_version
+```
+
+The latter advances only after atomic metadata activation succeeds.
 
 ---
 
-## 6.2 `sync_run`
+## 4. Durable sync journal
 
-Durable coordinator state for crash recovery.
+### `sync_run`
 
 ```text
-sync_run
-──────────────────────────────────────────
 run_id                 TEXT PK
 trigger                 TEXT NOT NULL
 translation_locale     TEXT NOT NULL
@@ -257,27 +174,19 @@ PERIODIC_FRESHNESS
 RECOVERY
 ```
 
-Only one non-terminal `sync_run` may be owned by `ContentSyncCoordinator` at a time.
-
----
-
-## 6.3 `sync_pack_update`
-
-One row for each pack/variant change in a sync plan.
+### `sync_pack_update`
 
 ```text
-sync_pack_update
-──────────────────────────────────────────
-run_id                  TEXT NOT NULL
-pack_code               TEXT NOT NULL
-variant_key             TEXT NOT NULL
-target_revision         INTEGER NOT NULL
-target_checksum         TEXT NOT NULL
-state                    TEXT NOT NULL
-required_asset_count    INTEGER NOT NULL DEFAULT 0
-verified_asset_count    INTEGER NOT NULL DEFAULT 0
-error_code               TEXT NULL
-updated_at               DATETIME NOT NULL
+run_id               TEXT NOT NULL
+pack_code            TEXT NOT NULL
+variant_key          TEXT NOT NULL
+target_revision      INTEGER NOT NULL
+target_checksum      TEXT NOT NULL
+state                 TEXT NOT NULL
+required_asset_count INTEGER NOT NULL DEFAULT 0
+verified_asset_count INTEGER NOT NULL DEFAULT 0
+error_code            TEXT NULL
+updated_at            DATETIME NOT NULL
 
 PK (run_id, pack_code, variant_key)
 FK run_id -> sync_run(run_id)
@@ -291,15 +200,9 @@ locale:ru
 locale:kk
 ```
 
----
-
-## 6.4 `sync_tombstone`
-
-Persists planned removals so a crash cannot lose the sync plan.
+### `sync_tombstone`
 
 ```text
-sync_tombstone
-──────────────────────────────────────────
 run_id          TEXT NOT NULL
 content_code    TEXT NOT NULL
 content_type    TEXT NOT NULL
@@ -309,30 +212,17 @@ state           TEXT NOT NULL
 applied_at      DATETIME NULL
 
 PK (run_id, content_code, content_type)
-FK run_id -> sync_run(run_id)
 ```
 
-States:
-
-```text
-PLANNED
-APPLIED
-IGNORED_ALREADY_ABSENT
-```
-
-Tombstones affect disposable synced content, not learner history.
+Tombstones never delete durable learner state.
 
 ---
 
-# 7. Pack and content snapshot tables
+## 5. Pack revisions
 
-## 7.1 `content_pack_revision`
-
-Stores concurrently staged and active pack revisions.
+### `content_pack_revision`
 
 ```text
-content_pack_revision
-──────────────────────────────────────────
 pack_code          TEXT NOT NULL
 variant_key        TEXT NOT NULL
 revision           INTEGER NOT NULL
@@ -342,48 +232,46 @@ state              TEXT NOT NULL
 source_content_ver INTEGER NOT NULL
 staged_at          DATETIME NOT NULL
 verified_at        DATETIME NULL
-activated_at       DATETIME NULL
+current_at         DATETIME NULL
 superseded_at      DATETIME NULL
 
 PK (pack_code, variant_key, revision)
 ```
 
-States:
+Standard local metadata states:
 
 ```text
 STAGING
 VERIFIED
-ACTIVE
-FAILED
+CURRENT
 SUPERSEDED
+FAILED
 ```
 
 Invariant:
 
 ```text
-at most one ACTIVE revision per (pack_code, variant_key)
+at most one CURRENT revision per (pack_code, variant_key)
 ```
 
-Use a SQLite partial unique index where supported by the Drift migration strategy, otherwise enforce transactionally and verify with tests.
+`ACTIVE` is forbidden as a Flutter local revision state; Backend reserves `ACTIVE` for learner-delivery availability.
 
 ---
 
-## 7.2 `local_content_record`
+## 6. Generic content envelope
 
-Generic sync envelope, not the primary feature payload store.
+### `local_content_record`
 
 ```text
-local_content_record
-──────────────────────────────────────────
-content_code        TEXT NOT NULL
-content_type        TEXT NOT NULL
-revision            INTEGER NOT NULL
-checksum            TEXT NOT NULL
-sort_order          INTEGER NULL
-published_at        DATETIME NULL
-snapshot_state      TEXT NOT NULL
-source_schema_ver   INTEGER NOT NULL
-created_at          DATETIME NOT NULL
+content_code       TEXT NOT NULL
+content_type       TEXT NOT NULL
+revision           INTEGER NOT NULL
+checksum           TEXT NOT NULL
+sort_order         INTEGER NULL
+published_at       DATETIME NULL
+snapshot_state     TEXT NOT NULL
+source_schema_ver  INTEGER NOT NULL
+created_at         DATETIME NOT NULL
 
 PK (content_code, content_type, revision)
 ```
@@ -392,12 +280,14 @@ States:
 
 ```text
 STAGED
-ACTIVE
+CURRENT
 SUPERSEDED
 TOMBSTONED
 ```
 
-The actual searchable/display fields belong in typed feature read models, for example later:
+This is a synchronization envelope, not the only learner query model.
+
+Searchable content uses typed Drift read models, e.g.:
 
 ```text
 vocabulary_item_read
@@ -409,23 +299,21 @@ practice_test_read
 question_read
 ```
 
-These feature tables SHALL share the same `(business code, revision)` identity and participate in the same activation transaction.
-
-Do not make `payload_json` the only query source for all learning features.
+Typed read models share stable `(businessCode, revision)` identity and are switched in the same metadata activation transaction.
 
 ---
 
-## 7.3 `pack_content_ref`
+## 7. Pack/content membership
+
+### `pack_content_ref`
 
 ```text
-pack_content_ref
-──────────────────────────────────────────
-pack_code       TEXT NOT NULL
-variant_key     TEXT NOT NULL
-pack_revision   INTEGER NOT NULL
-content_code    TEXT NOT NULL
-content_type    TEXT NOT NULL
-content_revision INTEGER NOT NULL
+pack_code          TEXT NOT NULL
+variant_key        TEXT NOT NULL
+pack_revision      INTEGER NOT NULL
+content_code       TEXT NOT NULL
+content_type       TEXT NOT NULL
+content_revision   INTEGER NOT NULL
 
 PK (
   pack_code,
@@ -437,23 +325,17 @@ PK (
 )
 ```
 
-Purpose:
-
-- determine which content belongs to a staged/active pack revision;
-- release old references after supersession;
-- avoid destructive guesses based only on missing API pages.
+This table makes pack replacement deterministic and avoids destructive inference from missing paginated API results.
 
 ---
 
-# 8. Asset model
+## 8. Asset model
 
-## 8.1 `asset_catalog`
+### `asset_catalog`
 
-Logical immutable asset descriptor received from manifests.
+Logical immutable descriptor:
 
 ```text
-asset_catalog
-──────────────────────────────────────────
 asset_id          TEXT PK
 checksum_sha256   TEXT NOT NULL
 asset_kind        TEXT NOT NULL
@@ -464,26 +346,13 @@ delivery_key      TEXT NOT NULL
 created_at        DATETIME NOT NULL
 ```
 
-`delivery_key` is a stable relative delivery/object key, not a permanent CDN hostname.
+`delivery_key` is relative/stable and never stores a permanent CDN hostname.
 
-Asset kinds may include:
+### `local_asset_file`
 
-```text
-AUDIO
-IMAGE
-THEME_ASSET
-OTHER
-```
-
----
-
-## 8.2 `local_asset_file`
-
-Physical verified file cache keyed by content hash.
+Physical verified cache:
 
 ```text
-local_asset_file
-──────────────────────────────────────────
 checksum_sha256   TEXT PK
 relative_path     TEXT NOT NULL UNIQUE
 size_bytes        INTEGER NOT NULL
@@ -502,15 +371,11 @@ CORRUPT
 DELETE_PENDING
 ```
 
-Because the physical file is keyed by checksum, two logical `asset_id` values with identical bytes may reuse the same local file.
+Physical cache is checksum-addressed so identical bytes may be reused.
 
----
-
-## 8.3 `content_asset_ref`
+### `content_asset_ref`
 
 ```text
-content_asset_ref
-──────────────────────────────────────────
 content_code       TEXT NOT NULL
 content_type       TEXT NOT NULL
 content_revision   INTEGER NOT NULL
@@ -519,29 +384,11 @@ asset_role         TEXT NOT NULL
 required_offline   INTEGER NOT NULL DEFAULT 0
 
 PK (content_code, content_type, content_revision, asset_id, asset_role)
-FK asset_id -> asset_catalog(asset_id)
 ```
 
-Example roles:
+### `pack_asset_ref`
 
 ```text
-QUESTION_AUDIO
-ANSWER_AUDIO
-WORD_AUDIO
-EXAMPLE_AUDIO
-TOPIC_AUDIO
-COVER_IMAGE
-```
-
----
-
-## 8.4 `pack_asset_ref`
-
-For pack-level assets not naturally owned by one content item.
-
-```text
-pack_asset_ref
-──────────────────────────────────────────
 pack_code        TEXT NOT NULL
 variant_key      TEXT NOT NULL
 pack_revision    INTEGER NOT NULL
@@ -549,18 +396,17 @@ asset_id         TEXT NOT NULL
 required_offline INTEGER NOT NULL DEFAULT 0
 
 PK (pack_code, variant_key, pack_revision, asset_id)
-FK asset_id -> asset_catalog(asset_id)
 ```
+
+A physical file may be deleted only when no retained/current/offline-ready reference requires it.
 
 ---
 
-# 9. Retention and offline-download state
+## 9. Cache retention
 
-## 9.1 `content_cache_entry`
+### `content_cache_entry`
 
 ```text
-content_cache_entry
-──────────────────────────────────────────
 content_code       TEXT NOT NULL
 content_type       TEXT NOT NULL
 content_revision   INTEGER NOT NULL
@@ -582,22 +428,23 @@ EXPLICIT_DOWNLOAD
 PINNED
 ```
 
-Favorites are not automatically `PINNED`.
+Favorites are not automatically pins.
 
 ---
 
-## 9.2 `offline_pack_state`
+## 10. Offline bundle state
 
-Persists user intent separately from the currently active content revision.
+Offline readiness is independent from metadata `CURRENT`.
+
+### `offline_pack_state`
 
 ```text
-offline_pack_state
-──────────────────────────────────────────
 pack_code           TEXT NOT NULL
 variant_key         TEXT NOT NULL
 desired_mode        TEXT NOT NULL
 offline_state       TEXT NOT NULL
 ready_revision      INTEGER NULL
+updating_revision   INTEGER NULL
 bytes_total         INTEGER NOT NULL DEFAULT 0
 bytes_present       INTEGER NOT NULL DEFAULT 0
 requested_at        DATETIME NULL
@@ -627,25 +474,24 @@ UPDATING
 FAILED
 ```
 
-Important activation rule:
+Important supported state:
 
 ```text
-normal/streaming pack
-→ metadata may activate once metadata/schema is verified
-
-EXPLICIT_DOWNLOAD or PINNED pack
-→ a new revision does not activate until all required_offline assets are verified
+metadata revision 8 = CURRENT
+offline ready_revision = 7
+offline updating_revision = 8
+offline_state = UPDATING
 ```
 
-This keeps an explicitly offline pack atomically usable.
+Revision 7 remains usable offline until revision 8 reaches READY.
 
 ---
 
-## 9.3 `download_task`
+## 11. Download tasks
+
+### `download_task`
 
 ```text
-download_task
-──────────────────────────────────────────
 task_id             TEXT PK
 task_type           TEXT NOT NULL
 sync_run_id         TEXT NULL
@@ -664,14 +510,6 @@ created_at          DATETIME NOT NULL
 updated_at          DATETIME NOT NULL
 ```
 
-Task types:
-
-```text
-ASSET
-PACK_REQUIRED_ASSET
-LOCALE_DELTA_ASSET
-```
-
 States:
 
 ```text
@@ -684,393 +522,194 @@ FAILED
 CANCELLED
 ```
 
+A download is `READY` only after integrity verification and atomic final-file placement.
+
 ---
 
-# 10. Durable learner state
+## 12. Durable learner state
 
-## 10.1 `favorite`
+Learner state uses stable content business identity and intentionally avoids destructive FK cascades into disposable content tables.
+
+### `favorite`
 
 ```text
-favorite
-──────────────────────────────────────────
 content_code   TEXT NOT NULL
 content_type   TEXT NOT NULL
 created_at     DATETIME NOT NULL
-
 PK (content_code, content_type)
 ```
 
-No FK to `local_content_record` by design.
-
-A favorite survives cache/content eviction and is resolved again if content is re-downloaded.
-
----
-
-## 10.2 `recent_content`
+### `recent_content`
 
 ```text
-recent_content
-──────────────────────────────────────────
 content_code      TEXT NOT NULL
 content_type      TEXT NOT NULL
-last_revision     INTEGER NULL
-resume_locator    TEXT NULL
 last_opened_at    DATETIME NOT NULL
-
+last_revision_seen INTEGER NULL
 PK (content_code, content_type)
 ```
 
-Used by `Continue Learning`.
-
-`resume_locator` is a feature-owned stable locator, e.g. a topic section code or test question position token.
-
----
-
-## 10.3 `vocabulary_progress`
+### `vocabulary_progress`
 
 ```text
-vocabulary_progress
-──────────────────────────────────────────
-word_code            TEXT PK
-last_seen_revision   INTEGER NULL
-familiarity_level    INTEGER NOT NULL DEFAULT 0
-correct_count        INTEGER NOT NULL DEFAULT 0
-incorrect_count      INTEGER NOT NULL DEFAULT 0
-last_practiced_at    DATETIME NULL
-updated_at            DATETIME NOT NULL
+content_code       TEXT PK
+status             TEXT NOT NULL
+correct_count      INTEGER NOT NULL DEFAULT 0
+incorrect_count    INTEGER NOT NULL DEFAULT 0
+last_reviewed_at   DATETIME NULL
+updated_at         DATETIME NOT NULL
 ```
 
-No FK to disposable vocabulary content.
-
----
-
-## 10.4 `topic_progress`
+### `topic_progress`
 
 ```text
-topic_progress
-──────────────────────────────────────────
-topic_code            TEXT PK
-last_seen_revision    INTEGER NULL
-last_section_code     TEXT NULL
-completed             INTEGER NOT NULL DEFAULT 0
-progress_percent      INTEGER NOT NULL DEFAULT 0
-last_opened_at        DATETIME NULL
-updated_at             DATETIME NOT NULL
+content_code       TEXT PK
+completed          INTEGER NOT NULL DEFAULT 0
+last_section_code  TEXT NULL
+last_position_ms   INTEGER NULL
+updated_at         DATETIME NOT NULL
 ```
 
----
-
-## 10.5 `review_schedule`
+### `review_schedule`
 
 ```text
-review_schedule
-──────────────────────────────────────────
-content_code        TEXT NOT NULL
-content_type        TEXT NOT NULL
-due_at              DATETIME NOT NULL
-interval_days       INTEGER NOT NULL
-last_result         TEXT NULL
-last_reviewed_at    DATETIME NULL
-updated_at           DATETIME NOT NULL
-
+content_code       TEXT NOT NULL
+content_type       TEXT NOT NULL
+review_state       TEXT NOT NULL
+next_review_at     DATETIME NULL
+last_result        TEXT NULL
+updated_at         DATETIME NOT NULL
 PK (content_code, content_type)
 ```
 
-The review scheduler is deterministic/local in MVP.
-
----
-
-# 11. Assessment durability
-
-## 11.1 `test_attempt`
+### `test_attempt`
 
 ```text
-test_attempt
-──────────────────────────────────────────
-attempt_id            TEXT PK
-test_code             TEXT NOT NULL
-test_revision         INTEGER NOT NULL
-mode                   TEXT NOT NULL
-state                  TEXT NOT NULL
-current_position       INTEGER NOT NULL DEFAULT 0
-score                  REAL NULL
-correct_count          INTEGER NULL
-question_count         INTEGER NOT NULL
-started_at             DATETIME NOT NULL
-updated_at             DATETIME NOT NULL
-completed_at           DATETIME NULL
+attempt_id          TEXT PK
+test_code           TEXT NOT NULL
+test_revision       INTEGER NOT NULL
+mode                TEXT NOT NULL
+state               TEXT NOT NULL
+current_position    INTEGER NOT NULL DEFAULT 0
+score               REAL NULL
+started_at          DATETIME NOT NULL
+completed_at        DATETIME NULL
+updated_at          DATETIME NOT NULL
 ```
 
-States:
+### `test_attempt_question`
+
+Immutable attempt snapshot:
 
 ```text
-IN_PROGRESS
-COMPLETED
-ABANDONED
-```
-
-Modes:
-
-```text
-LEARN
-EXAM
-QUICK
-```
-
----
-
-## 11.2 `test_attempt_question`
-
-Durable question snapshot for reproducible historical review even if the source pack is later evicted.
-
-```text
-test_attempt_question
-──────────────────────────────────────────
-attempt_id            TEXT NOT NULL
-position              INTEGER NOT NULL
-question_code         TEXT NOT NULL
-question_revision     INTEGER NOT NULL
-question_type         TEXT NOT NULL
-question_snapshot     TEXT NOT NULL
-
-PK (attempt_id, position)
-FK attempt_id -> test_attempt(attempt_id) ON DELETE CASCADE
-```
-
-`question_snapshot` may be a versioned compact JSON payload because it is an immutable attempt-history snapshot, not a general catalog query model.
-
-This is an intentional exception to the no-generic-JSON primary-content rule.
-
----
-
-## 11.3 `test_answer`
-
-```text
-test_answer
-──────────────────────────────────────────
 attempt_id          TEXT NOT NULL
 position            INTEGER NOT NULL
-answer_payload      TEXT NOT NULL
+question_code       TEXT NOT NULL
+question_revision   INTEGER NOT NULL
+snapshot_json       TEXT NOT NULL
+PK (attempt_id, position)
+```
+
+### `test_answer`
+
+```text
+attempt_id          TEXT NOT NULL
+position            INTEGER NOT NULL
+answer_json         TEXT NOT NULL
 is_correct          INTEGER NULL
 answered_at         DATETIME NOT NULL
-
 PK (attempt_id, position)
-FK (attempt_id, position)
-  -> test_attempt_question(attempt_id, position)
-  ON DELETE CASCADE
 ```
 
-`answer_payload` is versioned JSON so future question types do not require historical schema rewrites.
+Completed/in-progress attempts remain reviewable even if the source pack is later evicted.
 
 ---
 
-# 12. Typed feature read models
+## 13. Required indexes
 
-The following are REQUIRED conceptually but are frozen with their feature contracts rather than invented generically here:
-
-```text
-vocabulary_item_read
-vocabulary_example_read
-vocabulary_collocation_read
-interview_question_read
-interview_model_answer_read
-topic_read
-topic_section_read
-phrase_read
-practice_test_read
-question_read
-question_option_read
-localized_support_read
-```
-
-Rules:
-
-1. Every row carries stable code + exact revision.
-2. Staged rows are not returned by active repositories.
-3. Activation participates in the same Drift transaction as `content_pack_revision` state changes.
-4. Search/filter fields are typed/indexed rather than extracted from JSON at runtime.
-5. Locale-specific read models may be independently replaced without duplicating canonical English/audio.
-
----
-
-# 13. Required indexes
-
-Minimum index plan:
+At minimum qualify indexes for:
 
 ```text
-sync_run(state, updated_at)
-sync_pack_update(run_id, state)
 content_pack_revision(pack_code, variant_key, state)
 local_content_record(content_type, snapshot_state, sort_order)
-pack_content_ref(pack_code, variant_key, pack_revision)
-asset_catalog(checksum_sha256)
-local_asset_file(state, last_accessed_at)
 content_asset_ref(asset_id)
+pack_asset_ref(asset_id)
 content_cache_entry(retention_class, expires_at, last_accessed_at)
-offline_pack_state(offline_state, desired_mode)
 download_task(state, next_retry_at)
-recent_content(last_opened_at DESC)
-review_schedule(due_at)
-test_attempt(state, updated_at DESC)
+sync_run(state, started_at)
+review_schedule(next_review_at)
+recent_content(last_opened_at)
 ```
 
-Feature-specific indexes are defined with feature read-model contracts.
+Use a partial unique index for one `CURRENT` pack revision per `(pack_code, variant_key)` when supported by the Drift migration baseline; otherwise enforce transactionally and test it.
 
 ---
 
-# 14. Deletion and FK policy
+## 14. Transaction boundaries
 
-## Disposable graph
+Network/filesystem work never runs inside a Drift transaction.
 
-Safe cascade is allowed inside purely disposable/staged graphs where the parent cannot be learner history.
-
-Example:
+Short activation transaction may change:
 
 ```text
-sync_run
-→ sync_pack_update
-→ planned staging rows
+pack STAGING/VERIFIED → CURRENT
+old CURRENT → SUPERSEDED
+local content STAGED → CURRENT
+typed feature read models
+pack/content refs
+tombstones
+content_manifest_state.current_content_version
 ```
 
-## Durable learner graph
-
-Do NOT cascade from synced content into:
-
-```text
-favorite
-recent_content
-vocabulary_progress
-topic_progress
-review_schedule
-test_attempt
-```
-
-These tables use stable business codes intentionally.
+Offline `READY` replacement occurs only after required files are independently verified.
 
 ---
 
-# 15. Asset deletion rule
+## 15. Migration rules
 
-Physical asset deletion is allowed only when all conditions are true:
-
-```text
-1. local_asset_file exists
-2. no ACTIVE/STAGED-retained pack/content references require its checksum
-3. no explicit/pinned offline intent requires it
-4. no in-progress download/verification task owns it
-5. retention policy selected it for deletion
-```
-
-Deletion flow:
-
-```text
-VERIFIED
-→ DELETE_PENDING
-→ filesystem delete
-→ DB row delete
-```
-
-If filesystem deletion fails, keep `DELETE_PENDING` and retry later. Never delete the DB record first and orphan the file silently.
+1. every Drift schema change increments local schema version;
+2. migrations are explicit and tested from supported previous versions;
+3. learner-state tables receive priority preservation;
+4. cache tables may be rebuilt only when safe and documented;
+5. production recovery must not require deleting the whole app database;
+6. migration failure must not silently erase learner progress.
 
 ---
 
-# 16. Migration policy
-
-Drift schema migrations SHALL be explicit and tested.
-
-Rules:
+## 16. Invariants
 
 ```text
-schemaVersion increments monotonically
-migration tests open previous schema and migrate forward
-no production delete-and-recreate fallback
-migration does not erase favorites/progress/test attempts
-new columns prefer safe defaults/nullability
-indexes are created as part of migration qualification
+DRIFT-001 token is not stored in Drift
+DRIFT-002 one root current_content_version
+DRIFT-003 locale variants are pack variants, not root epochs
+DRIFT-004 one CURRENT revision per pack variant
+DRIFT-005 learner state survives cache eviction/tombstones
+DRIFT-006 CURRENT metadata does not imply offline READY
+DRIFT-007 old offline READY may coexist with newer CURRENT metadata
+DRIFT-008 physical file deletion is reference-safe
+DRIFT-009 staged rows are invisible to learner repositories
+DRIFT-010 test attempt snapshots survive source-content eviction
 ```
-
-A broken disposable cache may be rebuilt selectively, but durable learner tables are not disposable.
 
 ---
 
-# 17. Transaction boundaries
+## 17. Acceptance scenarios
 
-Use Drift transactions for:
-
-```text
-sync plan persistence
-pack staging metadata writes
-atomic content-version activation
-apply tombstones + activate new revisions
-complete test answer + update attempt position
-complete attempt + result summary
-asset-reference release after supersession
-```
-
-Do NOT hold a SQLite transaction open while performing network or filesystem downloads.
-
-Network/filesystem work occurs before the short commit transaction.
-
----
-
-# 18. Atomic sync activation boundary
-
-For one target root-manifest version:
+Must prove:
 
 ```text
-network fetch/download/verify
-        ↓
-all required staging state READY_TO_COMMIT
-        ↓
-ONE SHORT DRIFT TRANSACTION
-        ├── activate staged pack revisions
-        ├── supersede old pack revisions
-        ├── switch typed read models to active revisions
-        ├── apply tombstones
-        ├── update asset/content refs
-        └── advance content_manifest_state
-        ↓
-commit
-        ↓
-filesystem cleanup outside transaction
+fresh install
+metadata N→N+1 atomic switch
+locale variant update without duplicate English audio
+explicit offline download
+CURRENT rev 8 + offline READY rev 7 while rev 8 updates
+crash during staging
+crash after metadata commit before cleanup
+checksum mismatch
+shared asset reference safety
+tombstone with favorite/progress preservation
+in-progress test restoration
+Drift migration with learner-state preservation
 ```
 
-If the transaction fails, SQLite rollback preserves the complete previous active snapshot.
-
----
-
-# 19. Acceptance criteria for P0.12.4
-
-The ERD is accepted when implementation tests prove at least:
-
-1. installation token is never written to Drift;
-2. one old ACTIVE pack remains readable while a new revision is STAGING;
-3. staged content is invisible to normal repositories;
-4. failed staging does not change active manifest version;
-5. durable favorites/progress survive pack eviction;
-6. shared physical asset is not deleted while any retained reference remains;
-7. explicit/pinned pack upgrade does not activate until required offline assets verify;
-8. normal streaming pack may activate metadata without downloading every binary asset;
-9. completed test attempt remains reviewable after source test pack eviction;
-10. interrupted download leaves recoverable temp/task state;
-11. interrupted DB activation rolls back completely;
-12. Drift migration from prior schema preserves durable learner state.
-
----
-
-## 20. Result
-
-The local database is intentionally split into:
-
-```text
-SYNC METADATA
-    → recoverable/disposable
-
-CONTENT READ MODELS + ASSETS
-    → versioned/re-downloadable
-
-LEARNER STATE
-    → durable/local-first
-```
-
-This separation is the foundation for `ContentSyncCoordinator`, `DownloadManager`, `AssetResolver`, retention and offline-first startup.
+This is the authoritative local persistence baseline for CareerSpeak v0.9.
