@@ -4,6 +4,7 @@ import threading
 from datetime import datetime, timezone
 
 from voxprep_tts_worker.application.worker_loop import WorkerLoop
+from voxprep_tts_worker.domain.errors import BackendTransportError
 from voxprep_tts_worker.domain.job import ClaimedJob
 
 
@@ -35,6 +36,11 @@ class QueueBackend:
         return self.jobs.pop(0) if self.jobs else None
 
 
+class UnavailableBackend:
+    def claim(self, worker_id: str) -> ClaimedJob | None:
+        raise BackendTransportError("backend unavailable")
+
+
 class RecordingProcessor:
     def __init__(self) -> None:
         self.jobs: list[ClaimedJob] = []
@@ -43,11 +49,8 @@ class RecordingProcessor:
         self.jobs.append(job)
 
 
-def test_run_once_processes_one_claimed_job() -> None:
-    shutdown = threading.Event()
-    backend = QueueBackend([_job()])
-    processor = RecordingProcessor()
-    loop = WorkerLoop(
+def _loop(backend, processor: RecordingProcessor, shutdown: threading.Event) -> WorkerLoop:
+    return WorkerLoop(
         worker_id="worker-a",
         backend=backend,  # type: ignore[arg-type]
         processor=processor,  # type: ignore[arg-type]
@@ -55,7 +58,13 @@ def test_run_once_processes_one_claimed_job() -> None:
         shutdown=shutdown,
     )
 
-    assert loop.run_once() is True
+
+def test_run_once_processes_one_claimed_job() -> None:
+    shutdown = threading.Event()
+    backend = QueueBackend([_job()])
+    processor = RecordingProcessor()
+
+    assert _loop(backend, processor, shutdown).run_once() is True
     assert backend.claims == ["worker-a"]
     assert [job.job_id for job in processor.jobs] == ["job-1"]
 
@@ -64,15 +73,16 @@ def test_run_once_is_idle_when_backend_has_no_job() -> None:
     shutdown = threading.Event()
     backend = QueueBackend([None])
     processor = RecordingProcessor()
-    loop = WorkerLoop(
-        worker_id="worker-a",
-        backend=backend,  # type: ignore[arg-type]
-        processor=processor,  # type: ignore[arg-type]
-        poll_interval_seconds=1,
-        shutdown=shutdown,
-    )
 
-    assert loop.run_once() is False
+    assert _loop(backend, processor, shutdown).run_once() is False
+    assert processor.jobs == []
+
+
+def test_transient_backend_outage_is_treated_as_idle_poll() -> None:
+    shutdown = threading.Event()
+    processor = RecordingProcessor()
+
+    assert _loop(UnavailableBackend(), processor, shutdown).run_once() is False
     assert processor.jobs == []
 
 
@@ -81,14 +91,7 @@ def test_shutdown_prevents_new_claims() -> None:
     shutdown.set()
     backend = QueueBackend([_job()])
     processor = RecordingProcessor()
-    loop = WorkerLoop(
-        worker_id="worker-a",
-        backend=backend,  # type: ignore[arg-type]
-        processor=processor,  # type: ignore[arg-type]
-        poll_interval_seconds=1,
-        shutdown=shutdown,
-    )
 
-    assert loop.run_once() is False
+    assert _loop(backend, processor, shutdown).run_once() is False
     assert backend.claims == []
     assert processor.jobs == []
