@@ -39,6 +39,9 @@ P2.10  mock → production repository cutover
 P2.11  offline / restart / recovery qualification
 ```
 
+P2.8 scope and acceptance are recorded in
+[P2.8 — AssetResolver](P2_8_ASSET_RESOLVER.md).
+
 ## P2.0 — adapter boundary
 
 Accepted at exact SHA:
