@@ -17,8 +17,8 @@ final class UnavailablePracticeTestRepository
   Stream<Result<Page<PracticeTestSummary>>> watchTests(
     PracticeTestQuery query,
   ) {
-    return const Stream<Result<Page<PracticeTestSummary>>>.value(
-      FailureResult<Page<PracticeTestSummary>>(_unavailable),
+    return Stream<Result<Page<PracticeTestSummary>>>.value(
+      const FailureResult<Page<PracticeTestSummary>>(_unavailable),
     );
   }
 
