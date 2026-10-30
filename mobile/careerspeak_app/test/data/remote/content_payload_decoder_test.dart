@@ -30,11 +30,9 @@ void main() {
     final result = decoder.decode(json);
 
     expect(result, isA<FailureResult<ContentPayload>>());
-    expect(
-      (result as FailureResult<ContentPayload>).failure.code,
-      'CONTENT_PAYLOAD_INVALID',
-    );
-    expect(result.failure.details['field'], r'$.contentType');
+    final failure = (result as FailureResult<ContentPayload>).failure;
+    expect(failure.code, 'CONTENT_PAYLOAD_INVALID');
+    expect(failure.details['field'], r'$.contentType');
   });
 
   test('rejects invalid presentation payload', () {
