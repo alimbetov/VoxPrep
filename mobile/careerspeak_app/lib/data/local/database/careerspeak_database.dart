@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'careerspeak_sync_metadata_tables.dart';
 import 'careerspeak_tables.dart';
 
 part 'careerspeak_database.g.dart';
@@ -15,6 +16,10 @@ part 'careerspeak_database.g.dart';
     SyncTombstones,
     ContentPackRevisions,
     LocalContentRecords,
+    PackContentRefs,
+    AssetCatalog,
+    ContentAssetRefs,
+    PackAssetRefs,
     Favorites,
     ContentLearningStates,
   ],
@@ -24,7 +29,7 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
     : super(executor ?? driftDatabase(name: 'careerspeak'));
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -36,6 +41,12 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
         await migrator.createTable(syncRuns);
         await migrator.createTable(syncPackUpdates);
         await migrator.createTable(syncTombstones);
+      }
+      if (from < 3) {
+        await migrator.createTable(packContentRefs);
+        await migrator.createTable(assetCatalog);
+        await migrator.createTable(contentAssetRefs);
+        await migrator.createTable(packAssetRefs);
       }
     },
     beforeOpen: (details) async {
