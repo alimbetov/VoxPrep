@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/learner_state_providers.dart';
 import '../../app/repository_providers.dart';
+import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
 import '../../domain/content_marker_state.dart';
 import '../content/content_detail_panel.dart';
@@ -34,18 +36,30 @@ class _LearnScreenState extends ConsumerState<LearnScreen> {
           child: Text('Unable to load learning content.\n$error'),
         ),
       ),
-      data: (page) => _buildContent(context, page.items, markers),
+      data: (page) => markers.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (error, stackTrace) => Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text('Unable to load learner state.\n$error'),
+          ),
+        ),
+        data: (values) => _buildContent(context, page.items, values),
+      ),
     );
   }
 
   Widget _buildContent(
     BuildContext context,
     List<ContentItem> items,
-    Map<String, ContentMarkerState> markers,
+    Map<ContentIdentity, ContentMarkerState> markers,
   ) {
+    ContentMarkerState markerFor(ContentItem item) =>
+        markers[ContentIdentity.fromItem(item)] ?? const ContentMarkerState();
+
     final filtered = items
         .where((item) {
-          final marker = markers[item.code] ?? const ContentMarkerState();
+          final marker = markerFor(item);
           final normalizedQuery = query.toLowerCase();
           final matchesQuery =
               query.isEmpty ||
