@@ -65,11 +65,15 @@ jobs:
       - name: Build worker image
         run: docker build -t voxprep-tts-worker:functional ./worker
 
-      - name: Verify pinned runtime components
+      - name: Verify pinned runtime components and non-root execution
         shell: bash
         run: |
           docker run --rm --entrypoint sh voxprep-tts-worker:functional -c '
             set -eu
+            test "$(id -u)" = "10001"
+            test "$(id -g)" = "10001"
+            test -w /var/lib/voxprep/tts/models
+            test -w /tmp/voxprep-tts
             test "$(python -c "import sys; print(sys.version.split()[0])")" = "3.12.16"
             ffmpeg -version | head -n 1 | grep -F "5.1.9-0+deb12u1"
             ffprobe -version | head -n 1 | grep -F "5.1.9-0+deb12u1"

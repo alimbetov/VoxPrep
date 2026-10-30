@@ -60,10 +60,10 @@ class FailingVoice:
         raise RuntimeError("boom")
 
 
-def _installed_model(tmp_path: Path) -> Path:
-    model_dir = tmp_path / "model"
+def _installed_model(tmp_path: Path, name: str = "model") -> Path:
+    model_dir = tmp_path / name
     model_dir.mkdir()
-    (model_dir / "model.onnx").write_bytes(b"fake-model")
+    (model_dir / "model.onnx").write_bytes(f"fake-{name}".encode())
     (model_dir / "model.onnx.json").write_text("{}", encoding="utf-8")
     return model_dir
 
@@ -90,6 +90,37 @@ def test_piper_synthesizer_loads_exact_cached_model(monkeypatch, tmp_path: Path)
     assert output.is_file()
     assert output.stat().st_size > 44
     assert seen == {"model": model_path, "config": config_path}
+
+
+def test_piper_voice_cache_reuses_and_evicts_lru(monkeypatch, tmp_path: Path) -> None:
+    model_dirs = {
+        name: _installed_model(tmp_path, name)
+        for name in ("model-a", "model-b", "model-c")
+    }
+    load_calls: list[str] = []
+
+    def fake_load(model: Path, *, config_path: Path):
+        del config_path
+        load_calls.append(Path(model).parent.name)
+        return FakeVoice()
+
+    monkeypatch.setattr(audio.PiperVoice, "load", fake_load)
+    synthesizer = PiperSynthesizer(max_loaded_models=2)
+
+    for index, name in enumerate(("model-a", "model-b", "model-a", "model-c", "model-b")):
+        synthesizer.synthesize(
+            job=_job(),
+            model_dir=model_dirs[name],
+            output_wav=tmp_path / f"voice-{index}.wav",
+        )
+
+    assert load_calls == ["model-a", "model-b", "model-c", "model-b"]
+    assert len(synthesizer._voices) == 2
+
+
+def test_piper_rejects_invalid_loaded_model_limit() -> None:
+    with pytest.raises(ValueError, match="must be > 0"):
+        PiperSynthesizer(max_loaded_models=0)
 
 
 @pytest.mark.parametrize("missing_name", ["model.onnx", "model.onnx.json"])
@@ -196,12 +227,13 @@ def test_ffprobe_invalid_metadata_is_rejected(monkeypatch, tmp_path: Path) -> No
 
 
 @pytest.mark.parametrize(
-    ("codec", "sample_rate", "channels", "duration", "message"),
+    ("codec", "sample_rate", "channels", "bit_rate", "duration", "message"),
     [
-        ("aac", "24000", 1, "1.0", "codec is not MP3"),
-        ("mp3", "48000", 1, "1.0", "sample rate is not 24 kHz"),
-        ("mp3", "24000", 2, "1.0", "not mono"),
-        ("mp3", "24000", 1, "0", "duration is not positive"),
+        ("aac", "24000", 1, "64000", "1.0", "codec is not MP3"),
+        ("mp3", "48000", 1, "64000", "1.0", "sample rate is not 24 kHz"),
+        ("mp3", "24000", 2, "64000", "1.0", "not mono"),
+        ("mp3", "24000", 1, "96000", "1.0", "outside the 64 kbps profile"),
+        ("mp3", "24000", 1, "64000", "0", "duration is not positive"),
     ],
 )
 def test_ffprobe_profile_mismatch_is_rejected(
@@ -210,6 +242,7 @@ def test_ffprobe_profile_mismatch_is_rejected(
     codec: str,
     sample_rate: str,
     channels: int,
+    bit_rate: str,
     duration: str,
     message: str,
 ) -> None:
@@ -217,7 +250,12 @@ def test_ffprobe_profile_mismatch_is_rejected(
     mp3.write_bytes(b"mp3")
     payload = {
         "streams": [
-            {"codec_name": codec, "sample_rate": sample_rate, "channels": channels}
+            {
+                "codec_name": codec,
+                "sample_rate": sample_rate,
+                "channels": channels,
+                "bit_rate": bit_rate,
+            }
         ],
         "format": {"duration": duration},
     }

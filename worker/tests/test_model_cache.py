@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -41,6 +42,10 @@ def _job(
         lease_token="lease-1",
         lease_until=datetime(2030, 1, 1, tzinfo=timezone.utc),
     )
+
+
+def _size(path: Path) -> int:
+    return sum(item.stat().st_size for item in path.rglob("*") if item.is_file())
 
 
 class FakeModelSource:
@@ -166,3 +171,54 @@ def test_different_model_ids_never_share_cache_revision(tmp_path: Path) -> None:
     assert second.parent.name == "model-b"
     assert source.model_downloads == 2
     assert source.config_downloads == 2
+
+
+def test_cache_prunes_least_recent_revision_and_keeps_current(tmp_path: Path) -> None:
+    source = FakeModelSource()
+    cache_root = tmp_path / "models"
+    unlimited = BackendModelCache(
+        cache_root=cache_root,
+        source=source,
+        max_cache_bytes=1024 * 1024,
+    )
+    first = unlimited.ensure_model(_job(voice_model_id="model-a"))
+    second_job = _job(voice_model_id="model-b")
+    second = unlimited.ensure_model(second_job)
+
+    os.utime(first / "installed.json", ns=(1, 1))
+    os.utime(second / "installed.json", ns=(2, 2))
+    current_size = _size(second)
+
+    pruning_cache = BackendModelCache(
+        cache_root=cache_root,
+        source=source,
+        max_cache_bytes=current_size,
+    )
+    resolved = pruning_cache.ensure_model(second_job)
+
+    assert resolved == second
+    assert second.exists()
+    assert not first.exists()
+
+
+def test_cache_never_prunes_current_revision_even_when_it_exceeds_limit(tmp_path: Path) -> None:
+    source = FakeModelSource()
+    cache = BackendModelCache(
+        cache_root=tmp_path / "models",
+        source=source,
+        max_cache_bytes=1,
+    )
+
+    resolved = cache.ensure_model(_job())
+
+    assert resolved.exists()
+    assert (resolved / "model.onnx").is_file()
+
+
+def test_cache_rejects_non_positive_size_limit(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="must be > 0"):
+        BackendModelCache(
+            cache_root=tmp_path / "models",
+            source=FakeModelSource(),
+            max_cache_bytes=0,
+        )
