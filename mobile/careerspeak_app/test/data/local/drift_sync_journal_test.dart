@@ -19,6 +19,8 @@ const _packCanonical =
     'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
 const _packLocale =
     'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+const _contentHash =
+    'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 
 void main() {
   late CareerSpeakDatabase database;
@@ -84,6 +86,90 @@ void main() {
     expect(snapshot.currentPacks, hasLength(1));
     expect(snapshot.currentPacks.single.identity.variant, 'canonical');
   });
+
+  test(
+    'CURRENT pack without learner payload is omitted so same root repairs it',
+    () async {
+      await database
+          .into(database.contentManifestStates)
+          .insert(
+            ContentManifestStatesCompanion.insert(
+              id: const Value(1),
+              schemaVersion: 1,
+              currentContentVersion: 108,
+              currentManifestChecksum: _root108,
+              updatedAt: now,
+            ),
+          );
+      await database
+          .into(database.contentPackRevisions)
+          .insert(
+            ContentPackRevisionsCompanion.insert(
+              packCode: 'JAVA_SENIOR',
+              variantKey: 'canonical',
+              revision: 8,
+              schemaVersion: 1,
+              checksum: _packCanonical,
+              state: 'CURRENT',
+              sourceContentVersion: 108,
+              stagedAt: now,
+              currentAt: Value(now),
+            ),
+          );
+      await database
+          .into(database.localContentRecords)
+          .insert(
+            LocalContentRecordsCompanion.insert(
+              contentCode: 'JAVA_Q_001',
+              contentType: 'INTERVIEW',
+              revision: 1,
+              checksum: _contentHash,
+              snapshotState: 'CURRENT',
+              sourceSchemaVersion: 1,
+              createdAt: now,
+            ),
+          );
+      await database
+          .into(database.packContentRefs)
+          .insert(
+            PackContentRefsCompanion.insert(
+              packCode: 'JAVA_SENIOR',
+              variantKey: 'canonical',
+              packRevision: 8,
+              contentCode: 'JAVA_Q_001',
+              contentType: 'INTERVIEW',
+              contentRevision: 1,
+            ),
+          );
+
+      final local = (await journal.readLocalSnapshot()).getOrThrow();
+      expect(local.currentContentVersion, 108);
+      expect(local.currentPacks, isEmpty);
+
+      final remote = RootContentManifest(
+        schemaVersion: 1,
+        contentVersion: 108,
+        minimumAppContractVersion: 1,
+        publishedAt: now,
+        checksum: _root108,
+        packs: <PackRevisionRef>[
+          PackRevisionRef(
+            identity: PackIdentity(code: 'JAVA_SENIOR', variant: 'canonical'),
+            revision: 8,
+            checksum: _packCanonical,
+          ),
+        ],
+        tombstones: const <ContentTombstone>[],
+      );
+      final plan = const ContentSyncPlanner()
+          .plan(local: local, remote: remote)
+          .getOrThrow();
+
+      expect(plan.rootChanged, isFalse);
+      expect(plan.changedPacks, hasLength(1));
+      expect(plan.changedPacks.single.identity.code, 'JAVA_SENIOR');
+    },
+  );
 
   test('coalesces a second trigger into the active durable run', () async {
     final first = await journal.startOrCoalesce(
