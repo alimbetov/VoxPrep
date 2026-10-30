@@ -1,6 +1,6 @@
 # CareerSpeak — Flutter Mobile Application Requirements
 
-**Document version:** 2.0  
+**Document version:** 2.1  
 **Status:** Normative mobile application baseline  
 **Applies to:** CareerSpeak v0.9+  
 **Target platforms:** Android, iOS
@@ -11,6 +11,8 @@ Related detailed contracts:
 - [`../mobile/CAREERSPEAK_DRIFT_ERD.md`](../mobile/CAREERSPEAK_DRIFT_ERD.md)
 - [`../mobile/CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md`](../mobile/CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md)
 - [`../mobile/CAREERSPEAK_ADAPTIVE_UI.md`](../mobile/CAREERSPEAK_ADAPTIVE_UI.md)
+- [`../mobile/CAREERSPEAK_MATERIAL_DESIGN_3.md`](../mobile/CAREERSPEAK_MATERIAL_DESIGN_3.md)
+- [`../mobile/CAREERSPEAK_LEARNER_CONTENT_STATE.md`](../mobile/CAREERSPEAK_LEARNER_CONTENT_STATE.md)
 - [`CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md`](CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
 - [`CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md`](CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md)
 
@@ -27,11 +29,13 @@ browse/search learner content
 read/listen/repeat/shadow
 complete tests
 local progress/favorites/review
+LISTENED / COMPLETED / FAVORITE learner markers
 manifest/pack synchronization
 offline downloads
 local retention/storage management
 UI/translation locale preferences
 adaptive learner UI
+Material Design 3 presentation system
 ```
 
 It does not own:
@@ -51,6 +55,7 @@ business availability decisions
 ```text
 Flutter stable
 Dart
+Material Design 3
 Riverpod
 go_router
 Drift + SQLite
@@ -116,6 +121,7 @@ installation/session state
 sync state
 download state
 audio state
+learner marker state
 settings/locale/theme
 ```
 
@@ -175,9 +181,45 @@ Rules:
 ```text
 adapt to available window, not device name
 layout changes do not fork business logic
-route/test/audio state survives resize
+route/test/audio/marker state survives resize
 phone/tablet/split-screen use same domain controllers
 large text and RTL are first-class qualification cases
+```
+
+---
+
+## 6A. Material Design 3
+
+Material Design 3 is the **single and exclusive UI design system** for CareerSpeak.
+
+Authoritative contract:
+
+```text
+docs/mobile/CAREERSPEAK_MATERIAL_DESIGN_3.md
+```
+
+Design hierarchy:
+
+```text
+Material Design 3
+        ↓
+CareerSpeak Theme + Design Tokens
+        ↓
+CareerSpeak reusable Material components
+        ↓
+Adaptive feature presentation
+```
+
+Rules:
+
+```text
+ThemeData / ColorScheme is the application theme source
+light / dark / system modes are supported
+Material NavigationBar / NavigationRail are the adaptive navigation baseline
+spacing/radius/type/motion tokens are centralized
+feature widgets do not define a second visual system
+Study Ambience is decorative and not a second design system
+Material/BuildContext concerns never enter domain/application code
 ```
 
 ---
@@ -229,6 +271,7 @@ initialize Drift/filesystem
 → load settings/locales/theme
 → load secure installation credential state
 → load CURRENT local metadata
+→ load durable learner markers/progress
 → render usable UI
 → recover interrupted local work
 → register/refresh installation if required and possible
@@ -287,7 +330,7 @@ DURABLE LEARNER STATE
 
 Backend `ACTIVE`, Flutter metadata `CURRENT`, and offline `READY` are separate states.
 
-Learner progress is never deleted merely because cache/content files are reclaimed.
+Learner progress and markers are never deleted merely because cache/content files are reclaimed.
 
 ---
 
@@ -448,6 +491,7 @@ position/state
 speed
 repeat
 skip backward/forward
+qualified playback completion event
 ```
 
 Playback states:
@@ -463,6 +507,59 @@ ERROR
 ```
 
 One primary learning-audio session owns playback at a time unless later UX explicitly changes this rule.
+
+Audio completion is reported to the learner-state application layer; UI widgets do not directly persist `LISTENED`.
+
+---
+
+## 18A. Learner content markers
+
+Authoritative contract:
+
+```text
+docs/mobile/CAREERSPEAK_LEARNER_CONTENT_STATE.md
+```
+
+Independent durable local states:
+
+```text
+FAVORITE
+= learner explicitly saved the item
+
+LISTENED
+= qualified audio playback completed
+
+COMPLETED
+= pedagogical unit completed according to feature policy
+```
+
+A content item may hold any valid combination, including:
+
+```text
+FAVORITE + LISTENED + COMPLETED
+```
+
+Markers use stable `content_code + content_type` identity and survive cache/media eviction.
+
+Material 3 UI may expose:
+
+```text
+favorite / favorite_border
+Listened status
+Completed status
+```
+
+Catalogs/search SHOULD support local filters where useful:
+
+```text
+Favorites
+Listened
+Not listened
+Completed
+Not completed
+```
+
+Favorite does not imply offline pinning. Listened does not imply Completed. Completed does not erase or merge audio history.
 
 ---
 
@@ -509,6 +606,8 @@ score/results
 In-progress attempt survives process recreation.
 
 Completed attempt remains reviewable after source pack cache eviction.
+
+Test completion MAY drive the relevant `COMPLETED` learner marker through application policy without replacing the immutable test-attempt history.
 
 ---
 
@@ -575,6 +674,8 @@ Drift migration
 
 A failed sync does not require deleting the local database.
 
+Durable FAVORITE/LISTENED/COMPLETED state must survive recoverable cache/sync failures.
+
 ---
 
 ## 24. Acceptance qualification
@@ -585,15 +686,20 @@ Mobile architecture is accepted when tests prove at least:
 first launch online/offline
 installation credential lifecycle
 CURRENT metadata atomic update
-tombstone + progress preservation
+tombstone + learner-state preservation
 explicit offline READY replacement
 shared asset safety
 locale delta reuse
-adaptive resize without route/test/audio state loss
+Material Design 3 is the single design system
+light/dark/system theme qualification
+adaptive resize without route/test/audio/marker state loss
 text scale 2.0 core-flow usability
 RTL/mixed-direction readiness
+LISTENED / COMPLETED / FAVORITE persistence and coexistence
+favorite does not pin media automatically
+local marker filters return correct results
 in-progress test restoration
-storage cleanup without progress deletion
+storage cleanup without progress/marker deletion
 schema incompatibility fallback
 ```
 
