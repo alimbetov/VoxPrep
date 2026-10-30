@@ -18,8 +18,10 @@ void main() {
       title: 'Dependency Injection',
       subtitle: 'Java Backend',
       description: 'Explain constructor injection and its tradeoffs.',
-      category: 'Java Backend',
-      level: 'Senior',
+      categoryCode: 'JAVA_BACKEND',
+      categoryLabel: 'Java Backend',
+      levelCode: 'SENIOR',
+      levelLabel: 'Senior',
       minutes: 6,
       hasAudio: true,
     );
@@ -33,8 +35,10 @@ void main() {
     expect(payload.title, dto.title);
     expect(payload.subtitle, dto.subtitle);
     expect(payload.description, dto.description);
-    expect(payload.category, dto.category);
-    expect(payload.level, dto.level);
+    expect(payload.categoryCode, dto.categoryCode);
+    expect(payload.category, dto.categoryLabel);
+    expect(payload.levelCode, dto.levelCode);
+    expect(payload.level, dto.levelLabel);
     expect(payload.minutes, dto.minutes);
     expect(payload.hasAudio, dto.hasAudio);
   });
@@ -48,8 +52,10 @@ void main() {
       title: 'Dependency Injection',
       subtitle: 'Java Backend',
       description: 'Explain constructor injection and its tradeoffs.',
-      category: 'Java Backend',
-      level: 'Senior',
+      categoryCode: 'JAVA_BACKEND',
+      categoryLabel: 'Java Backend',
+      levelCode: 'SENIOR',
+      levelLabel: 'Senior',
       minutes: 6,
       hasAudio: true,
     );
