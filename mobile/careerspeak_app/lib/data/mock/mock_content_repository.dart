@@ -1,14 +1,10 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import '../../application/ports/content_repository.dart';
 import '../../domain/content_item.dart';
 
-final mockContentRepositoryProvider = Provider<MockContentRepository>(
-  (ref) => const MockContentRepository(),
-);
-
-class MockContentRepository {
+class MockContentRepository implements ContentRepository {
   const MockContentRepository();
 
+  @override
   List<ContentItem> get all => const [
         ContentItem(
           code: 'JAVA_DI_001',
@@ -88,6 +84,7 @@ class MockContentRepository {
         ),
       ];
 
+  @override
   ContentItem? byCode(String code) {
     for (final item in all) {
       if (item.code == code) return item;
