@@ -41,6 +41,46 @@ final class DriftSyncJournal implements SyncJournal {
 
       final packs = <PackRevisionRef>[];
       for (final row in currentRows) {
+        final refs =
+            await (_database.select(_database.packContentRefs)..where(
+                  (ref) =>
+                      ref.packCode.equals(row.packCode) &
+                      ref.variantKey.equals(row.variantKey) &
+                      ref.packRevision.equals(row.revision),
+                ))
+                .get();
+        var payloadComplete = true;
+        for (final ref in refs) {
+          final local =
+              await (_database.select(_database.localContentRecords)..where(
+                    (content) =>
+                        content.contentCode.equals(ref.contentCode) &
+                        content.contentType.equals(ref.contentType) &
+                        content.revision.equals(ref.contentRevision),
+                  ))
+                  .getSingleOrNull();
+          if (local == null || local.snapshotState != 'CURRENT') {
+            payloadComplete = false;
+            break;
+          }
+
+          final payload =
+              await (_database.select(_database.contentCatalogReads)..where(
+                    (content) =>
+                        content.contentCode.equals(ref.contentCode) &
+                        content.contentType.equals(ref.contentType) &
+                        content.revision.equals(ref.contentRevision),
+                  ))
+                  .getSingleOrNull();
+          if (payload == null || payload.checksum != local.checksum) {
+            payloadComplete = false;
+            break;
+          }
+        }
+
+        if (!payloadComplete) {
+          continue;
+        }
         packs.add(
           PackRevisionRef(
             identity: PackIdentity(code: row.packCode, variant: row.variantKey),
