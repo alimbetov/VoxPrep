@@ -3,14 +3,14 @@
 **Repository:** `alimbetov/VoxPrep`  
 **Product name:** CareerSpeak  
 **Codename:** VoxPrep  
-**Document version:** 0.4  
+**Document version:** 0.5  
 **Status:** Normative specification  
-**Applies to:** CareerSpeak v0.7+  
+**Applies to:** CareerSpeak v0.8+  
 **Target platforms:** Android, iOS
 
 ---
 
-## 1. Purpose
+## 1. Core principle
 
 CareerSpeak is an **English-learning application**.
 
@@ -20,68 +20,113 @@ Canonical learning language:
 ENGLISH
 ```
 
-Other languages are used for:
+Other languages are presentation/localization languages for:
 
 ```text
-UI localization
+application UI
 vocabulary translation
 hints
 explanations
 localized catalog labels/guidance
 ```
 
-Other languages are not alternative learning languages in MVP.
+They are not alternative learning languages in MVP.
+
+Canonical English text/audio SHALL be stored once and reused across locales.
 
 ---
 
-## 2. Core model
+## 2. Two localization channels
+
+CareerSpeak deliberately separates Flutter UI localization from backend-driven educational content localization.
+
+### 2.1 Flutter UI localization
+
+Application-owned/system strings use:
 
 ```text
-CANONICAL ENGLISH CONTENT
-        │
-        ├── UI localization
-        ├── translation
-        ├── hint localization
-        └── explanation localization
+ARB resources
+Flutter gen-l10n
+compile-time mobile resources
 ```
 
-Canonical English learning content and English audio SHALL be stored once and reused across interface locales.
+Examples:
+
+```text
+Home
+Settings
+Download
+Retry
+Free space
+Correct / Incorrect
+```
+
+A fully supported new `uiLocale` normally requires an application release.
+
+### 2.2 Backend content localization
+
+Backend-driven content includes:
+
+```text
+translation
+hint
+explanation
+localized profession/category/test/topic labels
+```
+
+It is delivered through:
+
+```text
+root manifest
+pack manifest
+locale delta
+```
+
+Compatible content localization may be published without a new Flutter release.
 
 ---
 
 ## 3. Locale dimensions
 
-CareerSpeak distinguishes:
+Flutter SHALL distinguish:
 
 ```text
-ui_locale
-translation_locale
-preferred_accent
+uiLocale
+translationLocale
+preferredAccent
 ```
 
 Learning language is fixed:
 
 ```text
-learning_language = en
+learningLanguage = en
 ```
 
-`ui_locale` and `translation_locale` may differ.
+Example:
+
+```text
+uiLocale          = ru
+translationLocale = kk
+preferredAccent   = UK
+```
+
+`uiLocale` and `translationLocale` may differ.
 
 Preferences are local-first.
 
 ---
 
-## 4. Initial locales
+## 4. UI locales vs translation locales
 
-Release baseline:
+Initial application UI locales:
 
 ```text
-en  English
-ru  Russian
-kk  Kazakh
+en
+ru
+kk
 ```
 
-Planned expansion may include:
+Backend translation locale catalog may grow independently, for example:
 
 ```text
 uz
@@ -100,13 +145,13 @@ fr
 de
 ```
 
-Architecture SHALL permit new locales without core-schema redesign.
+A locale MAY exist as a content translation locale before it becomes a complete application UI locale, provided the application can safely render its script/direction.
 
 ---
 
 ## 5. Locale identifiers
 
-Locale identifiers SHOULD follow BCP-47-compatible semantics.
+Locale identifiers use BCP-47-compatible semantics.
 
 Examples:
 
@@ -116,11 +161,12 @@ ru
 kk
 pt-BR
 pt-PT
+es-MX
 ar
 ur
 ```
 
-Locale metadata should include:
+Locale metadata concept:
 
 ```text
 code
@@ -132,54 +178,27 @@ enabled
 sort_order
 ```
 
-Text direction:
+Directions:
 
 ```text
 LTR
 RTL
 ```
 
-Flutter SHALL be RTL-ready before Arabic/Urdu production rollout.
-
 ---
 
-## 6. Typed localization model
+## 6. Canonical vs localized fields
 
-Do not create fixed-language columns such as:
-
-```text
-title_ru
-title_kk
-translation_es
-```
-
-Do not use a generic untyped EAV localization store for all domain content.
-
-Prefer typed localization tables owned by their domain, for example:
+Canonical learner content remains English:
 
 ```text
-profession_localization
-vocabulary_localization
-question_localization
-topic_localization
-```
-
-This preserves foreign keys, validation and explicit field semantics.
-
----
-
-## 7. Canonical vs localized fields
-
-Canonical learner content remains English.
-
-Examples:
-
-```text
-question_text           → English
-model_answer             → English
-vocabulary lemma         → English
-example sentence         → English
-topic section text       → English
+question_text
+model_answer
+vocabulary lemma
+example sentence
+topic section text
+phrase text
+English audio
 ```
 
 Localized support may include:
@@ -191,27 +210,52 @@ explanation
 localized title/description
 ```
 
-Localized text SHALL NOT duplicate canonical English merely to create a locale record.
+Do not duplicate canonical English into every locale record merely to satisfy schema structure.
 
 ---
 
-## 8. Hint and explanation localization
+## 7. Typed localization tables
+
+Do not create fixed-language columns such as:
+
+```text
+title_ru
+title_kk
+translation_es
+```
+
+Do not use one generic untyped EAV localization store for all domains.
+
+Prefer typed tables owned by their domain, for example:
+
+```text
+profession_localization
+vocabulary_localization
+question_localization
+topic_localization
+```
+
+This preserves foreign keys, validation and explicit semantics.
+
+---
+
+## 8. Hint and explanation
 
 `hint` and `explanation` are first-class localizable concepts.
 
-Examples:
+Example:
 
 ```text
-canonical question
+canonical English question
 → localized hint
 → localized explanation
 ```
 
-A missing localized hint/explanation falls back according to locale fallback policy.
+Missing localized support content falls back according to the locale fallback contract.
 
 ---
 
-## 9. Locale publication/readiness
+## 9. Locale readiness/publication
 
 Localization readiness is separate from canonical English publication.
 
@@ -225,9 +269,7 @@ UZ: DRAFT
 ES: MISSING
 ```
 
-A missing optional locale SHALL NOT automatically block canonical English publication unless the pack/content policy explicitly requires that locale.
-
-Suggested locale states:
+Suggested states:
 
 ```text
 MISSING
@@ -237,16 +279,69 @@ PUBLISHED
 ARCHIVED
 ```
 
+A missing non-required locale SHALL NOT block canonical English publication.
+
+Pack/content policy may explicitly require selected locales before that pack is advertised for those locales.
+
 ---
 
-## 10. Locale fallback
+## 10. UI locale selection
 
-Default fallback:
+Initial selection precedence:
 
 ```text
-requested regional locale
-→ base language
+1. saved explicit CareerSpeak uiLocale
+2. OS per-app locale
+3. OS preferred language list
+4. OS region as a weak hint
+5. English
+```
+
+CareerSpeak SHALL NOT request GPS solely to choose locale.
+
+The learner can override the selected UI language.
+
+---
+
+## 11. Translation locale selection
+
+`translationLocale` is an independent learner preference.
+
+It may default from `uiLocale`, but the learner can choose another supported translation language.
+
+Example:
+
+```text
+UI = English
+Translation = Kazakh
+```
+
+or:
+
+```text
+UI = Russian
+Translation = Russian
+```
+
+Changing translation locale SHALL NOT change canonical English learning text/audio.
+
+---
+
+## 12. Fallback rules
+
+### UI fallback
+
+```text
+requested supported UI locale
 → English
+```
+
+### Backend content fallback
+
+```text
+requested regional translation locale
+→ base language
+→ English support content where defined
 ```
 
 Examples:
@@ -258,45 +353,105 @@ ru-KZ → ru → en
 kk-KZ → kk → en
 ```
 
-Fallback rules SHALL be centralized and consistent between backend contracts and Flutter behavior.
+Fallback policy SHALL be deterministic and shared between backend contracts and Flutter behavior.
 
 ---
 
-## 11. Automatic locale selection
+## 13. RTL readiness
 
-CareerSpeak SHALL NOT request GPS/precise location solely for language selection.
-
-Selection precedence:
+Before Arabic/Urdu rollout, Flutter SHALL qualify:
 
 ```text
-1. explicit CareerSpeak selection
-2. OS per-app locale
-3. OS preferred language
-4. OS region
-5. English fallback
+Directional start/end layout APIs
+RTL navigation/icon mirroring where semantically required
+text direction per localized block
+mixed English-learning text inside RTL UI
+long translated strings/text scaling
 ```
 
-Learner may always override the automatic choice.
+Canonical English learning text may remain LTR inside an RTL application shell.
 
 ---
 
-## 12. Installation identity
+## 14. Locale-aware content manifests
 
-CareerSpeak has no personal learner account in MVP.
+The learner manifest contract SHALL support locale-aware delivery.
 
-On first launch Flutter generates a cryptographically random app-specific:
-
-```text
-installationId
-```
-
-Recommended entropy:
+Example:
 
 ```text
-256-bit cryptographically secure random value
+GET /api/v1/content/manifest?locale=kk
 ```
 
-It SHALL NOT be derived from:
+Manifest metadata may include:
+
+```text
+schemaVersion
+contentVersion
+locale
+fallbackLocale
+packs
+localeDeltas
+assets
+checksums
+tombstones
+```
+
+No learner profile is required.
+
+---
+
+## 15. Locale delta packs
+
+Canonical English/audio assets are shared.
+
+Example:
+
+```text
+JAVA_SENIOR
+├── canonical English questions/answers
+├── English audio
+├── common assets
+└── locale deltas
+    ├── ru translations/hints/explanations
+    ├── kk translations/hints/explanations
+    └── ...
+```
+
+Changing `translationLocale` SHOULD download only missing/changed locale resources where canonical content/audio is unchanged.
+
+---
+
+## 16. Flutter local storage
+
+Locale preferences remain local-first:
+
+```text
+uiLocale
+translationLocale
+preferredAccent
+```
+
+Downloaded locale deltas are versioned disposable content and may be reclaimed by local retention policy when no longer required.
+
+User language preferences themselves are durable local settings and are not deleted by media/cache cleanup.
+
+---
+
+## 17. Installation identity
+
+CareerSpeak has no personal learner account.
+
+First launch:
+
+```text
+Flutter generates random app-specific installationId
+→ backend registration
+→ backend-issued installation token
+→ platform secure storage
+```
+
+`installationId` SHALL NOT be derived from:
 
 ```text
 IMEI
@@ -306,66 +461,34 @@ hardware serial
 advertising ID
 phone number
 email
-Apple/Google account identity
+Apple/Google identity
 ```
+
+It SHALL NOT be joined to learner progress/favorites/test history.
 
 ---
 
-## 13. Installation token
+## 18. Installation token
 
-`installationId` is not itself the API credential.
+`installationId` is not the API credential.
 
-Flow:
+The learner credential is backend-issued.
 
-```text
-Flutter generates installationId
-→ registration request
-→ backend issues installation token
-→ token stored in Android Keystore/iOS Keychain-backed secure storage
-→ token authenticates /api/v1/**
-```
-
-Do not use a client-computable credential such as:
+Do not use:
 
 ```text
 SHA256(installationId)
 ```
 
-The backend-issued token may be opaque or signed according to the final security ADR.
+or another credential that the client can deterministically manufacture without server authority.
+
+Token material is stored using platform secure storage and is not logged.
 
 ---
 
-## 14. Installation identity purpose
+## 19. Learner data policy
 
-Installation identity/token may support:
-
-```text
-API abuse protection
-rate limiting
-entitlement/integrity extensions
-token rotation
-credential revocation
-```
-
-It SHALL NOT create a server-side learning profile.
-
-The backend SHALL NOT join installation identity to:
-
-```text
-favorites
-IELTS scores
-mock-test history
-learned vocabulary
-profession interests
-recent topics
-learning progress
-```
-
----
-
-## 15. Learner data policy
-
-CareerSpeak SHALL NOT require for MVP:
+MVP SHALL NOT require:
 
 ```text
 name
@@ -381,94 +504,32 @@ contacts
 advertising identifier
 ```
 
-The following remain local-first:
+Local-first learner state includes:
 
 ```text
 favorites
-vocabulary progress
+progress
 test attempts/answers/scores
-completed topics
 review schedule
+completed topics
 recent content
-downloaded packs
-UI/localization settings
-```
-
-Uninstall may remove local history unless a future explicit backup/sync feature is introduced.
-
----
-
-## 16. Privacy requirements
-
-```text
-PRIV-001 No mandatory personal learner account.
-PRIV-002 Learning history/favorites/test results/preferences are local-first.
-PRIV-003 No GPS solely for locale selection.
-PRIV-004 installationId is random and app-specific.
-PRIV-005 installationId is not derived from hardware/advertising identifiers.
-PRIV-006 Learner voice is not uploaded in MVP.
-PRIV-007 Logs avoid unnecessary learner-identifying payloads.
-PRIV-008 Advertising SDKs are outside MVP scope.
-PRIV-009 installationId is not joined to learning history as a learner profile.
-PRIV-010 Learner API credential is backend-issued, not client-derived from installationId.
+downloads
+language/theme/settings
 ```
 
 ---
 
-## 17. Localized content delivery
+## 20. ADMIN localization workflow
 
-The root/pack manifest model SHALL support locale-aware content delivery without requiring a learner profile.
+There is one human ADMIN actor.
 
-Example:
-
-```text
-GET /api/v1/content/manifest?locale=kk
-```
-
-Manifest may expose:
-
-```text
-schemaVersion
-contentVersion
-locale
-fallbackLocale
-packs
-assets
-checksums
-tombstones
-```
-
----
-
-## 18. Offline locale delta
-
-Offline packs should reuse canonical English audio across locales.
-
-Example:
-
-```text
-JAVA_SENIOR pack
-├── English questions/answers
-├── English audio
-├── kk translations/hints/explanations
-└── locale metadata
-```
-
-Changing from one translation locale to another SHOULD download the locale delta rather than redownloading unchanged English audio.
-
----
-
-## 19. ADMIN localization workflow
-
-There is one human ADMIN actor in MVP.
-
-Localization is managed through the same Spring MVC Content Studio:
+Localization is managed through the Spring MVC Content Studio:
 
 ```text
 /admin/localization
 ```
 
-Required capabilities:
+Capabilities:
 
 ```text
 locale catalog
@@ -480,11 +541,11 @@ preview by locale
 publish/archive locale data
 ```
 
-Do not create a separate Python/desktop moderator application.
+No separate desktop/Python moderator application exists.
 
 ---
 
-## 20. Global delivery topology
+## 21. Global delivery topology
 
 ```text
 Flutter
@@ -499,47 +560,68 @@ TTS Worker
 → RustFS models/media
 ```
 
-Canonical media identity remains:
+Canonical binary identity remains:
 
 ```text
-bucket + object_key
+bucket + object_key + checksum
 ```
 
-Do not persist environment-specific CDN hostnames as domain identity.
+CDN hostname is not durable domain identity.
 
 ---
 
-## 21. Acceptance criteria
+## 22. Privacy requirements
 
-Globalization is accepted when:
-
-1. canonical learning language is English and stored once;
-2. UI/translation locale changes without duplicating English learning content;
-3. a new locale can be added without core-schema redesign;
-4. hints/explanations localize independently;
-5. English audio is reused across locales;
-6. RTL metadata is supported;
-7. locale selection requires no GPS;
-8. installationId exposes no hardware identity;
-9. learner credential is backend-issued;
-10. learning history remains local-first;
-11. one ADMIN manages locale content through Spring MVC Content Studio;
-12. offline locale deltas do not redownload unchanged English audio.
+```text
+PRIV-001 No mandatory personal learner account.
+PRIV-002 Learning history/favorites/test results/preferences are local-first.
+PRIV-003 No GPS solely for locale selection.
+PRIV-004 installationId is random and app-specific.
+PRIV-005 installationId is not derived from hardware/advertising identifiers.
+PRIV-006 Learner voice is not uploaded in MVP.
+PRIV-007 Logs avoid unnecessary learner-identifying payloads.
+PRIV-008 Advertising SDKs are outside MVP scope.
+PRIV-009 installationId is not joined to learning history as a learner profile.
+PRIV-010 Learner API credential is backend-issued.
+PRIV-011 Full installation token SHALL NOT be written to application logs.
+```
 
 ---
 
-## 22. P0 deliverables
+## 23. Acceptance criteria
+
+Globalization/localization is accepted when:
+
+1. canonical English content/audio is stored once;
+2. UI locale and translation locale can differ;
+3. UI strings are Flutter-owned ARB/gen-l10n resources;
+4. content translations/hints/explanations are backend-driven;
+5. new compatible content translations can be published without a mobile release;
+6. a new locale can be added without core content-schema redesign;
+7. English audio is reused across locales;
+8. locale delta download avoids redownloading unchanged English audio;
+9. fallback works for regional/base/English cases;
+10. RTL mixed-language UI is qualified before RTL rollout;
+11. no GPS is required for locale selection;
+12. learner credential is backend-issued;
+13. learning history remains local-first;
+14. one ADMIN manages localization through Content Studio.
+
+---
+
+## 24. P0 deliverables
 
 ```text
 locale domain model
 typed localization ERD
+UI locale resource contract
+translation-locale catalog contract
 fallback specification
-Flutter locale-selection flow
-installation registration/token contract
-localized manifest contract
-offline locale-delta design
-ADMIN localization workflow
 RTL qualification plan
+Flutter locale-selection state flow
+installation registration/token contract
+localized manifest/locale-delta contract
+ADMIN localization workflow
 ```
 
-This is the authoritative globalization/localization baseline for CareerSpeak v0.7.
+This is the authoritative globalization/localization baseline for CareerSpeak v0.8.
