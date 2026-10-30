@@ -28,6 +28,9 @@ void main() {
       final result = await gateway.fetch(_target());
 
       expect(result, isA<Success<ContentPayload>>());
+      final payload = (result as Success<ContentPayload>).value;
+      expect(payload.categoryCode, 'JAVA_BACKEND');
+      expect(payload.levelCode, 'SENIOR');
       final request = apiClient.requests.single;
       expect(request.method, ApiMethod.get);
       expect(request.path, '/api/v1/content/interview/JAVA_Q_001/revisions/3');
@@ -113,8 +116,10 @@ Map<String, Object?> _payloadJson() {
     'title': 'Dependency Injection',
     'subtitle': 'Java Backend',
     'description': 'Explain constructor injection and its tradeoffs.',
-    'category': 'Java Backend',
-    'level': 'Senior',
+    'categoryCode': 'JAVA_BACKEND',
+    'categoryLabel': 'Java Backend',
+    'levelCode': 'SENIOR',
+    'levelLabel': 'Senior',
     'minutes': 6,
     'hasAudio': true,
   };
