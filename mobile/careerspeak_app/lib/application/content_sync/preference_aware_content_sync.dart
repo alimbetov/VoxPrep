@@ -1,3 +1,4 @@
+import '../../domain/application_preferences.dart';
 import '../ports/app_preferences_repository.dart';
 import '../result/result.dart';
 import 'content_sync_coordinator.dart';
@@ -18,11 +19,11 @@ final class PreferenceAwareContentSync {
     required SyncTrigger trigger,
   }) async {
     final preferencesResult = await _preferencesRepository.getPreferences();
-    if (preferencesResult is FailureResult) {
+    if (preferencesResult is FailureResult<ApplicationPreferences>) {
       return FailureResult<ContentSyncOutcome>(preferencesResult.failure);
     }
     final preferences =
-        (preferencesResult as Success).value;
+        (preferencesResult as Success<ApplicationPreferences>).value;
 
     return _coordinator.synchronize(
       runId: runId,
