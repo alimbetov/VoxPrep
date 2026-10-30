@@ -249,7 +249,8 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
             throw const _SyncExecutorInvariant(
               ApplicationFailure(
                 code: 'CONTENT_PAYLOAD_SET_MISMATCH',
-                message: 'A canonical pack content reference has no exact staged payload revision.',
+                message:
+                    'A canonical pack content reference has no exact staged payload revision.',
               ),
             );
           }
@@ -404,7 +405,8 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
       throw const _SyncExecutorInvariant(
         ApplicationFailure(
           code: 'CONTENT_PAYLOAD_IMMUTABLE_CONFLICT',
-          message: 'A persisted content payload conflicts with its immutable revision.',
+          message:
+              'A persisted content payload conflicts with its immutable revision.',
         ),
       );
     }
@@ -480,7 +482,8 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
       throw const _SyncExecutorInvariant(
         ApplicationFailure(
           code: 'CONTENT_ASSET_IMMUTABLE_CONFLICT',
-          message: 'Persisted content asset references conflict with immutable metadata.',
+          message:
+              'Persisted content asset references conflict with immutable metadata.',
         ),
       );
     }
@@ -599,7 +602,8 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
               throw const _SyncExecutorInvariant(
                 ApplicationFailure(
                   code: 'SYNC_TARGET_PAYLOAD_MISSING',
-                  message: 'A canonical target content revision is missing its learner payload.',
+                  message:
+                      'A canonical target content revision is missing its learner payload.',
                 ),
               );
             }
@@ -607,7 +611,8 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
               throw const _SyncExecutorInvariant(
                 ApplicationFailure(
                   code: 'SYNC_TARGET_PAYLOAD_MISMATCH',
-                  message: 'The canonical target payload does not match content metadata.',
+                  message:
+                      'The canonical target payload does not match content metadata.',
                 ),
               );
             }
@@ -628,7 +633,8 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
           throw const _SyncExecutorInvariant(
             ApplicationFailure(
               code: 'TOMBSTONE_TARGET_CONFLICT',
-              message: 'A target root cannot publish and tombstone the same content.',
+              message:
+                  'A target root cannot publish and tombstone the same content.',
             ),
           );
         }

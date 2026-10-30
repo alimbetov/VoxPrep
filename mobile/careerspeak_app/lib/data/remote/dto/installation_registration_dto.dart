@@ -9,9 +9,7 @@ final class InstallationRegistrationRequestDto {
 }
 
 final class InstallationRegistrationResponseDto {
-  const InstallationRegistrationResponseDto({
-    required this.installationToken,
-  });
+  const InstallationRegistrationResponseDto({required this.installationToken});
 
   final String installationToken;
 }

@@ -76,11 +76,7 @@ final class ContentManifestDecoder {
 
       final dto = RootContentManifestDto(
         schemaVersion: schemaVersion,
-        contentVersion: _integer(
-          object,
-          'contentVersion',
-          r'$.contentVersion',
-        ),
+        contentVersion: _integer(object, 'contentVersion', r'$.contentVersion'),
         minimumAppContractVersion: minimumAppContractVersion,
         publishedAt: _utcDateTime(object, 'publishedAt', r'$.publishedAt'),
         checksum: _string(object, 'checksum', r'$.checksum'),

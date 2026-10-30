@@ -36,7 +36,5 @@ void main() {
 }
 
 Object? _fixture(String name) {
-  return jsonDecode(
-    File('test/contracts/fixtures/$name').readAsStringSync(),
-  );
+  return jsonDecode(File('test/contracts/fixtures/$name').readAsStringSync());
 }

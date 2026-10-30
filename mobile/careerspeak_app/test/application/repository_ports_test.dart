@@ -54,8 +54,9 @@ void main() {
               .getOrThrow();
       expect(page.items, isNotEmpty);
 
-      final test = (await repository.getByCode('JAVA_SENIOR_QUICK_001'))
-          .getOrThrow();
+      final test = (await repository.getByCode(
+        'JAVA_SENIOR_QUICK_001',
+      )).getOrThrow();
       expect(test?.questions.length, 5);
     },
   );

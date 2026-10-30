@@ -33,16 +33,23 @@ void main() {
     }
   });
 
-  test('shared payload fixture uses codes plus labels, not legacy wire keys', () {
-    final fixture = jsonDecode(
-      File('test/contracts/fixtures/content_payload_v1.json').readAsStringSync(),
-    ) as Map<String, dynamic>;
+  test(
+    'shared payload fixture uses codes plus labels, not legacy wire keys',
+    () {
+      final fixture =
+          jsonDecode(
+                File(
+                  'test/contracts/fixtures/content_payload_v1.json',
+                ).readAsStringSync(),
+              )
+              as Map<String, dynamic>;
 
-    expect(fixture['categoryCode'], 'JAVA_BACKEND');
-    expect(fixture['categoryLabel'], 'Java Backend');
-    expect(fixture['levelCode'], 'SENIOR');
-    expect(fixture['levelLabel'], 'Senior');
-    expect(fixture.containsKey('category'), isFalse);
-    expect(fixture.containsKey('level'), isFalse);
-  });
+      expect(fixture['categoryCode'], 'JAVA_BACKEND');
+      expect(fixture['categoryLabel'], 'Java Backend');
+      expect(fixture['levelCode'], 'SENIOR');
+      expect(fixture['levelLabel'], 'Senior');
+      expect(fixture.containsKey('category'), isFalse);
+      expect(fixture.containsKey('level'), isFalse);
+    },
+  );
 }

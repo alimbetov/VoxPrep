@@ -99,7 +99,8 @@ final class ContentSyncCoordinator {
         activeRunId,
         const ApplicationFailure(
           code: 'SYNC_REMOTE_RESPONSE_INVALID',
-          message: 'An unconditional root manifest request returned no manifest payload.',
+          message:
+              'An unconditional root manifest request returned no manifest payload.',
         ),
       );
     }
