@@ -53,6 +53,72 @@ class ContentManifestStates extends Table {
   List<String> get customConstraints => const ['CHECK (id = 1)'];
 }
 
+class SyncRuns extends Table {
+  TextColumn get runId => text()();
+  TextColumn get trigger => text()();
+  TextColumn get translationLocale => text()();
+  IntColumn get fromContentVersion => integer().nullable()();
+  IntColumn get targetContentVersion => integer().nullable()();
+  IntColumn get targetSchemaVersion => integer().nullable()();
+  TextColumn get state => text()();
+  BoolColumn get resyncRequested =>
+      boolean().withDefault(const Constant(false))();
+  IntColumn get attemptCount => integer().withDefault(const Constant(0))();
+  BoolColumn get retryable => boolean().withDefault(const Constant(false))();
+  TextColumn get errorCode => text().nullable()();
+  TextColumn get errorMessage => text().nullable()();
+  DateTimeColumn get startedAt => dateTime()();
+  DateTimeColumn get updatedAt => dateTime()();
+  DateTimeColumn get finishedAt => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {runId};
+
+  @override
+  List<String> get customConstraints => const ['CHECK (attempt_count >= 0)'];
+}
+
+class SyncPackUpdates extends Table {
+  TextColumn get runId =>
+      text().references(SyncRuns, #runId, onDelete: KeyAction.cascade)();
+  TextColumn get packCode => text()();
+  TextColumn get variantKey => text()();
+  IntColumn get targetRevision => integer()();
+  TextColumn get targetChecksum => text()();
+  TextColumn get state => text()();
+  IntColumn get requiredAssetCount =>
+      integer().withDefault(const Constant(0))();
+  IntColumn get verifiedAssetCount =>
+      integer().withDefault(const Constant(0))();
+  TextColumn get errorCode => text().nullable()();
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {runId, packCode, variantKey};
+
+  @override
+  List<String> get customConstraints => const [
+    'CHECK (target_revision > 0)',
+    'CHECK (required_asset_count >= 0)',
+    'CHECK (verified_asset_count >= 0)',
+    'CHECK (verified_asset_count <= required_asset_count)',
+  ];
+}
+
+class SyncTombstones extends Table {
+  TextColumn get runId =>
+      text().references(SyncRuns, #runId, onDelete: KeyAction.cascade)();
+  TextColumn get contentCode => text()();
+  TextColumn get contentType => text()();
+  IntColumn get revision => integer().nullable()();
+  TextColumn get reason => text()();
+  TextColumn get state => text()();
+  DateTimeColumn get appliedAt => dateTime().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {runId, contentCode, contentType};
+}
+
 class ContentPackRevisions extends Table {
   TextColumn get packCode => text()();
   TextColumn get variantKey => text()();

@@ -10,6 +10,9 @@ part 'careerspeak_database.g.dart';
     AppPreferences,
     InstallationRuntimeStates,
     ContentManifestStates,
+    SyncRuns,
+    SyncPackUpdates,
+    SyncTombstones,
     ContentPackRevisions,
     LocalContentRecords,
     Favorites,
@@ -21,12 +24,19 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
     : super(executor ?? driftDatabase(name: 'careerspeak'));
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) async {
       await migrator.createAll();
+    },
+    onUpgrade: (migrator, from, _) async {
+      if (from < 2) {
+        await migrator.createTable(syncRuns);
+        await migrator.createTable(syncPackUpdates);
+        await migrator.createTable(syncTombstones);
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');

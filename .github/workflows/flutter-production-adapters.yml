@@ -49,13 +49,24 @@ jobs:
         run: |
           dart run drift_dev schema dump \
             lib/data/local/database/careerspeak_database.dart \
-            drift_schemas/drift_schema_v1.json
+            drift_schemas/drift_schema_v2.json
+
+      - name: Drift migration test codegen
+        run: |
+          rm -rf test/generated_migrations
+          dart run drift_dev schema generate \
+            --data-classes \
+            --companions \
+            drift_schemas/ \
+            test/generated_migrations/
 
       - name: Generated baseline reproducibility
         run: |
           git diff --exit-code -- \
             lib/data/local/database/careerspeak_database.g.dart \
-            drift_schemas/drift_schema_v1.json
+            drift_schemas/drift_schema_v1.json \
+            drift_schemas/drift_schema_v2.json \
+            test/generated_migrations
 
       - name: Analyze
         run: flutter analyze

@@ -15,15 +15,15 @@ void main() {
     await database.close();
   });
 
-  test('schema version 1 creates the foundation tables', () async {
+  test('schema version 2 creates the production adapter foundation', () async {
     await database.customSelect('SELECT 1').getSingle();
 
-    expect(database.schemaVersion, 1);
+    expect(database.schemaVersion, 2);
 
     final userVersion = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(userVersion.read<int>('user_version'), 1);
+    expect(userVersion.read<int>('user_version'), 2);
 
     final foreignKeys = await database
         .customSelect('PRAGMA foreign_keys')
@@ -40,6 +40,9 @@ void main() {
         'app_preferences',
         'installation_runtime_states',
         'content_manifest_states',
+        'sync_runs',
+        'sync_pack_updates',
+        'sync_tombstones',
         'content_pack_revisions',
         'local_content_records',
         'favorites',
@@ -127,6 +130,95 @@ void main() {
               updatedAt: now,
             ),
           ),
+      throwsA(anything),
+    );
+  });
+
+  test('sync journal children are owned by the durable run', () async {
+    final now = DateTime.utc(2026, 10, 30, 10);
+
+    await database
+        .into(database.syncRuns)
+        .insert(
+          SyncRunsCompanion.insert(
+            runId: 'sync-1',
+            trigger: 'STARTUP',
+            translationLocale: 'kk',
+            state: 'PLANNING',
+            startedAt: now,
+            updatedAt: now,
+          ),
+        );
+
+    await database
+        .into(database.syncPackUpdates)
+        .insert(
+          SyncPackUpdatesCompanion.insert(
+            runId: 'sync-1',
+            packCode: 'JAVA_SENIOR',
+            variantKey: 'canonical',
+            targetRevision: 8,
+            targetChecksum:
+                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            state: 'PLANNED',
+            updatedAt: now,
+          ),
+        );
+
+    await database
+        .into(database.syncTombstones)
+        .insert(
+          SyncTombstonesCompanion.insert(
+            runId: 'sync-1',
+            contentCode: 'JAVA_QUESTION_001',
+            contentType: 'interview',
+            revision: const Value(3),
+            reason: 'INACTIVE',
+            state: 'PLANNED',
+          ),
+        );
+
+    expect(await database.select(database.syncPackUpdates).get(), hasLength(1));
+    expect(await database.select(database.syncTombstones).get(), hasLength(1));
+
+    await (database.delete(
+      database.syncRuns,
+    )..where((row) => row.runId.equals('sync-1'))).go();
+
+    expect(await database.select(database.syncPackUpdates).get(), isEmpty);
+    expect(await database.select(database.syncTombstones).get(), isEmpty);
+  });
+
+  test('sync pack identity is scoped by run and pack variant', () async {
+    final now = DateTime.utc(2026, 10, 30, 10);
+
+    await database
+        .into(database.syncRuns)
+        .insert(
+          SyncRunsCompanion.insert(
+            runId: 'sync-1',
+            trigger: 'MANUAL',
+            translationLocale: 'ru',
+            state: 'PLANNING',
+            startedAt: now,
+            updatedAt: now,
+          ),
+        );
+
+    final update = SyncPackUpdatesCompanion.insert(
+      runId: 'sync-1',
+      packCode: 'JAVA_SENIOR',
+      variantKey: 'canonical',
+      targetRevision: 8,
+      targetChecksum:
+          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+      state: 'PLANNED',
+      updatedAt: now,
+    );
+
+    await database.into(database.syncPackUpdates).insert(update);
+    await expectLater(
+      database.into(database.syncPackUpdates).insert(update),
       throwsA(anything),
     );
   });

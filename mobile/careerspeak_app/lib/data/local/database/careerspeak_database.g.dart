@@ -1762,6 +1762,2017 @@ class ContentManifestStatesCompanion
   }
 }
 
+class $SyncRunsTable extends SyncRuns with TableInfo<$SyncRunsTable, SyncRun> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyncRunsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _runIdMeta = const VerificationMeta('runId');
+  @override
+  late final GeneratedColumn<String> runId = GeneratedColumn<String>(
+    'run_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _triggerMeta = const VerificationMeta(
+    'trigger',
+  );
+  @override
+  late final GeneratedColumn<String> trigger = GeneratedColumn<String>(
+    'trigger',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _translationLocaleMeta = const VerificationMeta(
+    'translationLocale',
+  );
+  @override
+  late final GeneratedColumn<String> translationLocale =
+      GeneratedColumn<String>(
+        'translation_locale',
+        aliasedName,
+        false,
+        type: DriftSqlType.string,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _fromContentVersionMeta =
+      const VerificationMeta('fromContentVersion');
+  @override
+  late final GeneratedColumn<int> fromContentVersion = GeneratedColumn<int>(
+    'from_content_version',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _targetContentVersionMeta =
+      const VerificationMeta('targetContentVersion');
+  @override
+  late final GeneratedColumn<int> targetContentVersion = GeneratedColumn<int>(
+    'target_content_version',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _targetSchemaVersionMeta =
+      const VerificationMeta('targetSchemaVersion');
+  @override
+  late final GeneratedColumn<int> targetSchemaVersion = GeneratedColumn<int>(
+    'target_schema_version',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _stateMeta = const VerificationMeta('state');
+  @override
+  late final GeneratedColumn<String> state = GeneratedColumn<String>(
+    'state',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _resyncRequestedMeta = const VerificationMeta(
+    'resyncRequested',
+  );
+  @override
+  late final GeneratedColumn<bool> resyncRequested = GeneratedColumn<bool>(
+    'resync_requested',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("resync_requested" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _attemptCountMeta = const VerificationMeta(
+    'attemptCount',
+  );
+  @override
+  late final GeneratedColumn<int> attemptCount = GeneratedColumn<int>(
+    'attempt_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _retryableMeta = const VerificationMeta(
+    'retryable',
+  );
+  @override
+  late final GeneratedColumn<bool> retryable = GeneratedColumn<bool>(
+    'retryable',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("retryable" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  static const VerificationMeta _errorCodeMeta = const VerificationMeta(
+    'errorCode',
+  );
+  @override
+  late final GeneratedColumn<String> errorCode = GeneratedColumn<String>(
+    'error_code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _errorMessageMeta = const VerificationMeta(
+    'errorMessage',
+  );
+  @override
+  late final GeneratedColumn<String> errorMessage = GeneratedColumn<String>(
+    'error_message',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _startedAtMeta = const VerificationMeta(
+    'startedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> startedAt = GeneratedColumn<DateTime>(
+    'started_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _finishedAtMeta = const VerificationMeta(
+    'finishedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> finishedAt = GeneratedColumn<DateTime>(
+    'finished_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    runId,
+    trigger,
+    translationLocale,
+    fromContentVersion,
+    targetContentVersion,
+    targetSchemaVersion,
+    state,
+    resyncRequested,
+    attemptCount,
+    retryable,
+    errorCode,
+    errorMessage,
+    startedAt,
+    updatedAt,
+    finishedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sync_runs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SyncRun> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('run_id')) {
+      context.handle(
+        _runIdMeta,
+        runId.isAcceptableOrUnknown(data['run_id']!, _runIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_runIdMeta);
+    }
+    if (data.containsKey('trigger')) {
+      context.handle(
+        _triggerMeta,
+        trigger.isAcceptableOrUnknown(data['trigger']!, _triggerMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_triggerMeta);
+    }
+    if (data.containsKey('translation_locale')) {
+      context.handle(
+        _translationLocaleMeta,
+        translationLocale.isAcceptableOrUnknown(
+          data['translation_locale']!,
+          _translationLocaleMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_translationLocaleMeta);
+    }
+    if (data.containsKey('from_content_version')) {
+      context.handle(
+        _fromContentVersionMeta,
+        fromContentVersion.isAcceptableOrUnknown(
+          data['from_content_version']!,
+          _fromContentVersionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('target_content_version')) {
+      context.handle(
+        _targetContentVersionMeta,
+        targetContentVersion.isAcceptableOrUnknown(
+          data['target_content_version']!,
+          _targetContentVersionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('target_schema_version')) {
+      context.handle(
+        _targetSchemaVersionMeta,
+        targetSchemaVersion.isAcceptableOrUnknown(
+          data['target_schema_version']!,
+          _targetSchemaVersionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('state')) {
+      context.handle(
+        _stateMeta,
+        state.isAcceptableOrUnknown(data['state']!, _stateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_stateMeta);
+    }
+    if (data.containsKey('resync_requested')) {
+      context.handle(
+        _resyncRequestedMeta,
+        resyncRequested.isAcceptableOrUnknown(
+          data['resync_requested']!,
+          _resyncRequestedMeta,
+        ),
+      );
+    }
+    if (data.containsKey('attempt_count')) {
+      context.handle(
+        _attemptCountMeta,
+        attemptCount.isAcceptableOrUnknown(
+          data['attempt_count']!,
+          _attemptCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('retryable')) {
+      context.handle(
+        _retryableMeta,
+        retryable.isAcceptableOrUnknown(data['retryable']!, _retryableMeta),
+      );
+    }
+    if (data.containsKey('error_code')) {
+      context.handle(
+        _errorCodeMeta,
+        errorCode.isAcceptableOrUnknown(data['error_code']!, _errorCodeMeta),
+      );
+    }
+    if (data.containsKey('error_message')) {
+      context.handle(
+        _errorMessageMeta,
+        errorMessage.isAcceptableOrUnknown(
+          data['error_message']!,
+          _errorMessageMeta,
+        ),
+      );
+    }
+    if (data.containsKey('started_at')) {
+      context.handle(
+        _startedAtMeta,
+        startedAt.isAcceptableOrUnknown(data['started_at']!, _startedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_startedAtMeta);
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    if (data.containsKey('finished_at')) {
+      context.handle(
+        _finishedAtMeta,
+        finishedAt.isAcceptableOrUnknown(data['finished_at']!, _finishedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {runId};
+  @override
+  SyncRun map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyncRun(
+      runId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}run_id'],
+      )!,
+      trigger: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}trigger'],
+      )!,
+      translationLocale: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}translation_locale'],
+      )!,
+      fromContentVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}from_content_version'],
+      ),
+      targetContentVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}target_content_version'],
+      ),
+      targetSchemaVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}target_schema_version'],
+      ),
+      state: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}state'],
+      )!,
+      resyncRequested: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}resync_requested'],
+      )!,
+      attemptCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}attempt_count'],
+      )!,
+      retryable: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}retryable'],
+      )!,
+      errorCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}error_code'],
+      ),
+      errorMessage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}error_message'],
+      ),
+      startedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}started_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      finishedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}finished_at'],
+      ),
+    );
+  }
+
+  @override
+  $SyncRunsTable createAlias(String alias) {
+    return $SyncRunsTable(attachedDatabase, alias);
+  }
+}
+
+class SyncRun extends DataClass implements Insertable<SyncRun> {
+  final String runId;
+  final String trigger;
+  final String translationLocale;
+  final int? fromContentVersion;
+  final int? targetContentVersion;
+  final int? targetSchemaVersion;
+  final String state;
+  final bool resyncRequested;
+  final int attemptCount;
+  final bool retryable;
+  final String? errorCode;
+  final String? errorMessage;
+  final DateTime startedAt;
+  final DateTime updatedAt;
+  final DateTime? finishedAt;
+  const SyncRun({
+    required this.runId,
+    required this.trigger,
+    required this.translationLocale,
+    this.fromContentVersion,
+    this.targetContentVersion,
+    this.targetSchemaVersion,
+    required this.state,
+    required this.resyncRequested,
+    required this.attemptCount,
+    required this.retryable,
+    this.errorCode,
+    this.errorMessage,
+    required this.startedAt,
+    required this.updatedAt,
+    this.finishedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['run_id'] = Variable<String>(runId);
+    map['trigger'] = Variable<String>(trigger);
+    map['translation_locale'] = Variable<String>(translationLocale);
+    if (!nullToAbsent || fromContentVersion != null) {
+      map['from_content_version'] = Variable<int>(fromContentVersion);
+    }
+    if (!nullToAbsent || targetContentVersion != null) {
+      map['target_content_version'] = Variable<int>(targetContentVersion);
+    }
+    if (!nullToAbsent || targetSchemaVersion != null) {
+      map['target_schema_version'] = Variable<int>(targetSchemaVersion);
+    }
+    map['state'] = Variable<String>(state);
+    map['resync_requested'] = Variable<bool>(resyncRequested);
+    map['attempt_count'] = Variable<int>(attemptCount);
+    map['retryable'] = Variable<bool>(retryable);
+    if (!nullToAbsent || errorCode != null) {
+      map['error_code'] = Variable<String>(errorCode);
+    }
+    if (!nullToAbsent || errorMessage != null) {
+      map['error_message'] = Variable<String>(errorMessage);
+    }
+    map['started_at'] = Variable<DateTime>(startedAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || finishedAt != null) {
+      map['finished_at'] = Variable<DateTime>(finishedAt);
+    }
+    return map;
+  }
+
+  SyncRunsCompanion toCompanion(bool nullToAbsent) {
+    return SyncRunsCompanion(
+      runId: Value(runId),
+      trigger: Value(trigger),
+      translationLocale: Value(translationLocale),
+      fromContentVersion: fromContentVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fromContentVersion),
+      targetContentVersion: targetContentVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(targetContentVersion),
+      targetSchemaVersion: targetSchemaVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(targetSchemaVersion),
+      state: Value(state),
+      resyncRequested: Value(resyncRequested),
+      attemptCount: Value(attemptCount),
+      retryable: Value(retryable),
+      errorCode: errorCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(errorCode),
+      errorMessage: errorMessage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(errorMessage),
+      startedAt: Value(startedAt),
+      updatedAt: Value(updatedAt),
+      finishedAt: finishedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(finishedAt),
+    );
+  }
+
+  factory SyncRun.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyncRun(
+      runId: serializer.fromJson<String>(json['runId']),
+      trigger: serializer.fromJson<String>(json['trigger']),
+      translationLocale: serializer.fromJson<String>(json['translationLocale']),
+      fromContentVersion: serializer.fromJson<int?>(json['fromContentVersion']),
+      targetContentVersion: serializer.fromJson<int?>(
+        json['targetContentVersion'],
+      ),
+      targetSchemaVersion: serializer.fromJson<int?>(
+        json['targetSchemaVersion'],
+      ),
+      state: serializer.fromJson<String>(json['state']),
+      resyncRequested: serializer.fromJson<bool>(json['resyncRequested']),
+      attemptCount: serializer.fromJson<int>(json['attemptCount']),
+      retryable: serializer.fromJson<bool>(json['retryable']),
+      errorCode: serializer.fromJson<String?>(json['errorCode']),
+      errorMessage: serializer.fromJson<String?>(json['errorMessage']),
+      startedAt: serializer.fromJson<DateTime>(json['startedAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      finishedAt: serializer.fromJson<DateTime?>(json['finishedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'runId': serializer.toJson<String>(runId),
+      'trigger': serializer.toJson<String>(trigger),
+      'translationLocale': serializer.toJson<String>(translationLocale),
+      'fromContentVersion': serializer.toJson<int?>(fromContentVersion),
+      'targetContentVersion': serializer.toJson<int?>(targetContentVersion),
+      'targetSchemaVersion': serializer.toJson<int?>(targetSchemaVersion),
+      'state': serializer.toJson<String>(state),
+      'resyncRequested': serializer.toJson<bool>(resyncRequested),
+      'attemptCount': serializer.toJson<int>(attemptCount),
+      'retryable': serializer.toJson<bool>(retryable),
+      'errorCode': serializer.toJson<String?>(errorCode),
+      'errorMessage': serializer.toJson<String?>(errorMessage),
+      'startedAt': serializer.toJson<DateTime>(startedAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'finishedAt': serializer.toJson<DateTime?>(finishedAt),
+    };
+  }
+
+  SyncRun copyWith({
+    String? runId,
+    String? trigger,
+    String? translationLocale,
+    Value<int?> fromContentVersion = const Value.absent(),
+    Value<int?> targetContentVersion = const Value.absent(),
+    Value<int?> targetSchemaVersion = const Value.absent(),
+    String? state,
+    bool? resyncRequested,
+    int? attemptCount,
+    bool? retryable,
+    Value<String?> errorCode = const Value.absent(),
+    Value<String?> errorMessage = const Value.absent(),
+    DateTime? startedAt,
+    DateTime? updatedAt,
+    Value<DateTime?> finishedAt = const Value.absent(),
+  }) => SyncRun(
+    runId: runId ?? this.runId,
+    trigger: trigger ?? this.trigger,
+    translationLocale: translationLocale ?? this.translationLocale,
+    fromContentVersion: fromContentVersion.present
+        ? fromContentVersion.value
+        : this.fromContentVersion,
+    targetContentVersion: targetContentVersion.present
+        ? targetContentVersion.value
+        : this.targetContentVersion,
+    targetSchemaVersion: targetSchemaVersion.present
+        ? targetSchemaVersion.value
+        : this.targetSchemaVersion,
+    state: state ?? this.state,
+    resyncRequested: resyncRequested ?? this.resyncRequested,
+    attemptCount: attemptCount ?? this.attemptCount,
+    retryable: retryable ?? this.retryable,
+    errorCode: errorCode.present ? errorCode.value : this.errorCode,
+    errorMessage: errorMessage.present ? errorMessage.value : this.errorMessage,
+    startedAt: startedAt ?? this.startedAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    finishedAt: finishedAt.present ? finishedAt.value : this.finishedAt,
+  );
+  SyncRun copyWithCompanion(SyncRunsCompanion data) {
+    return SyncRun(
+      runId: data.runId.present ? data.runId.value : this.runId,
+      trigger: data.trigger.present ? data.trigger.value : this.trigger,
+      translationLocale: data.translationLocale.present
+          ? data.translationLocale.value
+          : this.translationLocale,
+      fromContentVersion: data.fromContentVersion.present
+          ? data.fromContentVersion.value
+          : this.fromContentVersion,
+      targetContentVersion: data.targetContentVersion.present
+          ? data.targetContentVersion.value
+          : this.targetContentVersion,
+      targetSchemaVersion: data.targetSchemaVersion.present
+          ? data.targetSchemaVersion.value
+          : this.targetSchemaVersion,
+      state: data.state.present ? data.state.value : this.state,
+      resyncRequested: data.resyncRequested.present
+          ? data.resyncRequested.value
+          : this.resyncRequested,
+      attemptCount: data.attemptCount.present
+          ? data.attemptCount.value
+          : this.attemptCount,
+      retryable: data.retryable.present ? data.retryable.value : this.retryable,
+      errorCode: data.errorCode.present ? data.errorCode.value : this.errorCode,
+      errorMessage: data.errorMessage.present
+          ? data.errorMessage.value
+          : this.errorMessage,
+      startedAt: data.startedAt.present ? data.startedAt.value : this.startedAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      finishedAt: data.finishedAt.present
+          ? data.finishedAt.value
+          : this.finishedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncRun(')
+          ..write('runId: $runId, ')
+          ..write('trigger: $trigger, ')
+          ..write('translationLocale: $translationLocale, ')
+          ..write('fromContentVersion: $fromContentVersion, ')
+          ..write('targetContentVersion: $targetContentVersion, ')
+          ..write('targetSchemaVersion: $targetSchemaVersion, ')
+          ..write('state: $state, ')
+          ..write('resyncRequested: $resyncRequested, ')
+          ..write('attemptCount: $attemptCount, ')
+          ..write('retryable: $retryable, ')
+          ..write('errorCode: $errorCode, ')
+          ..write('errorMessage: $errorMessage, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('finishedAt: $finishedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    runId,
+    trigger,
+    translationLocale,
+    fromContentVersion,
+    targetContentVersion,
+    targetSchemaVersion,
+    state,
+    resyncRequested,
+    attemptCount,
+    retryable,
+    errorCode,
+    errorMessage,
+    startedAt,
+    updatedAt,
+    finishedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyncRun &&
+          other.runId == this.runId &&
+          other.trigger == this.trigger &&
+          other.translationLocale == this.translationLocale &&
+          other.fromContentVersion == this.fromContentVersion &&
+          other.targetContentVersion == this.targetContentVersion &&
+          other.targetSchemaVersion == this.targetSchemaVersion &&
+          other.state == this.state &&
+          other.resyncRequested == this.resyncRequested &&
+          other.attemptCount == this.attemptCount &&
+          other.retryable == this.retryable &&
+          other.errorCode == this.errorCode &&
+          other.errorMessage == this.errorMessage &&
+          other.startedAt == this.startedAt &&
+          other.updatedAt == this.updatedAt &&
+          other.finishedAt == this.finishedAt);
+}
+
+class SyncRunsCompanion extends UpdateCompanion<SyncRun> {
+  final Value<String> runId;
+  final Value<String> trigger;
+  final Value<String> translationLocale;
+  final Value<int?> fromContentVersion;
+  final Value<int?> targetContentVersion;
+  final Value<int?> targetSchemaVersion;
+  final Value<String> state;
+  final Value<bool> resyncRequested;
+  final Value<int> attemptCount;
+  final Value<bool> retryable;
+  final Value<String?> errorCode;
+  final Value<String?> errorMessage;
+  final Value<DateTime> startedAt;
+  final Value<DateTime> updatedAt;
+  final Value<DateTime?> finishedAt;
+  final Value<int> rowid;
+  const SyncRunsCompanion({
+    this.runId = const Value.absent(),
+    this.trigger = const Value.absent(),
+    this.translationLocale = const Value.absent(),
+    this.fromContentVersion = const Value.absent(),
+    this.targetContentVersion = const Value.absent(),
+    this.targetSchemaVersion = const Value.absent(),
+    this.state = const Value.absent(),
+    this.resyncRequested = const Value.absent(),
+    this.attemptCount = const Value.absent(),
+    this.retryable = const Value.absent(),
+    this.errorCode = const Value.absent(),
+    this.errorMessage = const Value.absent(),
+    this.startedAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.finishedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SyncRunsCompanion.insert({
+    required String runId,
+    required String trigger,
+    required String translationLocale,
+    this.fromContentVersion = const Value.absent(),
+    this.targetContentVersion = const Value.absent(),
+    this.targetSchemaVersion = const Value.absent(),
+    required String state,
+    this.resyncRequested = const Value.absent(),
+    this.attemptCount = const Value.absent(),
+    this.retryable = const Value.absent(),
+    this.errorCode = const Value.absent(),
+    this.errorMessage = const Value.absent(),
+    required DateTime startedAt,
+    required DateTime updatedAt,
+    this.finishedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : runId = Value(runId),
+       trigger = Value(trigger),
+       translationLocale = Value(translationLocale),
+       state = Value(state),
+       startedAt = Value(startedAt),
+       updatedAt = Value(updatedAt);
+  static Insertable<SyncRun> custom({
+    Expression<String>? runId,
+    Expression<String>? trigger,
+    Expression<String>? translationLocale,
+    Expression<int>? fromContentVersion,
+    Expression<int>? targetContentVersion,
+    Expression<int>? targetSchemaVersion,
+    Expression<String>? state,
+    Expression<bool>? resyncRequested,
+    Expression<int>? attemptCount,
+    Expression<bool>? retryable,
+    Expression<String>? errorCode,
+    Expression<String>? errorMessage,
+    Expression<DateTime>? startedAt,
+    Expression<DateTime>? updatedAt,
+    Expression<DateTime>? finishedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (runId != null) 'run_id': runId,
+      if (trigger != null) 'trigger': trigger,
+      if (translationLocale != null) 'translation_locale': translationLocale,
+      if (fromContentVersion != null)
+        'from_content_version': fromContentVersion,
+      if (targetContentVersion != null)
+        'target_content_version': targetContentVersion,
+      if (targetSchemaVersion != null)
+        'target_schema_version': targetSchemaVersion,
+      if (state != null) 'state': state,
+      if (resyncRequested != null) 'resync_requested': resyncRequested,
+      if (attemptCount != null) 'attempt_count': attemptCount,
+      if (retryable != null) 'retryable': retryable,
+      if (errorCode != null) 'error_code': errorCode,
+      if (errorMessage != null) 'error_message': errorMessage,
+      if (startedAt != null) 'started_at': startedAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (finishedAt != null) 'finished_at': finishedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SyncRunsCompanion copyWith({
+    Value<String>? runId,
+    Value<String>? trigger,
+    Value<String>? translationLocale,
+    Value<int?>? fromContentVersion,
+    Value<int?>? targetContentVersion,
+    Value<int?>? targetSchemaVersion,
+    Value<String>? state,
+    Value<bool>? resyncRequested,
+    Value<int>? attemptCount,
+    Value<bool>? retryable,
+    Value<String?>? errorCode,
+    Value<String?>? errorMessage,
+    Value<DateTime>? startedAt,
+    Value<DateTime>? updatedAt,
+    Value<DateTime?>? finishedAt,
+    Value<int>? rowid,
+  }) {
+    return SyncRunsCompanion(
+      runId: runId ?? this.runId,
+      trigger: trigger ?? this.trigger,
+      translationLocale: translationLocale ?? this.translationLocale,
+      fromContentVersion: fromContentVersion ?? this.fromContentVersion,
+      targetContentVersion: targetContentVersion ?? this.targetContentVersion,
+      targetSchemaVersion: targetSchemaVersion ?? this.targetSchemaVersion,
+      state: state ?? this.state,
+      resyncRequested: resyncRequested ?? this.resyncRequested,
+      attemptCount: attemptCount ?? this.attemptCount,
+      retryable: retryable ?? this.retryable,
+      errorCode: errorCode ?? this.errorCode,
+      errorMessage: errorMessage ?? this.errorMessage,
+      startedAt: startedAt ?? this.startedAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      finishedAt: finishedAt ?? this.finishedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (runId.present) {
+      map['run_id'] = Variable<String>(runId.value);
+    }
+    if (trigger.present) {
+      map['trigger'] = Variable<String>(trigger.value);
+    }
+    if (translationLocale.present) {
+      map['translation_locale'] = Variable<String>(translationLocale.value);
+    }
+    if (fromContentVersion.present) {
+      map['from_content_version'] = Variable<int>(fromContentVersion.value);
+    }
+    if (targetContentVersion.present) {
+      map['target_content_version'] = Variable<int>(targetContentVersion.value);
+    }
+    if (targetSchemaVersion.present) {
+      map['target_schema_version'] = Variable<int>(targetSchemaVersion.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(state.value);
+    }
+    if (resyncRequested.present) {
+      map['resync_requested'] = Variable<bool>(resyncRequested.value);
+    }
+    if (attemptCount.present) {
+      map['attempt_count'] = Variable<int>(attemptCount.value);
+    }
+    if (retryable.present) {
+      map['retryable'] = Variable<bool>(retryable.value);
+    }
+    if (errorCode.present) {
+      map['error_code'] = Variable<String>(errorCode.value);
+    }
+    if (errorMessage.present) {
+      map['error_message'] = Variable<String>(errorMessage.value);
+    }
+    if (startedAt.present) {
+      map['started_at'] = Variable<DateTime>(startedAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (finishedAt.present) {
+      map['finished_at'] = Variable<DateTime>(finishedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncRunsCompanion(')
+          ..write('runId: $runId, ')
+          ..write('trigger: $trigger, ')
+          ..write('translationLocale: $translationLocale, ')
+          ..write('fromContentVersion: $fromContentVersion, ')
+          ..write('targetContentVersion: $targetContentVersion, ')
+          ..write('targetSchemaVersion: $targetSchemaVersion, ')
+          ..write('state: $state, ')
+          ..write('resyncRequested: $resyncRequested, ')
+          ..write('attemptCount: $attemptCount, ')
+          ..write('retryable: $retryable, ')
+          ..write('errorCode: $errorCode, ')
+          ..write('errorMessage: $errorMessage, ')
+          ..write('startedAt: $startedAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('finishedAt: $finishedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SyncPackUpdatesTable extends SyncPackUpdates
+    with TableInfo<$SyncPackUpdatesTable, SyncPackUpdate> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyncPackUpdatesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _runIdMeta = const VerificationMeta('runId');
+  @override
+  late final GeneratedColumn<String> runId = GeneratedColumn<String>(
+    'run_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES sync_runs (run_id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _packCodeMeta = const VerificationMeta(
+    'packCode',
+  );
+  @override
+  late final GeneratedColumn<String> packCode = GeneratedColumn<String>(
+    'pack_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _variantKeyMeta = const VerificationMeta(
+    'variantKey',
+  );
+  @override
+  late final GeneratedColumn<String> variantKey = GeneratedColumn<String>(
+    'variant_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _targetRevisionMeta = const VerificationMeta(
+    'targetRevision',
+  );
+  @override
+  late final GeneratedColumn<int> targetRevision = GeneratedColumn<int>(
+    'target_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _targetChecksumMeta = const VerificationMeta(
+    'targetChecksum',
+  );
+  @override
+  late final GeneratedColumn<String> targetChecksum = GeneratedColumn<String>(
+    'target_checksum',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _stateMeta = const VerificationMeta('state');
+  @override
+  late final GeneratedColumn<String> state = GeneratedColumn<String>(
+    'state',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _requiredAssetCountMeta =
+      const VerificationMeta('requiredAssetCount');
+  @override
+  late final GeneratedColumn<int> requiredAssetCount = GeneratedColumn<int>(
+    'required_asset_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _verifiedAssetCountMeta =
+      const VerificationMeta('verifiedAssetCount');
+  @override
+  late final GeneratedColumn<int> verifiedAssetCount = GeneratedColumn<int>(
+    'verified_asset_count',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _errorCodeMeta = const VerificationMeta(
+    'errorCode',
+  );
+  @override
+  late final GeneratedColumn<String> errorCode = GeneratedColumn<String>(
+    'error_code',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    runId,
+    packCode,
+    variantKey,
+    targetRevision,
+    targetChecksum,
+    state,
+    requiredAssetCount,
+    verifiedAssetCount,
+    errorCode,
+    updatedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sync_pack_updates';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SyncPackUpdate> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('run_id')) {
+      context.handle(
+        _runIdMeta,
+        runId.isAcceptableOrUnknown(data['run_id']!, _runIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_runIdMeta);
+    }
+    if (data.containsKey('pack_code')) {
+      context.handle(
+        _packCodeMeta,
+        packCode.isAcceptableOrUnknown(data['pack_code']!, _packCodeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_packCodeMeta);
+    }
+    if (data.containsKey('variant_key')) {
+      context.handle(
+        _variantKeyMeta,
+        variantKey.isAcceptableOrUnknown(data['variant_key']!, _variantKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_variantKeyMeta);
+    }
+    if (data.containsKey('target_revision')) {
+      context.handle(
+        _targetRevisionMeta,
+        targetRevision.isAcceptableOrUnknown(
+          data['target_revision']!,
+          _targetRevisionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_targetRevisionMeta);
+    }
+    if (data.containsKey('target_checksum')) {
+      context.handle(
+        _targetChecksumMeta,
+        targetChecksum.isAcceptableOrUnknown(
+          data['target_checksum']!,
+          _targetChecksumMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_targetChecksumMeta);
+    }
+    if (data.containsKey('state')) {
+      context.handle(
+        _stateMeta,
+        state.isAcceptableOrUnknown(data['state']!, _stateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_stateMeta);
+    }
+    if (data.containsKey('required_asset_count')) {
+      context.handle(
+        _requiredAssetCountMeta,
+        requiredAssetCount.isAcceptableOrUnknown(
+          data['required_asset_count']!,
+          _requiredAssetCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('verified_asset_count')) {
+      context.handle(
+        _verifiedAssetCountMeta,
+        verifiedAssetCount.isAcceptableOrUnknown(
+          data['verified_asset_count']!,
+          _verifiedAssetCountMeta,
+        ),
+      );
+    }
+    if (data.containsKey('error_code')) {
+      context.handle(
+        _errorCodeMeta,
+        errorCode.isAcceptableOrUnknown(data['error_code']!, _errorCodeMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_updatedAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {runId, packCode, variantKey};
+  @override
+  SyncPackUpdate map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyncPackUpdate(
+      runId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}run_id'],
+      )!,
+      packCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pack_code'],
+      )!,
+      variantKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}variant_key'],
+      )!,
+      targetRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}target_revision'],
+      )!,
+      targetChecksum: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}target_checksum'],
+      )!,
+      state: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}state'],
+      )!,
+      requiredAssetCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}required_asset_count'],
+      )!,
+      verifiedAssetCount: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}verified_asset_count'],
+      )!,
+      errorCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}error_code'],
+      ),
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+    );
+  }
+
+  @override
+  $SyncPackUpdatesTable createAlias(String alias) {
+    return $SyncPackUpdatesTable(attachedDatabase, alias);
+  }
+}
+
+class SyncPackUpdate extends DataClass implements Insertable<SyncPackUpdate> {
+  final String runId;
+  final String packCode;
+  final String variantKey;
+  final int targetRevision;
+  final String targetChecksum;
+  final String state;
+  final int requiredAssetCount;
+  final int verifiedAssetCount;
+  final String? errorCode;
+  final DateTime updatedAt;
+  const SyncPackUpdate({
+    required this.runId,
+    required this.packCode,
+    required this.variantKey,
+    required this.targetRevision,
+    required this.targetChecksum,
+    required this.state,
+    required this.requiredAssetCount,
+    required this.verifiedAssetCount,
+    this.errorCode,
+    required this.updatedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['run_id'] = Variable<String>(runId);
+    map['pack_code'] = Variable<String>(packCode);
+    map['variant_key'] = Variable<String>(variantKey);
+    map['target_revision'] = Variable<int>(targetRevision);
+    map['target_checksum'] = Variable<String>(targetChecksum);
+    map['state'] = Variable<String>(state);
+    map['required_asset_count'] = Variable<int>(requiredAssetCount);
+    map['verified_asset_count'] = Variable<int>(verifiedAssetCount);
+    if (!nullToAbsent || errorCode != null) {
+      map['error_code'] = Variable<String>(errorCode);
+    }
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    return map;
+  }
+
+  SyncPackUpdatesCompanion toCompanion(bool nullToAbsent) {
+    return SyncPackUpdatesCompanion(
+      runId: Value(runId),
+      packCode: Value(packCode),
+      variantKey: Value(variantKey),
+      targetRevision: Value(targetRevision),
+      targetChecksum: Value(targetChecksum),
+      state: Value(state),
+      requiredAssetCount: Value(requiredAssetCount),
+      verifiedAssetCount: Value(verifiedAssetCount),
+      errorCode: errorCode == null && nullToAbsent
+          ? const Value.absent()
+          : Value(errorCode),
+      updatedAt: Value(updatedAt),
+    );
+  }
+
+  factory SyncPackUpdate.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyncPackUpdate(
+      runId: serializer.fromJson<String>(json['runId']),
+      packCode: serializer.fromJson<String>(json['packCode']),
+      variantKey: serializer.fromJson<String>(json['variantKey']),
+      targetRevision: serializer.fromJson<int>(json['targetRevision']),
+      targetChecksum: serializer.fromJson<String>(json['targetChecksum']),
+      state: serializer.fromJson<String>(json['state']),
+      requiredAssetCount: serializer.fromJson<int>(json['requiredAssetCount']),
+      verifiedAssetCount: serializer.fromJson<int>(json['verifiedAssetCount']),
+      errorCode: serializer.fromJson<String?>(json['errorCode']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'runId': serializer.toJson<String>(runId),
+      'packCode': serializer.toJson<String>(packCode),
+      'variantKey': serializer.toJson<String>(variantKey),
+      'targetRevision': serializer.toJson<int>(targetRevision),
+      'targetChecksum': serializer.toJson<String>(targetChecksum),
+      'state': serializer.toJson<String>(state),
+      'requiredAssetCount': serializer.toJson<int>(requiredAssetCount),
+      'verifiedAssetCount': serializer.toJson<int>(verifiedAssetCount),
+      'errorCode': serializer.toJson<String?>(errorCode),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+    };
+  }
+
+  SyncPackUpdate copyWith({
+    String? runId,
+    String? packCode,
+    String? variantKey,
+    int? targetRevision,
+    String? targetChecksum,
+    String? state,
+    int? requiredAssetCount,
+    int? verifiedAssetCount,
+    Value<String?> errorCode = const Value.absent(),
+    DateTime? updatedAt,
+  }) => SyncPackUpdate(
+    runId: runId ?? this.runId,
+    packCode: packCode ?? this.packCode,
+    variantKey: variantKey ?? this.variantKey,
+    targetRevision: targetRevision ?? this.targetRevision,
+    targetChecksum: targetChecksum ?? this.targetChecksum,
+    state: state ?? this.state,
+    requiredAssetCount: requiredAssetCount ?? this.requiredAssetCount,
+    verifiedAssetCount: verifiedAssetCount ?? this.verifiedAssetCount,
+    errorCode: errorCode.present ? errorCode.value : this.errorCode,
+    updatedAt: updatedAt ?? this.updatedAt,
+  );
+  SyncPackUpdate copyWithCompanion(SyncPackUpdatesCompanion data) {
+    return SyncPackUpdate(
+      runId: data.runId.present ? data.runId.value : this.runId,
+      packCode: data.packCode.present ? data.packCode.value : this.packCode,
+      variantKey: data.variantKey.present
+          ? data.variantKey.value
+          : this.variantKey,
+      targetRevision: data.targetRevision.present
+          ? data.targetRevision.value
+          : this.targetRevision,
+      targetChecksum: data.targetChecksum.present
+          ? data.targetChecksum.value
+          : this.targetChecksum,
+      state: data.state.present ? data.state.value : this.state,
+      requiredAssetCount: data.requiredAssetCount.present
+          ? data.requiredAssetCount.value
+          : this.requiredAssetCount,
+      verifiedAssetCount: data.verifiedAssetCount.present
+          ? data.verifiedAssetCount.value
+          : this.verifiedAssetCount,
+      errorCode: data.errorCode.present ? data.errorCode.value : this.errorCode,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncPackUpdate(')
+          ..write('runId: $runId, ')
+          ..write('packCode: $packCode, ')
+          ..write('variantKey: $variantKey, ')
+          ..write('targetRevision: $targetRevision, ')
+          ..write('targetChecksum: $targetChecksum, ')
+          ..write('state: $state, ')
+          ..write('requiredAssetCount: $requiredAssetCount, ')
+          ..write('verifiedAssetCount: $verifiedAssetCount, ')
+          ..write('errorCode: $errorCode, ')
+          ..write('updatedAt: $updatedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    runId,
+    packCode,
+    variantKey,
+    targetRevision,
+    targetChecksum,
+    state,
+    requiredAssetCount,
+    verifiedAssetCount,
+    errorCode,
+    updatedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyncPackUpdate &&
+          other.runId == this.runId &&
+          other.packCode == this.packCode &&
+          other.variantKey == this.variantKey &&
+          other.targetRevision == this.targetRevision &&
+          other.targetChecksum == this.targetChecksum &&
+          other.state == this.state &&
+          other.requiredAssetCount == this.requiredAssetCount &&
+          other.verifiedAssetCount == this.verifiedAssetCount &&
+          other.errorCode == this.errorCode &&
+          other.updatedAt == this.updatedAt);
+}
+
+class SyncPackUpdatesCompanion extends UpdateCompanion<SyncPackUpdate> {
+  final Value<String> runId;
+  final Value<String> packCode;
+  final Value<String> variantKey;
+  final Value<int> targetRevision;
+  final Value<String> targetChecksum;
+  final Value<String> state;
+  final Value<int> requiredAssetCount;
+  final Value<int> verifiedAssetCount;
+  final Value<String?> errorCode;
+  final Value<DateTime> updatedAt;
+  final Value<int> rowid;
+  const SyncPackUpdatesCompanion({
+    this.runId = const Value.absent(),
+    this.packCode = const Value.absent(),
+    this.variantKey = const Value.absent(),
+    this.targetRevision = const Value.absent(),
+    this.targetChecksum = const Value.absent(),
+    this.state = const Value.absent(),
+    this.requiredAssetCount = const Value.absent(),
+    this.verifiedAssetCount = const Value.absent(),
+    this.errorCode = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SyncPackUpdatesCompanion.insert({
+    required String runId,
+    required String packCode,
+    required String variantKey,
+    required int targetRevision,
+    required String targetChecksum,
+    required String state,
+    this.requiredAssetCount = const Value.absent(),
+    this.verifiedAssetCount = const Value.absent(),
+    this.errorCode = const Value.absent(),
+    required DateTime updatedAt,
+    this.rowid = const Value.absent(),
+  }) : runId = Value(runId),
+       packCode = Value(packCode),
+       variantKey = Value(variantKey),
+       targetRevision = Value(targetRevision),
+       targetChecksum = Value(targetChecksum),
+       state = Value(state),
+       updatedAt = Value(updatedAt);
+  static Insertable<SyncPackUpdate> custom({
+    Expression<String>? runId,
+    Expression<String>? packCode,
+    Expression<String>? variantKey,
+    Expression<int>? targetRevision,
+    Expression<String>? targetChecksum,
+    Expression<String>? state,
+    Expression<int>? requiredAssetCount,
+    Expression<int>? verifiedAssetCount,
+    Expression<String>? errorCode,
+    Expression<DateTime>? updatedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (runId != null) 'run_id': runId,
+      if (packCode != null) 'pack_code': packCode,
+      if (variantKey != null) 'variant_key': variantKey,
+      if (targetRevision != null) 'target_revision': targetRevision,
+      if (targetChecksum != null) 'target_checksum': targetChecksum,
+      if (state != null) 'state': state,
+      if (requiredAssetCount != null)
+        'required_asset_count': requiredAssetCount,
+      if (verifiedAssetCount != null)
+        'verified_asset_count': verifiedAssetCount,
+      if (errorCode != null) 'error_code': errorCode,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SyncPackUpdatesCompanion copyWith({
+    Value<String>? runId,
+    Value<String>? packCode,
+    Value<String>? variantKey,
+    Value<int>? targetRevision,
+    Value<String>? targetChecksum,
+    Value<String>? state,
+    Value<int>? requiredAssetCount,
+    Value<int>? verifiedAssetCount,
+    Value<String?>? errorCode,
+    Value<DateTime>? updatedAt,
+    Value<int>? rowid,
+  }) {
+    return SyncPackUpdatesCompanion(
+      runId: runId ?? this.runId,
+      packCode: packCode ?? this.packCode,
+      variantKey: variantKey ?? this.variantKey,
+      targetRevision: targetRevision ?? this.targetRevision,
+      targetChecksum: targetChecksum ?? this.targetChecksum,
+      state: state ?? this.state,
+      requiredAssetCount: requiredAssetCount ?? this.requiredAssetCount,
+      verifiedAssetCount: verifiedAssetCount ?? this.verifiedAssetCount,
+      errorCode: errorCode ?? this.errorCode,
+      updatedAt: updatedAt ?? this.updatedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (runId.present) {
+      map['run_id'] = Variable<String>(runId.value);
+    }
+    if (packCode.present) {
+      map['pack_code'] = Variable<String>(packCode.value);
+    }
+    if (variantKey.present) {
+      map['variant_key'] = Variable<String>(variantKey.value);
+    }
+    if (targetRevision.present) {
+      map['target_revision'] = Variable<int>(targetRevision.value);
+    }
+    if (targetChecksum.present) {
+      map['target_checksum'] = Variable<String>(targetChecksum.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(state.value);
+    }
+    if (requiredAssetCount.present) {
+      map['required_asset_count'] = Variable<int>(requiredAssetCount.value);
+    }
+    if (verifiedAssetCount.present) {
+      map['verified_asset_count'] = Variable<int>(verifiedAssetCount.value);
+    }
+    if (errorCode.present) {
+      map['error_code'] = Variable<String>(errorCode.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncPackUpdatesCompanion(')
+          ..write('runId: $runId, ')
+          ..write('packCode: $packCode, ')
+          ..write('variantKey: $variantKey, ')
+          ..write('targetRevision: $targetRevision, ')
+          ..write('targetChecksum: $targetChecksum, ')
+          ..write('state: $state, ')
+          ..write('requiredAssetCount: $requiredAssetCount, ')
+          ..write('verifiedAssetCount: $verifiedAssetCount, ')
+          ..write('errorCode: $errorCode, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $SyncTombstonesTable extends SyncTombstones
+    with TableInfo<$SyncTombstonesTable, SyncTombstone> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $SyncTombstonesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _runIdMeta = const VerificationMeta('runId');
+  @override
+  late final GeneratedColumn<String> runId = GeneratedColumn<String>(
+    'run_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES sync_runs (run_id) ON DELETE CASCADE',
+    ),
+  );
+  static const VerificationMeta _contentCodeMeta = const VerificationMeta(
+    'contentCode',
+  );
+  @override
+  late final GeneratedColumn<String> contentCode = GeneratedColumn<String>(
+    'content_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentTypeMeta = const VerificationMeta(
+    'contentType',
+  );
+  @override
+  late final GeneratedColumn<String> contentType = GeneratedColumn<String>(
+    'content_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  @override
+  late final GeneratedColumn<int> revision = GeneratedColumn<int>(
+    'revision',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _reasonMeta = const VerificationMeta('reason');
+  @override
+  late final GeneratedColumn<String> reason = GeneratedColumn<String>(
+    'reason',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _stateMeta = const VerificationMeta('state');
+  @override
+  late final GeneratedColumn<String> state = GeneratedColumn<String>(
+    'state',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _appliedAtMeta = const VerificationMeta(
+    'appliedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> appliedAt = GeneratedColumn<DateTime>(
+    'applied_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    runId,
+    contentCode,
+    contentType,
+    revision,
+    reason,
+    state,
+    appliedAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'sync_tombstones';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<SyncTombstone> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('run_id')) {
+      context.handle(
+        _runIdMeta,
+        runId.isAcceptableOrUnknown(data['run_id']!, _runIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_runIdMeta);
+    }
+    if (data.containsKey('content_code')) {
+      context.handle(
+        _contentCodeMeta,
+        contentCode.isAcceptableOrUnknown(
+          data['content_code']!,
+          _contentCodeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentCodeMeta);
+    }
+    if (data.containsKey('content_type')) {
+      context.handle(
+        _contentTypeMeta,
+        contentType.isAcceptableOrUnknown(
+          data['content_type']!,
+          _contentTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentTypeMeta);
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    }
+    if (data.containsKey('reason')) {
+      context.handle(
+        _reasonMeta,
+        reason.isAcceptableOrUnknown(data['reason']!, _reasonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_reasonMeta);
+    }
+    if (data.containsKey('state')) {
+      context.handle(
+        _stateMeta,
+        state.isAcceptableOrUnknown(data['state']!, _stateMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_stateMeta);
+    }
+    if (data.containsKey('applied_at')) {
+      context.handle(
+        _appliedAtMeta,
+        appliedAt.isAcceptableOrUnknown(data['applied_at']!, _appliedAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {runId, contentCode, contentType};
+  @override
+  SyncTombstone map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return SyncTombstone(
+      runId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}run_id'],
+      )!,
+      contentCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_code'],
+      )!,
+      contentType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_type'],
+      )!,
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}revision'],
+      ),
+      reason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reason'],
+      )!,
+      state: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}state'],
+      )!,
+      appliedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}applied_at'],
+      ),
+    );
+  }
+
+  @override
+  $SyncTombstonesTable createAlias(String alias) {
+    return $SyncTombstonesTable(attachedDatabase, alias);
+  }
+}
+
+class SyncTombstone extends DataClass implements Insertable<SyncTombstone> {
+  final String runId;
+  final String contentCode;
+  final String contentType;
+  final int? revision;
+  final String reason;
+  final String state;
+  final DateTime? appliedAt;
+  const SyncTombstone({
+    required this.runId,
+    required this.contentCode,
+    required this.contentType,
+    this.revision,
+    required this.reason,
+    required this.state,
+    this.appliedAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['run_id'] = Variable<String>(runId);
+    map['content_code'] = Variable<String>(contentCode);
+    map['content_type'] = Variable<String>(contentType);
+    if (!nullToAbsent || revision != null) {
+      map['revision'] = Variable<int>(revision);
+    }
+    map['reason'] = Variable<String>(reason);
+    map['state'] = Variable<String>(state);
+    if (!nullToAbsent || appliedAt != null) {
+      map['applied_at'] = Variable<DateTime>(appliedAt);
+    }
+    return map;
+  }
+
+  SyncTombstonesCompanion toCompanion(bool nullToAbsent) {
+    return SyncTombstonesCompanion(
+      runId: Value(runId),
+      contentCode: Value(contentCode),
+      contentType: Value(contentType),
+      revision: revision == null && nullToAbsent
+          ? const Value.absent()
+          : Value(revision),
+      reason: Value(reason),
+      state: Value(state),
+      appliedAt: appliedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(appliedAt),
+    );
+  }
+
+  factory SyncTombstone.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return SyncTombstone(
+      runId: serializer.fromJson<String>(json['runId']),
+      contentCode: serializer.fromJson<String>(json['contentCode']),
+      contentType: serializer.fromJson<String>(json['contentType']),
+      revision: serializer.fromJson<int?>(json['revision']),
+      reason: serializer.fromJson<String>(json['reason']),
+      state: serializer.fromJson<String>(json['state']),
+      appliedAt: serializer.fromJson<DateTime?>(json['appliedAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'runId': serializer.toJson<String>(runId),
+      'contentCode': serializer.toJson<String>(contentCode),
+      'contentType': serializer.toJson<String>(contentType),
+      'revision': serializer.toJson<int?>(revision),
+      'reason': serializer.toJson<String>(reason),
+      'state': serializer.toJson<String>(state),
+      'appliedAt': serializer.toJson<DateTime?>(appliedAt),
+    };
+  }
+
+  SyncTombstone copyWith({
+    String? runId,
+    String? contentCode,
+    String? contentType,
+    Value<int?> revision = const Value.absent(),
+    String? reason,
+    String? state,
+    Value<DateTime?> appliedAt = const Value.absent(),
+  }) => SyncTombstone(
+    runId: runId ?? this.runId,
+    contentCode: contentCode ?? this.contentCode,
+    contentType: contentType ?? this.contentType,
+    revision: revision.present ? revision.value : this.revision,
+    reason: reason ?? this.reason,
+    state: state ?? this.state,
+    appliedAt: appliedAt.present ? appliedAt.value : this.appliedAt,
+  );
+  SyncTombstone copyWithCompanion(SyncTombstonesCompanion data) {
+    return SyncTombstone(
+      runId: data.runId.present ? data.runId.value : this.runId,
+      contentCode: data.contentCode.present
+          ? data.contentCode.value
+          : this.contentCode,
+      contentType: data.contentType.present
+          ? data.contentType.value
+          : this.contentType,
+      revision: data.revision.present ? data.revision.value : this.revision,
+      reason: data.reason.present ? data.reason.value : this.reason,
+      state: data.state.present ? data.state.value : this.state,
+      appliedAt: data.appliedAt.present ? data.appliedAt.value : this.appliedAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncTombstone(')
+          ..write('runId: $runId, ')
+          ..write('contentCode: $contentCode, ')
+          ..write('contentType: $contentType, ')
+          ..write('revision: $revision, ')
+          ..write('reason: $reason, ')
+          ..write('state: $state, ')
+          ..write('appliedAt: $appliedAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    runId,
+    contentCode,
+    contentType,
+    revision,
+    reason,
+    state,
+    appliedAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is SyncTombstone &&
+          other.runId == this.runId &&
+          other.contentCode == this.contentCode &&
+          other.contentType == this.contentType &&
+          other.revision == this.revision &&
+          other.reason == this.reason &&
+          other.state == this.state &&
+          other.appliedAt == this.appliedAt);
+}
+
+class SyncTombstonesCompanion extends UpdateCompanion<SyncTombstone> {
+  final Value<String> runId;
+  final Value<String> contentCode;
+  final Value<String> contentType;
+  final Value<int?> revision;
+  final Value<String> reason;
+  final Value<String> state;
+  final Value<DateTime?> appliedAt;
+  final Value<int> rowid;
+  const SyncTombstonesCompanion({
+    this.runId = const Value.absent(),
+    this.contentCode = const Value.absent(),
+    this.contentType = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.reason = const Value.absent(),
+    this.state = const Value.absent(),
+    this.appliedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  SyncTombstonesCompanion.insert({
+    required String runId,
+    required String contentCode,
+    required String contentType,
+    this.revision = const Value.absent(),
+    required String reason,
+    required String state,
+    this.appliedAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : runId = Value(runId),
+       contentCode = Value(contentCode),
+       contentType = Value(contentType),
+       reason = Value(reason),
+       state = Value(state);
+  static Insertable<SyncTombstone> custom({
+    Expression<String>? runId,
+    Expression<String>? contentCode,
+    Expression<String>? contentType,
+    Expression<int>? revision,
+    Expression<String>? reason,
+    Expression<String>? state,
+    Expression<DateTime>? appliedAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (runId != null) 'run_id': runId,
+      if (contentCode != null) 'content_code': contentCode,
+      if (contentType != null) 'content_type': contentType,
+      if (revision != null) 'revision': revision,
+      if (reason != null) 'reason': reason,
+      if (state != null) 'state': state,
+      if (appliedAt != null) 'applied_at': appliedAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  SyncTombstonesCompanion copyWith({
+    Value<String>? runId,
+    Value<String>? contentCode,
+    Value<String>? contentType,
+    Value<int?>? revision,
+    Value<String>? reason,
+    Value<String>? state,
+    Value<DateTime?>? appliedAt,
+    Value<int>? rowid,
+  }) {
+    return SyncTombstonesCompanion(
+      runId: runId ?? this.runId,
+      contentCode: contentCode ?? this.contentCode,
+      contentType: contentType ?? this.contentType,
+      revision: revision ?? this.revision,
+      reason: reason ?? this.reason,
+      state: state ?? this.state,
+      appliedAt: appliedAt ?? this.appliedAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (runId.present) {
+      map['run_id'] = Variable<String>(runId.value);
+    }
+    if (contentCode.present) {
+      map['content_code'] = Variable<String>(contentCode.value);
+    }
+    if (contentType.present) {
+      map['content_type'] = Variable<String>(contentType.value);
+    }
+    if (revision.present) {
+      map['revision'] = Variable<int>(revision.value);
+    }
+    if (reason.present) {
+      map['reason'] = Variable<String>(reason.value);
+    }
+    if (state.present) {
+      map['state'] = Variable<String>(state.value);
+    }
+    if (appliedAt.present) {
+      map['applied_at'] = Variable<DateTime>(appliedAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('SyncTombstonesCompanion(')
+          ..write('runId: $runId, ')
+          ..write('contentCode: $contentCode, ')
+          ..write('contentType: $contentType, ')
+          ..write('revision: $revision, ')
+          ..write('reason: $reason, ')
+          ..write('state: $state, ')
+          ..write('appliedAt: $appliedAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $ContentPackRevisionsTable extends ContentPackRevisions
     with TableInfo<$ContentPackRevisionsTable, ContentPackRevision> {
   @override
@@ -3996,6 +6007,11 @@ abstract class _$CareerSpeakDatabase extends GeneratedDatabase {
       $InstallationRuntimeStatesTable(this);
   late final $ContentManifestStatesTable contentManifestStates =
       $ContentManifestStatesTable(this);
+  late final $SyncRunsTable syncRuns = $SyncRunsTable(this);
+  late final $SyncPackUpdatesTable syncPackUpdates = $SyncPackUpdatesTable(
+    this,
+  );
+  late final $SyncTombstonesTable syncTombstones = $SyncTombstonesTable(this);
   late final $ContentPackRevisionsTable contentPackRevisions =
       $ContentPackRevisionsTable(this);
   late final $LocalContentRecordsTable localContentRecords =
@@ -4011,11 +6027,31 @@ abstract class _$CareerSpeakDatabase extends GeneratedDatabase {
     appPreferences,
     installationRuntimeStates,
     contentManifestStates,
+    syncRuns,
+    syncPackUpdates,
+    syncTombstones,
     contentPackRevisions,
     localContentRecords,
     favorites,
     contentLearningStates,
   ];
+  @override
+  StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'sync_runs',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('sync_pack_updates', kind: UpdateKind.delete)],
+    ),
+    WritePropagation(
+      on: TableUpdateQuery.onTableName(
+        'sync_runs',
+        limitUpdateKind: UpdateKind.delete,
+      ),
+      result: [TableUpdate('sync_tombstones', kind: UpdateKind.delete)],
+    ),
+  ]);
 }
 
 typedef $$AppPreferencesTableCreateCompanionBuilder =
@@ -4919,6 +6955,1422 @@ typedef $$ContentManifestStatesTableProcessedTableManager =
       ),
       ContentManifestState,
       PrefetchHooks Function()
+    >;
+typedef $$SyncRunsTableCreateCompanionBuilder =
+    SyncRunsCompanion Function({
+      required String runId,
+      required String trigger,
+      required String translationLocale,
+      Value<int?> fromContentVersion,
+      Value<int?> targetContentVersion,
+      Value<int?> targetSchemaVersion,
+      required String state,
+      Value<bool> resyncRequested,
+      Value<int> attemptCount,
+      Value<bool> retryable,
+      Value<String?> errorCode,
+      Value<String?> errorMessage,
+      required DateTime startedAt,
+      required DateTime updatedAt,
+      Value<DateTime?> finishedAt,
+      Value<int> rowid,
+    });
+typedef $$SyncRunsTableUpdateCompanionBuilder =
+    SyncRunsCompanion Function({
+      Value<String> runId,
+      Value<String> trigger,
+      Value<String> translationLocale,
+      Value<int?> fromContentVersion,
+      Value<int?> targetContentVersion,
+      Value<int?> targetSchemaVersion,
+      Value<String> state,
+      Value<bool> resyncRequested,
+      Value<int> attemptCount,
+      Value<bool> retryable,
+      Value<String?> errorCode,
+      Value<String?> errorMessage,
+      Value<DateTime> startedAt,
+      Value<DateTime> updatedAt,
+      Value<DateTime?> finishedAt,
+      Value<int> rowid,
+    });
+
+final class $$SyncRunsTableReferences
+    extends BaseReferences<_$CareerSpeakDatabase, $SyncRunsTable, SyncRun> {
+  $$SyncRunsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$SyncPackUpdatesTable, List<SyncPackUpdate>>
+  _syncPackUpdatesRefsTable(_$CareerSpeakDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.syncPackUpdates,
+        aliasName: 'sync_runs__run_id__sync_pack_updates__run_id',
+      );
+
+  $$SyncPackUpdatesTableProcessedTableManager get syncPackUpdatesRefs {
+    final manager = $$SyncPackUpdatesTableTableManager(
+      $_db,
+      $_db.syncPackUpdates,
+    ).filter((f) => f.runId.runId.sqlEquals($_itemColumn<String>('run_id')!));
+
+    final cache = $_typedResult.readTableOrNull(
+      _syncPackUpdatesRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$SyncTombstonesTable, List<SyncTombstone>>
+  _syncTombstonesRefsTable(_$CareerSpeakDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.syncTombstones,
+        aliasName: 'sync_runs__run_id__sync_tombstones__run_id',
+      );
+
+  $$SyncTombstonesTableProcessedTableManager get syncTombstonesRefs {
+    final manager = $$SyncTombstonesTableTableManager(
+      $_db,
+      $_db.syncTombstones,
+    ).filter((f) => f.runId.runId.sqlEquals($_itemColumn<String>('run_id')!));
+
+    final cache = $_typedResult.readTableOrNull(_syncTombstonesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$SyncRunsTableFilterComposer
+    extends Composer<_$CareerSpeakDatabase, $SyncRunsTable> {
+  $$SyncRunsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get runId => $composableBuilder(
+    column: $table.runId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get trigger => $composableBuilder(
+    column: $table.trigger,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get translationLocale => $composableBuilder(
+    column: $table.translationLocale,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get fromContentVersion => $composableBuilder(
+    column: $table.fromContentVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get targetContentVersion => $composableBuilder(
+    column: $table.targetContentVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get targetSchemaVersion => $composableBuilder(
+    column: $table.targetSchemaVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get resyncRequested => $composableBuilder(
+    column: $table.resyncRequested,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get attemptCount => $composableBuilder(
+    column: $table.attemptCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get retryable => $composableBuilder(
+    column: $table.retryable,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get errorCode => $composableBuilder(
+    column: $table.errorCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get errorMessage => $composableBuilder(
+    column: $table.errorMessage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get finishedAt => $composableBuilder(
+    column: $table.finishedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> syncPackUpdatesRefs(
+    Expression<bool> Function($$SyncPackUpdatesTableFilterComposer f) f,
+  ) {
+    final $$SyncPackUpdatesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.syncPackUpdates,
+      getReferencedColumn: (t) => t.runId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SyncPackUpdatesTableFilterComposer(
+            $db: $db,
+            $table: $db.syncPackUpdates,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> syncTombstonesRefs(
+    Expression<bool> Function($$SyncTombstonesTableFilterComposer f) f,
+  ) {
+    final $$SyncTombstonesTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.syncTombstones,
+      getReferencedColumn: (t) => t.runId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SyncTombstonesTableFilterComposer(
+            $db: $db,
+            $table: $db.syncTombstones,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$SyncRunsTableOrderingComposer
+    extends Composer<_$CareerSpeakDatabase, $SyncRunsTable> {
+  $$SyncRunsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get runId => $composableBuilder(
+    column: $table.runId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get trigger => $composableBuilder(
+    column: $table.trigger,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get translationLocale => $composableBuilder(
+    column: $table.translationLocale,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get fromContentVersion => $composableBuilder(
+    column: $table.fromContentVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get targetContentVersion => $composableBuilder(
+    column: $table.targetContentVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get targetSchemaVersion => $composableBuilder(
+    column: $table.targetSchemaVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get resyncRequested => $composableBuilder(
+    column: $table.resyncRequested,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get attemptCount => $composableBuilder(
+    column: $table.attemptCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get retryable => $composableBuilder(
+    column: $table.retryable,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get errorCode => $composableBuilder(
+    column: $table.errorCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get errorMessage => $composableBuilder(
+    column: $table.errorMessage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get startedAt => $composableBuilder(
+    column: $table.startedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get finishedAt => $composableBuilder(
+    column: $table.finishedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$SyncRunsTableAnnotationComposer
+    extends Composer<_$CareerSpeakDatabase, $SyncRunsTable> {
+  $$SyncRunsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get runId =>
+      $composableBuilder(column: $table.runId, builder: (column) => column);
+
+  GeneratedColumn<String> get trigger =>
+      $composableBuilder(column: $table.trigger, builder: (column) => column);
+
+  GeneratedColumn<String> get translationLocale => $composableBuilder(
+    column: $table.translationLocale,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get fromContentVersion => $composableBuilder(
+    column: $table.fromContentVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get targetContentVersion => $composableBuilder(
+    column: $table.targetContentVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get targetSchemaVersion => $composableBuilder(
+    column: $table.targetSchemaVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get state =>
+      $composableBuilder(column: $table.state, builder: (column) => column);
+
+  GeneratedColumn<bool> get resyncRequested => $composableBuilder(
+    column: $table.resyncRequested,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get attemptCount => $composableBuilder(
+    column: $table.attemptCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get retryable =>
+      $composableBuilder(column: $table.retryable, builder: (column) => column);
+
+  GeneratedColumn<String> get errorCode =>
+      $composableBuilder(column: $table.errorCode, builder: (column) => column);
+
+  GeneratedColumn<String> get errorMessage => $composableBuilder(
+    column: $table.errorMessage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get startedAt =>
+      $composableBuilder(column: $table.startedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get finishedAt => $composableBuilder(
+    column: $table.finishedAt,
+    builder: (column) => column,
+  );
+
+  Expression<T> syncPackUpdatesRefs<T extends Object>(
+    Expression<T> Function($$SyncPackUpdatesTableAnnotationComposer a) f,
+  ) {
+    final $$SyncPackUpdatesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.syncPackUpdates,
+      getReferencedColumn: (t) => t.runId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SyncPackUpdatesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.syncPackUpdates,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> syncTombstonesRefs<T extends Object>(
+    Expression<T> Function($$SyncTombstonesTableAnnotationComposer a) f,
+  ) {
+    final $$SyncTombstonesTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.syncTombstones,
+      getReferencedColumn: (t) => t.runId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SyncTombstonesTableAnnotationComposer(
+            $db: $db,
+            $table: $db.syncTombstones,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$SyncRunsTableTableManager
+    extends
+        RootTableManager<
+          _$CareerSpeakDatabase,
+          $SyncRunsTable,
+          SyncRun,
+          $$SyncRunsTableFilterComposer,
+          $$SyncRunsTableOrderingComposer,
+          $$SyncRunsTableAnnotationComposer,
+          $$SyncRunsTableCreateCompanionBuilder,
+          $$SyncRunsTableUpdateCompanionBuilder,
+          (SyncRun, $$SyncRunsTableReferences),
+          SyncRun,
+          PrefetchHooks Function({
+            bool syncPackUpdatesRefs,
+            bool syncTombstonesRefs,
+          })
+        > {
+  $$SyncRunsTableTableManager(_$CareerSpeakDatabase db, $SyncRunsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyncRunsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyncRunsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyncRunsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> runId = const Value.absent(),
+                Value<String> trigger = const Value.absent(),
+                Value<String> translationLocale = const Value.absent(),
+                Value<int?> fromContentVersion = const Value.absent(),
+                Value<int?> targetContentVersion = const Value.absent(),
+                Value<int?> targetSchemaVersion = const Value.absent(),
+                Value<String> state = const Value.absent(),
+                Value<bool> resyncRequested = const Value.absent(),
+                Value<int> attemptCount = const Value.absent(),
+                Value<bool> retryable = const Value.absent(),
+                Value<String?> errorCode = const Value.absent(),
+                Value<String?> errorMessage = const Value.absent(),
+                Value<DateTime> startedAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<DateTime?> finishedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncRunsCompanion(
+                runId: runId,
+                trigger: trigger,
+                translationLocale: translationLocale,
+                fromContentVersion: fromContentVersion,
+                targetContentVersion: targetContentVersion,
+                targetSchemaVersion: targetSchemaVersion,
+                state: state,
+                resyncRequested: resyncRequested,
+                attemptCount: attemptCount,
+                retryable: retryable,
+                errorCode: errorCode,
+                errorMessage: errorMessage,
+                startedAt: startedAt,
+                updatedAt: updatedAt,
+                finishedAt: finishedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String runId,
+                required String trigger,
+                required String translationLocale,
+                Value<int?> fromContentVersion = const Value.absent(),
+                Value<int?> targetContentVersion = const Value.absent(),
+                Value<int?> targetSchemaVersion = const Value.absent(),
+                required String state,
+                Value<bool> resyncRequested = const Value.absent(),
+                Value<int> attemptCount = const Value.absent(),
+                Value<bool> retryable = const Value.absent(),
+                Value<String?> errorCode = const Value.absent(),
+                Value<String?> errorMessage = const Value.absent(),
+                required DateTime startedAt,
+                required DateTime updatedAt,
+                Value<DateTime?> finishedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncRunsCompanion.insert(
+                runId: runId,
+                trigger: trigger,
+                translationLocale: translationLocale,
+                fromContentVersion: fromContentVersion,
+                targetContentVersion: targetContentVersion,
+                targetSchemaVersion: targetSchemaVersion,
+                state: state,
+                resyncRequested: resyncRequested,
+                attemptCount: attemptCount,
+                retryable: retryable,
+                errorCode: errorCode,
+                errorMessage: errorMessage,
+                startedAt: startedAt,
+                updatedAt: updatedAt,
+                finishedAt: finishedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$SyncRunsTable, SyncRun>(table),
+                  $$SyncRunsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({syncPackUpdatesRefs = false, syncTombstonesRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (syncPackUpdatesRefs) db.syncPackUpdates,
+                    if (syncTombstonesRefs) db.syncTombstones,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (syncPackUpdatesRefs)
+                        await $_getPrefetchedDataByColumns<
+                          SyncRun,
+                          $SyncRunsTable,
+                          SyncPackUpdate,
+                          $SyncPackUpdatesTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SyncRunsTableReferences
+                              ._syncPackUpdatesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SyncRunsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).syncPackUpdatesRefs,
+                          currentColumn: 'run_id',
+                          referencedColumn: 'run_id',
+                          typedResults: items,
+                        ),
+                      if (syncTombstonesRefs)
+                        await $_getPrefetchedDataByColumns<
+                          SyncRun,
+                          $SyncRunsTable,
+                          SyncTombstone,
+                          $SyncTombstonesTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$SyncRunsTableReferences
+                              ._syncTombstonesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$SyncRunsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).syncTombstonesRefs,
+                          currentColumn: 'run_id',
+                          referencedColumn: 'run_id',
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$SyncRunsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$CareerSpeakDatabase,
+      $SyncRunsTable,
+      SyncRun,
+      $$SyncRunsTableFilterComposer,
+      $$SyncRunsTableOrderingComposer,
+      $$SyncRunsTableAnnotationComposer,
+      $$SyncRunsTableCreateCompanionBuilder,
+      $$SyncRunsTableUpdateCompanionBuilder,
+      (SyncRun, $$SyncRunsTableReferences),
+      SyncRun,
+      PrefetchHooks Function({
+        bool syncPackUpdatesRefs,
+        bool syncTombstonesRefs,
+      })
+    >;
+typedef $$SyncPackUpdatesTableCreateCompanionBuilder =
+    SyncPackUpdatesCompanion Function({
+      required String runId,
+      required String packCode,
+      required String variantKey,
+      required int targetRevision,
+      required String targetChecksum,
+      required String state,
+      Value<int> requiredAssetCount,
+      Value<int> verifiedAssetCount,
+      Value<String?> errorCode,
+      required DateTime updatedAt,
+      Value<int> rowid,
+    });
+typedef $$SyncPackUpdatesTableUpdateCompanionBuilder =
+    SyncPackUpdatesCompanion Function({
+      Value<String> runId,
+      Value<String> packCode,
+      Value<String> variantKey,
+      Value<int> targetRevision,
+      Value<String> targetChecksum,
+      Value<String> state,
+      Value<int> requiredAssetCount,
+      Value<int> verifiedAssetCount,
+      Value<String?> errorCode,
+      Value<DateTime> updatedAt,
+      Value<int> rowid,
+    });
+
+final class $$SyncPackUpdatesTableReferences
+    extends
+        BaseReferences<
+          _$CareerSpeakDatabase,
+          $SyncPackUpdatesTable,
+          SyncPackUpdate
+        > {
+  $$SyncPackUpdatesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $SyncRunsTable _runIdTable(_$CareerSpeakDatabase db) =>
+      db.syncRuns.createAlias('sync_pack_updates__run_id__sync_runs__run_id');
+
+  $$SyncRunsTableProcessedTableManager get runId {
+    final $_column = $_itemColumn<String>('run_id')!;
+
+    final manager = $$SyncRunsTableTableManager(
+      $_db,
+      $_db.syncRuns,
+    ).filter((f) => f.runId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_runIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$SyncPackUpdatesTableFilterComposer
+    extends Composer<_$CareerSpeakDatabase, $SyncPackUpdatesTable> {
+  $$SyncPackUpdatesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get packCode => $composableBuilder(
+    column: $table.packCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get variantKey => $composableBuilder(
+    column: $table.variantKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get targetRevision => $composableBuilder(
+    column: $table.targetRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get targetChecksum => $composableBuilder(
+    column: $table.targetChecksum,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get requiredAssetCount => $composableBuilder(
+    column: $table.requiredAssetCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get verifiedAssetCount => $composableBuilder(
+    column: $table.verifiedAssetCount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get errorCode => $composableBuilder(
+    column: $table.errorCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SyncRunsTableFilterComposer get runId {
+    final $$SyncRunsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.syncRuns,
+      getReferencedColumn: (t) => t.runId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SyncRunsTableFilterComposer(
+            $db: $db,
+            $table: $db.syncRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SyncPackUpdatesTableOrderingComposer
+    extends Composer<_$CareerSpeakDatabase, $SyncPackUpdatesTable> {
+  $$SyncPackUpdatesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get packCode => $composableBuilder(
+    column: $table.packCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get variantKey => $composableBuilder(
+    column: $table.variantKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get targetRevision => $composableBuilder(
+    column: $table.targetRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get targetChecksum => $composableBuilder(
+    column: $table.targetChecksum,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get requiredAssetCount => $composableBuilder(
+    column: $table.requiredAssetCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get verifiedAssetCount => $composableBuilder(
+    column: $table.verifiedAssetCount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get errorCode => $composableBuilder(
+    column: $table.errorCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SyncRunsTableOrderingComposer get runId {
+    final $$SyncRunsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.syncRuns,
+      getReferencedColumn: (t) => t.runId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SyncRunsTableOrderingComposer(
+            $db: $db,
+            $table: $db.syncRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SyncPackUpdatesTableAnnotationComposer
+    extends Composer<_$CareerSpeakDatabase, $SyncPackUpdatesTable> {
+  $$SyncPackUpdatesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get packCode =>
+      $composableBuilder(column: $table.packCode, builder: (column) => column);
+
+  GeneratedColumn<String> get variantKey => $composableBuilder(
+    column: $table.variantKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get targetRevision => $composableBuilder(
+    column: $table.targetRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get targetChecksum => $composableBuilder(
+    column: $table.targetChecksum,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get state =>
+      $composableBuilder(column: $table.state, builder: (column) => column);
+
+  GeneratedColumn<int> get requiredAssetCount => $composableBuilder(
+    column: $table.requiredAssetCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get verifiedAssetCount => $composableBuilder(
+    column: $table.verifiedAssetCount,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get errorCode =>
+      $composableBuilder(column: $table.errorCode, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  $$SyncRunsTableAnnotationComposer get runId {
+    final $$SyncRunsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.syncRuns,
+      getReferencedColumn: (t) => t.runId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SyncRunsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.syncRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SyncPackUpdatesTableTableManager
+    extends
+        RootTableManager<
+          _$CareerSpeakDatabase,
+          $SyncPackUpdatesTable,
+          SyncPackUpdate,
+          $$SyncPackUpdatesTableFilterComposer,
+          $$SyncPackUpdatesTableOrderingComposer,
+          $$SyncPackUpdatesTableAnnotationComposer,
+          $$SyncPackUpdatesTableCreateCompanionBuilder,
+          $$SyncPackUpdatesTableUpdateCompanionBuilder,
+          (SyncPackUpdate, $$SyncPackUpdatesTableReferences),
+          SyncPackUpdate,
+          PrefetchHooks Function({bool runId})
+        > {
+  $$SyncPackUpdatesTableTableManager(
+    _$CareerSpeakDatabase db,
+    $SyncPackUpdatesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyncPackUpdatesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyncPackUpdatesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyncPackUpdatesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> runId = const Value.absent(),
+                Value<String> packCode = const Value.absent(),
+                Value<String> variantKey = const Value.absent(),
+                Value<int> targetRevision = const Value.absent(),
+                Value<String> targetChecksum = const Value.absent(),
+                Value<String> state = const Value.absent(),
+                Value<int> requiredAssetCount = const Value.absent(),
+                Value<int> verifiedAssetCount = const Value.absent(),
+                Value<String?> errorCode = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncPackUpdatesCompanion(
+                runId: runId,
+                packCode: packCode,
+                variantKey: variantKey,
+                targetRevision: targetRevision,
+                targetChecksum: targetChecksum,
+                state: state,
+                requiredAssetCount: requiredAssetCount,
+                verifiedAssetCount: verifiedAssetCount,
+                errorCode: errorCode,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String runId,
+                required String packCode,
+                required String variantKey,
+                required int targetRevision,
+                required String targetChecksum,
+                required String state,
+                Value<int> requiredAssetCount = const Value.absent(),
+                Value<int> verifiedAssetCount = const Value.absent(),
+                Value<String?> errorCode = const Value.absent(),
+                required DateTime updatedAt,
+                Value<int> rowid = const Value.absent(),
+              }) => SyncPackUpdatesCompanion.insert(
+                runId: runId,
+                packCode: packCode,
+                variantKey: variantKey,
+                targetRevision: targetRevision,
+                targetChecksum: targetChecksum,
+                state: state,
+                requiredAssetCount: requiredAssetCount,
+                verifiedAssetCount: verifiedAssetCount,
+                errorCode: errorCode,
+                updatedAt: updatedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$SyncPackUpdatesTable, SyncPackUpdate>(table),
+                  $$SyncPackUpdatesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({runId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (runId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.runId,
+                                referencedTable:
+                                    $$SyncPackUpdatesTableReferences
+                                        ._runIdTable(db),
+                                referencedColumn:
+                                    $$SyncPackUpdatesTableReferences
+                                        ._runIdTable(db)
+                                        .runId,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SyncPackUpdatesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$CareerSpeakDatabase,
+      $SyncPackUpdatesTable,
+      SyncPackUpdate,
+      $$SyncPackUpdatesTableFilterComposer,
+      $$SyncPackUpdatesTableOrderingComposer,
+      $$SyncPackUpdatesTableAnnotationComposer,
+      $$SyncPackUpdatesTableCreateCompanionBuilder,
+      $$SyncPackUpdatesTableUpdateCompanionBuilder,
+      (SyncPackUpdate, $$SyncPackUpdatesTableReferences),
+      SyncPackUpdate,
+      PrefetchHooks Function({bool runId})
+    >;
+typedef $$SyncTombstonesTableCreateCompanionBuilder =
+    SyncTombstonesCompanion Function({
+      required String runId,
+      required String contentCode,
+      required String contentType,
+      Value<int?> revision,
+      required String reason,
+      required String state,
+      Value<DateTime?> appliedAt,
+      Value<int> rowid,
+    });
+typedef $$SyncTombstonesTableUpdateCompanionBuilder =
+    SyncTombstonesCompanion Function({
+      Value<String> runId,
+      Value<String> contentCode,
+      Value<String> contentType,
+      Value<int?> revision,
+      Value<String> reason,
+      Value<String> state,
+      Value<DateTime?> appliedAt,
+      Value<int> rowid,
+    });
+
+final class $$SyncTombstonesTableReferences
+    extends
+        BaseReferences<
+          _$CareerSpeakDatabase,
+          $SyncTombstonesTable,
+          SyncTombstone
+        > {
+  $$SyncTombstonesTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $SyncRunsTable _runIdTable(_$CareerSpeakDatabase db) =>
+      db.syncRuns.createAlias('sync_tombstones__run_id__sync_runs__run_id');
+
+  $$SyncRunsTableProcessedTableManager get runId {
+    final $_column = $_itemColumn<String>('run_id')!;
+
+    final manager = $$SyncRunsTableTableManager(
+      $_db,
+      $_db.syncRuns,
+    ).filter((f) => f.runId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_runIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$SyncTombstonesTableFilterComposer
+    extends Composer<_$CareerSpeakDatabase, $SyncTombstonesTable> {
+  $$SyncTombstonesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get appliedAt => $composableBuilder(
+    column: $table.appliedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$SyncRunsTableFilterComposer get runId {
+    final $$SyncRunsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.syncRuns,
+      getReferencedColumn: (t) => t.runId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SyncRunsTableFilterComposer(
+            $db: $db,
+            $table: $db.syncRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SyncTombstonesTableOrderingComposer
+    extends Composer<_$CareerSpeakDatabase, $SyncTombstonesTable> {
+  $$SyncTombstonesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get state => $composableBuilder(
+    column: $table.state,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get appliedAt => $composableBuilder(
+    column: $table.appliedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$SyncRunsTableOrderingComposer get runId {
+    final $$SyncRunsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.syncRuns,
+      getReferencedColumn: (t) => t.runId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SyncRunsTableOrderingComposer(
+            $db: $db,
+            $table: $db.syncRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SyncTombstonesTableAnnotationComposer
+    extends Composer<_$CareerSpeakDatabase, $SyncTombstonesTable> {
+  $$SyncTombstonesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+
+  GeneratedColumn<String> get reason =>
+      $composableBuilder(column: $table.reason, builder: (column) => column);
+
+  GeneratedColumn<String> get state =>
+      $composableBuilder(column: $table.state, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get appliedAt =>
+      $composableBuilder(column: $table.appliedAt, builder: (column) => column);
+
+  $$SyncRunsTableAnnotationComposer get runId {
+    final $$SyncRunsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.runId,
+      referencedTable: $db.syncRuns,
+      getReferencedColumn: (t) => t.runId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$SyncRunsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.syncRuns,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$SyncTombstonesTableTableManager
+    extends
+        RootTableManager<
+          _$CareerSpeakDatabase,
+          $SyncTombstonesTable,
+          SyncTombstone,
+          $$SyncTombstonesTableFilterComposer,
+          $$SyncTombstonesTableOrderingComposer,
+          $$SyncTombstonesTableAnnotationComposer,
+          $$SyncTombstonesTableCreateCompanionBuilder,
+          $$SyncTombstonesTableUpdateCompanionBuilder,
+          (SyncTombstone, $$SyncTombstonesTableReferences),
+          SyncTombstone,
+          PrefetchHooks Function({bool runId})
+        > {
+  $$SyncTombstonesTableTableManager(
+    _$CareerSpeakDatabase db,
+    $SyncTombstonesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$SyncTombstonesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$SyncTombstonesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$SyncTombstonesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> runId = const Value.absent(),
+                Value<String> contentCode = const Value.absent(),
+                Value<String> contentType = const Value.absent(),
+                Value<int?> revision = const Value.absent(),
+                Value<String> reason = const Value.absent(),
+                Value<String> state = const Value.absent(),
+                Value<DateTime?> appliedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncTombstonesCompanion(
+                runId: runId,
+                contentCode: contentCode,
+                contentType: contentType,
+                revision: revision,
+                reason: reason,
+                state: state,
+                appliedAt: appliedAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String runId,
+                required String contentCode,
+                required String contentType,
+                Value<int?> revision = const Value.absent(),
+                required String reason,
+                required String state,
+                Value<DateTime?> appliedAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => SyncTombstonesCompanion.insert(
+                runId: runId,
+                contentCode: contentCode,
+                contentType: contentType,
+                revision: revision,
+                reason: reason,
+                state: state,
+                appliedAt: appliedAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$SyncTombstonesTable, SyncTombstone>(table),
+                  $$SyncTombstonesTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({runId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (runId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.runId,
+                                referencedTable: $$SyncTombstonesTableReferences
+                                    ._runIdTable(db),
+                                referencedColumn:
+                                    $$SyncTombstonesTableReferences
+                                        ._runIdTable(db)
+                                        .runId,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$SyncTombstonesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$CareerSpeakDatabase,
+      $SyncTombstonesTable,
+      SyncTombstone,
+      $$SyncTombstonesTableFilterComposer,
+      $$SyncTombstonesTableOrderingComposer,
+      $$SyncTombstonesTableAnnotationComposer,
+      $$SyncTombstonesTableCreateCompanionBuilder,
+      $$SyncTombstonesTableUpdateCompanionBuilder,
+      (SyncTombstone, $$SyncTombstonesTableReferences),
+      SyncTombstone,
+      PrefetchHooks Function({bool runId})
     >;
 typedef $$ContentPackRevisionsTableCreateCompanionBuilder =
     ContentPackRevisionsCompanion Function({
@@ -6116,6 +9568,12 @@ class $CareerSpeakDatabaseManager {
       );
   $$ContentManifestStatesTableTableManager get contentManifestStates =>
       $$ContentManifestStatesTableTableManager(_db, _db.contentManifestStates);
+  $$SyncRunsTableTableManager get syncRuns =>
+      $$SyncRunsTableTableManager(_db, _db.syncRuns);
+  $$SyncPackUpdatesTableTableManager get syncPackUpdates =>
+      $$SyncPackUpdatesTableTableManager(_db, _db.syncPackUpdates);
+  $$SyncTombstonesTableTableManager get syncTombstones =>
+      $$SyncTombstonesTableTableManager(_db, _db.syncTombstones);
   $$ContentPackRevisionsTableTableManager get contentPackRevisions =>
       $$ContentPackRevisionsTableTableManager(_db, _db.contentPackRevisions);
   $$LocalContentRecordsTableTableManager get localContentRecords =>
