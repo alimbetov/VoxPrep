@@ -3,84 +3,55 @@
 **Repository:** `alimbetov/VoxPrep`  
 **Product name:** CareerSpeak  
 **Codename:** VoxPrep  
-**Document version:** 0.3  
-**Status:** Normative extension to the System Requirements baseline  
-**Target platforms:** Android, iOS  
-**Production target:** DigitalOcean  
+**Document version:** 0.4  
+**Status:** Normative specification  
+**Applies to:** CareerSpeak v0.7+  
+**Target platforms:** Android, iOS
 
 ---
 
 ## 1. Purpose
 
-This document defines the globalization, localization, installation-identity and privacy requirements for CareerSpeak.
-
-It is a normative extension of `CAREERSPEAK_SYSTEM_REQUIREMENTS.md` and supersedes any earlier assumption that CareerSpeak is intended to support multiple learning languages in the MVP architecture.
-
 CareerSpeak is an **English-learning application**.
 
-The canonical learning language is fixed as:
+Canonical learning language:
 
 ```text
 ENGLISH
 ```
 
-Other languages are required for:
+Other languages are used for:
 
-- mobile UI localization;
-- vocabulary translation;
-- translation of `hint` content;
-- translation of explanations and supporting guidance;
-- localized category/profession/test names where useful;
-- locale-aware onboarding and navigation.
+```text
+UI localization
+vocabulary translation
+hints
+explanations
+localized catalog labels/guidance
+```
 
-Other languages are **not** separate learning languages in the current product scope.
+Other languages are not alternative learning languages in MVP.
 
 ---
 
-## 2. Core globalization principle
-
-CareerSpeak separates:
+## 2. Core model
 
 ```text
 CANONICAL ENGLISH CONTENT
-            │
-            ├── UI localization
-            ├── translation
-            ├── hint localization
-            └── explanation localization
+        │
+        ├── UI localization
+        ├── translation
+        ├── hint localization
+        └── explanation localization
 ```
 
-The application SHALL NOT duplicate canonical English learning content per locale.
-
-Examples:
-
-```text
-Canonical word:
-significant
-
-Localized translation:
-ru → значительный
-kk → елеулі
-uz → sezilarli
-es → significativo
-```
-
-```text
-Canonical hint:
-Think about a word that describes a large or important change.
-
-Localized hints:
-ru → Подумайте о слове, описывающем крупное или важное изменение.
-kk → Үлкен немесе маңызды өзгерісті сипаттайтын сөзді ойлаңыз.
-```
-
-English audio remains the same for all interface locales.
+Canonical English learning content and English audio SHALL be stored once and reused across interface locales.
 
 ---
 
 ## 3. Locale dimensions
 
-CareerSpeak SHALL distinguish the following settings:
+CareerSpeak distinguishes:
 
 ```text
 ui_locale
@@ -88,37 +59,21 @@ translation_locale
 preferred_accent
 ```
 
-The learning language is not a user-selectable dimension in MVP:
+Learning language is fixed:
 
 ```text
 learning_language = en
 ```
 
-Example:
+`ui_locale` and `translation_locale` may differ.
 
-```text
-ui_locale          = ru
-translation_locale = kk
-preferred_accent   = UK
-```
-
-Another valid configuration:
-
-```text
-ui_locale          = es
-translation_locale = es
-preferred_accent   = US
-```
-
-`ui_locale` and `translation_locale` MAY be the same or different.
-
-These preferences SHALL be stored locally by default.
+Preferences are local-first.
 
 ---
 
-## 4. Initial supported locales
+## 4. Initial locales
 
-### Release 1
+Release baseline:
 
 ```text
 en  English
@@ -126,61 +81,48 @@ ru  Russian
 kk  Kazakh
 ```
 
-The first production release SHALL support English UI plus Russian and Kazakh localization where the relevant content translations are available.
+Planned expansion may include:
+
+```text
+uz
+ky
+uk
+tr
+es
+pt
+hi
+ur
+ar
+bn
+id
+vi
+fr
+de
+```
+
+Architecture SHALL permit new locales without core-schema redesign.
 
 ---
 
-## 5. Planned globalization rollout
+## 5. Locale identifiers
 
-The rollout is a product/content plan, not a database limitation.
+Locale identifiers SHOULD follow BCP-47-compatible semantics.
 
-### Phase G1 — Central Asia
+Examples:
 
 ```text
-uz  Uzbek
-ky  Kyrgyz
+en
+ru
+kk
+pt-BR
+pt-PT
+ar
+ur
 ```
 
-### Phase G2 — Adjacent markets
+Locale metadata should include:
 
 ```text
-uk  Ukrainian
-tr  Turkish
-```
-
-### Phase G3 — Major global IELTS / career-English markets
-
-```text
-es  Spanish
-pt  Portuguese
-hi  Hindi
-ur  Urdu
-ar  Arabic
-```
-
-### Phase G4 — Further global expansion
-
-```text
-bn  Bengali
-id  Indonesian
-vi  Vietnamese
-fr  French
-de  German
-```
-
-The architecture SHALL permit additional locales without redesigning core content entities.
-
----
-
-## 6. Language/locale master data
-
-Locale support SHALL be data-driven.
-
-Suggested entity:
-
-```text
-locale
-────────────────────────
 code
 bcp47_tag
 name_en
@@ -188,182 +130,104 @@ native_name
 direction
 enabled
 sort_order
-created_at
-updated_at
 ```
 
-Example data:
-
-```text
-en | en    | English    | English     | LTR
-ru | ru    | Russian    | Русский     | LTR
-kk | kk    | Kazakh     | Қазақша     | LTR
-uz | uz    | Uzbek      | O‘zbekcha   | LTR
-es | es    | Spanish    | Español     | LTR
-pt | pt-BR | Portuguese | Português   | LTR
-ar | ar    | Arabic     | العربية     | RTL
-ur | ur    | Urdu       | اردو        | RTL
-```
-
-Supported text direction values:
+Text direction:
 
 ```text
 LTR
 RTL
 ```
 
-The Flutter UI SHALL be RTL-ready before Arabic or Urdu production rollout.
+Flutter SHALL be RTL-ready before Arabic/Urdu production rollout.
 
 ---
 
-## 7. Canonical content model
+## 6. Typed localization model
 
-Canonical educational content SHALL remain English-first.
+Do not create fixed-language columns such as:
+
+```text
+title_ru
+title_kk
+translation_es
+```
+
+Do not use a generic untyped EAV localization store for all domain content.
+
+Prefer typed localization tables owned by their domain, for example:
+
+```text
+profession_localization
+vocabulary_localization
+question_localization
+topic_localization
+```
+
+This preserves foreign keys, validation and explicit field semantics.
+
+---
+
+## 7. Canonical vs localized fields
+
+Canonical learner content remains English.
 
 Examples:
 
 ```text
-vocabulary_word
-────────────────────────
-id
-lemma
-phonetic
-part_of_speech
-cefr_level
-status
-created_at
-updated_at
+question_text           → English
+model_answer             → English
+vocabulary lemma         → English
+example sentence         → English
+topic section text       → English
 ```
 
+Localized support may include:
+
 ```text
-vocabulary_translation
-────────────────────────
-id
-word_id
-locale
 translation
-localized_definition
-status
-```
-
-The schema SHALL NOT use fixed-language columns such as:
-
-```text
-translation_ru
-translation_kk
-translation_uz
-translation_es
-```
-
----
-
-## 8. Hint localization
-
-`hint` is a first-class localizable content type.
-
-Canonical hint content SHALL be stored independently from its localized variants.
-
-Suggested conceptual model:
-
-```text
 hint
-────────────────────────
-id
-content_type
-content_id
-hint_text_en
-status
-revision
+explanation
+localized title/description
 ```
 
-```text
-hint_translation
-────────────────────────
-hint_id
-locale
-text
-status
-```
-
-A hint may be associated with:
-
-- vocabulary;
-- mock-test question;
-- interview question;
-- IELTS cue card;
-- topic section;
-- phrase;
-- collocation;
-- answer explanation.
-
-The mobile application SHALL display the localized hint when available and SHALL fall back to English if no translation exists.
+Localized text SHALL NOT duplicate canonical English merely to create a locale record.
 
 ---
 
-## 9. Explanation localization
+## 8. Hint and explanation localization
 
-Supporting explanations MAY be translated without changing canonical English questions or answers.
+`hint` and `explanation` are first-class localizable concepts.
+
+Examples:
+
+```text
+canonical question
+→ localized hint
+→ localized explanation
+```
+
+A missing localized hint/explanation falls back according to locale fallback policy.
+
+---
+
+## 9. Locale publication/readiness
+
+Localization readiness is separate from canonical English publication.
 
 Example:
 
 ```text
-Canonical question:
-Which collection is designed for concurrent access?
-
-Canonical answer:
-ConcurrentHashMap
-
-Localized explanation (ru):
-ConcurrentHashMap предназначен для безопасной конкурентной работы нескольких потоков.
-```
-
-The same question, answer and English audio SHALL be reusable across every UI locale.
-
----
-
-## 10. Localizable entities
-
-At minimum, the following content SHALL support localization where applicable:
-
-```text
-UI strings
-vocabulary translations
-hints
-explanations
-profession names
-career-track names
-category names
-skill names
-mock-test titles/descriptions
-topic titles/descriptions
-phrase translations
-administrative labels visible to learners
-```
-
-Canonical learning content remains English unless the business explicitly defines an auxiliary translated field.
-
----
-
-## 11. Publication by locale
-
-Localization SHALL have its own publication state.
-
-Example:
-
-```text
-Canonical content: PUBLISHED
-
-EN: PUBLISHED
+Canonical English: PUBLISHED
 RU: PUBLISHED
-KK: PUBLISHED
+KK: READY
 UZ: DRAFT
 ES: MISSING
-AR: MISSING
 ```
 
-Publishing the canonical English content SHALL NOT automatically publish every locale.
+A missing optional locale SHALL NOT automatically block canonical English publication unless the pack/content policy explicitly requires that locale.
 
-Locale status values:
+Suggested locale states:
 
 ```text
 MISSING
@@ -373,20 +237,16 @@ PUBLISHED
 ARCHIVED
 ```
 
-The mobile application SHALL receive only localized content with `PUBLISHED` status, plus configured fallback English content.
-
 ---
 
-## 12. Locale fallback
+## 10. Locale fallback
 
-Default fallback policy:
+Default fallback:
 
 ```text
-requested locale
-      ↓
-base language where applicable
-      ↓
-English
+requested regional locale
+→ base language
+→ English
 ```
 
 Examples:
@@ -398,88 +258,102 @@ ru-KZ → ru → en
 kk-KZ → kk → en
 ```
 
-Fallback rules SHALL be centralized and consistent across mobile and backend contracts.
+Fallback rules SHALL be centralized and consistent between backend contracts and Flutter behavior.
 
 ---
 
-## 13. Automatic locale selection
+## 11. Automatic locale selection
 
-CareerSpeak SHALL NOT require GPS or precise/approximate location permission solely to choose UI language.
+CareerSpeak SHALL NOT request GPS/precise location solely for language selection.
 
-Automatic locale selection SHALL use:
+Selection precedence:
 
 ```text
-1. Explicit CareerSpeak locale selection
+1. explicit CareerSpeak selection
 2. OS per-app locale
-3. OS preferred language list
+3. OS preferred language
 4. OS region
 5. English fallback
 ```
 
-Example:
-
-```text
-kk-KZ → kk
-ru-KZ → ru
-uz-UZ → uz
-es-MX → es
-pt-BR → pt-BR/pt according to configured availability
-```
-
-The learner SHALL always be able to override the automatically selected locale.
+Learner may always override the automatic choice.
 
 ---
 
-## 14. Installation identity
+## 12. Installation identity
 
-CareerSpeak SHALL NOT require a personal learner account.
+CareerSpeak has no personal learner account in MVP.
 
-The application MAY generate a cryptographically random technical installation identifier at first launch.
-
-Normative term:
+On first launch Flutter generates a cryptographically random app-specific:
 
 ```text
 installationId
 ```
 
-The system SHALL NOT use `userId` or hardware `deviceId` for this concept.
-
-Recommended generation:
+Recommended entropy:
 
 ```text
 256-bit cryptographically secure random value
 ```
 
-The installation identifier SHALL NOT be derived from:
+It SHALL NOT be derived from:
 
-- IMEI;
-- IMSI;
-- MAC address;
-- hardware serial number;
-- advertising ID;
-- phone number;
-- email address;
-- Apple/Google account identity.
+```text
+IMEI
+IMSI
+MAC
+hardware serial
+advertising ID
+phone number
+email
+Apple/Google account identity
+```
 
 ---
 
-## 15. Installation identity purpose
+## 13. Installation token
 
-`installationId` MAY be used only for technical purposes such as:
+`installationId` is not itself the API credential.
 
-- API abuse protection;
-- rate limiting;
-- application entitlement/integrity extensions;
-- token rotation;
-- blocking compromised installation credentials.
+Flow:
 
-It SHALL NOT be used to create a server-side learning profile.
+```text
+Flutter generates installationId
+→ registration request
+→ backend issues installation token
+→ token stored in Android Keystore/iOS Keychain-backed secure storage
+→ token authenticates /api/v1/**
+```
 
-The backend SHALL NOT associate the installation identifier with:
+Do not use a client-computable credential such as:
+
+```text
+SHA256(installationId)
+```
+
+The backend-issued token may be opaque or signed according to the final security ADR.
+
+---
+
+## 14. Installation identity purpose
+
+Installation identity/token may support:
+
+```text
+API abuse protection
+rate limiting
+entitlement/integrity extensions
+token rotation
+credential revocation
+```
+
+It SHALL NOT create a server-side learning profile.
+
+The backend SHALL NOT join installation identity to:
 
 ```text
 favorites
-IELTS score
+IELTS scores
 mock-test history
 learned vocabulary
 profession interests
@@ -489,132 +363,141 @@ learning progress
 
 ---
 
-## 16. Installation credential protection
+## 15. Learner data policy
 
-Sensitive installation material SHALL be stored with platform secure storage:
-
-```text
-Android → Keystore-backed secure storage
-iOS     → Keychain
-```
-
-If the server needs to compare an installation secret but does not need the original value, it SHOULD store a one-way keyed derivation such as HMAC rather than reversible encryption.
-
-A server-signed installation token SHOULD be evaluated as the preferred stateless design.
-
----
-
-## 17. Learner data policy
-
-CareerSpeak SHALL NOT require the following learner data for MVP:
+CareerSpeak SHALL NOT require for MVP:
 
 ```text
 name
 email
-phone number
+phone
 birth date
 precise location
 social account
 employer
 resume/CV
-voice recording
+learner voice recording
 contacts
 advertising identifier
 ```
 
-The following learning state SHALL be local-first:
+The following remain local-first:
 
 ```text
 favorites
 vocabulary progress
-mock-test attempts
-mock-test answers
-scores
+test attempts/answers/scores
 completed topics
 review schedule
-recently opened content
+recent content
 downloaded packs
-UI settings
+UI/localization settings
 ```
 
-Deleting the application may delete this local learning history unless a future explicit backup/sync capability is introduced.
+Uninstall may remove local history unless a future explicit backup/sync feature is introduced.
 
 ---
 
-## 18. Privacy requirement IDs
+## 16. Privacy requirements
 
 ```text
-PRIV-001 CareerSpeak SHALL NOT require a personal learner account.
-PRIV-002 Learning history, favorites, test results and preferences SHALL be local-first.
-PRIV-003 CareerSpeak SHALL NOT request GPS location solely for localization.
-PRIV-004 A random installationId MAY be used only for technical security/entitlement purposes.
-PRIV-005 installationId SHALL NOT be derived from persistent hardware or advertising identifiers.
-PRIV-006 Learner voice SHALL NOT be uploaded in MVP.
-PRIV-007 Application logs SHALL avoid learner-identifying payloads where not operationally required.
+PRIV-001 No mandatory personal learner account.
+PRIV-002 Learning history/favorites/test results/preferences are local-first.
+PRIV-003 No GPS solely for locale selection.
+PRIV-004 installationId is random and app-specific.
+PRIV-005 installationId is not derived from hardware/advertising identifiers.
+PRIV-006 Learner voice is not uploaded in MVP.
+PRIV-007 Logs avoid unnecessary learner-identifying payloads.
 PRIV-008 Advertising SDKs are outside MVP scope.
-PRIV-009 installationId SHALL NOT be joined with local learning history to form a server-side learner profile.
+PRIV-009 installationId is not joined to learning history as a learner profile.
+PRIV-010 Learner API credential is backend-issued, not client-derived from installationId.
 ```
 
 ---
 
-## 19. DigitalOcean global deployment strategy
+## 17. Localized content delivery
 
-The production platform SHALL be designed for DigitalOcean.
+The root/pack manifest model SHALL support locale-aware content delivery without requiring a learner profile.
 
-Initial deployment MAY use one primary application/database region.
-
-Recommended logical topology:
+Example:
 
 ```text
-                    GLOBAL USERS
-                         │
-                         ▼
-                    CDN / EDGE
-                         │
-              ┌──────────┴──────────┐
-              │                     │
-              ▼                     ▼
-          Audio/Media            Content API
-              │                     │
-              ▼                     ▼
-            RustFS          CareerSpeak Backend
-                                  │
-                                  ▼
-                              PostgreSQL
-                                  ▲
-                                  │
-                         Moderator Desktop
+GET /api/v1/content/manifest?locale=kk
 ```
 
-The initial API/database region may be located in Europe, with Frankfurt as a strong candidate for the first deployment serving Kazakhstan, Europe and broader international traffic.
-
-The exact region SHALL be confirmed during production infrastructure qualification.
-
----
-
-## 20. CDN-first media strategy
-
-CareerSpeak is audio-heavy and predominantly read-oriented.
-
-Audio files SHALL NOT require every global learner to read directly from a single RustFS origin over long geographic distances.
-
-Production architecture SHALL support:
+Manifest may expose:
 
 ```text
-RustFS origin
-     ↓
-CDN/cache layer
-     ↓
-Global learners
+schemaVersion
+contentVersion
+locale
+fallbackLocale
+packs
+assets
+checksums
+tombstones
 ```
-
-The content/database API remains the source of metadata while media delivery is optimized independently.
-
-CDN integration SHALL NOT require changes to canonical `file_asset` identity.
 
 ---
 
-## 21. File identity
+## 18. Offline locale delta
+
+Offline packs should reuse canonical English audio across locales.
+
+Example:
+
+```text
+JAVA_SENIOR pack
+├── English questions/answers
+├── English audio
+├── kk translations/hints/explanations
+└── locale metadata
+```
+
+Changing from one translation locale to another SHOULD download the locale delta rather than redownloading unchanged English audio.
+
+---
+
+## 19. ADMIN localization workflow
+
+There is one human ADMIN actor in MVP.
+
+Localization is managed through the same Spring MVC Content Studio:
+
+```text
+/admin/localization
+```
+
+Required capabilities:
+
+```text
+locale catalog
+translation editor
+hint/explanation editor
+missing-translation filter
+readiness/status
+preview by locale
+publish/archive locale data
+```
+
+Do not create a separate Python/desktop moderator application.
+
+---
+
+## 20. Global delivery topology
+
+```text
+Flutter
+├── REST API → Spring Boot Backend → PostgreSQL
+└── CDN/edge → RustFS published media
+
+ADMIN Browser
+→ Spring MVC Content Studio
+
+TTS Worker
+→ Backend Job API
+→ RustFS models/media
+```
 
 Canonical media identity remains:
 
@@ -622,152 +505,41 @@ Canonical media identity remains:
 bucket + object_key
 ```
 
-The database SHALL NOT use a CDN hostname or public URL as durable media identity.
-
-This allows later migration between:
-
-- RustFS endpoints;
-- CDN providers;
-- DigitalOcean object-storage options;
-- additional delivery regions.
-
-without rewriting educational entities.
+Do not persist environment-specific CDN hostnames as domain identity.
 
 ---
 
-## 22. Localized content manifest
+## 21. Acceptance criteria
 
-The content manifest SHOULD support locale selection.
+Globalization is accepted when:
 
-Example:
-
-```http
-GET /api/v1/content/manifest?locale=kk
-```
-
-Conceptual response metadata:
-
-```text
-manifestVersion
-contentVersion
-locale
-fallbackLocale
-publishedAt
-packs
-assets
-checksums
-```
-
-The manifest SHALL NOT require a learner profile.
+1. canonical learning language is English and stored once;
+2. UI/translation locale changes without duplicating English learning content;
+3. a new locale can be added without core-schema redesign;
+4. hints/explanations localize independently;
+5. English audio is reused across locales;
+6. RTL metadata is supported;
+7. locale selection requires no GPS;
+8. installationId exposes no hardware identity;
+9. learner credential is backend-issued;
+10. learning history remains local-first;
+11. one ADMIN manages locale content through Spring MVC Content Studio;
+12. offline locale deltas do not redownload unchanged English audio.
 
 ---
 
-## 23. Mobile offline localization
-
-Offline packs SHALL contain the selected locale resources required for the learner experience.
-
-Example pack:
+## 22. P0 deliverables
 
 ```text
-Java Interview Pack
-├── canonical English questions
-├── canonical English answers
-├── English audio
-├── kk translations
-├── kk hints
-└── kk explanations
+locale domain model
+typed localization ERD
+fallback specification
+Flutter locale-selection flow
+installation registration/token contract
+localized manifest contract
+offline locale-delta design
+ADMIN localization workflow
+RTL qualification plan
 ```
 
-Switching locale MAY require downloading the new locale delta rather than redownloading the English audio assets.
-
-This is a core optimization goal for global expansion.
-
----
-
-## 24. Moderator localization workflow
-
-The Python Moderator application SHALL include localization management.
-
-Required capabilities:
-
-```text
-locale catalog
-translation editor
-hint translation editor
-explanation translation editor
-missing-translation filter
-translation status
-preview by locale
-publish locale
-archive locale
-```
-
-Example dashboard:
-
-```text
-Content                EN      RU       KK       UZ       ES
-----------------------------------------------------------------
-Java question #101     ✓       ✓        ✓        Draft    Missing
-IELTS word #202        ✓       ✓        ✓        ✓        Missing
-Topic #17              ✓       ✓        Draft    Missing  Missing
-```
-
----
-
-## 25. Globalization acceptance criteria
-
-Globalization architecture is accepted when all of the following are true:
-
-1. Canonical learning content is English and is stored once.
-2. UI language can be changed independently from English learning content.
-3. Vocabulary translation can be added for a new locale without changing the core schema.
-4. `hint` can be translated independently per locale.
-5. Explanations can be translated independently per locale.
-6. English audio is reused across locales.
-7. RTL locale metadata is supported.
-8. Locale selection does not require GPS permission.
-9. `installationId` does not expose hardware identity.
-10. Learning history remains local by default.
-11. A new locale can be published through Moderator + backend data without a new Flutter feature implementation.
-12. CDN/media delivery can change without changing canonical media IDs.
-13. Offline locale deltas do not require redownloading unchanged English audio.
-
----
-
-## 26. Architecture decisions to record
-
-The following ADRs SHALL be created during P0:
-
-```text
-ADR-G01 English as the fixed learning language for CareerSpeak MVP
-ADR-G02 UI locale and translation locale are independent
-ADR-G03 Typed localization tables; no fixed-language columns
-ADR-G04 Hint and explanation localization model
-ADR-G05 No GPS solely for locale detection
-ADR-G06 Random installationId, not hardware device identity
-ADR-G07 Local-first learner progress
-ADR-G08 DigitalOcean primary-region deployment
-ADR-G09 CDN-first global audio delivery
-ADR-G10 Locale-specific offline delta packs
-```
-
----
-
-## 27. P0 globalization deliverables
-
-Before implementation of the content domain, P0 SHALL produce:
-
-```text
-G0.1 Locale domain model
-G0.2 Translation ERD
-G0.3 Hint localization ERD
-G0.4 Locale fallback specification
-G0.5 Flutter locale-selection flow
-G0.6 installationId security design
-G0.7 localized manifest contract
-G0.8 offline locale-delta design
-G0.9 moderator localization workflow
-G0.10 DigitalOcean/CDN deployment decision
-```
-
-These deliverables are prerequisites for freezing the content schema.
+This is the authoritative globalization/localization baseline for CareerSpeak v0.7.
