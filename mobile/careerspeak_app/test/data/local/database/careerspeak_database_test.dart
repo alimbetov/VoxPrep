@@ -15,15 +15,15 @@ void main() {
     await database.close();
   });
 
-  test('schema version 2 creates the production adapter foundation', () async {
+  test('schema version 3 creates the production adapter foundation', () async {
     await database.customSelect('SELECT 1').getSingle();
 
-    expect(database.schemaVersion, 2);
+    expect(database.schemaVersion, 3);
 
     final userVersion = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(userVersion.read<int>('user_version'), 2);
+    expect(userVersion.read<int>('user_version'), 3);
 
     final foreignKeys = await database
         .customSelect('PRAGMA foreign_keys')
@@ -45,6 +45,10 @@ void main() {
         'sync_tombstones',
         'content_pack_revisions',
         'local_content_records',
+        'pack_content_refs',
+        'asset_catalog',
+        'content_asset_refs',
+        'pack_asset_refs',
         'favorites',
         'content_learning_states',
       }),

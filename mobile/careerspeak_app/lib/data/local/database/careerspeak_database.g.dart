@@ -5053,6 +5053,1827 @@ class LocalContentRecordsCompanion extends UpdateCompanion<LocalContentRecord> {
   }
 }
 
+class $PackContentRefsTable extends PackContentRefs
+    with TableInfo<$PackContentRefsTable, PackContentRef> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PackContentRefsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _packCodeMeta = const VerificationMeta(
+    'packCode',
+  );
+  @override
+  late final GeneratedColumn<String> packCode = GeneratedColumn<String>(
+    'pack_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _variantKeyMeta = const VerificationMeta(
+    'variantKey',
+  );
+  @override
+  late final GeneratedColumn<String> variantKey = GeneratedColumn<String>(
+    'variant_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _packRevisionMeta = const VerificationMeta(
+    'packRevision',
+  );
+  @override
+  late final GeneratedColumn<int> packRevision = GeneratedColumn<int>(
+    'pack_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentCodeMeta = const VerificationMeta(
+    'contentCode',
+  );
+  @override
+  late final GeneratedColumn<String> contentCode = GeneratedColumn<String>(
+    'content_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentTypeMeta = const VerificationMeta(
+    'contentType',
+  );
+  @override
+  late final GeneratedColumn<String> contentType = GeneratedColumn<String>(
+    'content_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentRevisionMeta = const VerificationMeta(
+    'contentRevision',
+  );
+  @override
+  late final GeneratedColumn<int> contentRevision = GeneratedColumn<int>(
+    'content_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    packCode,
+    variantKey,
+    packRevision,
+    contentCode,
+    contentType,
+    contentRevision,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pack_content_refs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PackContentRef> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('pack_code')) {
+      context.handle(
+        _packCodeMeta,
+        packCode.isAcceptableOrUnknown(data['pack_code']!, _packCodeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_packCodeMeta);
+    }
+    if (data.containsKey('variant_key')) {
+      context.handle(
+        _variantKeyMeta,
+        variantKey.isAcceptableOrUnknown(data['variant_key']!, _variantKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_variantKeyMeta);
+    }
+    if (data.containsKey('pack_revision')) {
+      context.handle(
+        _packRevisionMeta,
+        packRevision.isAcceptableOrUnknown(
+          data['pack_revision']!,
+          _packRevisionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_packRevisionMeta);
+    }
+    if (data.containsKey('content_code')) {
+      context.handle(
+        _contentCodeMeta,
+        contentCode.isAcceptableOrUnknown(
+          data['content_code']!,
+          _contentCodeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentCodeMeta);
+    }
+    if (data.containsKey('content_type')) {
+      context.handle(
+        _contentTypeMeta,
+        contentType.isAcceptableOrUnknown(
+          data['content_type']!,
+          _contentTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentTypeMeta);
+    }
+    if (data.containsKey('content_revision')) {
+      context.handle(
+        _contentRevisionMeta,
+        contentRevision.isAcceptableOrUnknown(
+          data['content_revision']!,
+          _contentRevisionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentRevisionMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {
+    packCode,
+    variantKey,
+    packRevision,
+    contentCode,
+    contentType,
+    contentRevision,
+  };
+  @override
+  PackContentRef map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PackContentRef(
+      packCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pack_code'],
+      )!,
+      variantKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}variant_key'],
+      )!,
+      packRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pack_revision'],
+      )!,
+      contentCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_code'],
+      )!,
+      contentType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_type'],
+      )!,
+      contentRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}content_revision'],
+      )!,
+    );
+  }
+
+  @override
+  $PackContentRefsTable createAlias(String alias) {
+    return $PackContentRefsTable(attachedDatabase, alias);
+  }
+}
+
+class PackContentRef extends DataClass implements Insertable<PackContentRef> {
+  final String packCode;
+  final String variantKey;
+  final int packRevision;
+  final String contentCode;
+  final String contentType;
+  final int contentRevision;
+  const PackContentRef({
+    required this.packCode,
+    required this.variantKey,
+    required this.packRevision,
+    required this.contentCode,
+    required this.contentType,
+    required this.contentRevision,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['pack_code'] = Variable<String>(packCode);
+    map['variant_key'] = Variable<String>(variantKey);
+    map['pack_revision'] = Variable<int>(packRevision);
+    map['content_code'] = Variable<String>(contentCode);
+    map['content_type'] = Variable<String>(contentType);
+    map['content_revision'] = Variable<int>(contentRevision);
+    return map;
+  }
+
+  PackContentRefsCompanion toCompanion(bool nullToAbsent) {
+    return PackContentRefsCompanion(
+      packCode: Value(packCode),
+      variantKey: Value(variantKey),
+      packRevision: Value(packRevision),
+      contentCode: Value(contentCode),
+      contentType: Value(contentType),
+      contentRevision: Value(contentRevision),
+    );
+  }
+
+  factory PackContentRef.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PackContentRef(
+      packCode: serializer.fromJson<String>(json['packCode']),
+      variantKey: serializer.fromJson<String>(json['variantKey']),
+      packRevision: serializer.fromJson<int>(json['packRevision']),
+      contentCode: serializer.fromJson<String>(json['contentCode']),
+      contentType: serializer.fromJson<String>(json['contentType']),
+      contentRevision: serializer.fromJson<int>(json['contentRevision']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'packCode': serializer.toJson<String>(packCode),
+      'variantKey': serializer.toJson<String>(variantKey),
+      'packRevision': serializer.toJson<int>(packRevision),
+      'contentCode': serializer.toJson<String>(contentCode),
+      'contentType': serializer.toJson<String>(contentType),
+      'contentRevision': serializer.toJson<int>(contentRevision),
+    };
+  }
+
+  PackContentRef copyWith({
+    String? packCode,
+    String? variantKey,
+    int? packRevision,
+    String? contentCode,
+    String? contentType,
+    int? contentRevision,
+  }) => PackContentRef(
+    packCode: packCode ?? this.packCode,
+    variantKey: variantKey ?? this.variantKey,
+    packRevision: packRevision ?? this.packRevision,
+    contentCode: contentCode ?? this.contentCode,
+    contentType: contentType ?? this.contentType,
+    contentRevision: contentRevision ?? this.contentRevision,
+  );
+  PackContentRef copyWithCompanion(PackContentRefsCompanion data) {
+    return PackContentRef(
+      packCode: data.packCode.present ? data.packCode.value : this.packCode,
+      variantKey: data.variantKey.present
+          ? data.variantKey.value
+          : this.variantKey,
+      packRevision: data.packRevision.present
+          ? data.packRevision.value
+          : this.packRevision,
+      contentCode: data.contentCode.present
+          ? data.contentCode.value
+          : this.contentCode,
+      contentType: data.contentType.present
+          ? data.contentType.value
+          : this.contentType,
+      contentRevision: data.contentRevision.present
+          ? data.contentRevision.value
+          : this.contentRevision,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PackContentRef(')
+          ..write('packCode: $packCode, ')
+          ..write('variantKey: $variantKey, ')
+          ..write('packRevision: $packRevision, ')
+          ..write('contentCode: $contentCode, ')
+          ..write('contentType: $contentType, ')
+          ..write('contentRevision: $contentRevision')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    packCode,
+    variantKey,
+    packRevision,
+    contentCode,
+    contentType,
+    contentRevision,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PackContentRef &&
+          other.packCode == this.packCode &&
+          other.variantKey == this.variantKey &&
+          other.packRevision == this.packRevision &&
+          other.contentCode == this.contentCode &&
+          other.contentType == this.contentType &&
+          other.contentRevision == this.contentRevision);
+}
+
+class PackContentRefsCompanion extends UpdateCompanion<PackContentRef> {
+  final Value<String> packCode;
+  final Value<String> variantKey;
+  final Value<int> packRevision;
+  final Value<String> contentCode;
+  final Value<String> contentType;
+  final Value<int> contentRevision;
+  final Value<int> rowid;
+  const PackContentRefsCompanion({
+    this.packCode = const Value.absent(),
+    this.variantKey = const Value.absent(),
+    this.packRevision = const Value.absent(),
+    this.contentCode = const Value.absent(),
+    this.contentType = const Value.absent(),
+    this.contentRevision = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PackContentRefsCompanion.insert({
+    required String packCode,
+    required String variantKey,
+    required int packRevision,
+    required String contentCode,
+    required String contentType,
+    required int contentRevision,
+    this.rowid = const Value.absent(),
+  }) : packCode = Value(packCode),
+       variantKey = Value(variantKey),
+       packRevision = Value(packRevision),
+       contentCode = Value(contentCode),
+       contentType = Value(contentType),
+       contentRevision = Value(contentRevision);
+  static Insertable<PackContentRef> custom({
+    Expression<String>? packCode,
+    Expression<String>? variantKey,
+    Expression<int>? packRevision,
+    Expression<String>? contentCode,
+    Expression<String>? contentType,
+    Expression<int>? contentRevision,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (packCode != null) 'pack_code': packCode,
+      if (variantKey != null) 'variant_key': variantKey,
+      if (packRevision != null) 'pack_revision': packRevision,
+      if (contentCode != null) 'content_code': contentCode,
+      if (contentType != null) 'content_type': contentType,
+      if (contentRevision != null) 'content_revision': contentRevision,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PackContentRefsCompanion copyWith({
+    Value<String>? packCode,
+    Value<String>? variantKey,
+    Value<int>? packRevision,
+    Value<String>? contentCode,
+    Value<String>? contentType,
+    Value<int>? contentRevision,
+    Value<int>? rowid,
+  }) {
+    return PackContentRefsCompanion(
+      packCode: packCode ?? this.packCode,
+      variantKey: variantKey ?? this.variantKey,
+      packRevision: packRevision ?? this.packRevision,
+      contentCode: contentCode ?? this.contentCode,
+      contentType: contentType ?? this.contentType,
+      contentRevision: contentRevision ?? this.contentRevision,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (packCode.present) {
+      map['pack_code'] = Variable<String>(packCode.value);
+    }
+    if (variantKey.present) {
+      map['variant_key'] = Variable<String>(variantKey.value);
+    }
+    if (packRevision.present) {
+      map['pack_revision'] = Variable<int>(packRevision.value);
+    }
+    if (contentCode.present) {
+      map['content_code'] = Variable<String>(contentCode.value);
+    }
+    if (contentType.present) {
+      map['content_type'] = Variable<String>(contentType.value);
+    }
+    if (contentRevision.present) {
+      map['content_revision'] = Variable<int>(contentRevision.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PackContentRefsCompanion(')
+          ..write('packCode: $packCode, ')
+          ..write('variantKey: $variantKey, ')
+          ..write('packRevision: $packRevision, ')
+          ..write('contentCode: $contentCode, ')
+          ..write('contentType: $contentType, ')
+          ..write('contentRevision: $contentRevision, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $AssetCatalogTable extends AssetCatalog
+    with TableInfo<$AssetCatalogTable, AssetCatalogData> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $AssetCatalogTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _assetIdMeta = const VerificationMeta(
+    'assetId',
+  );
+  @override
+  late final GeneratedColumn<String> assetId = GeneratedColumn<String>(
+    'asset_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _checksumSha256Meta = const VerificationMeta(
+    'checksumSha256',
+  );
+  @override
+  late final GeneratedColumn<String> checksumSha256 = GeneratedColumn<String>(
+    'checksum_sha256',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _assetKindMeta = const VerificationMeta(
+    'assetKind',
+  );
+  @override
+  late final GeneratedColumn<String> assetKind = GeneratedColumn<String>(
+    'asset_kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _mimeTypeMeta = const VerificationMeta(
+    'mimeType',
+  );
+  @override
+  late final GeneratedColumn<String> mimeType = GeneratedColumn<String>(
+    'mime_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sizeBytesMeta = const VerificationMeta(
+    'sizeBytes',
+  );
+  @override
+  late final GeneratedColumn<int> sizeBytes = GeneratedColumn<int>(
+    'size_bytes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _durationMsMeta = const VerificationMeta(
+    'durationMs',
+  );
+  @override
+  late final GeneratedColumn<int> durationMs = GeneratedColumn<int>(
+    'duration_ms',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _deliveryKeyMeta = const VerificationMeta(
+    'deliveryKey',
+  );
+  @override
+  late final GeneratedColumn<String> deliveryKey = GeneratedColumn<String>(
+    'delivery_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    assetId,
+    checksumSha256,
+    assetKind,
+    mimeType,
+    sizeBytes,
+    durationMs,
+    deliveryKey,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'asset_catalog';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<AssetCatalogData> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('asset_id')) {
+      context.handle(
+        _assetIdMeta,
+        assetId.isAcceptableOrUnknown(data['asset_id']!, _assetIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_assetIdMeta);
+    }
+    if (data.containsKey('checksum_sha256')) {
+      context.handle(
+        _checksumSha256Meta,
+        checksumSha256.isAcceptableOrUnknown(
+          data['checksum_sha256']!,
+          _checksumSha256Meta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_checksumSha256Meta);
+    }
+    if (data.containsKey('asset_kind')) {
+      context.handle(
+        _assetKindMeta,
+        assetKind.isAcceptableOrUnknown(data['asset_kind']!, _assetKindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_assetKindMeta);
+    }
+    if (data.containsKey('mime_type')) {
+      context.handle(
+        _mimeTypeMeta,
+        mimeType.isAcceptableOrUnknown(data['mime_type']!, _mimeTypeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_mimeTypeMeta);
+    }
+    if (data.containsKey('size_bytes')) {
+      context.handle(
+        _sizeBytesMeta,
+        sizeBytes.isAcceptableOrUnknown(data['size_bytes']!, _sizeBytesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_sizeBytesMeta);
+    }
+    if (data.containsKey('duration_ms')) {
+      context.handle(
+        _durationMsMeta,
+        durationMs.isAcceptableOrUnknown(data['duration_ms']!, _durationMsMeta),
+      );
+    }
+    if (data.containsKey('delivery_key')) {
+      context.handle(
+        _deliveryKeyMeta,
+        deliveryKey.isAcceptableOrUnknown(
+          data['delivery_key']!,
+          _deliveryKeyMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_deliveryKeyMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {assetId};
+  @override
+  AssetCatalogData map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return AssetCatalogData(
+      assetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}asset_id'],
+      )!,
+      checksumSha256: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}checksum_sha256'],
+      )!,
+      assetKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}asset_kind'],
+      )!,
+      mimeType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}mime_type'],
+      )!,
+      sizeBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}size_bytes'],
+      )!,
+      durationMs: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}duration_ms'],
+      ),
+      deliveryKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}delivery_key'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $AssetCatalogTable createAlias(String alias) {
+    return $AssetCatalogTable(attachedDatabase, alias);
+  }
+}
+
+class AssetCatalogData extends DataClass
+    implements Insertable<AssetCatalogData> {
+  final String assetId;
+  final String checksumSha256;
+  final String assetKind;
+  final String mimeType;
+  final int sizeBytes;
+  final int? durationMs;
+  final String deliveryKey;
+  final DateTime createdAt;
+  const AssetCatalogData({
+    required this.assetId,
+    required this.checksumSha256,
+    required this.assetKind,
+    required this.mimeType,
+    required this.sizeBytes,
+    this.durationMs,
+    required this.deliveryKey,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['asset_id'] = Variable<String>(assetId);
+    map['checksum_sha256'] = Variable<String>(checksumSha256);
+    map['asset_kind'] = Variable<String>(assetKind);
+    map['mime_type'] = Variable<String>(mimeType);
+    map['size_bytes'] = Variable<int>(sizeBytes);
+    if (!nullToAbsent || durationMs != null) {
+      map['duration_ms'] = Variable<int>(durationMs);
+    }
+    map['delivery_key'] = Variable<String>(deliveryKey);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  AssetCatalogCompanion toCompanion(bool nullToAbsent) {
+    return AssetCatalogCompanion(
+      assetId: Value(assetId),
+      checksumSha256: Value(checksumSha256),
+      assetKind: Value(assetKind),
+      mimeType: Value(mimeType),
+      sizeBytes: Value(sizeBytes),
+      durationMs: durationMs == null && nullToAbsent
+          ? const Value.absent()
+          : Value(durationMs),
+      deliveryKey: Value(deliveryKey),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory AssetCatalogData.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return AssetCatalogData(
+      assetId: serializer.fromJson<String>(json['assetId']),
+      checksumSha256: serializer.fromJson<String>(json['checksumSha256']),
+      assetKind: serializer.fromJson<String>(json['assetKind']),
+      mimeType: serializer.fromJson<String>(json['mimeType']),
+      sizeBytes: serializer.fromJson<int>(json['sizeBytes']),
+      durationMs: serializer.fromJson<int?>(json['durationMs']),
+      deliveryKey: serializer.fromJson<String>(json['deliveryKey']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'assetId': serializer.toJson<String>(assetId),
+      'checksumSha256': serializer.toJson<String>(checksumSha256),
+      'assetKind': serializer.toJson<String>(assetKind),
+      'mimeType': serializer.toJson<String>(mimeType),
+      'sizeBytes': serializer.toJson<int>(sizeBytes),
+      'durationMs': serializer.toJson<int?>(durationMs),
+      'deliveryKey': serializer.toJson<String>(deliveryKey),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  AssetCatalogData copyWith({
+    String? assetId,
+    String? checksumSha256,
+    String? assetKind,
+    String? mimeType,
+    int? sizeBytes,
+    Value<int?> durationMs = const Value.absent(),
+    String? deliveryKey,
+    DateTime? createdAt,
+  }) => AssetCatalogData(
+    assetId: assetId ?? this.assetId,
+    checksumSha256: checksumSha256 ?? this.checksumSha256,
+    assetKind: assetKind ?? this.assetKind,
+    mimeType: mimeType ?? this.mimeType,
+    sizeBytes: sizeBytes ?? this.sizeBytes,
+    durationMs: durationMs.present ? durationMs.value : this.durationMs,
+    deliveryKey: deliveryKey ?? this.deliveryKey,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  AssetCatalogData copyWithCompanion(AssetCatalogCompanion data) {
+    return AssetCatalogData(
+      assetId: data.assetId.present ? data.assetId.value : this.assetId,
+      checksumSha256: data.checksumSha256.present
+          ? data.checksumSha256.value
+          : this.checksumSha256,
+      assetKind: data.assetKind.present ? data.assetKind.value : this.assetKind,
+      mimeType: data.mimeType.present ? data.mimeType.value : this.mimeType,
+      sizeBytes: data.sizeBytes.present ? data.sizeBytes.value : this.sizeBytes,
+      durationMs: data.durationMs.present
+          ? data.durationMs.value
+          : this.durationMs,
+      deliveryKey: data.deliveryKey.present
+          ? data.deliveryKey.value
+          : this.deliveryKey,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetCatalogData(')
+          ..write('assetId: $assetId, ')
+          ..write('checksumSha256: $checksumSha256, ')
+          ..write('assetKind: $assetKind, ')
+          ..write('mimeType: $mimeType, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('deliveryKey: $deliveryKey, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    assetId,
+    checksumSha256,
+    assetKind,
+    mimeType,
+    sizeBytes,
+    durationMs,
+    deliveryKey,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is AssetCatalogData &&
+          other.assetId == this.assetId &&
+          other.checksumSha256 == this.checksumSha256 &&
+          other.assetKind == this.assetKind &&
+          other.mimeType == this.mimeType &&
+          other.sizeBytes == this.sizeBytes &&
+          other.durationMs == this.durationMs &&
+          other.deliveryKey == this.deliveryKey &&
+          other.createdAt == this.createdAt);
+}
+
+class AssetCatalogCompanion extends UpdateCompanion<AssetCatalogData> {
+  final Value<String> assetId;
+  final Value<String> checksumSha256;
+  final Value<String> assetKind;
+  final Value<String> mimeType;
+  final Value<int> sizeBytes;
+  final Value<int?> durationMs;
+  final Value<String> deliveryKey;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const AssetCatalogCompanion({
+    this.assetId = const Value.absent(),
+    this.checksumSha256 = const Value.absent(),
+    this.assetKind = const Value.absent(),
+    this.mimeType = const Value.absent(),
+    this.sizeBytes = const Value.absent(),
+    this.durationMs = const Value.absent(),
+    this.deliveryKey = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  AssetCatalogCompanion.insert({
+    required String assetId,
+    required String checksumSha256,
+    required String assetKind,
+    required String mimeType,
+    required int sizeBytes,
+    this.durationMs = const Value.absent(),
+    required String deliveryKey,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : assetId = Value(assetId),
+       checksumSha256 = Value(checksumSha256),
+       assetKind = Value(assetKind),
+       mimeType = Value(mimeType),
+       sizeBytes = Value(sizeBytes),
+       deliveryKey = Value(deliveryKey),
+       createdAt = Value(createdAt);
+  static Insertable<AssetCatalogData> custom({
+    Expression<String>? assetId,
+    Expression<String>? checksumSha256,
+    Expression<String>? assetKind,
+    Expression<String>? mimeType,
+    Expression<int>? sizeBytes,
+    Expression<int>? durationMs,
+    Expression<String>? deliveryKey,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (assetId != null) 'asset_id': assetId,
+      if (checksumSha256 != null) 'checksum_sha256': checksumSha256,
+      if (assetKind != null) 'asset_kind': assetKind,
+      if (mimeType != null) 'mime_type': mimeType,
+      if (sizeBytes != null) 'size_bytes': sizeBytes,
+      if (durationMs != null) 'duration_ms': durationMs,
+      if (deliveryKey != null) 'delivery_key': deliveryKey,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  AssetCatalogCompanion copyWith({
+    Value<String>? assetId,
+    Value<String>? checksumSha256,
+    Value<String>? assetKind,
+    Value<String>? mimeType,
+    Value<int>? sizeBytes,
+    Value<int?>? durationMs,
+    Value<String>? deliveryKey,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return AssetCatalogCompanion(
+      assetId: assetId ?? this.assetId,
+      checksumSha256: checksumSha256 ?? this.checksumSha256,
+      assetKind: assetKind ?? this.assetKind,
+      mimeType: mimeType ?? this.mimeType,
+      sizeBytes: sizeBytes ?? this.sizeBytes,
+      durationMs: durationMs ?? this.durationMs,
+      deliveryKey: deliveryKey ?? this.deliveryKey,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (assetId.present) {
+      map['asset_id'] = Variable<String>(assetId.value);
+    }
+    if (checksumSha256.present) {
+      map['checksum_sha256'] = Variable<String>(checksumSha256.value);
+    }
+    if (assetKind.present) {
+      map['asset_kind'] = Variable<String>(assetKind.value);
+    }
+    if (mimeType.present) {
+      map['mime_type'] = Variable<String>(mimeType.value);
+    }
+    if (sizeBytes.present) {
+      map['size_bytes'] = Variable<int>(sizeBytes.value);
+    }
+    if (durationMs.present) {
+      map['duration_ms'] = Variable<int>(durationMs.value);
+    }
+    if (deliveryKey.present) {
+      map['delivery_key'] = Variable<String>(deliveryKey.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('AssetCatalogCompanion(')
+          ..write('assetId: $assetId, ')
+          ..write('checksumSha256: $checksumSha256, ')
+          ..write('assetKind: $assetKind, ')
+          ..write('mimeType: $mimeType, ')
+          ..write('sizeBytes: $sizeBytes, ')
+          ..write('durationMs: $durationMs, ')
+          ..write('deliveryKey: $deliveryKey, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ContentAssetRefsTable extends ContentAssetRefs
+    with TableInfo<$ContentAssetRefsTable, ContentAssetRef> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ContentAssetRefsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _contentCodeMeta = const VerificationMeta(
+    'contentCode',
+  );
+  @override
+  late final GeneratedColumn<String> contentCode = GeneratedColumn<String>(
+    'content_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentTypeMeta = const VerificationMeta(
+    'contentType',
+  );
+  @override
+  late final GeneratedColumn<String> contentType = GeneratedColumn<String>(
+    'content_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentRevisionMeta = const VerificationMeta(
+    'contentRevision',
+  );
+  @override
+  late final GeneratedColumn<int> contentRevision = GeneratedColumn<int>(
+    'content_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _assetIdMeta = const VerificationMeta(
+    'assetId',
+  );
+  @override
+  late final GeneratedColumn<String> assetId = GeneratedColumn<String>(
+    'asset_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES asset_catalog (asset_id) ON DELETE RESTRICT',
+    ),
+  );
+  static const VerificationMeta _assetRoleMeta = const VerificationMeta(
+    'assetRole',
+  );
+  @override
+  late final GeneratedColumn<String> assetRole = GeneratedColumn<String>(
+    'asset_role',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _requiredOfflineMeta = const VerificationMeta(
+    'requiredOffline',
+  );
+  @override
+  late final GeneratedColumn<bool> requiredOffline = GeneratedColumn<bool>(
+    'required_offline',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("required_offline" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    contentCode,
+    contentType,
+    contentRevision,
+    assetId,
+    assetRole,
+    requiredOffline,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'content_asset_refs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ContentAssetRef> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('content_code')) {
+      context.handle(
+        _contentCodeMeta,
+        contentCode.isAcceptableOrUnknown(
+          data['content_code']!,
+          _contentCodeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentCodeMeta);
+    }
+    if (data.containsKey('content_type')) {
+      context.handle(
+        _contentTypeMeta,
+        contentType.isAcceptableOrUnknown(
+          data['content_type']!,
+          _contentTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentTypeMeta);
+    }
+    if (data.containsKey('content_revision')) {
+      context.handle(
+        _contentRevisionMeta,
+        contentRevision.isAcceptableOrUnknown(
+          data['content_revision']!,
+          _contentRevisionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentRevisionMeta);
+    }
+    if (data.containsKey('asset_id')) {
+      context.handle(
+        _assetIdMeta,
+        assetId.isAcceptableOrUnknown(data['asset_id']!, _assetIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_assetIdMeta);
+    }
+    if (data.containsKey('asset_role')) {
+      context.handle(
+        _assetRoleMeta,
+        assetRole.isAcceptableOrUnknown(data['asset_role']!, _assetRoleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_assetRoleMeta);
+    }
+    if (data.containsKey('required_offline')) {
+      context.handle(
+        _requiredOfflineMeta,
+        requiredOffline.isAcceptableOrUnknown(
+          data['required_offline']!,
+          _requiredOfflineMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {
+    contentCode,
+    contentType,
+    contentRevision,
+    assetId,
+    assetRole,
+  };
+  @override
+  ContentAssetRef map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ContentAssetRef(
+      contentCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_code'],
+      )!,
+      contentType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_type'],
+      )!,
+      contentRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}content_revision'],
+      )!,
+      assetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}asset_id'],
+      )!,
+      assetRole: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}asset_role'],
+      )!,
+      requiredOffline: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}required_offline'],
+      )!,
+    );
+  }
+
+  @override
+  $ContentAssetRefsTable createAlias(String alias) {
+    return $ContentAssetRefsTable(attachedDatabase, alias);
+  }
+}
+
+class ContentAssetRef extends DataClass implements Insertable<ContentAssetRef> {
+  final String contentCode;
+  final String contentType;
+  final int contentRevision;
+  final String assetId;
+  final String assetRole;
+  final bool requiredOffline;
+  const ContentAssetRef({
+    required this.contentCode,
+    required this.contentType,
+    required this.contentRevision,
+    required this.assetId,
+    required this.assetRole,
+    required this.requiredOffline,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['content_code'] = Variable<String>(contentCode);
+    map['content_type'] = Variable<String>(contentType);
+    map['content_revision'] = Variable<int>(contentRevision);
+    map['asset_id'] = Variable<String>(assetId);
+    map['asset_role'] = Variable<String>(assetRole);
+    map['required_offline'] = Variable<bool>(requiredOffline);
+    return map;
+  }
+
+  ContentAssetRefsCompanion toCompanion(bool nullToAbsent) {
+    return ContentAssetRefsCompanion(
+      contentCode: Value(contentCode),
+      contentType: Value(contentType),
+      contentRevision: Value(contentRevision),
+      assetId: Value(assetId),
+      assetRole: Value(assetRole),
+      requiredOffline: Value(requiredOffline),
+    );
+  }
+
+  factory ContentAssetRef.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ContentAssetRef(
+      contentCode: serializer.fromJson<String>(json['contentCode']),
+      contentType: serializer.fromJson<String>(json['contentType']),
+      contentRevision: serializer.fromJson<int>(json['contentRevision']),
+      assetId: serializer.fromJson<String>(json['assetId']),
+      assetRole: serializer.fromJson<String>(json['assetRole']),
+      requiredOffline: serializer.fromJson<bool>(json['requiredOffline']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'contentCode': serializer.toJson<String>(contentCode),
+      'contentType': serializer.toJson<String>(contentType),
+      'contentRevision': serializer.toJson<int>(contentRevision),
+      'assetId': serializer.toJson<String>(assetId),
+      'assetRole': serializer.toJson<String>(assetRole),
+      'requiredOffline': serializer.toJson<bool>(requiredOffline),
+    };
+  }
+
+  ContentAssetRef copyWith({
+    String? contentCode,
+    String? contentType,
+    int? contentRevision,
+    String? assetId,
+    String? assetRole,
+    bool? requiredOffline,
+  }) => ContentAssetRef(
+    contentCode: contentCode ?? this.contentCode,
+    contentType: contentType ?? this.contentType,
+    contentRevision: contentRevision ?? this.contentRevision,
+    assetId: assetId ?? this.assetId,
+    assetRole: assetRole ?? this.assetRole,
+    requiredOffline: requiredOffline ?? this.requiredOffline,
+  );
+  ContentAssetRef copyWithCompanion(ContentAssetRefsCompanion data) {
+    return ContentAssetRef(
+      contentCode: data.contentCode.present
+          ? data.contentCode.value
+          : this.contentCode,
+      contentType: data.contentType.present
+          ? data.contentType.value
+          : this.contentType,
+      contentRevision: data.contentRevision.present
+          ? data.contentRevision.value
+          : this.contentRevision,
+      assetId: data.assetId.present ? data.assetId.value : this.assetId,
+      assetRole: data.assetRole.present ? data.assetRole.value : this.assetRole,
+      requiredOffline: data.requiredOffline.present
+          ? data.requiredOffline.value
+          : this.requiredOffline,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ContentAssetRef(')
+          ..write('contentCode: $contentCode, ')
+          ..write('contentType: $contentType, ')
+          ..write('contentRevision: $contentRevision, ')
+          ..write('assetId: $assetId, ')
+          ..write('assetRole: $assetRole, ')
+          ..write('requiredOffline: $requiredOffline')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    contentCode,
+    contentType,
+    contentRevision,
+    assetId,
+    assetRole,
+    requiredOffline,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ContentAssetRef &&
+          other.contentCode == this.contentCode &&
+          other.contentType == this.contentType &&
+          other.contentRevision == this.contentRevision &&
+          other.assetId == this.assetId &&
+          other.assetRole == this.assetRole &&
+          other.requiredOffline == this.requiredOffline);
+}
+
+class ContentAssetRefsCompanion extends UpdateCompanion<ContentAssetRef> {
+  final Value<String> contentCode;
+  final Value<String> contentType;
+  final Value<int> contentRevision;
+  final Value<String> assetId;
+  final Value<String> assetRole;
+  final Value<bool> requiredOffline;
+  final Value<int> rowid;
+  const ContentAssetRefsCompanion({
+    this.contentCode = const Value.absent(),
+    this.contentType = const Value.absent(),
+    this.contentRevision = const Value.absent(),
+    this.assetId = const Value.absent(),
+    this.assetRole = const Value.absent(),
+    this.requiredOffline = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ContentAssetRefsCompanion.insert({
+    required String contentCode,
+    required String contentType,
+    required int contentRevision,
+    required String assetId,
+    required String assetRole,
+    this.requiredOffline = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : contentCode = Value(contentCode),
+       contentType = Value(contentType),
+       contentRevision = Value(contentRevision),
+       assetId = Value(assetId),
+       assetRole = Value(assetRole);
+  static Insertable<ContentAssetRef> custom({
+    Expression<String>? contentCode,
+    Expression<String>? contentType,
+    Expression<int>? contentRevision,
+    Expression<String>? assetId,
+    Expression<String>? assetRole,
+    Expression<bool>? requiredOffline,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (contentCode != null) 'content_code': contentCode,
+      if (contentType != null) 'content_type': contentType,
+      if (contentRevision != null) 'content_revision': contentRevision,
+      if (assetId != null) 'asset_id': assetId,
+      if (assetRole != null) 'asset_role': assetRole,
+      if (requiredOffline != null) 'required_offline': requiredOffline,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ContentAssetRefsCompanion copyWith({
+    Value<String>? contentCode,
+    Value<String>? contentType,
+    Value<int>? contentRevision,
+    Value<String>? assetId,
+    Value<String>? assetRole,
+    Value<bool>? requiredOffline,
+    Value<int>? rowid,
+  }) {
+    return ContentAssetRefsCompanion(
+      contentCode: contentCode ?? this.contentCode,
+      contentType: contentType ?? this.contentType,
+      contentRevision: contentRevision ?? this.contentRevision,
+      assetId: assetId ?? this.assetId,
+      assetRole: assetRole ?? this.assetRole,
+      requiredOffline: requiredOffline ?? this.requiredOffline,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (contentCode.present) {
+      map['content_code'] = Variable<String>(contentCode.value);
+    }
+    if (contentType.present) {
+      map['content_type'] = Variable<String>(contentType.value);
+    }
+    if (contentRevision.present) {
+      map['content_revision'] = Variable<int>(contentRevision.value);
+    }
+    if (assetId.present) {
+      map['asset_id'] = Variable<String>(assetId.value);
+    }
+    if (assetRole.present) {
+      map['asset_role'] = Variable<String>(assetRole.value);
+    }
+    if (requiredOffline.present) {
+      map['required_offline'] = Variable<bool>(requiredOffline.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ContentAssetRefsCompanion(')
+          ..write('contentCode: $contentCode, ')
+          ..write('contentType: $contentType, ')
+          ..write('contentRevision: $contentRevision, ')
+          ..write('assetId: $assetId, ')
+          ..write('assetRole: $assetRole, ')
+          ..write('requiredOffline: $requiredOffline, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PackAssetRefsTable extends PackAssetRefs
+    with TableInfo<$PackAssetRefsTable, PackAssetRef> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PackAssetRefsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _packCodeMeta = const VerificationMeta(
+    'packCode',
+  );
+  @override
+  late final GeneratedColumn<String> packCode = GeneratedColumn<String>(
+    'pack_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _variantKeyMeta = const VerificationMeta(
+    'variantKey',
+  );
+  @override
+  late final GeneratedColumn<String> variantKey = GeneratedColumn<String>(
+    'variant_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _packRevisionMeta = const VerificationMeta(
+    'packRevision',
+  );
+  @override
+  late final GeneratedColumn<int> packRevision = GeneratedColumn<int>(
+    'pack_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _assetIdMeta = const VerificationMeta(
+    'assetId',
+  );
+  @override
+  late final GeneratedColumn<String> assetId = GeneratedColumn<String>(
+    'asset_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES asset_catalog (asset_id) ON DELETE RESTRICT',
+    ),
+  );
+  static const VerificationMeta _requiredOfflineMeta = const VerificationMeta(
+    'requiredOffline',
+  );
+  @override
+  late final GeneratedColumn<bool> requiredOffline = GeneratedColumn<bool>(
+    'required_offline',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("required_offline" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    packCode,
+    variantKey,
+    packRevision,
+    assetId,
+    requiredOffline,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pack_asset_refs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PackAssetRef> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('pack_code')) {
+      context.handle(
+        _packCodeMeta,
+        packCode.isAcceptableOrUnknown(data['pack_code']!, _packCodeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_packCodeMeta);
+    }
+    if (data.containsKey('variant_key')) {
+      context.handle(
+        _variantKeyMeta,
+        variantKey.isAcceptableOrUnknown(data['variant_key']!, _variantKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_variantKeyMeta);
+    }
+    if (data.containsKey('pack_revision')) {
+      context.handle(
+        _packRevisionMeta,
+        packRevision.isAcceptableOrUnknown(
+          data['pack_revision']!,
+          _packRevisionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_packRevisionMeta);
+    }
+    if (data.containsKey('asset_id')) {
+      context.handle(
+        _assetIdMeta,
+        assetId.isAcceptableOrUnknown(data['asset_id']!, _assetIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_assetIdMeta);
+    }
+    if (data.containsKey('required_offline')) {
+      context.handle(
+        _requiredOfflineMeta,
+        requiredOffline.isAcceptableOrUnknown(
+          data['required_offline']!,
+          _requiredOfflineMeta,
+        ),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {
+    packCode,
+    variantKey,
+    packRevision,
+    assetId,
+  };
+  @override
+  PackAssetRef map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PackAssetRef(
+      packCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pack_code'],
+      )!,
+      variantKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}variant_key'],
+      )!,
+      packRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pack_revision'],
+      )!,
+      assetId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}asset_id'],
+      )!,
+      requiredOffline: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}required_offline'],
+      )!,
+    );
+  }
+
+  @override
+  $PackAssetRefsTable createAlias(String alias) {
+    return $PackAssetRefsTable(attachedDatabase, alias);
+  }
+}
+
+class PackAssetRef extends DataClass implements Insertable<PackAssetRef> {
+  final String packCode;
+  final String variantKey;
+  final int packRevision;
+  final String assetId;
+  final bool requiredOffline;
+  const PackAssetRef({
+    required this.packCode,
+    required this.variantKey,
+    required this.packRevision,
+    required this.assetId,
+    required this.requiredOffline,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['pack_code'] = Variable<String>(packCode);
+    map['variant_key'] = Variable<String>(variantKey);
+    map['pack_revision'] = Variable<int>(packRevision);
+    map['asset_id'] = Variable<String>(assetId);
+    map['required_offline'] = Variable<bool>(requiredOffline);
+    return map;
+  }
+
+  PackAssetRefsCompanion toCompanion(bool nullToAbsent) {
+    return PackAssetRefsCompanion(
+      packCode: Value(packCode),
+      variantKey: Value(variantKey),
+      packRevision: Value(packRevision),
+      assetId: Value(assetId),
+      requiredOffline: Value(requiredOffline),
+    );
+  }
+
+  factory PackAssetRef.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PackAssetRef(
+      packCode: serializer.fromJson<String>(json['packCode']),
+      variantKey: serializer.fromJson<String>(json['variantKey']),
+      packRevision: serializer.fromJson<int>(json['packRevision']),
+      assetId: serializer.fromJson<String>(json['assetId']),
+      requiredOffline: serializer.fromJson<bool>(json['requiredOffline']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'packCode': serializer.toJson<String>(packCode),
+      'variantKey': serializer.toJson<String>(variantKey),
+      'packRevision': serializer.toJson<int>(packRevision),
+      'assetId': serializer.toJson<String>(assetId),
+      'requiredOffline': serializer.toJson<bool>(requiredOffline),
+    };
+  }
+
+  PackAssetRef copyWith({
+    String? packCode,
+    String? variantKey,
+    int? packRevision,
+    String? assetId,
+    bool? requiredOffline,
+  }) => PackAssetRef(
+    packCode: packCode ?? this.packCode,
+    variantKey: variantKey ?? this.variantKey,
+    packRevision: packRevision ?? this.packRevision,
+    assetId: assetId ?? this.assetId,
+    requiredOffline: requiredOffline ?? this.requiredOffline,
+  );
+  PackAssetRef copyWithCompanion(PackAssetRefsCompanion data) {
+    return PackAssetRef(
+      packCode: data.packCode.present ? data.packCode.value : this.packCode,
+      variantKey: data.variantKey.present
+          ? data.variantKey.value
+          : this.variantKey,
+      packRevision: data.packRevision.present
+          ? data.packRevision.value
+          : this.packRevision,
+      assetId: data.assetId.present ? data.assetId.value : this.assetId,
+      requiredOffline: data.requiredOffline.present
+          ? data.requiredOffline.value
+          : this.requiredOffline,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PackAssetRef(')
+          ..write('packCode: $packCode, ')
+          ..write('variantKey: $variantKey, ')
+          ..write('packRevision: $packRevision, ')
+          ..write('assetId: $assetId, ')
+          ..write('requiredOffline: $requiredOffline')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(packCode, variantKey, packRevision, assetId, requiredOffline);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PackAssetRef &&
+          other.packCode == this.packCode &&
+          other.variantKey == this.variantKey &&
+          other.packRevision == this.packRevision &&
+          other.assetId == this.assetId &&
+          other.requiredOffline == this.requiredOffline);
+}
+
+class PackAssetRefsCompanion extends UpdateCompanion<PackAssetRef> {
+  final Value<String> packCode;
+  final Value<String> variantKey;
+  final Value<int> packRevision;
+  final Value<String> assetId;
+  final Value<bool> requiredOffline;
+  final Value<int> rowid;
+  const PackAssetRefsCompanion({
+    this.packCode = const Value.absent(),
+    this.variantKey = const Value.absent(),
+    this.packRevision = const Value.absent(),
+    this.assetId = const Value.absent(),
+    this.requiredOffline = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PackAssetRefsCompanion.insert({
+    required String packCode,
+    required String variantKey,
+    required int packRevision,
+    required String assetId,
+    this.requiredOffline = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : packCode = Value(packCode),
+       variantKey = Value(variantKey),
+       packRevision = Value(packRevision),
+       assetId = Value(assetId);
+  static Insertable<PackAssetRef> custom({
+    Expression<String>? packCode,
+    Expression<String>? variantKey,
+    Expression<int>? packRevision,
+    Expression<String>? assetId,
+    Expression<bool>? requiredOffline,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (packCode != null) 'pack_code': packCode,
+      if (variantKey != null) 'variant_key': variantKey,
+      if (packRevision != null) 'pack_revision': packRevision,
+      if (assetId != null) 'asset_id': assetId,
+      if (requiredOffline != null) 'required_offline': requiredOffline,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PackAssetRefsCompanion copyWith({
+    Value<String>? packCode,
+    Value<String>? variantKey,
+    Value<int>? packRevision,
+    Value<String>? assetId,
+    Value<bool>? requiredOffline,
+    Value<int>? rowid,
+  }) {
+    return PackAssetRefsCompanion(
+      packCode: packCode ?? this.packCode,
+      variantKey: variantKey ?? this.variantKey,
+      packRevision: packRevision ?? this.packRevision,
+      assetId: assetId ?? this.assetId,
+      requiredOffline: requiredOffline ?? this.requiredOffline,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (packCode.present) {
+      map['pack_code'] = Variable<String>(packCode.value);
+    }
+    if (variantKey.present) {
+      map['variant_key'] = Variable<String>(variantKey.value);
+    }
+    if (packRevision.present) {
+      map['pack_revision'] = Variable<int>(packRevision.value);
+    }
+    if (assetId.present) {
+      map['asset_id'] = Variable<String>(assetId.value);
+    }
+    if (requiredOffline.present) {
+      map['required_offline'] = Variable<bool>(requiredOffline.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PackAssetRefsCompanion(')
+          ..write('packCode: $packCode, ')
+          ..write('variantKey: $variantKey, ')
+          ..write('packRevision: $packRevision, ')
+          ..write('assetId: $assetId, ')
+          ..write('requiredOffline: $requiredOffline, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $FavoritesTable extends Favorites
     with TableInfo<$FavoritesTable, Favorite> {
   @override
@@ -6016,6 +7837,14 @@ abstract class _$CareerSpeakDatabase extends GeneratedDatabase {
       $ContentPackRevisionsTable(this);
   late final $LocalContentRecordsTable localContentRecords =
       $LocalContentRecordsTable(this);
+  late final $PackContentRefsTable packContentRefs = $PackContentRefsTable(
+    this,
+  );
+  late final $AssetCatalogTable assetCatalog = $AssetCatalogTable(this);
+  late final $ContentAssetRefsTable contentAssetRefs = $ContentAssetRefsTable(
+    this,
+  );
+  late final $PackAssetRefsTable packAssetRefs = $PackAssetRefsTable(this);
   late final $FavoritesTable favorites = $FavoritesTable(this);
   late final $ContentLearningStatesTable contentLearningStates =
       $ContentLearningStatesTable(this);
@@ -6032,6 +7861,10 @@ abstract class _$CareerSpeakDatabase extends GeneratedDatabase {
     syncTombstones,
     contentPackRevisions,
     localContentRecords,
+    packContentRefs,
+    assetCatalog,
+    contentAssetRefs,
+    packAssetRefs,
     favorites,
     contentLearningStates,
   ];
@@ -9036,6 +10869,1421 @@ typedef $$LocalContentRecordsTableProcessedTableManager =
       LocalContentRecord,
       PrefetchHooks Function()
     >;
+typedef $$PackContentRefsTableCreateCompanionBuilder =
+    PackContentRefsCompanion Function({
+      required String packCode,
+      required String variantKey,
+      required int packRevision,
+      required String contentCode,
+      required String contentType,
+      required int contentRevision,
+      Value<int> rowid,
+    });
+typedef $$PackContentRefsTableUpdateCompanionBuilder =
+    PackContentRefsCompanion Function({
+      Value<String> packCode,
+      Value<String> variantKey,
+      Value<int> packRevision,
+      Value<String> contentCode,
+      Value<String> contentType,
+      Value<int> contentRevision,
+      Value<int> rowid,
+    });
+
+class $$PackContentRefsTableFilterComposer
+    extends Composer<_$CareerSpeakDatabase, $PackContentRefsTable> {
+  $$PackContentRefsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get packCode => $composableBuilder(
+    column: $table.packCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get variantKey => $composableBuilder(
+    column: $table.variantKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get packRevision => $composableBuilder(
+    column: $table.packRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get contentRevision => $composableBuilder(
+    column: $table.contentRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PackContentRefsTableOrderingComposer
+    extends Composer<_$CareerSpeakDatabase, $PackContentRefsTable> {
+  $$PackContentRefsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get packCode => $composableBuilder(
+    column: $table.packCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get variantKey => $composableBuilder(
+    column: $table.variantKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get packRevision => $composableBuilder(
+    column: $table.packRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get contentRevision => $composableBuilder(
+    column: $table.contentRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PackContentRefsTableAnnotationComposer
+    extends Composer<_$CareerSpeakDatabase, $PackContentRefsTable> {
+  $$PackContentRefsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get packCode =>
+      $composableBuilder(column: $table.packCode, builder: (column) => column);
+
+  GeneratedColumn<String> get variantKey => $composableBuilder(
+    column: $table.variantKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get packRevision => $composableBuilder(
+    column: $table.packRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get contentRevision => $composableBuilder(
+    column: $table.contentRevision,
+    builder: (column) => column,
+  );
+}
+
+class $$PackContentRefsTableTableManager
+    extends
+        RootTableManager<
+          _$CareerSpeakDatabase,
+          $PackContentRefsTable,
+          PackContentRef,
+          $$PackContentRefsTableFilterComposer,
+          $$PackContentRefsTableOrderingComposer,
+          $$PackContentRefsTableAnnotationComposer,
+          $$PackContentRefsTableCreateCompanionBuilder,
+          $$PackContentRefsTableUpdateCompanionBuilder,
+          (
+            PackContentRef,
+            BaseReferences<
+              _$CareerSpeakDatabase,
+              $PackContentRefsTable,
+              PackContentRef
+            >,
+          ),
+          PackContentRef,
+          PrefetchHooks Function()
+        > {
+  $$PackContentRefsTableTableManager(
+    _$CareerSpeakDatabase db,
+    $PackContentRefsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PackContentRefsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PackContentRefsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PackContentRefsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> packCode = const Value.absent(),
+                Value<String> variantKey = const Value.absent(),
+                Value<int> packRevision = const Value.absent(),
+                Value<String> contentCode = const Value.absent(),
+                Value<String> contentType = const Value.absent(),
+                Value<int> contentRevision = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PackContentRefsCompanion(
+                packCode: packCode,
+                variantKey: variantKey,
+                packRevision: packRevision,
+                contentCode: contentCode,
+                contentType: contentType,
+                contentRevision: contentRevision,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String packCode,
+                required String variantKey,
+                required int packRevision,
+                required String contentCode,
+                required String contentType,
+                required int contentRevision,
+                Value<int> rowid = const Value.absent(),
+              }) => PackContentRefsCompanion.insert(
+                packCode: packCode,
+                variantKey: variantKey,
+                packRevision: packRevision,
+                contentCode: contentCode,
+                contentType: contentType,
+                contentRevision: contentRevision,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PackContentRefsTable, PackContentRef>(table),
+                  BaseReferences<
+                    _$CareerSpeakDatabase,
+                    $PackContentRefsTable,
+                    PackContentRef
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PackContentRefsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$CareerSpeakDatabase,
+      $PackContentRefsTable,
+      PackContentRef,
+      $$PackContentRefsTableFilterComposer,
+      $$PackContentRefsTableOrderingComposer,
+      $$PackContentRefsTableAnnotationComposer,
+      $$PackContentRefsTableCreateCompanionBuilder,
+      $$PackContentRefsTableUpdateCompanionBuilder,
+      (
+        PackContentRef,
+        BaseReferences<
+          _$CareerSpeakDatabase,
+          $PackContentRefsTable,
+          PackContentRef
+        >,
+      ),
+      PackContentRef,
+      PrefetchHooks Function()
+    >;
+typedef $$AssetCatalogTableCreateCompanionBuilder =
+    AssetCatalogCompanion Function({
+      required String assetId,
+      required String checksumSha256,
+      required String assetKind,
+      required String mimeType,
+      required int sizeBytes,
+      Value<int?> durationMs,
+      required String deliveryKey,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$AssetCatalogTableUpdateCompanionBuilder =
+    AssetCatalogCompanion Function({
+      Value<String> assetId,
+      Value<String> checksumSha256,
+      Value<String> assetKind,
+      Value<String> mimeType,
+      Value<int> sizeBytes,
+      Value<int?> durationMs,
+      Value<String> deliveryKey,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+final class $$AssetCatalogTableReferences
+    extends
+        BaseReferences<
+          _$CareerSpeakDatabase,
+          $AssetCatalogTable,
+          AssetCatalogData
+        > {
+  $$AssetCatalogTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static MultiTypedResultKey<$ContentAssetRefsTable, List<ContentAssetRef>>
+  _contentAssetRefsRefsTable(_$CareerSpeakDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.contentAssetRefs,
+        aliasName: 'asset_catalog__asset_id__content_asset_refs__asset_id',
+      );
+
+  $$ContentAssetRefsTableProcessedTableManager get contentAssetRefsRefs {
+    final manager =
+        $$ContentAssetRefsTableTableManager($_db, $_db.contentAssetRefs).filter(
+          (f) => f.assetId.assetId.sqlEquals($_itemColumn<String>('asset_id')!),
+        );
+
+    final cache = $_typedResult.readTableOrNull(
+      _contentAssetRefsRefsTable($_db),
+    );
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$PackAssetRefsTable, List<PackAssetRef>>
+  _packAssetRefsRefsTable(_$CareerSpeakDatabase db) =>
+      MultiTypedResultKey.fromTable(
+        db.packAssetRefs,
+        aliasName: 'asset_catalog__asset_id__pack_asset_refs__asset_id',
+      );
+
+  $$PackAssetRefsTableProcessedTableManager get packAssetRefsRefs {
+    final manager = $$PackAssetRefsTableTableManager($_db, $_db.packAssetRefs)
+        .filter(
+          (f) => f.assetId.assetId.sqlEquals($_itemColumn<String>('asset_id')!),
+        );
+
+    final cache = $_typedResult.readTableOrNull(_packAssetRefsRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+}
+
+class $$AssetCatalogTableFilterComposer
+    extends Composer<_$CareerSpeakDatabase, $AssetCatalogTable> {
+  $$AssetCatalogTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get assetId => $composableBuilder(
+    column: $table.assetId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get checksumSha256 => $composableBuilder(
+    column: $table.checksumSha256,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get assetKind => $composableBuilder(
+    column: $table.assetKind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get mimeType => $composableBuilder(
+    column: $table.mimeType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get deliveryKey => $composableBuilder(
+    column: $table.deliveryKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  Expression<bool> contentAssetRefsRefs(
+    Expression<bool> Function($$ContentAssetRefsTableFilterComposer f) f,
+  ) {
+    final $$ContentAssetRefsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.contentAssetRefs,
+      getReferencedColumn: (t) => t.assetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ContentAssetRefsTableFilterComposer(
+            $db: $db,
+            $table: $db.contentAssetRefs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> packAssetRefsRefs(
+    Expression<bool> Function($$PackAssetRefsTableFilterComposer f) f,
+  ) {
+    final $$PackAssetRefsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.packAssetRefs,
+      getReferencedColumn: (t) => t.assetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PackAssetRefsTableFilterComposer(
+            $db: $db,
+            $table: $db.packAssetRefs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$AssetCatalogTableOrderingComposer
+    extends Composer<_$CareerSpeakDatabase, $AssetCatalogTable> {
+  $$AssetCatalogTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get assetId => $composableBuilder(
+    column: $table.assetId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get checksumSha256 => $composableBuilder(
+    column: $table.checksumSha256,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get assetKind => $composableBuilder(
+    column: $table.assetKind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get mimeType => $composableBuilder(
+    column: $table.mimeType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sizeBytes => $composableBuilder(
+    column: $table.sizeBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get deliveryKey => $composableBuilder(
+    column: $table.deliveryKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$AssetCatalogTableAnnotationComposer
+    extends Composer<_$CareerSpeakDatabase, $AssetCatalogTable> {
+  $$AssetCatalogTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get assetId =>
+      $composableBuilder(column: $table.assetId, builder: (column) => column);
+
+  GeneratedColumn<String> get checksumSha256 => $composableBuilder(
+    column: $table.checksumSha256,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get assetKind =>
+      $composableBuilder(column: $table.assetKind, builder: (column) => column);
+
+  GeneratedColumn<String> get mimeType =>
+      $composableBuilder(column: $table.mimeType, builder: (column) => column);
+
+  GeneratedColumn<int> get sizeBytes =>
+      $composableBuilder(column: $table.sizeBytes, builder: (column) => column);
+
+  GeneratedColumn<int> get durationMs => $composableBuilder(
+    column: $table.durationMs,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get deliveryKey => $composableBuilder(
+    column: $table.deliveryKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  Expression<T> contentAssetRefsRefs<T extends Object>(
+    Expression<T> Function($$ContentAssetRefsTableAnnotationComposer a) f,
+  ) {
+    final $$ContentAssetRefsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.contentAssetRefs,
+      getReferencedColumn: (t) => t.assetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ContentAssetRefsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.contentAssetRefs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<T> packAssetRefsRefs<T extends Object>(
+    Expression<T> Function($$PackAssetRefsTableAnnotationComposer a) f,
+  ) {
+    final $$PackAssetRefsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.packAssetRefs,
+      getReferencedColumn: (t) => t.assetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$PackAssetRefsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.packAssetRefs,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+}
+
+class $$AssetCatalogTableTableManager
+    extends
+        RootTableManager<
+          _$CareerSpeakDatabase,
+          $AssetCatalogTable,
+          AssetCatalogData,
+          $$AssetCatalogTableFilterComposer,
+          $$AssetCatalogTableOrderingComposer,
+          $$AssetCatalogTableAnnotationComposer,
+          $$AssetCatalogTableCreateCompanionBuilder,
+          $$AssetCatalogTableUpdateCompanionBuilder,
+          (AssetCatalogData, $$AssetCatalogTableReferences),
+          AssetCatalogData,
+          PrefetchHooks Function({
+            bool contentAssetRefsRefs,
+            bool packAssetRefsRefs,
+          })
+        > {
+  $$AssetCatalogTableTableManager(
+    _$CareerSpeakDatabase db,
+    $AssetCatalogTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$AssetCatalogTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$AssetCatalogTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$AssetCatalogTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> assetId = const Value.absent(),
+                Value<String> checksumSha256 = const Value.absent(),
+                Value<String> assetKind = const Value.absent(),
+                Value<String> mimeType = const Value.absent(),
+                Value<int> sizeBytes = const Value.absent(),
+                Value<int?> durationMs = const Value.absent(),
+                Value<String> deliveryKey = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => AssetCatalogCompanion(
+                assetId: assetId,
+                checksumSha256: checksumSha256,
+                assetKind: assetKind,
+                mimeType: mimeType,
+                sizeBytes: sizeBytes,
+                durationMs: durationMs,
+                deliveryKey: deliveryKey,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String assetId,
+                required String checksumSha256,
+                required String assetKind,
+                required String mimeType,
+                required int sizeBytes,
+                Value<int?> durationMs = const Value.absent(),
+                required String deliveryKey,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => AssetCatalogCompanion.insert(
+                assetId: assetId,
+                checksumSha256: checksumSha256,
+                assetKind: assetKind,
+                mimeType: mimeType,
+                sizeBytes: sizeBytes,
+                durationMs: durationMs,
+                deliveryKey: deliveryKey,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$AssetCatalogTable, AssetCatalogData>(table),
+                  $$AssetCatalogTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback:
+              ({contentAssetRefsRefs = false, packAssetRefsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (contentAssetRefsRefs) db.contentAssetRefs,
+                    if (packAssetRefsRefs) db.packAssetRefs,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (contentAssetRefsRefs)
+                        await $_getPrefetchedDataByColumns<
+                          AssetCatalogData,
+                          $AssetCatalogTable,
+                          ContentAssetRef,
+                          $ContentAssetRefsTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AssetCatalogTableReferences
+                              ._contentAssetRefsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AssetCatalogTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).contentAssetRefsRefs,
+                          currentColumn: 'asset_id',
+                          referencedColumn: 'asset_id',
+                          typedResults: items,
+                        ),
+                      if (packAssetRefsRefs)
+                        await $_getPrefetchedDataByColumns<
+                          AssetCatalogData,
+                          $AssetCatalogTable,
+                          PackAssetRef,
+                          $PackAssetRefsTable
+                        >(
+                          currentTable: table,
+                          referencedTable: $$AssetCatalogTableReferences
+                              ._packAssetRefsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$AssetCatalogTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).packAssetRefsRefs,
+                          currentColumn: 'asset_id',
+                          referencedColumn: 'asset_id',
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
+              },
+        ),
+      );
+}
+
+typedef $$AssetCatalogTableProcessedTableManager =
+    ProcessedTableManager<
+      _$CareerSpeakDatabase,
+      $AssetCatalogTable,
+      AssetCatalogData,
+      $$AssetCatalogTableFilterComposer,
+      $$AssetCatalogTableOrderingComposer,
+      $$AssetCatalogTableAnnotationComposer,
+      $$AssetCatalogTableCreateCompanionBuilder,
+      $$AssetCatalogTableUpdateCompanionBuilder,
+      (AssetCatalogData, $$AssetCatalogTableReferences),
+      AssetCatalogData,
+      PrefetchHooks Function({
+        bool contentAssetRefsRefs,
+        bool packAssetRefsRefs,
+      })
+    >;
+typedef $$ContentAssetRefsTableCreateCompanionBuilder =
+    ContentAssetRefsCompanion Function({
+      required String contentCode,
+      required String contentType,
+      required int contentRevision,
+      required String assetId,
+      required String assetRole,
+      Value<bool> requiredOffline,
+      Value<int> rowid,
+    });
+typedef $$ContentAssetRefsTableUpdateCompanionBuilder =
+    ContentAssetRefsCompanion Function({
+      Value<String> contentCode,
+      Value<String> contentType,
+      Value<int> contentRevision,
+      Value<String> assetId,
+      Value<String> assetRole,
+      Value<bool> requiredOffline,
+      Value<int> rowid,
+    });
+
+final class $$ContentAssetRefsTableReferences
+    extends
+        BaseReferences<
+          _$CareerSpeakDatabase,
+          $ContentAssetRefsTable,
+          ContentAssetRef
+        > {
+  $$ContentAssetRefsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $AssetCatalogTable _assetIdTable(_$CareerSpeakDatabase db) => db
+      .assetCatalog
+      .createAlias('content_asset_refs__asset_id__asset_catalog__asset_id');
+
+  $$AssetCatalogTableProcessedTableManager get assetId {
+    final $_column = $_itemColumn<String>('asset_id')!;
+
+    final manager = $$AssetCatalogTableTableManager(
+      $_db,
+      $_db.assetCatalog,
+    ).filter((f) => f.assetId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_assetIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ContentAssetRefsTableFilterComposer
+    extends Composer<_$CareerSpeakDatabase, $ContentAssetRefsTable> {
+  $$ContentAssetRefsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get contentRevision => $composableBuilder(
+    column: $table.contentRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get assetRole => $composableBuilder(
+    column: $table.assetRole,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get requiredOffline => $composableBuilder(
+    column: $table.requiredOffline,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$AssetCatalogTableFilterComposer get assetId {
+    final $$AssetCatalogTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assetCatalog,
+      getReferencedColumn: (t) => t.assetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetCatalogTableFilterComposer(
+            $db: $db,
+            $table: $db.assetCatalog,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ContentAssetRefsTableOrderingComposer
+    extends Composer<_$CareerSpeakDatabase, $ContentAssetRefsTable> {
+  $$ContentAssetRefsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get contentRevision => $composableBuilder(
+    column: $table.contentRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get assetRole => $composableBuilder(
+    column: $table.assetRole,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get requiredOffline => $composableBuilder(
+    column: $table.requiredOffline,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$AssetCatalogTableOrderingComposer get assetId {
+    final $$AssetCatalogTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assetCatalog,
+      getReferencedColumn: (t) => t.assetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetCatalogTableOrderingComposer(
+            $db: $db,
+            $table: $db.assetCatalog,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ContentAssetRefsTableAnnotationComposer
+    extends Composer<_$CareerSpeakDatabase, $ContentAssetRefsTable> {
+  $$ContentAssetRefsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get contentRevision => $composableBuilder(
+    column: $table.contentRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get assetRole =>
+      $composableBuilder(column: $table.assetRole, builder: (column) => column);
+
+  GeneratedColumn<bool> get requiredOffline => $composableBuilder(
+    column: $table.requiredOffline,
+    builder: (column) => column,
+  );
+
+  $$AssetCatalogTableAnnotationComposer get assetId {
+    final $$AssetCatalogTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assetCatalog,
+      getReferencedColumn: (t) => t.assetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetCatalogTableAnnotationComposer(
+            $db: $db,
+            $table: $db.assetCatalog,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ContentAssetRefsTableTableManager
+    extends
+        RootTableManager<
+          _$CareerSpeakDatabase,
+          $ContentAssetRefsTable,
+          ContentAssetRef,
+          $$ContentAssetRefsTableFilterComposer,
+          $$ContentAssetRefsTableOrderingComposer,
+          $$ContentAssetRefsTableAnnotationComposer,
+          $$ContentAssetRefsTableCreateCompanionBuilder,
+          $$ContentAssetRefsTableUpdateCompanionBuilder,
+          (ContentAssetRef, $$ContentAssetRefsTableReferences),
+          ContentAssetRef,
+          PrefetchHooks Function({bool assetId})
+        > {
+  $$ContentAssetRefsTableTableManager(
+    _$CareerSpeakDatabase db,
+    $ContentAssetRefsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ContentAssetRefsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ContentAssetRefsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ContentAssetRefsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> contentCode = const Value.absent(),
+                Value<String> contentType = const Value.absent(),
+                Value<int> contentRevision = const Value.absent(),
+                Value<String> assetId = const Value.absent(),
+                Value<String> assetRole = const Value.absent(),
+                Value<bool> requiredOffline = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ContentAssetRefsCompanion(
+                contentCode: contentCode,
+                contentType: contentType,
+                contentRevision: contentRevision,
+                assetId: assetId,
+                assetRole: assetRole,
+                requiredOffline: requiredOffline,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String contentCode,
+                required String contentType,
+                required int contentRevision,
+                required String assetId,
+                required String assetRole,
+                Value<bool> requiredOffline = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ContentAssetRefsCompanion.insert(
+                contentCode: contentCode,
+                contentType: contentType,
+                contentRevision: contentRevision,
+                assetId: assetId,
+                assetRole: assetRole,
+                requiredOffline: requiredOffline,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ContentAssetRefsTable, ContentAssetRef>(table),
+                  $$ContentAssetRefsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({assetId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (assetId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.assetId,
+                                referencedTable:
+                                    $$ContentAssetRefsTableReferences
+                                        ._assetIdTable(db),
+                                referencedColumn:
+                                    $$ContentAssetRefsTableReferences
+                                        ._assetIdTable(db)
+                                        .assetId,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ContentAssetRefsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$CareerSpeakDatabase,
+      $ContentAssetRefsTable,
+      ContentAssetRef,
+      $$ContentAssetRefsTableFilterComposer,
+      $$ContentAssetRefsTableOrderingComposer,
+      $$ContentAssetRefsTableAnnotationComposer,
+      $$ContentAssetRefsTableCreateCompanionBuilder,
+      $$ContentAssetRefsTableUpdateCompanionBuilder,
+      (ContentAssetRef, $$ContentAssetRefsTableReferences),
+      ContentAssetRef,
+      PrefetchHooks Function({bool assetId})
+    >;
+typedef $$PackAssetRefsTableCreateCompanionBuilder =
+    PackAssetRefsCompanion Function({
+      required String packCode,
+      required String variantKey,
+      required int packRevision,
+      required String assetId,
+      Value<bool> requiredOffline,
+      Value<int> rowid,
+    });
+typedef $$PackAssetRefsTableUpdateCompanionBuilder =
+    PackAssetRefsCompanion Function({
+      Value<String> packCode,
+      Value<String> variantKey,
+      Value<int> packRevision,
+      Value<String> assetId,
+      Value<bool> requiredOffline,
+      Value<int> rowid,
+    });
+
+final class $$PackAssetRefsTableReferences
+    extends
+        BaseReferences<
+          _$CareerSpeakDatabase,
+          $PackAssetRefsTable,
+          PackAssetRef
+        > {
+  $$PackAssetRefsTableReferences(
+    super.$_db,
+    super.$_table,
+    super.$_typedResult,
+  );
+
+  static $AssetCatalogTable _assetIdTable(_$CareerSpeakDatabase db) => db
+      .assetCatalog
+      .createAlias('pack_asset_refs__asset_id__asset_catalog__asset_id');
+
+  $$AssetCatalogTableProcessedTableManager get assetId {
+    final $_column = $_itemColumn<String>('asset_id')!;
+
+    final manager = $$AssetCatalogTableTableManager(
+      $_db,
+      $_db.assetCatalog,
+    ).filter((f) => f.assetId.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_assetIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$PackAssetRefsTableFilterComposer
+    extends Composer<_$CareerSpeakDatabase, $PackAssetRefsTable> {
+  $$PackAssetRefsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get packCode => $composableBuilder(
+    column: $table.packCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get variantKey => $composableBuilder(
+    column: $table.variantKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get packRevision => $composableBuilder(
+    column: $table.packRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get requiredOffline => $composableBuilder(
+    column: $table.requiredOffline,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$AssetCatalogTableFilterComposer get assetId {
+    final $$AssetCatalogTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assetCatalog,
+      getReferencedColumn: (t) => t.assetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetCatalogTableFilterComposer(
+            $db: $db,
+            $table: $db.assetCatalog,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PackAssetRefsTableOrderingComposer
+    extends Composer<_$CareerSpeakDatabase, $PackAssetRefsTable> {
+  $$PackAssetRefsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get packCode => $composableBuilder(
+    column: $table.packCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get variantKey => $composableBuilder(
+    column: $table.variantKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get packRevision => $composableBuilder(
+    column: $table.packRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get requiredOffline => $composableBuilder(
+    column: $table.requiredOffline,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$AssetCatalogTableOrderingComposer get assetId {
+    final $$AssetCatalogTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assetCatalog,
+      getReferencedColumn: (t) => t.assetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetCatalogTableOrderingComposer(
+            $db: $db,
+            $table: $db.assetCatalog,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PackAssetRefsTableAnnotationComposer
+    extends Composer<_$CareerSpeakDatabase, $PackAssetRefsTable> {
+  $$PackAssetRefsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get packCode =>
+      $composableBuilder(column: $table.packCode, builder: (column) => column);
+
+  GeneratedColumn<String> get variantKey => $composableBuilder(
+    column: $table.variantKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get packRevision => $composableBuilder(
+    column: $table.packRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get requiredOffline => $composableBuilder(
+    column: $table.requiredOffline,
+    builder: (column) => column,
+  );
+
+  $$AssetCatalogTableAnnotationComposer get assetId {
+    final $$AssetCatalogTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.assetId,
+      referencedTable: $db.assetCatalog,
+      getReferencedColumn: (t) => t.assetId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$AssetCatalogTableAnnotationComposer(
+            $db: $db,
+            $table: $db.assetCatalog,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$PackAssetRefsTableTableManager
+    extends
+        RootTableManager<
+          _$CareerSpeakDatabase,
+          $PackAssetRefsTable,
+          PackAssetRef,
+          $$PackAssetRefsTableFilterComposer,
+          $$PackAssetRefsTableOrderingComposer,
+          $$PackAssetRefsTableAnnotationComposer,
+          $$PackAssetRefsTableCreateCompanionBuilder,
+          $$PackAssetRefsTableUpdateCompanionBuilder,
+          (PackAssetRef, $$PackAssetRefsTableReferences),
+          PackAssetRef,
+          PrefetchHooks Function({bool assetId})
+        > {
+  $$PackAssetRefsTableTableManager(
+    _$CareerSpeakDatabase db,
+    $PackAssetRefsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PackAssetRefsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PackAssetRefsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PackAssetRefsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> packCode = const Value.absent(),
+                Value<String> variantKey = const Value.absent(),
+                Value<int> packRevision = const Value.absent(),
+                Value<String> assetId = const Value.absent(),
+                Value<bool> requiredOffline = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PackAssetRefsCompanion(
+                packCode: packCode,
+                variantKey: variantKey,
+                packRevision: packRevision,
+                assetId: assetId,
+                requiredOffline: requiredOffline,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String packCode,
+                required String variantKey,
+                required int packRevision,
+                required String assetId,
+                Value<bool> requiredOffline = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PackAssetRefsCompanion.insert(
+                packCode: packCode,
+                variantKey: variantKey,
+                packRevision: packRevision,
+                assetId: assetId,
+                requiredOffline: requiredOffline,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PackAssetRefsTable, PackAssetRef>(table),
+                  $$PackAssetRefsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({assetId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (assetId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.assetId,
+                                referencedTable: $$PackAssetRefsTableReferences
+                                    ._assetIdTable(db),
+                                referencedColumn: $$PackAssetRefsTableReferences
+                                    ._assetIdTable(db)
+                                    .assetId,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$PackAssetRefsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$CareerSpeakDatabase,
+      $PackAssetRefsTable,
+      PackAssetRef,
+      $$PackAssetRefsTableFilterComposer,
+      $$PackAssetRefsTableOrderingComposer,
+      $$PackAssetRefsTableAnnotationComposer,
+      $$PackAssetRefsTableCreateCompanionBuilder,
+      $$PackAssetRefsTableUpdateCompanionBuilder,
+      (PackAssetRef, $$PackAssetRefsTableReferences),
+      PackAssetRef,
+      PrefetchHooks Function({bool assetId})
+    >;
 typedef $$FavoritesTableCreateCompanionBuilder =
     FavoritesCompanion Function({
       required String contentCode,
@@ -9578,6 +12826,14 @@ class $CareerSpeakDatabaseManager {
       $$ContentPackRevisionsTableTableManager(_db, _db.contentPackRevisions);
   $$LocalContentRecordsTableTableManager get localContentRecords =>
       $$LocalContentRecordsTableTableManager(_db, _db.localContentRecords);
+  $$PackContentRefsTableTableManager get packContentRefs =>
+      $$PackContentRefsTableTableManager(_db, _db.packContentRefs);
+  $$AssetCatalogTableTableManager get assetCatalog =>
+      $$AssetCatalogTableTableManager(_db, _db.assetCatalog);
+  $$ContentAssetRefsTableTableManager get contentAssetRefs =>
+      $$ContentAssetRefsTableTableManager(_db, _db.contentAssetRefs);
+  $$PackAssetRefsTableTableManager get packAssetRefs =>
+      $$PackAssetRefsTableTableManager(_db, _db.packAssetRefs);
   $$FavoritesTableTableManager get favorites =>
       $$FavoritesTableTableManager(_db, _db.favorites);
   $$ContentLearningStatesTableTableManager get contentLearningStates =>

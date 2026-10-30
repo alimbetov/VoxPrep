@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../../generated_migrations/schema.dart';
 import '../../../generated_migrations/schema_v1.dart' as v1;
 import '../../../generated_migrations/schema_v2.dart' as v2;
+import '../../../generated_migrations/schema_v3.dart' as v3;
 
 void main() {
   late SchemaVerifier verifier;
@@ -14,7 +15,7 @@ void main() {
     verifier = SchemaVerifier(GeneratedHelper());
   });
 
-  test('v1 to v2 migration preserves durable learner state', () async {
+  test('v1 to v3 migration preserves durable learner state', () async {
     final schema = await verifier.schemaAt(1);
     final storedNow =
         DateTime.utc(2026, 10, 30, 10).millisecondsSinceEpoch ~/ 1000;
@@ -43,10 +44,10 @@ void main() {
     await oldDatabase.close();
 
     final database = CareerSpeakDatabase(schema.newConnection());
-    await verifier.migrateAndValidate(database, 2);
+    await verifier.migrateAndValidate(database, 3);
     await database.close();
 
-    final migratedDatabase = v2.DatabaseAtV2(schema.newConnection());
+    final migratedDatabase = v3.DatabaseAtV3(schema.newConnection());
     final favorites = await migratedDatabase
         .select(migratedDatabase.favorites)
         .get();
@@ -61,6 +62,48 @@ void main() {
     expect(learningStates.single.lastRevisionSeen, 7);
     expect(
       await migratedDatabase.select(migratedDatabase.syncRuns).get(),
+      isEmpty,
+    );
+    expect(
+      await migratedDatabase.select(migratedDatabase.packContentRefs).get(),
+      isEmpty,
+    );
+
+    await migratedDatabase.close();
+  });
+
+  test('v2 to v3 migration preserves durable sync journal', () async {
+    final schema = await verifier.schemaAt(2);
+    final storedNow =
+        DateTime.utc(2026, 10, 30, 11).millisecondsSinceEpoch ~/ 1000;
+
+    final oldDatabase = v2.DatabaseAtV2(schema.newConnection());
+    await oldDatabase
+        .into(oldDatabase.syncRuns)
+        .insert(
+          v2.SyncRunsCompanion.insert(
+            runId: 'sync-v2',
+            trigger: 'RECOVERY',
+            translationLocale: 'kk',
+            state: 'PLANNING',
+            startedAt: storedNow,
+            updatedAt: storedNow,
+          ),
+        );
+    await oldDatabase.close();
+
+    final database = CareerSpeakDatabase(schema.newConnection());
+    await verifier.migrateAndValidate(database, 3);
+    await database.close();
+
+    final migratedDatabase = v3.DatabaseAtV3(schema.newConnection());
+    final runs = await migratedDatabase.select(migratedDatabase.syncRuns).get();
+
+    expect(runs, hasLength(1));
+    expect(runs.single.runId, 'sync-v2');
+    expect(runs.single.state, 'PLANNING');
+    expect(
+      await migratedDatabase.select(migratedDatabase.assetCatalog).get(),
       isEmpty,
     );
 
