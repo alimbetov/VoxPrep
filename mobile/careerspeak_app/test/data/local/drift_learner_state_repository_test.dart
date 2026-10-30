@@ -45,58 +45,68 @@ void main() {
     expect(afterRemoval, isNot(contains(identity)));
   });
 
-  test('listened transition increments count only when becoming listened', () async {
-    await repository.setListened(
-      identity,
-      listened: true,
-      lastRevisionSeen: 7,
-    );
+  test(
+    'listened transition increments count only when becoming listened',
+    () async {
+      await repository.setListened(
+        identity,
+        listened: true,
+        lastRevisionSeen: 7,
+      );
 
-    var row = await database.select(database.contentLearningStates).getSingle();
-    expect(row.listenedAt, now);
-    expect(row.listenCount, 1);
-    expect(row.lastRevisionSeen, 7);
+      var row = await database
+          .select(database.contentLearningStates)
+          .getSingle();
+      expect(row.listenedAt, now);
+      expect(row.listenCount, 1);
+      expect(row.lastRevisionSeen, 7);
 
-    await repository.setListened(identity, listened: true);
-    row = await database.select(database.contentLearningStates).getSingle();
-    expect(row.listenCount, 1);
+      await repository.setListened(identity, listened: true);
+      row = await database.select(database.contentLearningStates).getSingle();
+      expect(row.listenCount, 1);
 
-    await repository.setListened(identity, listened: false);
-    row = await database.select(database.contentLearningStates).getSingle();
-    expect(row.listenedAt, isNull);
-    expect(row.listenCount, 1);
+      await repository.setListened(identity, listened: false);
+      row = await database.select(database.contentLearningStates).getSingle();
+      expect(row.listenedAt, isNull);
+      expect(row.listenCount, 1);
 
-    await repository.setListened(identity, listened: true);
-    row = await database.select(database.contentLearningStates).getSingle();
-    expect(row.listenCount, 2);
-  });
+      await repository.setListened(identity, listened: true);
+      row = await database.select(database.contentLearningStates).getSingle();
+      expect(row.listenCount, 2);
+    },
+  );
 
-  test('completion and playback position merge into one learner state', () async {
-    await repository.setCompleted(
-      identity,
-      completed: true,
-      completionSource: 'TEST',
-      lastRevisionSeen: 8,
-    );
-    await repository.savePlaybackPosition(identity, positionMs: 1250);
+  test(
+    'completion and playback position merge into one learner state',
+    () async {
+      await repository.setCompleted(
+        identity,
+        completed: true,
+        completionSource: 'TEST',
+        lastRevisionSeen: 8,
+      );
+      await repository.savePlaybackPosition(identity, positionMs: 1250);
 
-    final row = await database.select(database.contentLearningStates).getSingle();
-    expect(row.completedAt, now);
-    expect(row.completionSource, 'TEST');
-    expect(row.lastRevisionSeen, 8);
-    expect(row.lastPositionMs, 1250);
+      final row = await database
+          .select(database.contentLearningStates)
+          .getSingle();
+      expect(row.completedAt, now);
+      expect(row.completionSource, 'TEST');
+      expect(row.lastRevisionSeen, 8);
+      expect(row.lastPositionMs, 1250);
 
-    final markers = await _currentMarkers(repository);
-    expect(markers[identity]?.completed, isTrue);
-    expect(markers[identity]?.lastPositionMs, 1250);
+      final markers = await _currentMarkers(repository);
+      expect(markers[identity]?.completed, isTrue);
+      expect(markers[identity]?.lastPositionMs, 1250);
 
-    await repository.setCompleted(identity, completed: false);
-    final cleared = await database
-        .select(database.contentLearningStates)
-        .getSingle();
-    expect(cleared.completedAt, isNull);
-    expect(cleared.completionSource, isNull);
-  });
+      await repository.setCompleted(identity, completed: false);
+      final cleared = await database
+          .select(database.contentLearningStates)
+          .getSingle();
+      expect(cleared.completedAt, isNull);
+      expect(cleared.completionSource, isNull);
+    },
+  );
 
   test('negative playback position fails without writing state', () async {
     final result = await repository.savePlaybackPosition(
@@ -108,7 +118,10 @@ void main() {
     final failure = (result as FailureResult<void>).failure;
     expect(failure.code, 'INVALID_PLAYBACK_POSITION');
     expect(failure.retryable, isFalse);
-    expect(await database.select(database.contentLearningStates).get(), isEmpty);
+    expect(
+      await database.select(database.contentLearningStates).get(),
+      isEmpty,
+    );
   });
 
   test('content identity type survives Drift storage round-trip', () async {
