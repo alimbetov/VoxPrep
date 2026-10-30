@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": 108,
+  "minimumAppContractVersion": 1,
+  "publishedAt": "2026-10-30T09:30:00Z",
+  "checksum": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "packs": [
+    {
+      "code": "JAVA_SENIOR",
+      "variant": "canonical",
+      "revision": 8,
+      "checksum": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    }
+  ],
+  "tombstones": [
+    {
+      "contentCode": "JAVA_QUESTION_001",
+      "contentType": "interview",
+      "revision": 3,
+      "reason": "INACTIVE"
+    }
+  ]
+}
