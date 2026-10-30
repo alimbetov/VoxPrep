@@ -62,14 +62,18 @@ jobs:
         shell: bash
         run: |
           token="ci-worker-secret"
-          id=$(docker run -d --rm \
+          id=$(docker run -d \
             -e BASE_URL=http://backend.example \
             -e WORKER_TOKEN="$token" \
             -e WORKER_ID=ci-worker-01 \
             voxprep-tts-worker:w1)
           sleep 2
           docker stop --time 10 "$id"
-          docker logs "$id" > /tmp/worker.log 2>&1 || true
+          docker logs "$id" > /tmp/worker.log 2>&1
+          docker rm "$id"
+          cat /tmp/worker.log
+          grep -q "worker polling started" /tmp/worker.log
+          grep -q "worker polling stopped" /tmp/worker.log
           if grep -Fq "$token" /tmp/worker.log; then
             echo "worker token leaked to logs"
             exit 1
