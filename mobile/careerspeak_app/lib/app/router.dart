@@ -7,6 +7,7 @@ import '../features/home/home_screen.dart';
 import '../features/learn/learn_screen.dart';
 import '../features/review/review_screen.dart';
 import '../features/settings/settings_screen.dart';
+import '../features/tests/test_session_screen.dart';
 import '../features/tests/tests_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -27,6 +28,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/tests',
             builder: (context, state) => const TestsScreen(),
+          ),
+          GoRoute(
+            path: '/tests/:code',
+            builder: (context, state) => TestSessionScreen(
+              code: state.pathParameters['code']!,
+            ),
           ),
           GoRoute(
             path: '/review',

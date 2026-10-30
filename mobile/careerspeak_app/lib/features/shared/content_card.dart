@@ -7,19 +7,28 @@ import '../../domain/content_marker_state.dart';
 import 'content_marker_chips.dart';
 
 class ContentCard extends ConsumerWidget {
-  const ContentCard({required this.item, super.key});
+  const ContentCard({
+    required this.item,
+    this.onTap,
+    this.selected = false,
+    super.key,
+  });
 
   final ContentItem item;
+  final VoidCallback? onTap;
+  final bool selected;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final markers = ref.watch(contentMarkersProvider);
     final markerState = markers[item.code] ?? const ContentMarkerState();
+    final scheme = Theme.of(context).colorScheme;
 
     return Card(
       clipBehavior: Clip.antiAlias,
+      color: selected ? scheme.secondaryContainer : null,
       child: InkWell(
-        onTap: () => context.push('/content/${item.code}'),
+        onTap: onTap ?? () => context.push('/content/${item.code}'),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(

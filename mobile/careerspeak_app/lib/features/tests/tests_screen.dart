@@ -1,42 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-class TestsScreen extends StatelessWidget {
+import '../../data/mock/mock_test_repository.dart';
+import '../../domain/mock_practice_test.dart';
+
+class TestsScreen extends ConsumerWidget {
   const TestsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final tests = ref.watch(mockTestRepositoryProvider).all;
+
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
         Text('Tests', style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 8),
-        const Text('Mock assessment catalogue for UI qualification.'),
+        const Text('Mock assessment catalogue for interaction and adaptive-layout qualification.'),
         const SizedBox(height: 20),
-        _TestCard(
-          title: 'Java Senior · Quick Test',
-          subtitle: '10 questions · Java Core, Concurrency, Spring',
-          icon: Icons.code,
-        ),
-        _TestCard(
-          title: 'IELTS Speaking · Environment',
-          subtitle: 'Part 2 + Part 3 · 12 questions',
-          icon: Icons.language,
-        ),
+        for (final test in tests) _TestCard(test: test),
       ],
     );
   }
 }
 
 class _TestCard extends StatelessWidget {
-  const _TestCard({
-    required this.title,
-    required this.subtitle,
-    required this.icon,
-  });
+  const _TestCard({required this.test});
 
-  final String title;
-  final String subtitle;
-  final IconData icon;
+  final MockPracticeTest test;
 
   @override
   Widget build(BuildContext context) {
@@ -45,27 +37,33 @@ class _TestCard extends StatelessWidget {
         padding: const EdgeInsets.all(20),
         child: Row(
           children: [
-            CircleAvatar(child: Icon(icon)),
+            CircleAvatar(child: Icon(_iconFor(test.mode))),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title, style: Theme.of(context).textTheme.titleMedium),
+                  Text(test.title, style: Theme.of(context).textTheme.titleMedium),
                   const SizedBox(height: 4),
-                  Text(subtitle),
+                  Text(test.subtitle),
                 ],
               ),
             ),
             FilledButton.tonal(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Mock test session opens in P1.2.')),
-              ),
-              child: const Text('Start'),
+              onPressed: () => context.push('/tests/${test.code}'),
+              child: const Text('Open'),
             ),
           ],
         ),
       ),
     );
+  }
+
+  IconData _iconFor(MockTestMode mode) {
+    return switch (mode) {
+      MockTestMode.learn => Icons.school,
+      MockTestMode.exam => Icons.assignment,
+      MockTestMode.quick => Icons.bolt,
+    };
   }
 }
