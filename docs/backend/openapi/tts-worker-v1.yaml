@@ -1,0 +1,450 @@
+openapi: 3.1.0
+info:
+  title: VoxPrep TTS Worker API
+  version: 1.0.0
+  description: |
+    Machine-readable contract for the production TTS Worker boundary.
+    The Worker connects only to the Spring Boot Backend. PostgreSQL and RustFS
+    are never exposed directly to the Worker.
+servers:
+  - url: https://api.voxprep.example
+    description: Example production-style origin
+security:
+  - workerBearer: []
+
+tags:
+  - name: TTS Worker Jobs
+  - name: TTS Worker Models
+
+paths:
+  /internal/v1/tts/jobs/claim:
+    post:
+      tags: [TTS Worker Jobs]
+      operationId: claimTtsJob
+      summary: Atomically claim one pending or reclaimable TTS job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClaimRequest'
+      responses:
+        '200':
+          description: One job was atomically claimed and leased to this Worker
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ClaimResponse'
+        '204':
+          description: No claimable TTS job is currently available
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServerError'
+
+  /internal/v1/tts/jobs/{jobId}/heartbeat:
+    post:
+      tags: [TTS Worker Jobs]
+      operationId: heartbeatTtsJob
+      summary: Extend an unexpired current job lease
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HeartbeatRequest'
+      responses:
+        '200':
+          description: Lease extended
+        '204':
+          description: Lease extended without response body
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/LeaseConflict'
+        '410':
+          $ref: '#/components/responses/LeaseGone'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServerError'
+
+  /internal/v1/tts/jobs/{jobId}/fail:
+    post:
+      tags: [TTS Worker Jobs]
+      operationId: failTtsJob
+      summary: Report a classified processing failure for the current lease
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FailRequest'
+      responses:
+        '200':
+          description: Failure accepted and durable retry/terminal policy applied
+        '204':
+          description: Failure accepted without response body
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/LeaseConflict'
+        '410':
+          $ref: '#/components/responses/LeaseGone'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServerError'
+
+  /internal/v1/tts/jobs/{jobId}/output:
+    post:
+      tags: [TTS Worker Jobs]
+      operationId: uploadTtsOutput
+      summary: Upload and finalize one technically qualified immutable MP3 result
+      description: |
+        For RUNNING jobs, finalization requires the current unexpired lease.
+        Replaying an already finalized READY result with identical immutable
+        identity and checksum must be idempotently successful. A conflicting
+        payload for the same READY fileId must be rejected.
+      parameters:
+        - $ref: '#/components/parameters/JobId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/OutputUploadRequest'
+      responses:
+        '200':
+          description: Output finalized or identical READY replay accepted
+        '201':
+          description: Output finalized and immutable FileAsset created/activated
+        '204':
+          description: Output finalized without response body
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Lease/identity/checksum conflict or conflicting READY replay
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '410':
+          $ref: '#/components/responses/LeaseGone'
+        '413':
+          description: Uploaded artifact exceeds configured Backend limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServerError'
+
+  /internal/v1/tts/models/{voiceModelId}/model:
+    get:
+      tags: [TTS Worker Models]
+      operationId: downloadTtsModel
+      summary: Download exact immutable Piper model bytes selected by claim
+      parameters:
+        - $ref: '#/components/parameters/VoiceModelId'
+      responses:
+        '200':
+          description: Exact model.onnx bytes; SHA-256 must equal claim.modelSha256
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/ModelNotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServerError'
+
+  /internal/v1/tts/models/{voiceModelId}/config:
+    get:
+      tags: [TTS Worker Models]
+      operationId: downloadTtsModelConfig
+      summary: Download exact immutable Piper config bytes selected by claim
+      parameters:
+        - $ref: '#/components/parameters/VoiceModelId'
+      responses:
+        '200':
+          description: Exact model config bytes; SHA-256 must equal claim.configSha256
+          content:
+            application/json:
+              schema:
+                type: string
+                description: Raw stored Piper JSON document bytes
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/ModelNotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '503':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  securitySchemes:
+    workerBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: opaque deployment token
+      description: Static deployment-managed WORKER_TOKEN for MVP
+
+  parameters:
+    JobId:
+      name: jobId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    VoiceModelId:
+      name: voiceModelId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    ClaimRequest:
+      type: object
+      additionalProperties: false
+      required: [workerId]
+      properties:
+        workerId:
+          type: string
+          minLength: 1
+
+    ClaimResponse:
+      type: object
+      additionalProperties: true
+      required:
+        - jobId
+        - fileId
+        - contentRevisionId
+        - audioRole
+        - normalizedTtsText
+        - language
+        - voiceModelId
+        - voiceModelCode
+        - modelSha256
+        - configSha256
+        - fingerprint
+        - leaseToken
+        - leaseUntil
+      properties:
+        jobId:
+          type: string
+          format: uuid
+        fileId:
+          type: string
+          format: uuid
+        contentRevisionId:
+          type: string
+          format: uuid
+        audioRole:
+          type: string
+          minLength: 1
+        normalizedTtsText:
+          type: string
+          minLength: 1
+        language:
+          type: string
+          minLength: 1
+          description: BCP-47-compatible language identifier, e.g. en-US
+        voiceModelId:
+          type: string
+          format: uuid
+        voiceModelCode:
+          type: string
+          minLength: 1
+        modelSha256:
+          $ref: '#/components/schemas/Sha256'
+        configSha256:
+          $ref: '#/components/schemas/Sha256'
+        fingerprint:
+          $ref: '#/components/schemas/Sha256'
+        leaseToken:
+          type: string
+          minLength: 1
+        leaseUntil:
+          type: string
+          format: date-time
+          description: Timezone-qualified instant; Backend should emit UTC Z form
+
+    HeartbeatRequest:
+      type: object
+      additionalProperties: false
+      required: [workerId, leaseToken]
+      properties:
+        workerId:
+          type: string
+          minLength: 1
+        leaseToken:
+          type: string
+          minLength: 1
+
+    FailRequest:
+      type: object
+      additionalProperties: false
+      required: [workerId, fileId, leaseToken, errorCode, errorMessage]
+      properties:
+        workerId:
+          type: string
+          minLength: 1
+        fileId:
+          type: string
+          format: uuid
+        leaseToken:
+          type: string
+          minLength: 1
+        errorCode:
+          type: string
+          pattern: '^[A-Z0-9_]{1,64}$'
+        errorMessage:
+          type: string
+          maxLength: 2000
+
+    OutputUploadRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - workerId
+        - fileId
+        - leaseToken
+        - fingerprint
+        - voiceModelId
+        - audioProfile
+        - sha256
+        - sizeBytes
+        - durationMs
+        - file
+      properties:
+        workerId:
+          type: string
+          minLength: 1
+        fileId:
+          type: string
+          format: uuid
+        leaseToken:
+          type: string
+          minLength: 1
+        fingerprint:
+          $ref: '#/components/schemas/Sha256'
+        voiceModelId:
+          type: string
+          format: uuid
+        audioProfile:
+          type: string
+          minLength: 1
+          examples: [mp3-mono-24k-64k-v1]
+        sha256:
+          $ref: '#/components/schemas/Sha256'
+        sizeBytes:
+          type: string
+          pattern: '^[1-9][0-9]*$'
+          description: Decimal text field as emitted by the current Worker multipart client
+        durationMs:
+          type: string
+          pattern: '^[1-9][0-9]*$'
+          description: Positive decimal text field as emitted by the current Worker multipart client
+        file:
+          type: string
+          format: binary
+          description: MP3 bytes; Content-Type audio/mpeg
+
+    Sha256:
+      type: string
+      pattern: '^[0-9a-f]{64}$'
+      minLength: 64
+      maxLength: 64
+
+    ApiError:
+      type: object
+      additionalProperties: true
+      required: [code, message, traceId, details]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        traceId:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+  responses:
+    BadRequest:
+      description: Invalid Worker request or malformed contract field
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Missing or invalid WORKER_TOKEN
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    LeaseConflict:
+      description: RUNNING job exists but worker/lease identity conflicts
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    LeaseGone:
+      description: Lease expired or job is no longer mutable by this lease
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ModelNotFound:
+      description: Claimed model revision is missing or unavailable; no fallback is allowed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    TooManyRequests:
+      description: Temporary Backend overload; Worker treats as transient unavailability
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ServerError:
+      description: Temporary Backend/storage failure; Worker treats 5xx as transient unavailability
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
