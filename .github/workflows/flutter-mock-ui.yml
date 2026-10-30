@@ -1,0 +1,42 @@
+name: Flutter Mock UI
+
+on:
+  push:
+    branches:
+      - feat/p1-flutter-mock-ui
+    paths:
+      - 'mobile/careerspeak_app/**'
+      - '.github/workflows/flutter-mock-ui.yml'
+  pull_request:
+    paths:
+      - 'mobile/careerspeak_app/**'
+      - '.github/workflows/flutter-mock-ui.yml'
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
