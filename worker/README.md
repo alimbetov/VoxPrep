@@ -2,7 +2,7 @@
 
 Containerized outbound TTS worker for VoxPrep.
 
-Current slice: **Functional TTS Worker (W3 + W4 + W5)**.
+Current slice: **Functional TTS Worker (W3 + W4 + W5) with test hardening**.
 
 The runtime boundary remains deliberately small:
 
@@ -13,7 +13,7 @@ Worker owns disposable compute and a private persistent model cache
 
 ## Functional pipeline
 
-The production composition now performs:
+The production composition performs:
 
 ```text
 claim job from Backend
@@ -45,7 +45,15 @@ ffprobe      5.1.9-0+deb12u1
 Debian       Bookworm
 ```
 
-`worker/constraints.txt` locks the complete qualified Python runtime/test dependency graph, including HTTPX and Piper transitive dependencies.
+Test qualification tooling is pinned too:
+
+```text
+pytest       8.4.2
+pytest-cov   7.1.0
+coverage     7.17.0
+```
+
+`worker/constraints.txt` locks the complete qualified Python runtime/test dependency graph, including HTTPX, Piper and coverage transitive dependencies.
 
 Dependency upgrades are explicit qualification changes. Do not widen or remove pins as part of unrelated feature work.
 
@@ -169,7 +177,28 @@ python3.12 -m venv .venv
 python -m pip install pip==26.2.2
 python -m pip install -c constraints.txt -e '.[dev]'
 python -m pip check
-pytest
+pytest --cov=voxprep_tts_worker --cov-branch --cov-report=term-missing --cov-fail-under=90
+```
+
+Coverage is measured against the production Worker path. The deprecated foundation adapter and the standalone container smoke helper are not part of the coverage denominator; both remain protected by container qualification.
+
+## Functional test matrix
+
+The test suite locks the externally observable Worker behavior rather than only individual implementation methods:
+
+```text
+runtime config          required values, defaults, invalid values, writable paths
+Backend claim           empty queue, strict DTO parsing, auth/protocol/transport failures
+model acquisition       Backend-only download, 404, model/config checksum failures
+model cache             cache hit, corrupt cache replacement, atomic partial cleanup
+Piper                    exact model/config load, load failure, synthesis failure, empty WAV
+FFmpeg + ffprobe         production profile, process failure, malformed and invalid QC metadata
+lease                    heartbeat success, transient outage, confirmed lease loss
+job processing           immutable IDs, failure routing, stale lease, ambiguous upload response
+output upload            multipart identity/metadata, stale lease, Backend outage
+polling                  idle queue, claimed job, transient outage, fail-fast contract errors
+production composition   real adapter wiring, shutdown signals, Backend client cleanup
+container                real WAV→MP3 smoke, Backend polling, SIGTERM, token non-leak
 ```
 
 ## Qualification gates
@@ -180,16 +209,20 @@ A functional Worker change is accepted only when all of the following remain gre
 exact Python dependency graph check
 pip check
 HTTPX + Piper + ONNX Runtime imports
-model download/cache tests
-claim/heartbeat/fail/output adapter tests
-Piper adapter tests
-FFmpeg/ffprobe production profile test
-full worker unit tests
+model download/cache happy + failure paths
+claim/heartbeat/fail/output adapter happy + failure paths
+lease loss and transient Backend recovery tests
+Piper load/synthesis happy + failure paths
+FFmpeg/ffprobe profile and QC failure tests
+production composition and shutdown tests
+>= 90% branch-aware production-path coverage
 Docker image build
 real in-container audio smoke
 container polling against Backend stub
 SIGTERM shutdown qualification
 WORKER_TOKEN non-leak check
 ```
+
+Before merge, a Worker feature branch must be synchronized with the current `main` and the integrated exact HEAD must pass these gates. Qualification of an older pre-sync SHA is not sufficient.
 
 Piper model/audio listening qualification is additionally required before upgrading the Piper engine used for production synthesis.

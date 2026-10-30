@@ -1,5 +1,5 @@
 # Qualified dependency lock for Python 3.12.16.
-# W2 extends the W1 baseline with the synchronous HTTP control adapter.
+# Functional Worker runtime plus pinned test/coverage tooling.
 # Update only through an explicit dependency qualification change.
 
 # Runtime dependency graph
@@ -20,6 +20,8 @@ typing_extensions==4.16.0
 
 # Test-only dependency graph
 pytest==8.4.2
+pytest-cov==7.1.0
+coverage==7.17.0
 iniconfig==2.3.1
 pluggy==1.7.0
 Pygments==2.21.0

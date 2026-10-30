@@ -54,6 +54,18 @@ def _job() -> ClaimedJob:
     )
 
 
+def _artifact(path: Path) -> AudioArtifact:
+    path.write_bytes(b"mp3-payload")
+    return AudioArtifact(
+        path=path,
+        content_type="audio/mpeg",
+        audio_profile="mp3-mono-24k-64k-v1",
+        sha256="d" * 64,
+        size_bytes=11,
+        duration_ms=1234,
+    )
+
+
 def _adapter(handler, *, token: str = "worker-secret") -> HttpBackendAdapter:
     return HttpBackendAdapter(
         base_url="https://backend.example",
@@ -91,15 +103,53 @@ def test_claim_200_parses_backend_owned_identity_and_lease() -> None:
     assert job.file_id == "file-456"
     assert job.lease_token == "lease-abc"
     assert job.model_sha256 == "a" * 64
+    assert job.config_sha256 == "b" * 64
+    assert job.fingerprint == "c" * 64
     assert job.lease_until == datetime(2030, 1, 1, tzinfo=timezone.utc)
 
 
-def test_claim_malformed_payload_fails_closed() -> None:
+@pytest.mark.parametrize("field", ["jobId", "voiceModelId", "leaseToken", "normalizedTtsText"])
+def test_claim_missing_required_field_fails_closed(field: str) -> None:
+    payload = _claim_payload()
+    del payload[field]
+    adapter = _adapter(lambda request: httpx.Response(200, json=payload))
+    try:
+        with pytest.raises(BackendProtocolError, match=field):
+            adapter.claim("worker-01")
+    finally:
+        adapter.close()
+
+
+def test_claim_malformed_sha_fails_closed() -> None:
     payload = _claim_payload()
     payload["modelSha256"] = "not-a-sha"
     adapter = _adapter(lambda request: httpx.Response(200, json=payload))
     try:
         with pytest.raises(BackendProtocolError, match="modelSha256"):
+            adapter.claim("worker-01")
+    finally:
+        adapter.close()
+
+
+def test_claim_invalid_json_fails_closed() -> None:
+    adapter = _adapter(
+        lambda request: httpx.Response(
+            200, content=b"not-json", headers={"content-type": "application/json"}
+        )
+    )
+    try:
+        with pytest.raises(BackendProtocolError, match="not valid JSON"):
+            adapter.claim("worker-01")
+    finally:
+        adapter.close()
+
+
+def test_claim_naive_lease_timestamp_fails_closed() -> None:
+    payload = _claim_payload()
+    payload["leaseUntil"] = "2030-01-01T00:00:00"
+    adapter = _adapter(lambda request: httpx.Response(200, json=payload))
+    try:
+        with pytest.raises(BackendProtocolError, match="timezone"):
             adapter.claim("worker-01")
     finally:
         adapter.close()
@@ -142,6 +192,15 @@ def test_transport_exception_is_classified() -> None:
     adapter = _adapter(handler)
     try:
         with pytest.raises(BackendTransportError, match="Backend request failed"):
+            adapter.claim("worker-01")
+    finally:
+        adapter.close()
+
+
+def test_unexpected_client_status_is_protocol_error() -> None:
+    adapter = _adapter(lambda request: httpx.Response(422))
+    try:
+        with pytest.raises(BackendProtocolError, match="422"):
             adapter.claim("worker-01")
     finally:
         adapter.close()
@@ -222,26 +281,21 @@ def test_model_and_config_are_downloaded_only_through_backend(tmp_path: Path) ->
     ]
 
 
-def test_missing_backend_model_is_classified() -> None:
+@pytest.mark.parametrize("suffix", ["model", "config"])
+def test_missing_backend_model_artifact_is_classified(tmp_path: Path, suffix: str) -> None:
     adapter = _adapter(lambda request: httpx.Response(404))
     try:
         with pytest.raises(ModelUnavailableError):
-            adapter.download_model(job=_job(), destination=Path("unused.onnx"))
+            if suffix == "model":
+                adapter.download_model(job=_job(), destination=tmp_path / "model.onnx")
+            else:
+                adapter.download_config(job=_job(), destination=tmp_path / "model.onnx.json")
     finally:
         adapter.close()
 
 
 def test_output_upload_preserves_backend_identity_and_audio_metadata(tmp_path: Path) -> None:
-    mp3 = tmp_path / "output.mp3"
-    mp3.write_bytes(b"mp3-payload")
-    artifact = AudioArtifact(
-        path=mp3,
-        content_type="audio/mpeg",
-        audio_profile="mp3-mono-24k-64k-v1",
-        sha256="d" * 64,
-        size_bytes=11,
-        duration_ms=1234,
-    )
+    artifact = _artifact(tmp_path / "output.mp3")
 
     def handler(request: httpx.Request) -> httpx.Response:
         assert request.url.path == "/internal/v1/tts/jobs/job-123/output"
@@ -249,11 +303,13 @@ def test_output_upload_preserves_backend_identity_and_audio_metadata(tmp_path: P
         assert request.headers["content-type"].startswith("multipart/form-data;")
         body = request.content
         for expected in (
+            b"worker-01",
             b"file-456",
             b"lease-abc",
             b"model-1",
             b"mp3-mono-24k-64k-v1",
             b"mp3-payload",
+            b"1234",
         ):
             assert expected in body
         return httpx.Response(201)
@@ -261,5 +317,42 @@ def test_output_upload_preserves_backend_identity_and_audio_metadata(tmp_path: P
     adapter = _adapter(handler)
     try:
         adapter.upload_output(worker_id="worker-01", job=_job(), artifact=artifact)
+    finally:
+        adapter.close()
+
+
+def test_output_upload_stale_lease_is_rejected(tmp_path: Path) -> None:
+    artifact = _artifact(tmp_path / "output.mp3")
+    adapter = _adapter(lambda request: httpx.Response(409))
+    try:
+        with pytest.raises(LeaseLostError):
+            adapter.upload_output(worker_id="worker-01", job=_job(), artifact=artifact)
+    finally:
+        adapter.close()
+
+
+def test_output_upload_backend_outage_is_transport_error(tmp_path: Path) -> None:
+    artifact = _artifact(tmp_path / "output.mp3")
+    adapter = _adapter(lambda request: httpx.Response(503))
+    try:
+        with pytest.raises(BackendTransportError, match="503"):
+            adapter.upload_output(worker_id="worker-01", job=_job(), artifact=artifact)
+    finally:
+        adapter.close()
+
+
+def test_output_upload_missing_local_artifact_is_protocol_error(tmp_path: Path) -> None:
+    artifact = AudioArtifact(
+        path=tmp_path / "missing.mp3",
+        content_type="audio/mpeg",
+        audio_profile="mp3-mono-24k-64k-v1",
+        sha256="d" * 64,
+        size_bytes=1,
+        duration_ms=1,
+    )
+    adapter = _adapter(lambda request: httpx.Response(201))
+    try:
+        with pytest.raises(BackendProtocolError, match="cannot be opened"):
+            adapter.upload_output(worker_id="worker-01", job=_job(), artifact=artifact)
     finally:
         adapter.close()

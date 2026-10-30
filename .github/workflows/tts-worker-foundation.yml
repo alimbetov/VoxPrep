@@ -40,8 +40,9 @@ jobs:
       - name: Verify Python dependency graph
         run: |
           python -m pip check
-          python -c "import httpx, onnxruntime, piper; assert httpx.__version__ == '0.28.1'; assert onnxruntime.__version__ == '1.31.1'; print('worker runtime imports ok')"
+          python -c "import coverage, httpx, onnxruntime, piper, pytest_cov; assert coverage.__version__ == '7.17.0'; assert httpx.__version__ == '0.28.1'; assert onnxruntime.__version__ == '1.31.1'; print('worker runtime/test imports ok')"
           python -m pip show piper-tts | grep -F "Version: 1.4.2"
+          python -m pip show pytest-cov | grep -F "Version: 7.1.0"
 
       - name: Verify resolved dependency set matches lock
         shell: bash
@@ -53,8 +54,8 @@ jobs:
       - name: Compile Python sources
         run: python -m compileall -q src tests
 
-      - name: Run worker tests
-        run: pytest
+      - name: Run worker tests with production-path coverage gate
+        run: pytest --cov=voxprep_tts_worker --cov-branch --cov-report=term-missing --cov-fail-under=90
 
   container:
     runs-on: ubuntu-latest

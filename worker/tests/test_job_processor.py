@@ -5,7 +5,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from voxprep_tts_worker.application.job_processor import JobProcessor
-from voxprep_tts_worker.domain.errors import BackendTransportError, LeaseLostError, SynthesisError
+from voxprep_tts_worker.domain.errors import (
+    BackendTransportError,
+    LeaseLostError,
+    ModelUnavailableError,
+    PostprocessError,
+    SynthesisError,
+)
 from voxprep_tts_worker.domain.job import AudioArtifact, ClaimedJob
 
 
@@ -32,12 +38,16 @@ class FakeBackend:
         self,
         *,
         lose_lease_on_upload: bool = False,
+        lose_lease_on_heartbeat: bool = False,
         transport_error_on_upload: bool = False,
+        transport_error_on_fail: bool = False,
     ) -> None:
         self.uploaded: tuple[str, ClaimedJob, AudioArtifact] | None = None
         self.failures: list[tuple[str, ClaimedJob, str, str]] = []
         self.lose_lease_on_upload = lose_lease_on_upload
+        self.lose_lease_on_heartbeat = lose_lease_on_heartbeat
         self.transport_error_on_upload = transport_error_on_upload
+        self.transport_error_on_fail = transport_error_on_fail
         self.heartbeats = 0
 
     def claim(self, worker_id: str) -> ClaimedJob | None:
@@ -45,6 +55,8 @@ class FakeBackend:
 
     def heartbeat(self, *, worker_id: str, job: ClaimedJob) -> None:
         self.heartbeats += 1
+        if self.lose_lease_on_heartbeat:
+            raise LeaseLostError("stale lease")
 
     def upload_output(
         self,
@@ -67,16 +79,21 @@ class FakeBackend:
         error_code: str,
         error_message: str,
     ) -> None:
+        if self.transport_error_on_fail:
+            raise BackendTransportError("failure callback unavailable")
         self.failures.append((worker_id, job, error_code, error_message))
 
 
 class FakeModelCache:
-    def __init__(self, root: Path) -> None:
+    def __init__(self, root: Path, *, fail: bool = False) -> None:
         self.root = root
+        self.fail = fail
         self.seen_job: ClaimedJob | None = None
 
     def ensure_model(self, job: ClaimedJob) -> Path:
         self.seen_job = job
+        if self.fail:
+            raise ModelUnavailableError("model missing")
         model_dir = self.root / job.voice_model_id / job.model_sha256
         model_dir.mkdir(parents=True, exist_ok=True)
         return model_dir
@@ -97,12 +114,15 @@ class FakeSynthesizer:
 
 
 class FakePostprocessor:
-    def __init__(self) -> None:
+    def __init__(self, *, fail: bool = False) -> None:
+        self.fail = fail
         self.seen_job: ClaimedJob | None = None
 
     def postprocess(self, *, job: ClaimedJob, input_wav: Path, output_mp3: Path) -> AudioArtifact:
         self.seen_job = job
         assert input_wav.exists()
+        if self.fail:
+            raise PostprocessError("fake ffmpeg failed")
         payload = b"fake-mp3"
         output_mp3.write_bytes(payload)
         return AudioArtifact(
@@ -119,24 +139,26 @@ def _processor(
     tmp_path: Path,
     backend: FakeBackend,
     *,
+    model_cache: FakeModelCache | None = None,
     synthesizer: FakeSynthesizer | None = None,
+    postprocessor: FakePostprocessor | None = None,
     heartbeat_interval_seconds: float | None = None,
 ) -> tuple[JobProcessor, FakeModelCache, FakeSynthesizer, FakePostprocessor]:
     temp_dir = tmp_path / "tmp"
     temp_dir.mkdir()
-    model_cache = FakeModelCache(tmp_path / "models")
+    cache = model_cache or FakeModelCache(tmp_path / "models")
     synth = synthesizer or FakeSynthesizer()
-    post = FakePostprocessor()
+    post = postprocessor or FakePostprocessor()
     processor = JobProcessor(
         worker_id="worker-01",
         temp_dir=temp_dir,
         backend=backend,
-        model_cache=model_cache,
+        model_cache=cache,
         synthesizer=synth,
         postprocessor=post,
         heartbeat_interval_seconds=heartbeat_interval_seconds,
     )
-    return processor, model_cache, synth, post
+    return processor, cache, synth, post
 
 
 def test_processor_preserves_backend_owned_job_file_and_lease_identity(tmp_path: Path) -> None:
@@ -160,12 +182,26 @@ def test_processor_preserves_backend_owned_job_file_and_lease_identity(tmp_path:
     assert list((tmp_path / "tmp").iterdir()) == []
 
 
-def test_lease_loss_never_reports_fail_or_finalizes(tmp_path: Path) -> None:
+def test_lease_loss_on_upload_never_reports_fail_or_finalizes(tmp_path: Path) -> None:
     backend = FakeBackend(lose_lease_on_upload=True)
     processor, _, _, _ = _processor(tmp_path, backend)
 
     processor.process(_job())
 
+    assert backend.uploaded is None
+    assert backend.failures == []
+    assert list((tmp_path / "tmp").iterdir()) == []
+
+
+def test_lease_loss_during_revalidation_prevents_upload_and_fail(tmp_path: Path) -> None:
+    backend = FakeBackend(lose_lease_on_heartbeat=True)
+    processor, _, _, _ = _processor(
+        tmp_path, backend, heartbeat_interval_seconds=3600
+    )
+
+    processor.process(_job())
+
+    assert backend.heartbeats == 1
     assert backend.uploaded is None
     assert backend.failures == []
     assert list((tmp_path / "tmp").iterdir()) == []
@@ -196,6 +232,19 @@ def test_heartbeat_revalidates_lease_before_upload(tmp_path: Path) -> None:
     assert backend.heartbeats == 1
 
 
+def test_missing_model_is_reported_with_classified_error(tmp_path: Path) -> None:
+    backend = FakeBackend()
+    cache = FakeModelCache(tmp_path / "models", fail=True)
+    processor, _, _, _ = _processor(tmp_path, backend, model_cache=cache)
+
+    processor.process(_job())
+
+    assert backend.uploaded is None
+    assert len(backend.failures) == 1
+    assert backend.failures[0][2:] == ("VOICE_MODEL_NOT_FOUND", "model missing")
+    assert list((tmp_path / "tmp").iterdir()) == []
+
+
 def test_classified_synthesis_failure_is_reported_and_temp_is_cleaned(tmp_path: Path) -> None:
     backend = FakeBackend()
     processor, _, _, _ = _processor(
@@ -214,6 +263,37 @@ def test_classified_synthesis_failure_is_reported_and_temp_is_cleaned(tmp_path: 
     assert failed_job.file_id == "file-456"
     assert error_code == "PIPER_SYNTHESIS_FAILED"
     assert error_message == "fake synthesis failed"
+    assert list((tmp_path / "tmp").iterdir()) == []
+
+
+def test_postprocess_failure_is_reported_with_ffmpeg_code(tmp_path: Path) -> None:
+    backend = FakeBackend()
+    processor, _, _, _ = _processor(
+        tmp_path,
+        backend,
+        postprocessor=FakePostprocessor(fail=True),
+    )
+
+    processor.process(_job())
+
+    assert backend.uploaded is None
+    assert len(backend.failures) == 1
+    assert backend.failures[0][2:] == ("FFMPEG_FAILED", "fake ffmpeg failed")
+    assert list((tmp_path / "tmp").iterdir()) == []
+
+
+def test_backend_outage_while_reporting_failure_relies_on_lease_recovery(tmp_path: Path) -> None:
+    backend = FakeBackend(transport_error_on_fail=True)
+    processor, _, _, _ = _processor(
+        tmp_path,
+        backend,
+        synthesizer=FakeSynthesizer(fail=True),
+    )
+
+    processor.process(_job())
+
+    assert backend.uploaded is None
+    assert backend.failures == []
     assert list((tmp_path / "tmp").iterdir()) == []
 
 
