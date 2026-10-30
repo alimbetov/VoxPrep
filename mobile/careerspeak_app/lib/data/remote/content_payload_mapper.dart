@@ -25,8 +25,10 @@ final class ContentPayloadMapper {
       title: dto.title,
       subtitle: dto.subtitle,
       description: dto.description,
-      category: dto.category,
-      level: dto.level,
+      categoryCode: dto.categoryCode,
+      category: dto.categoryLabel,
+      levelCode: dto.levelCode,
+      level: dto.levelLabel,
       minutes: dto.minutes,
       hasAudio: dto.hasAudio,
     );
