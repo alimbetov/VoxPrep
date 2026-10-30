@@ -41,6 +41,15 @@ class Backend:
             raise outcome
 
 
+class FakeStop:
+    def __init__(self, waits: list[bool]) -> None:
+        self.waits = waits
+
+    def wait(self, timeout: float) -> bool:
+        assert timeout == 3600
+        return self.waits.pop(0) if self.waits else True
+
+
 def _heartbeat(backend: Backend) -> LeaseHeartbeat:
     return LeaseHeartbeat(
         backend=backend,  # type: ignore[arg-type]
@@ -87,3 +96,26 @@ def test_transient_revalidation_error_does_not_mark_lease_lost() -> None:
     heartbeat.revalidate()
 
     assert backend.calls == 2
+
+
+def test_background_heartbeat_marks_confirmed_lease_loss() -> None:
+    backend = Backend([LeaseLostError("stale")])
+    heartbeat = _heartbeat(backend)
+    heartbeat._stop = FakeStop([False])  # type: ignore[assignment]
+
+    heartbeat._run()
+
+    assert backend.calls == 1
+    with pytest.raises(LeaseLostError, match="ownership was lost"):
+        heartbeat.assert_owned()
+
+
+def test_background_transient_failure_does_not_mark_lease_lost() -> None:
+    backend = Backend([BackendTransportError("temporary")])
+    heartbeat = _heartbeat(backend)
+    heartbeat._stop = FakeStop([False, True])  # type: ignore[assignment]
+
+    heartbeat._run()
+
+    assert backend.calls == 1
+    heartbeat.assert_owned()
