@@ -143,7 +143,7 @@ final class DriftAppPreferencesRepository implements AppPreferencesRepository {
           .into(_database.appPreferences)
           .insert(
             AppPreferencesCompanion.insert(
-              id: _singletonId,
+              id: const Value<int>(_singletonId),
               uiLocale: ApplicationPreferences.defaults.uiLocale.code,
               translationLocale:
                   ApplicationPreferences.defaults.translationLocale.code,
