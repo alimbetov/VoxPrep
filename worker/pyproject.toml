@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools==84.2.1"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "voxprep-tts-worker"
+version = "0.1.0"
+description = "VoxPrep backend-controlled TTS worker"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "piper-tts==1.4.2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest==8.4.2",
+]
+
+[project.scripts]
+voxprep-tts-worker = "voxprep_tts_worker.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"

@@ -1,0 +1,112 @@
+name: TTS Worker Foundation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/tts-worker-foundation
+    paths:
+      - "worker/**"
+      - ".github/workflows/tts-worker-foundation.yml"
+  pull_request:
+    paths:
+      - "worker/**"
+      - ".github/workflows/tts-worker-foundation.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12.16"
+          cache: pip
+          cache-dependency-path: |
+            worker/pyproject.toml
+            worker/constraints.txt
+
+      - name: Install pinned packaging tool
+        run: python -m pip install --no-cache-dir pip==26.2.2
+
+      - name: Install worker and pinned test dependencies
+        run: python -m pip install -c constraints.txt -e '.[dev]'
+
+      - name: Verify Python dependency graph
+        run: |
+          python -m pip check
+          python -c "import onnxruntime, piper; assert onnxruntime.__version__ == '1.31.1'; print('piper runtime import ok')"
+          python -m pip show piper-tts | grep -F "Version: 1.4.2"
+
+      - name: Verify resolved dependency set matches lock
+        shell: bash
+        run: |
+          grep -vE '^[[:space:]]*(#|$)' constraints.txt | sort -f > /tmp/expected.txt
+          python -m pip freeze | grep -vE '^-e ' | sort -f > /tmp/actual.txt
+          diff -u /tmp/expected.txt /tmp/actual.txt
+
+      - name: Compile Python sources
+        run: python -m compileall -q src tests
+
+      - name: Run worker tests
+        run: pytest
+
+  container:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build worker image
+        run: docker build -t voxprep-tts-worker:w1 ./worker
+
+      - name: Verify pinned runtime components
+        shell: bash
+        run: |
+          docker run --rm --entrypoint sh voxprep-tts-worker:w1 -c '
+            set -eu
+            test "$(python -c "import sys; print(sys.version.split()[0])")" = "3.12.16"
+            ffmpeg -version | head -n 1 | grep -F "5.1.9-0+deb12u1"
+            ffprobe -version | head -n 1 | grep -F "5.1.9-0+deb12u1"
+            python -m pip show piper-tts | grep -F "Version: 1.4.2"
+            test "$(python -c "import onnxruntime; print(onnxruntime.__version__)")" = "1.31.1"
+            python -m pip check
+          '
+
+      - name: Missing configuration fails fast
+        shell: bash
+        run: |
+          set +e
+          docker run --rm voxprep-tts-worker:w1 >/tmp/worker.out 2>/tmp/worker.err
+          code=$?
+          set -e
+          cat /tmp/worker.err
+          test "$code" -eq 2
+          grep -q "BASE_URL is required" /tmp/worker.err
+
+      - name: Valid runtime starts and stops with SIGTERM
+        shell: bash
+        run: |
+          token="ci-worker-secret"
+          id=$(docker run -d \
+            -e BASE_URL=http://backend.example \
+            -e WORKER_TOKEN="$token" \
+            -e WORKER_ID=ci-worker-01 \
+            voxprep-tts-worker:w1)
+          sleep 2
+          docker stop --timeout 10 "$id"
+          docker logs "$id" > /tmp/worker.log 2>&1
+          docker rm "$id"
+          cat /tmp/worker.log
+          grep -q "worker polling started" /tmp/worker.log
+          grep -q "worker polling stopped" /tmp/worker.log
+          if grep -Fq "$token" /tmp/worker.log; then
+            echo "worker token leaked to logs"
+            exit 1
+          fi
