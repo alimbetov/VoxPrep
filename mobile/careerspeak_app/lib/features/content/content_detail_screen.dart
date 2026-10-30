@@ -11,13 +11,19 @@ class ContentDetailScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(contentRepositoryProvider);
-    final item = repository.byCode(code);
+    final item = ref.watch(contentByCodeProvider(code));
 
-    if (item == null) {
-      return const Center(child: Text('Content not found.'));
-    }
-
-    return ContentDetailPanel(item: item);
+    return item.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stackTrace) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text('Unable to load content.\n$error'),
+        ),
+      ),
+      data: (value) => value == null
+          ? const Center(child: Text('Content not found.'))
+          : ContentDetailPanel(item: value),
+    );
   }
 }
