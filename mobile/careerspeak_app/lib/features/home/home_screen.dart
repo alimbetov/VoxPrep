@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/content_locations.dart';
 import '../../app/learner_state_providers.dart';
 import '../../app/repository_providers.dart';
 import '../../domain/content_identity.dart';
@@ -122,8 +123,11 @@ class _HomeContent extends StatelessWidget {
                   Text('$completed of ${items.length} items completed'),
                   const SizedBox(height: 14),
                   FilledButton.icon(
-                    onPressed: () =>
-                        context.push('/content/${continueItem!.code}'),
+                    onPressed: () => context.push(
+                      contentDetailLocation(
+                        ContentIdentity.fromItem(continueItem!),
+                      ),
+                    ),
                     icon: const Icon(Icons.play_arrow),
                     label: const Text('Continue'),
                   ),

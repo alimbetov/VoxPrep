@@ -27,8 +27,15 @@ void main() {
           .getOrThrow();
       expect(page.items, isNotEmpty);
 
-      final item = (await repository.getByCode('JAVA_DI_001')).getOrThrow();
+      final item = (await repository.getByIdentity(
+        const ContentIdentity(code: 'JAVA_DI_001', type: ContentType.interview),
+      )).getOrThrow();
       expect(item?.title, 'Dependency Injection');
+
+      final wrongType = (await repository.getByIdentity(
+        const ContentIdentity(code: 'JAVA_DI_001', type: ContentType.topic),
+      )).getOrThrow();
+      expect(wrongType, isNull);
     },
   );
 

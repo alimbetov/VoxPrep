@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/content_locations.dart';
 import '../../app/learner_state_providers.dart';
 import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
@@ -35,7 +36,7 @@ class ContentCard extends ConsumerWidget {
       clipBehavior: Clip.antiAlias,
       color: selected ? scheme.secondaryContainer : null,
       child: InkWell(
-        onTap: onTap ?? () => context.push('/content/${item.code}'),
+        onTap: onTap ?? () => context.push(contentDetailLocation(identity)),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Row(
