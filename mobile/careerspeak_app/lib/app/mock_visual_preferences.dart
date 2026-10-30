@@ -1,0 +1,90 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+enum MockUiLanguage {
+  english('English'),
+  russian('Русский'),
+  kazakh('Қазақша');
+
+  const MockUiLanguage(this.label);
+  final String label;
+}
+
+enum MockTranslationLanguage {
+  english('English'),
+  russian('Русский'),
+  kazakh('Қазақша');
+
+  const MockTranslationLanguage(this.label);
+  final String label;
+}
+
+enum MockAccent {
+  us('US English'),
+  uk('UK English'),
+  australian('Australian English');
+
+  const MockAccent(this.label);
+  final String label;
+}
+
+class MockVisualPreferences {
+  const MockVisualPreferences({
+    this.uiLanguage = MockUiLanguage.english,
+    this.translationLanguage = MockTranslationLanguage.russian,
+    this.accent = MockAccent.us,
+    this.largeTextPreview = false,
+    this.rtlPreview = false,
+  });
+
+  final MockUiLanguage uiLanguage;
+  final MockTranslationLanguage translationLanguage;
+  final MockAccent accent;
+  final bool largeTextPreview;
+  final bool rtlPreview;
+
+  MockVisualPreferences copyWith({
+    MockUiLanguage? uiLanguage,
+    MockTranslationLanguage? translationLanguage,
+    MockAccent? accent,
+    bool? largeTextPreview,
+    bool? rtlPreview,
+  }) {
+    return MockVisualPreferences(
+      uiLanguage: uiLanguage ?? this.uiLanguage,
+      translationLanguage: translationLanguage ?? this.translationLanguage,
+      accent: accent ?? this.accent,
+      largeTextPreview: largeTextPreview ?? this.largeTextPreview,
+      rtlPreview: rtlPreview ?? this.rtlPreview,
+    );
+  }
+}
+
+final mockVisualPreferencesProvider =
+    NotifierProvider<MockVisualPreferencesController, MockVisualPreferences>(
+  MockVisualPreferencesController.new,
+);
+
+class MockVisualPreferencesController extends Notifier<MockVisualPreferences> {
+  @override
+  MockVisualPreferences build() => const MockVisualPreferences();
+
+  void setUiLanguage(MockUiLanguage value) {
+    state = state.copyWith(uiLanguage: value);
+  }
+
+  void setTranslationLanguage(MockTranslationLanguage value) {
+    state = state.copyWith(translationLanguage: value);
+  }
+
+  void setAccent(MockAccent value) {
+    state = state.copyWith(accent: value);
+  }
+
+  void setLargeTextPreview(bool value) {
+    state = state.copyWith(largeTextPreview: value);
+  }
+
+  void setRtlPreview(bool value) {
+    state = state.copyWith(rtlPreview: value);
+  }
+}
