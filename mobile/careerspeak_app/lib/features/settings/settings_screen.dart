@@ -125,10 +125,10 @@ class SettingsScreen extends ConsumerWidget {
           'UI, translation locale and accent are stored locally. English remains the learning language; translation locale selects support/localization content packs.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
-        if (preferencesAsync.asError case final error?) ...[
+        if (preferencesAsync.hasError) ...[
           const SizedBox(height: 8),
           Text(
-            'Preferences unavailable: ${error.error.runtimeType}',
+            'Preferences are unavailable.',
             style: TextStyle(color: Theme.of(context).colorScheme.error),
           ),
         ],
