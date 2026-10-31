@@ -185,11 +185,15 @@ class SettingsScreen extends ConsumerWidget {
               children: [
                 Text('Current', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
-                Text('UI: ${preferences.uiLocale.label} (${preferences.uiLocale.code})'),
+                Text(
+                  'UI: ${preferences.uiLocale.label} (${preferences.uiLocale.code})',
+                ),
                 Text(
                   'Translation: ${preferences.translationLocale.label} (${preferences.translationLocale.code})',
                 ),
-                Text('Direction: ${preferences.uiLocale.isRtl ? 'RTL' : 'LTR'}'),
+                Text(
+                  'Direction: ${preferences.uiLocale.isRtl ? 'RTL' : 'LTR'}',
+                ),
                 Text(
                   'Accent: ${preferences.preferredAccent?.label ?? 'Default'}',
                 ),

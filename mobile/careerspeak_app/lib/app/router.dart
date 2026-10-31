@@ -23,24 +23,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: '/',
-            pageBuilder: (context, state) => _page(
-              state: state,
-              child: const HomeScreen(),
-            ),
+            pageBuilder: (context, state) =>
+                _page(state: state, child: const HomeScreen()),
           ),
           GoRoute(
             path: '/learn',
-            pageBuilder: (context, state) => _page(
-              state: state,
-              child: const LearnScreen(),
-            ),
+            pageBuilder: (context, state) =>
+                _page(state: state, child: const LearnScreen()),
           ),
           GoRoute(
             path: '/tests',
-            pageBuilder: (context, state) => _page(
-              state: state,
-              child: const TestsScreen(),
-            ),
+            pageBuilder: (context, state) =>
+                _page(state: state, child: const TestsScreen()),
           ),
           GoRoute(
             path: '/tests/:code',
@@ -52,17 +46,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/review',
-            pageBuilder: (context, state) => _page(
-              state: state,
-              child: const ReviewScreen(),
-            ),
+            pageBuilder: (context, state) =>
+                _page(state: state, child: const ReviewScreen()),
           ),
           GoRoute(
             path: '/settings',
-            pageBuilder: (context, state) => _page(
-              state: state,
-              child: const SettingsScreen(),
-            ),
+            pageBuilder: (context, state) =>
+                _page(state: state, child: const SettingsScreen()),
           ),
           GoRoute(
             path: '/content/:type/:code',

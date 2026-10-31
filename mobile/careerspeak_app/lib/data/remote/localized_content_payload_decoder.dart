@@ -8,7 +8,8 @@ import 'localized_content_payload_mapper.dart';
 
 final class LocalizedContentPayloadDecoder {
   const LocalizedContentPayloadDecoder({
-    LocalizedContentPayloadMapper mapper = const LocalizedContentPayloadMapper(),
+    LocalizedContentPayloadMapper mapper =
+        const LocalizedContentPayloadMapper(),
   }) : _mapper = mapper;
 
   final LocalizedContentPayloadMapper _mapper;
@@ -101,10 +102,7 @@ final class LocalizedContentPayloadDecoder {
   String _string(Map<String, Object?> object, String key) {
     final value = object[key];
     if (value is! String || value.trim().isEmpty) {
-      throw _LocalizedPayloadViolation(
-        '\$.$key',
-        'must be a non-blank string',
-      );
+      throw _LocalizedPayloadViolation('\$.$key', 'must be a non-blank string');
     }
     return value.trim();
   }

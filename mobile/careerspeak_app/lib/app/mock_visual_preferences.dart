@@ -29,8 +29,7 @@ class MockVisualPreferences {
     return MockVisualPreferences(
       textScale: textScale ?? this.textScale,
       rtlPreview: rtlPreview ?? this.rtlPreview,
-      reducedMotionPreview:
-          reducedMotionPreview ?? this.reducedMotionPreview,
+      reducedMotionPreview: reducedMotionPreview ?? this.reducedMotionPreview,
     );
   }
 }

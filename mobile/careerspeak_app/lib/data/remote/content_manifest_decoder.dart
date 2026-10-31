@@ -307,11 +307,7 @@ final class ContentManifestDecoder {
     return typeName;
   }
 
-  String _locale(
-    Map<String, Object?> object,
-    String key,
-    String path,
-  ) {
+  String _locale(Map<String, Object?> object, String key, String path) {
     final locale = _string(object, key, path);
     if (!_localePattern.hasMatch(locale)) {
       throw _ContractViolation(path, 'must be a BCP-47-compatible locale');

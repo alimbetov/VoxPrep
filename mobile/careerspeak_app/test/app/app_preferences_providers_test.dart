@@ -34,35 +34,36 @@ void main() {
     expect(preferences.theme, ApplicationPreferences.defaults.theme);
   });
 
-  test('translation locale provider exposes persisted BCP-47 sync locale', () async {
-    final database = createTestDatabase();
-    addTearDown(database.close);
-    final container = ProviderContainer(
-      overrides: [careerSpeakDatabaseProvider.overrideWithValue(database)],
-    );
-    addTearDown(container.dispose);
+  test(
+    'translation locale provider exposes persisted BCP-47 sync locale',
+    () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      final container = ProviderContainer(
+        overrides: [careerSpeakDatabaseProvider.overrideWithValue(database)],
+      );
+      addTearDown(container.dispose);
 
-    final observed = Completer<void>();
-    final subscription = container.listen<AsyncValue<String>>(
-      translationLocaleProvider,
-      (_, next) {
-        if (next.asData?.value == AppTranslationLocale.brazilianPortuguese.code &&
-            !observed.isCompleted) {
-          observed.complete();
-        }
-      },
-      fireImmediately: true,
-    );
-    addTearDown(subscription.close);
+      final observed = Completer<void>();
+      final subscription = container.listen<AsyncValue<String>>(
+        translationLocaleProvider,
+        (_, next) {
+          if (next.asData?.value ==
+                  AppTranslationLocale.brazilianPortuguese.code &&
+              !observed.isCompleted) {
+            observed.complete();
+          }
+        },
+        fireImmediately: true,
+      );
+      addTearDown(subscription.close);
 
-    await container
-        .read(appPreferencesControllerProvider)
-        .setTranslationLocale(AppTranslationLocale.brazilianPortuguese);
-    await observed.future.timeout(const Duration(seconds: 2));
+      await container
+          .read(appPreferencesControllerProvider)
+          .setTranslationLocale(AppTranslationLocale.brazilianPortuguese);
+      await observed.future.timeout(const Duration(seconds: 2));
 
-    expect(
-      container.read(translationLocaleProvider).asData?.value,
-      'pt-BR',
-    );
-  });
+      expect(container.read(translationLocaleProvider).asData?.value, 'pt-BR');
+    },
+  );
 }

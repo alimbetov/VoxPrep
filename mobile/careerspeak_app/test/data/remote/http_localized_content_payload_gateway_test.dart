@@ -14,29 +14,34 @@ const _otherHash =
 
 void main() {
   group('HttpLocalizedContentPayloadGateway', () {
-    test('fetches exact localization revision using installation auth', () async {
-      final apiClient = _RecordingApiClient(<Result<ApiResponse>>[
-        Success<ApiResponse>(
-          ApiResponse(
-            statusCode: 200,
-            headers: const <String, String>{},
-            jsonBody: _payloadJson(),
+    test(
+      'fetches exact localization revision using installation auth',
+      () async {
+        final apiClient = _RecordingApiClient(<Result<ApiResponse>>[
+          Success<ApiResponse>(
+            ApiResponse(
+              statusCode: 200,
+              headers: const <String, String>{},
+              jsonBody: _payloadJson(),
+            ),
           ),
-        ),
-      ]);
-      final gateway = HttpLocalizedContentPayloadGateway(apiClient: apiClient);
+        ]);
+        final gateway = HttpLocalizedContentPayloadGateway(
+          apiClient: apiClient,
+        );
 
-      final result = await gateway.fetch(_target());
+        final result = await gateway.fetch(_target());
 
-      expect(result, isA<Success<LocalizedContentPayload>>());
-      final request = apiClient.requests.single;
-      expect(request.method, ApiMethod.get);
-      expect(
-        request.path,
-        '/api/v1/content/interview/JAVA_Q_001/revisions/3/localizations/ru/revisions/2',
-      );
-      expect(request.authentication, ApiAuthentication.installation);
-    });
+        expect(result, isA<Success<LocalizedContentPayload>>());
+        final request = apiClient.requests.single;
+        expect(request.method, ApiMethod.get);
+        expect(
+          request.path,
+          '/api/v1/content/interview/JAVA_Q_001/revisions/3/localizations/ru/revisions/2',
+        );
+        expect(request.authentication, ApiAuthentication.installation);
+      },
+    );
 
     test('rejects response with mismatched localization checksum', () async {
       final apiClient = _RecordingApiClient(<Result<ApiResponse>>[

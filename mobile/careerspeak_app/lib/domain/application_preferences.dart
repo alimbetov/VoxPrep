@@ -5,7 +5,8 @@ sealed class LocaleCode {
 
   String get languageCode => code.split('-').first.toLowerCase();
 
-  bool get isRtl => const <String>{'ar', 'ur', 'fa', 'he'}.contains(languageCode);
+  bool get isRtl =>
+      const <String>{'ar', 'ur', 'fa', 'he'}.contains(languageCode);
 
   String get label => switch (code) {
     'en' => 'English',
@@ -151,9 +152,7 @@ final class AppTranslationLocale extends LocaleCode {
   }
 }
 
-final RegExp _localePattern = RegExp(
-  r'^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$',
-);
+final RegExp _localePattern = RegExp(r'^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$');
 final RegExp _alpha = RegExp(r'^[A-Za-z]+$');
 
 enum PreferredEnglishAccent {

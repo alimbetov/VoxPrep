@@ -74,28 +74,31 @@ void main() {
       expect(apiClient.requests, isEmpty);
     });
 
-    test('decodes changed locale-independent root through typed boundary', () async {
-      final apiClient = _RecordingApiClient(<Result<ApiResponse>>[
-        Success<ApiResponse>(
-          ApiResponse(
-            statusCode: 200,
-            headers: const <String, String>{'etag': 'etag-108'},
-            jsonBody: _rootManifest(),
+    test(
+      'decodes changed locale-independent root through typed boundary',
+      () async {
+        final apiClient = _RecordingApiClient(<Result<ApiResponse>>[
+          Success<ApiResponse>(
+            ApiResponse(
+              statusCode: 200,
+              headers: const <String, String>{'etag': 'etag-108'},
+              jsonBody: _rootManifest(),
+            ),
           ),
-        ),
-      ]);
-      final gateway = HttpContentManifestGateway(apiClient: apiClient);
+        ]);
+        final gateway = HttpContentManifestGateway(apiClient: apiClient);
 
-      final result = await gateway.fetchRootManifest();
+        final result = await gateway.fetchRootManifest();
 
-      expect(result, isA<Success<RootManifestFetch>>());
-      final fetch = (result as Success<RootManifestFetch>).value;
-      expect(fetch, isA<RootManifestChanged>());
-      final changed = fetch as RootManifestChanged;
-      expect(changed.manifest.contentVersion, 108);
-      expect(changed.etag, 'etag-108');
-      expect(apiClient.requests.single.queryParameters, isEmpty);
-    });
+        expect(result, isA<Success<RootManifestFetch>>());
+        final fetch = (result as Success<RootManifestFetch>).value;
+        expect(fetch, isA<RootManifestChanged>());
+        final changed = fetch as RootManifestChanged;
+        expect(changed.manifest.contentVersion, 108);
+        expect(changed.etag, 'etag-108');
+        expect(apiClient.requests.single.queryParameters, isEmpty);
+      },
+    );
 
     test('fetches exact pack target from root manifest identity', () async {
       final target = PackRevisionRef(
