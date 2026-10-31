@@ -34,27 +34,30 @@ void main() {
     expect(access.assetIds, ['asset-a']);
   });
 
-  test('origin 403 refreshes grant once for the same immutable asset', () async {
-    final requested = <Uri>[];
-    final access = _AccessGateway([
-      Uri.parse('https://media.example.test/signed/a?signature=expired'),
-      Uri.parse('https://media.example.test/signed/a?signature=fresh'),
-    ]);
-    final source = HttpAssetByteSource(
-      client: MockClient((request) async {
-        requested.add(request.url);
-        if (requested.length == 1) return http.Response('', 403);
-        return http.Response.bytes(<int>[1, 2, 3], 200);
-      }),
-      accessGateway: access,
-    );
+  test(
+    'origin 403 refreshes grant once for the same immutable asset',
+    () async {
+      final requested = <Uri>[];
+      final access = _AccessGateway([
+        Uri.parse('https://media.example.test/signed/a?signature=expired'),
+        Uri.parse('https://media.example.test/signed/a?signature=fresh'),
+      ]);
+      final source = HttpAssetByteSource(
+        client: MockClient((request) async {
+          requested.add(request.url);
+          if (requested.length == 1) return http.Response('', 403);
+          return http.Response.bytes(<int>[1, 2, 3], 200);
+        }),
+        accessGateway: access,
+      );
 
-    final result = await source.open(_asset(size: 3));
+      final result = await source.open(_asset(size: 3));
 
-    expect(result, isA<Success<AssetByteStream>>());
-    expect(requested.length, 2);
-    expect(access.assetIds, ['asset-a', 'asset-a']);
-  });
+      expect(result, isA<Success<AssetByteStream>>());
+      expect(requested.length, 2);
+      expect(access.assetIds, ['asset-a', 'asset-a']);
+    },
+  );
 
   test('second origin 403 fails instead of refreshing forever', () async {
     final access = _AccessGateway([
