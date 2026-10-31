@@ -4,15 +4,11 @@ path = Path(
     'mobile/careerspeak_app/test/data/local/database/careerspeak_retirement_migration_test.dart'
 )
 text = path.read_text()
-marker = "test('v5 TOMBSTONED local rows survive migration after journal pruning'"
-if marker in text:
-    raise SystemExit(0)
-
 closing = '\n}\n'
 if not text.endswith(closing):
     raise SystemExit('unexpected retirement migration test footer')
 
-cases = r'''
+case_local = r'''
 
   test(
     'v5 TOMBSTONED local rows survive migration after journal pruning',
@@ -69,6 +65,9 @@ cases = r'''
       await migrated.close();
     },
   );
+'''
+
+case_precedence = r'''
 
   test(
     'v5 journal metadata wins when retirement evidence has the same revision',
@@ -150,4 +149,18 @@ cases = r'''
   );
 '''
 
-path.write_text(text[:-len(closing)] + cases + closing)
+for marker, case in (
+    (
+        "test('v5 TOMBSTONED local rows survive migration after journal pruning'",
+        case_local,
+    ),
+    (
+        "test('v5 journal metadata wins when retirement evidence has the same revision'",
+        case_precedence,
+    ),
+):
+    if marker in text:
+        continue
+    text = text[:-len(closing)] + case + closing
+
+path.write_text(text)
