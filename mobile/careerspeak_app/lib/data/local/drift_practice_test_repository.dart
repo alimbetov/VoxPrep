@@ -11,6 +11,7 @@ import '../../domain/assessment.dart';
 import '../../domain/assessment_bundle.dart';
 import '../../domain/practice_test.dart';
 import 'database/careerspeak_database.dart';
+import 'publication_snapshot_storage.dart';
 
 /// Learner-facing practice-test repository fenced by the CURRENT publication.
 ///
@@ -31,6 +32,20 @@ final class DriftPracticeTestRepository implements PracticeTestRepository {
   Stream<Result<Page<PracticeTestSummary>>> watchTests(
     PracticeTestQuery query,
   ) async* {
+    try {
+      await PublicationSnapshotStorage(_database).ensureReady();
+    } on Object catch (error) {
+      yield FailureResult<Page<PracticeTestSummary>>(
+        ApplicationFailure(
+          code: 'PRACTICE_TEST_READ_FAILED',
+          message: 'The CURRENT practice-test projection could not be read.',
+          retryable: true,
+          details: <String, Object?>{'errorType': error.runtimeType.toString()},
+        ),
+      );
+      return;
+    }
+
     final cursor = _decodeCursor(query.page.cursor);
     if (cursor case FailureResult<String?>(:final failure)) {
       yield FailureResult<Page<PracticeTestSummary>>(failure);
@@ -109,6 +124,7 @@ final class DriftPracticeTestRepository implements PracticeTestRepository {
     }
 
     try {
+      await PublicationSnapshotStorage(_database).ensureReady();
       final refs = await _database.customSelect(
         '''
         SELECT p.practice_test_code, p.revision, p.checksum
