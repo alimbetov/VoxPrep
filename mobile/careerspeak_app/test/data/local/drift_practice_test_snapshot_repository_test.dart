@@ -3,6 +3,7 @@ import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_assessment_revision_repository.dart';
 import 'package:careerspeak_app/data/local/drift_practice_test_repository.dart';
+import 'package:careerspeak_app/data/local/publication_snapshot_storage.dart';
 import 'package:careerspeak_app/domain/assessment.dart';
 import 'package:careerspeak_app/domain/assessment_bundle.dart';
 import 'package:careerspeak_app/domain/practice_test.dart';
@@ -31,6 +32,7 @@ void main() {
 
   setUp(() async {
     database = createTestDatabase();
+    await PublicationSnapshotStorage(database).ensureReady();
     assessmentRepository = DriftAssessmentRevisionRepository(database);
     repository = DriftPracticeTestRepository(database, assessmentRepository);
 
@@ -154,5 +156,8 @@ AssessmentRevisionBundle _bundle({
       PracticeTestQuestionRef(order: 0, question: questionId, points: 1),
     ],
   );
-  return AssessmentRevisionBundle(test: test, questions: <AssessmentQuestionRevision>[question]);
+  return AssessmentRevisionBundle(
+    test: test,
+    questions: <AssessmentQuestionRevision>[question],
+  );
 }
