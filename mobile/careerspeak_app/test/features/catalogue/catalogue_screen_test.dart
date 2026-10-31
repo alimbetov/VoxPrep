@@ -73,7 +73,9 @@ void main() {
     expect(find.text('MEDICAL_ENGLISH'), findsNothing);
   });
 
-  testWidgets('goal drill-down renders only owned active tracks', (tester) async {
+  testWidgets('goal drill-down renders only owned active tracks', (
+    tester,
+  ) async {
     final snapshot = _snapshot(VerticalCataloguePresentationMode.shelves);
     await tester.pumpWidget(
       ProviderScope(
@@ -187,9 +189,7 @@ void main() {
             const _EmptyRepository(),
           ),
         ],
-        child: const MaterialApp(
-          home: Scaffold(body: CatalogueHomeScreen()),
-        ),
+        child: const MaterialApp(home: Scaffold(body: CatalogueHomeScreen())),
       ),
     );
     await tester.pumpAndSettle();
@@ -210,9 +210,7 @@ void main() {
             const _FailureRepository(),
           ),
         ],
-        child: const MaterialApp(
-          home: Scaffold(body: CatalogueHomeScreen()),
-        ),
+        child: const MaterialApp(home: Scaffold(body: CatalogueHomeScreen())),
       ),
     );
     await tester.pumpAndSettle();
