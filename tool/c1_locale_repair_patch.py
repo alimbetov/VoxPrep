@@ -57,8 +57,8 @@ replacement = """            currentManifestChecksum: _rootChecksum,
             localePolicyContentVersion: const Value(108),
             updatedAt: now,
 """
-if replacement not in test_text:
-    if test_text.count(needle) != 2:
-        raise SystemExit('unexpected locale repair manifest fixture count')
+if needle in test_text:
     test_text = test_text.replace(needle, replacement)
+if needle in test_text or replacement not in test_text:
+    raise SystemExit('missing locale repair manifest fixture anchor')
 test_path.write_text(test_text)
