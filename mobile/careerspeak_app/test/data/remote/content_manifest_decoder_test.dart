@@ -1,3 +1,4 @@
+import 'package:careerspeak_app/application/content_delivery/catalogue_revision_ref.dart';
 import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
 import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/remote/content_manifest_decoder.dart';
@@ -8,7 +9,7 @@ void main() {
   const decoder = ContentManifestDecoder();
 
   group('ContentManifestDecoder', () {
-    test('decodes schema v1 root manifest with typed tombstones', () {
+    test('decodes schema v1 root with exact publication membership', () {
       final result = decoder.decodeRoot(_rootManifest());
 
       expect(result, isA<Success<RootContentManifest>>());
@@ -20,6 +21,10 @@ void main() {
         manifest.packs.single.identity.toString(),
         'JAVA_SENIOR/canonical',
       );
+      expect(manifest.practiceTests.single.practiceTestCode, 'JAVA_TEST_001');
+      expect(manifest.practiceTests.single.revision, 3);
+      expect(manifest.catalogues.single.kind, CatalogueKind.learningCollections);
+      expect(manifest.catalogues.single.revision, 7);
       expect(manifest.tombstones.single.identity.type, ContentType.interview);
     });
 
@@ -43,6 +48,62 @@ void main() {
       expect(
         (result as FailureResult<RootContentManifest>).failure.code,
         'APP_UPDATE_REQUIRED',
+      );
+    });
+
+    test('root without exact practice-test membership array is rejected', () {
+      final manifest = _rootManifest()..remove('practiceTests');
+
+      final result = decoder.decodeRoot(manifest);
+
+      expect(result, isA<FailureResult<RootContentManifest>>());
+      final failure = (result as FailureResult<RootContentManifest>).failure;
+      expect(failure.code, 'MANIFEST_INVALID');
+      expect(failure.details['field'], r'$.practiceTests');
+    });
+
+    test('root without exact catalogue membership array is rejected', () {
+      final manifest = _rootManifest()..remove('catalogues');
+
+      final result = decoder.decodeRoot(manifest);
+
+      expect(result, isA<FailureResult<RootContentManifest>>());
+      final failure = (result as FailureResult<RootContentManifest>).failure;
+      expect(failure.code, 'MANIFEST_INVALID');
+      expect(failure.details['field'], r'$.catalogues');
+    });
+
+    test('duplicate catalogue kind membership is rejected', () {
+      final manifest = _rootManifest();
+      final catalogues = manifest['catalogues'] as List<Object?>;
+      catalogues.add(<String, Object?>{
+        'kind': 'learning-collections',
+        'revision': 8,
+        'checksum': _shaD,
+      });
+
+      final result = decoder.decodeRoot(manifest);
+
+      expect(result, isA<FailureResult<RootContentManifest>>());
+      expect(
+        (result as FailureResult<RootContentManifest>).failure.code,
+        'MANIFEST_INVALID',
+      );
+    });
+
+    test('invalid exact practice-test checksum is rejected', () {
+      final manifest = _rootManifest();
+      final test =
+          (manifest['practiceTests'] as List<Object?>).single
+              as Map<String, Object?>;
+      test['checksum'] = 'not-a-sha';
+
+      final result = decoder.decodeRoot(manifest);
+
+      expect(result, isA<FailureResult<RootContentManifest>>());
+      expect(
+        (result as FailureResult<RootContentManifest>).failure.code,
+        'MANIFEST_INVALID',
       );
     });
 
@@ -168,6 +229,20 @@ Map<String, Object?> _rootManifest() {
         'variant': 'canonical',
         'revision': 8,
         'checksum': _shaB,
+      },
+    ],
+    'practiceTests': <Object?>[
+      <String, Object?>{
+        'practiceTestCode': 'JAVA_TEST_001',
+        'revision': 3,
+        'checksum': _shaC,
+      },
+    ],
+    'catalogues': <Object?>[
+      <String, Object?>{
+        'kind': 'learning-collections',
+        'revision': 7,
+        'checksum': _shaD,
       },
     ],
     'tombstones': <Object?>[
