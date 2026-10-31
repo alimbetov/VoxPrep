@@ -1,4 +1,6 @@
 enum CatalogueKind {
+  verticalSections('vertical-sections'),
+  verticalPresentation('vertical-presentation'),
   verticals('verticals'),
   learningGoals('learning-goals'),
   learningTracks('learning-tracks'),

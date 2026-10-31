@@ -10,7 +10,15 @@ void main() {
   const checksum =
       'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
-  test('verticals is a backend-owned catalogue kind', () {
+  test('vertical catalogue capabilities are backend-owned catalogue kinds', () {
+    expect(
+      CatalogueKind.fromWireName('vertical-sections'),
+      CatalogueKind.verticalSections,
+    );
+    expect(
+      CatalogueKind.fromWireName('vertical-presentation'),
+      CatalogueKind.verticalPresentation,
+    );
     expect(CatalogueKind.fromWireName('verticals'), CatalogueKind.verticals);
   });
 
