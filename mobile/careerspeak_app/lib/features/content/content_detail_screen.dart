@@ -22,9 +22,26 @@ class ContentDetailScreen extends ConsumerWidget {
           child: Text('Unable to load content.\n$error'),
         ),
       ),
-      data: (value) => value == null
-          ? const Center(child: Text('Content not found.'))
-          : ContentDetailPanel(item: value),
+      data: (value) {
+        if (value == null) {
+          return const Center(child: Text('Content not found.'));
+        }
+
+        final localized = ref.watch(
+          localizedContentProvider(
+            LocalizedContentRequest(
+              identity: identity,
+              contentRevision: value.revision,
+            ),
+          ),
+        );
+        final localizedHint = localized.asData?.value?.hint;
+
+        return ContentDetailPanel(
+          item: value,
+          localizedHint: localizedHint,
+        );
+      },
     );
   }
 }
