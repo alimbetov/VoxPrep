@@ -36,6 +36,7 @@ final class DriftUniversalCatalogueGraphMaterializer {
       }
       requireUniversalCatalogueManifestV2(root);
       graph = _decodeGraph(root, payloads);
+      _requireExactPracticeTestMembership(root, graph);
     } on Object catch (error) {
       return FailureResult<void>(
         ApplicationFailure(
@@ -240,6 +241,30 @@ final class DriftUniversalCatalogueGraphMaterializer {
       collections: collections,
       presentation: presentation,
     );
+  }
+
+  void _requireExactPracticeTestMembership(
+    RootContentManifest root,
+    UniversalCatalogueGraph graph,
+  ) {
+    final exactTests = <String, PracticeTestRevisionRef>{
+      for (final ref in root.practiceTests) ref.practiceTestCode: ref,
+    };
+    for (final collection in graph.collections) {
+      for (final member in collection.members) {
+        final ref = member.practiceTestRef;
+        if (ref == null) continue;
+        final exact = exactTests[ref.practiceTestCode];
+        if (exact == null ||
+            exact.revision != ref.revision ||
+            exact.checksum != ref.checksum) {
+          throw FormatException(
+            'Collection ${collection.code} references practice test '
+            '${ref.practiceTestCode} outside exact snapshot membership.',
+          );
+        }
+      }
+    }
   }
 
   Future<void> _insertSection(
