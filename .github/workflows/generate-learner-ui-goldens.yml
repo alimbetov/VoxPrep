@@ -40,7 +40,7 @@ jobs:
       - name: Commit golden baselines
         working-directory: .
         run: |
-          if git diff --quiet -- mobile/careerspeak_app/test/goldens/baselines; then
+          if [ -z "$(git status --porcelain --untracked-files=all -- mobile/careerspeak_app/test/goldens/baselines)" ]; then
             echo 'Golden baselines are unchanged.'
             exit 0
           fi
