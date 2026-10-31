@@ -1,9 +1,9 @@
 import 'dart:convert';
 
 import 'package:careerspeak_app/application/content_delivery/catalogue_revision_ref.dart';
-import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_catalogue_snapshot_repository.dart';
+import 'package:careerspeak_app/data/local/publication_snapshot_storage.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -24,6 +24,7 @@ void main() {
 
   setUp(() async {
     database = createTestDatabase();
+    await PublicationSnapshotStorage(database).ensureReady();
     repository = DriftCatalogueSnapshotRepository(database);
     final now = DateTime.utc(2026, 10, 31, 16);
 
@@ -58,10 +59,9 @@ void main() {
   });
 
   test('newer cached catalogue stays hidden outside CURRENT root', () async {
-    final result = await repository.readCurrent(CatalogueKind.categories);
+    final payload = (await repository.readCurrent(CatalogueKind.categories))
+        .getOrThrow();
 
-    expect(result, isA<Success>());
-    final payload = result.getOrThrow();
     expect(payload, isNotNull);
     expect(payload!.ref.revision, 1);
     expect(
