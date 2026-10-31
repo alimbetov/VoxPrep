@@ -140,17 +140,26 @@ extension LearningCollectionPublicationBinding on LearningCollectionProjection {
       publication: publication,
     );
 
+    final expectedContentRefs = members
+        .where((member) => member.type == LearningCollectionMemberType.content)
+        .map((member) => member.contentRef!)
+        .map((ref) => '${ref.identityKey}|${ref.checksum}');
+    final expectedPracticeTestRefs = members
+        .where(
+          (member) => member.type == LearningCollectionMemberType.practiceTest,
+        )
+        .map((member) => member.practiceTestRef!)
+        .map((ref) => '${ref.identityKey}|${ref.checksum}');
+
     _requireSameExactRefs(
-      expected: contentRefs.map((ref) => '${ref.identityKey}|${ref.checksum}'),
+      expected: expectedContentRefs,
       actual: membership.contentRefs.map(
         (ref) => '${ref.identityKey}|${ref.checksum}',
       ),
       fieldName: 'contentRefs',
     );
     _requireSameExactRefs(
-      expected: practiceTestRefs.map(
-        (ref) => '${ref.identityKey}|${ref.checksum}',
-      ),
+      expected: expectedPracticeTestRefs,
       actual: membership.practiceTestRefs.map(
         (ref) => '${ref.identityKey}|${ref.checksum}',
       ),
