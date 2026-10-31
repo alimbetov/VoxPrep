@@ -1,4 +1,5 @@
 import 'catalogue_revision_ref.dart';
+import 'content_audio_policy.dart';
 import 'content_manifest.dart';
 import 'product_catalog.dart';
 
@@ -59,8 +60,11 @@ final class PublicationRevisionMembership {
 
     for (final manifest in manifestList) {
       for (final content in manifest.contents) {
-        final key =
-            '${content.identity.code}|${content.identity.type.name}|${content.revision}';
+        final key = _contentRevisionKey(
+          content.identity.code,
+          content.identity.type.name,
+          content.revision,
+        );
         final existing = canonicalRefs[key];
         if (existing != null && existing.checksum != content.checksum) {
           throw ArgumentError.value(
@@ -105,6 +109,12 @@ final class PublicationRevisionMembership {
       }
     }
 
+    _validateAudioMembership(
+      manifests: manifestList,
+      canonicalContents: canonicalRefs,
+      assets: assetRefs,
+    );
+
     return PublicationRevisionMembership._(
       packs: packList,
       packManifests: manifestList,
@@ -137,6 +147,100 @@ final class PublicationRevisionMembership {
   final List<PracticeTestRevisionRef> practiceTests;
   final List<CatalogueRevisionRef> catalogues;
   final List<ManifestAssetDescriptor> assets;
+}
+
+void _validateAudioMembership({
+  required List<PackContentManifest> manifests,
+  required Map<String, PackContentRef> canonicalContents,
+  required Map<String, ManifestAssetDescriptor> assets,
+}) {
+  final typedBindings = <String, String>{};
+  final legacyPromptByContent = <String>{};
+  final schemaByContent = <String, int>{};
+
+  for (final manifest in manifests) {
+    for (final content in manifest.contents) {
+      final contentKey = _contentRevisionKey(
+        content.identity.code,
+        content.identity.type.name,
+        content.revision,
+      );
+      final previous = schemaByContent[contentKey];
+      if (previous == null || manifest.schemaVersion > previous) {
+        schemaByContent[contentKey] = manifest.schemaVersion;
+      }
+    }
+
+    for (final binding in manifest.contentAssets) {
+      final contentKey = _contentRevisionKey(
+        binding.contentIdentity.code,
+        binding.contentIdentity.type.name,
+        binding.contentRevision,
+      );
+
+      if (binding.role == 'promptAudio') {
+        if (manifest.schemaVersion == 1) {
+          legacyPromptByContent.add(contentKey);
+        }
+        continue;
+      }
+
+      final role = ContentAudioRole.fromWireName(binding.role);
+      if (role == null) {
+        continue; // Generic non-audio asset roles remain outside this policy.
+      }
+      if (!ContentAudioPolicy.allows(binding.contentIdentity.type, role)) {
+        throw ArgumentError.value(
+          binding.role,
+          'contentAssets',
+          'audio role is not allowed for content type '
+              '${binding.contentIdentity.type.name}',
+        );
+      }
+
+      final asset = assets[binding.assetId];
+      if (asset == null || !asset.mediaType.toLowerCase().startsWith('audio/')) {
+        throw ArgumentError.value(
+          binding.assetId,
+          'contentAssets',
+          'audio role must reference an audio/* asset',
+        );
+      }
+
+      final roleKey = '$contentKey|${role.wireName}';
+      final existingAssetId = typedBindings[roleKey];
+      if (existingAssetId != null && existingAssetId != binding.assetId) {
+        throw ArgumentError.value(
+          roleKey,
+          'contentAssets',
+          'exact content revision has more than one asset for one audio role',
+        );
+      }
+      typedBindings[roleKey] = binding.assetId;
+    }
+  }
+
+  for (final entry in canonicalContents.entries) {
+    final contentKey = entry.key;
+    final content = entry.value;
+    final schemaVersion = schemaByContent[contentKey] ?? 1;
+    for (final role in ContentAudioPolicy.requiredRoles(content.identity.type)) {
+      final hasTypedRole = typedBindings.containsKey('$contentKey|${role.wireName}');
+      final hasLegacyV1Fallback =
+          schemaVersion == 1 && legacyPromptByContent.contains(contentKey);
+      if (!hasTypedRole && !hasLegacyV1Fallback) {
+        throw ArgumentError.value(
+          contentKey,
+          'contentAssets',
+          'required audio role ${role.wireName} is missing',
+        );
+      }
+    }
+  }
+}
+
+String _contentRevisionKey(String code, String type, int revision) {
+  return '$code|$type|$revision';
 }
 
 void _requireUnique(Iterable<String> keys, String fieldName) {
