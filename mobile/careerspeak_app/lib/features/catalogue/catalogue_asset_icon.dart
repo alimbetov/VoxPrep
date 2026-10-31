@@ -23,13 +23,13 @@ class CatalogueAssetIcon extends ConsumerWidget {
             child: CircularProgressIndicator(strokeWidth: 2),
           ),
         ),
-        error: (_, __) => const Icon(Icons.school_outlined),
+        error: (_, _) => const Icon(Icons.school_outlined),
         data: (asset) => asset == null
             ? const Icon(Icons.school_outlined)
             : Image.file(
                 File(asset.localPath),
                 fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Icon(Icons.school_outlined),
+                errorBuilder: (_, _, _) => const Icon(Icons.school_outlined),
               ),
       ),
     );
