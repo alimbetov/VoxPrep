@@ -48,7 +48,8 @@ void main() {
             tester,
             find.text('Learning catalogue'),
             viewport: boundary.size,
-            reason: 'Catalogue heading must remain inside viewport at $boundary',
+            reason:
+                'Catalogue heading must remain inside viewport at $boundary',
           );
           expectFinderInsideViewport(
             tester,
@@ -60,7 +61,9 @@ void main() {
       );
     }
 
-    testWidgets('hierarchy cards tolerate long copy at $boundary', (tester) async {
+    testWidgets('hierarchy cards tolerate long copy at $boundary', (
+      tester,
+    ) async {
       await _pumpCatalogue(
         tester,
         boundary: boundary,

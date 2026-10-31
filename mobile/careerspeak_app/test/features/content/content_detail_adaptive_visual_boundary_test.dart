@@ -17,7 +17,9 @@ const _longHint =
 
 void main() {
   for (final boundary in adaptiveUiBoundaryCases) {
-    testWidgets('content detail has no visual overflow at $boundary', (tester) async {
+    testWidgets('content detail has no visual overflow at $boundary', (
+      tester,
+    ) async {
       await _pump(tester, boundary);
 
       expect(find.text(_item.title), findsOneWidget);
@@ -30,7 +32,8 @@ void main() {
       await tester.pumpAndSettle();
       expectNoLayoutExceptions(
         tester,
-        reason: 'Content detail overflowed after scrolling to hint at $boundary',
+        reason:
+            'Content detail overflowed after scrolling to hint at $boundary',
       );
       expectFinderInsideViewport(
         tester,

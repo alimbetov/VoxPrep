@@ -102,10 +102,7 @@ class _CatalogueHeader extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(child: copy),
-            if (showSeeAll) ...[
-              const SizedBox(width: 12),
-              seeAll,
-            ],
+            if (showSeeAll) ...[const SizedBox(width: 12), seeAll],
           ],
         );
       },
