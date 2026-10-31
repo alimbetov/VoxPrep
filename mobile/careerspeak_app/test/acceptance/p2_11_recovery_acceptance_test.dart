@@ -58,114 +58,132 @@ void main() {
       (result as FailureResult<ApplicationBootstrapOutcome>).failure.code,
       'OFFLINE',
     );
-    expect((await credentialStore.readInstallationId())?.value, _installationId);
+    expect(
+      (await credentialStore.readInstallationId())?.value,
+      _installationId,
+    );
     expect((await credentialStore.readInstallationToken())?.value, _token);
     await _expectCurrentRevision(database, revision: 1, title: _titleV1);
   });
 
-  test('failed newer publication never replaces last-known-good CURRENT', () async {
-    final database = CareerSpeakDatabase(NativeDatabase.memory());
-    final credentialStore = _MemoryCredentialStore();
-    final backend = _RecoveryLearnerApiFixture();
-    final client = MockClient(backend.handle);
-    addTearDown(database.close);
-    addTearDown(client.close);
+  test(
+    'failed newer publication never replaces last-known-good CURRENT',
+    () async {
+      final database = CareerSpeakDatabase(NativeDatabase.memory());
+      final credentialStore = _MemoryCredentialStore();
+      final backend = _RecoveryLearnerApiFixture();
+      final client = MockClient(backend.handle);
+      addTearDown(database.close);
+      addTearDown(client.close);
 
-    await _bootstrapSuccess(
-      database: database,
-      credentialStore: credentialStore,
-      client: client,
-      runId: 'recovery-v1',
-    );
-    await _expectCurrentRevision(database, revision: 1, title: _titleV1);
+      await _bootstrapSuccess(
+        database: database,
+        credentialStore: credentialStore,
+        client: client,
+        runId: 'recovery-v1',
+      );
+      await _expectCurrentRevision(database, revision: 1, title: _titleV1);
 
-    backend
-      ..revision = 2
-      ..failPayload = true;
+      backend
+        ..revision = 2
+        ..failPayload = true;
 
-    final result = await _bootstrapResult(
-      database: database,
-      credentialStore: credentialStore,
-      client: client,
-      runId: 'recovery-v2-fails',
-    );
+      final result = await _bootstrapResult(
+        database: database,
+        credentialStore: credentialStore,
+        client: client,
+        runId: 'recovery-v2-fails',
+      );
 
-    expect(result, isA<FailureResult<ApplicationBootstrapOutcome>>());
-    expect(
-      (result as FailureResult<ApplicationBootstrapOutcome>).failure.code,
-      'SERVER_ERROR',
-    );
-    await _expectCurrentRevision(database, revision: 1, title: _titleV1);
-  });
+      expect(result, isA<FailureResult<ApplicationBootstrapOutcome>>());
+      expect(
+        (result as FailureResult<ApplicationBootstrapOutcome>).failure.code,
+        'SERVER_ERROR',
+      );
+      await _expectCurrentRevision(database, revision: 1, title: _titleV1);
+    },
+  );
 
-  test('same immutable root repairs a missing canonical learner payload', () async {
-    final database = CareerSpeakDatabase(NativeDatabase.memory());
-    final credentialStore = _MemoryCredentialStore();
-    final backend = _RecoveryLearnerApiFixture();
-    final client = MockClient(backend.handle);
-    addTearDown(database.close);
-    addTearDown(client.close);
+  test(
+    'same immutable root repairs a missing canonical learner payload',
+    () async {
+      final database = CareerSpeakDatabase(NativeDatabase.memory());
+      final credentialStore = _MemoryCredentialStore();
+      final backend = _RecoveryLearnerApiFixture();
+      final client = MockClient(backend.handle);
+      addTearDown(database.close);
+      addTearDown(client.close);
 
-    await _bootstrapSuccess(
-      database: database,
-      credentialStore: credentialStore,
-      client: client,
-      runId: 'repair-initial',
-    );
-    await _expectCurrentRevision(database, revision: 1, title: _titleV1);
+      await _bootstrapSuccess(
+        database: database,
+        credentialStore: credentialStore,
+        client: client,
+        runId: 'repair-initial',
+      );
+      await _expectCurrentRevision(database, revision: 1, title: _titleV1);
 
-    await (database.delete(database.contentCatalogReads)..where(
-          (row) =>
-              row.contentCode.equals(_contentCode) &
-              row.contentType.equals('INTERVIEW') &
-              row.revision.equals(1),
-        ))
-        .go();
+      await (database.delete(database.contentCatalogReads)..where(
+            (row) =>
+                row.contentCode.equals(_contentCode) &
+                row.contentType.equals('INTERVIEW') &
+                row.revision.equals(1),
+          ))
+          .go();
 
-    final broken = await DriftContentRepository(
-      database,
-    ).watchContent(const ContentQuery()).first;
-    expect(broken, isA<FailureResult>());
-    expect((broken as FailureResult).failure.code, 'CONTENT_READ_MODEL_INVALID');
+      final broken = await DriftContentRepository(
+        database,
+      ).watchContent(const ContentQuery()).first;
+      expect(broken, isA<FailureResult>());
+      expect(
+        (broken as FailureResult).failure.code,
+        'CONTENT_READ_MODEL_INVALID',
+      );
 
-    final packCallsBeforeRepair = backend.packManifestCalls;
-    final payloadCallsBeforeRepair = backend.contentPayloadCalls;
-    await _bootstrapSuccess(
-      database: database,
-      credentialStore: credentialStore,
-      client: client,
-      runId: 'repair-same-root',
-    );
+      final packCallsBeforeRepair = backend.packManifestCalls;
+      final payloadCallsBeforeRepair = backend.contentPayloadCalls;
+      await _bootstrapSuccess(
+        database: database,
+        credentialStore: credentialStore,
+        client: client,
+        runId: 'repair-same-root',
+      );
 
-    expect(backend.registrationCalls, 1);
-    expect(backend.packManifestCalls, packCallsBeforeRepair + 1);
-    expect(backend.contentPayloadCalls, payloadCallsBeforeRepair + 1);
-    await _expectCurrentRevision(database, revision: 1, title: _titleV1);
-  });
+      expect(backend.registrationCalls, 1);
+      expect(backend.packManifestCalls, packCallsBeforeRepair + 1);
+      expect(backend.contentPayloadCalls, payloadCallsBeforeRepair + 1);
+      await _expectCurrentRevision(database, revision: 1, title: _titleV1);
+    },
+  );
 
-  test('corrupt root journal fails closed without deleting CURRENT content', () async {
-    final database = CareerSpeakDatabase(NativeDatabase.memory());
-    final credentialStore = _MemoryCredentialStore();
-    final backend = _RecoveryLearnerApiFixture();
-    final client = MockClient(backend.handle);
-    addTearDown(database.close);
-    addTearDown(client.close);
+  test(
+    'corrupt root journal fails closed without deleting CURRENT content',
+    () async {
+      final database = CareerSpeakDatabase(NativeDatabase.memory());
+      final credentialStore = _MemoryCredentialStore();
+      final backend = _RecoveryLearnerApiFixture();
+      final client = MockClient(backend.handle);
+      addTearDown(database.close);
+      addTearDown(client.close);
 
-    await _bootstrapSuccess(
-      database: database,
-      credentialStore: credentialStore,
-      client: client,
-      runId: 'corrupt-root-initial',
-    );
-    await _expectCurrentRevision(database, revision: 1, title: _titleV1);
+      await _bootstrapSuccess(
+        database: database,
+        credentialStore: credentialStore,
+        client: client,
+        runId: 'corrupt-root-initial',
+      );
+      await _expectCurrentRevision(database, revision: 1, title: _titleV1);
 
-    await database.delete(database.contentManifestStates).go();
+      await database.delete(database.contentManifestStates).go();
 
-    final snapshot = await DriftSyncJournal(database).readLocalSnapshot();
-    expect(snapshot, isA<FailureResult>());
-    expect((snapshot as FailureResult).failure.code, 'LOCAL_SYNC_STATE_CORRUPT');
-    await _expectCurrentRevision(database, revision: 1, title: _titleV1);
-  });
+      final snapshot = await DriftSyncJournal(database).readLocalSnapshot();
+      expect(snapshot, isA<FailureResult>());
+      expect(
+        (snapshot as FailureResult).failure.code,
+        'LOCAL_SYNC_STATE_CORRUPT',
+      );
+      await _expectCurrentRevision(database, revision: 1, title: _titleV1);
+    },
+  );
 }
 
 Future<ApplicationBootstrapOutcome> _bootstrapSuccess({
@@ -309,21 +327,18 @@ final class _RecoveryLearnerApiFixture {
             '/api/v1/content/interview/$_contentCode/revisions/$revision') {
       contentPayloadCalls += 1;
       if (failPayload) {
-        return _jsonResponse(
-          <String, Object?>{
-            'code': 'SERVER_ERROR',
-            'message': 'Synthetic recovery failure.',
-          },
-          statusCode: 503,
-        );
+        return _jsonResponse(<String, Object?>{
+          'code': 'SERVER_ERROR',
+          'message': 'Synthetic recovery failure.',
+        }, statusCode: 503);
       }
       return _jsonResponse(_contentPayload(revision));
     }
 
-    return _jsonResponse(
-      <String, Object?>{'code': 'NOT_FOUND', 'message': 'Unexpected request.'},
-      statusCode: 404,
-    );
+    return _jsonResponse(<String, Object?>{
+      'code': 'NOT_FOUND',
+      'message': 'Unexpected request.',
+    }, statusCode: 404);
   }
 
   void _requireBearer(http.Request request) {
@@ -386,10 +401,7 @@ Map<String, Object?> _contentPayload(int revision) => <String, Object?>{
   'hasAudio': false,
 };
 
-http.Response _jsonResponse(
-  Object body, {
-  int statusCode = 200,
-}) {
+http.Response _jsonResponse(Object body, {int statusCode = 200}) {
   return http.Response(
     jsonEncode(body),
     statusCode,
