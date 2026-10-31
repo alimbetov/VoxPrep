@@ -75,6 +75,7 @@ jobs:
         run: |
           flutter test test/features/catalogue/catalogue_screen_test.dart
           flutter test test/features/catalogue/catalogue_parent_activity_test.dart
+          flutter test test/features/catalogue/catalogue_adaptive_visual_boundary_test.dart
           flutter test test/application/content_delivery/universal_catalogue_presentation_order_test.dart
           flutter test test/core/adaptive/careerspeak_adaptive_scaffold_test.dart
           flutter test test/features/content/content_detail_panel_adversarial_test.dart
@@ -82,6 +83,7 @@ jobs:
           flutter test test/features/content/content_detail_learner_state_interaction_test.dart
           flutter test test/features/content/content_detail_supersession_ui_test.dart
           flutter test test/features/content/content_detail_localized_hint_test.dart
+          flutter test test/features/content/content_detail_adaptive_visual_boundary_test.dart
 
       - name: Content Detail audio E2E
         run: |
