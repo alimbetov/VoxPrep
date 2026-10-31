@@ -1,0 +1,192 @@
+import 'content_manifest.dart';
+import 'product_catalog.dart';
+
+enum CatalogueKind {
+  learningGoals('learning-goals'),
+  learningTracks('learning-tracks'),
+  learningCollections('learning-collections'),
+  categories('categories'),
+  levels('levels'),
+  skills('skills'),
+  supportedLocales('supported-locales'),
+  ttsVoices('tts-voices');
+
+  const CatalogueKind(this.wireName);
+
+  final String wireName;
+}
+
+final class CatalogueRevisionRef {
+  factory CatalogueRevisionRef({
+    required CatalogueKind kind,
+    required int revision,
+    required String checksum,
+  }) {
+    if (revision < 1) {
+      throw ArgumentError.value(revision, 'revision', 'must be positive');
+    }
+    return CatalogueRevisionRef._(
+      kind: kind,
+      revision: revision,
+      checksum: normalizeSha256(checksum, 'checksum'),
+    );
+  }
+
+  const CatalogueRevisionRef._({
+    required this.kind,
+    required this.revision,
+    required this.checksum,
+  });
+
+  final CatalogueKind kind;
+  final int revision;
+  final String checksum;
+
+  String get identityKey => kind.wireName;
+}
+
+/// Exact immutable resource membership of one publication snapshot.
+///
+/// C4.2 owns only identity and closure rules. Ordering and collection semantics
+/// are intentionally deferred to C4.5; wire materialization is deferred to C4.4.
+final class PublicationRevisionMembership {
+  factory PublicationRevisionMembership({
+    required Iterable<PackRevisionRef> packs,
+    required Iterable<PackContentManifest> packManifests,
+    Iterable<PracticeTestRevisionRef> practiceTests =
+        const <PracticeTestRevisionRef>[],
+    Iterable<CatalogueRevisionRef> catalogues = const <CatalogueRevisionRef>[],
+  }) {
+    final packList = List<PackRevisionRef>.unmodifiable(packs);
+    final manifestList = List<PackContentManifest>.unmodifiable(packManifests);
+    final testList = List<PracticeTestRevisionRef>.unmodifiable(practiceTests);
+    final catalogueList = List<CatalogueRevisionRef>.unmodifiable(catalogues);
+
+    _requireUnique(
+      packList.map((ref) => '${ref.identity}|${ref.revision}'),
+      'packs',
+    );
+    _requireUnique(
+      manifestList.map((manifest) => '${manifest.identity}|${manifest.revision}'),
+      'packManifests',
+    );
+    _requireUnique(
+      testList.map((ref) => ref.identityKey),
+      'practiceTests',
+    );
+    _requireUnique(
+      catalogueList.map((ref) => ref.identityKey),
+      'catalogues',
+    );
+
+    final manifestByPack = <String, PackContentManifest>{
+      for (final manifest in manifestList)
+        '${manifest.identity}|${manifest.revision}': manifest,
+    };
+    for (final pack in packList) {
+      final key = '${pack.identity}|${pack.revision}';
+      final manifest = manifestByPack[key];
+      if (manifest == null || manifest.checksum != pack.checksum) {
+        throw ArgumentError.value(
+          pack.identity.toString(),
+          'packManifests',
+          'does not resolve the exact pack revision/checksum',
+        );
+      }
+    }
+    if (manifestByPack.length != packList.length) {
+      throw ArgumentError(
+        'packManifests contains a revision outside publication pack membership',
+      );
+    }
+
+    final canonicalRefs = <String, PackContentRef>{};
+    final localizedRefs = <String, LocalizedContentRef>{};
+    final assetRefs = <String, ManifestAssetDescriptor>{};
+
+    for (final manifest in manifestList) {
+      for (final content in manifest.contents) {
+        final key =
+            '${content.identity.code}|${content.identity.type.name}|${content.revision}';
+        final existing = canonicalRefs[key];
+        if (existing != null && existing.checksum != content.checksum) {
+          throw ArgumentError.value(
+            key,
+            'packManifests',
+            'same exact content revision has conflicting checksums',
+          );
+        }
+        canonicalRefs[key] = content;
+      }
+
+      for (final localized in manifest.localizations) {
+        final key =
+            '${localized.identity.code}|${localized.identity.type.name}|'
+            '${localized.contentRevision}|${localized.locale}|'
+            '${localized.localizationRevision}';
+        final existing = localizedRefs[key];
+        if (existing != null && existing.checksum != localized.checksum) {
+          throw ArgumentError.value(
+            key,
+            'packManifests',
+            'same exact localization revision has conflicting checksums',
+          );
+        }
+        localizedRefs[key] = localized;
+      }
+
+      for (final asset in manifest.assets) {
+        final existing = assetRefs[asset.assetId];
+        if (existing != null &&
+            (existing.checksumSha256 != asset.checksumSha256 ||
+                existing.deliveryKey != asset.deliveryKey ||
+                existing.sizeBytes != asset.sizeBytes ||
+                existing.mediaType != asset.mediaType)) {
+          throw ArgumentError.value(
+            asset.assetId,
+            'packManifests',
+            'same asset identity has conflicting immutable metadata',
+          );
+        }
+        assetRefs[asset.assetId] = asset;
+      }
+    }
+
+    return PublicationRevisionMembership._(
+      packs: packList,
+      packManifests: manifestList,
+      canonicalContents: List<PackContentRef>.unmodifiable(canonicalRefs.values),
+      localizations: List<LocalizedContentRef>.unmodifiable(localizedRefs.values),
+      practiceTests: testList,
+      catalogues: catalogueList,
+      assets: List<ManifestAssetDescriptor>.unmodifiable(assetRefs.values),
+    );
+  }
+
+  const PublicationRevisionMembership._({
+    required this.packs,
+    required this.packManifests,
+    required this.canonicalContents,
+    required this.localizations,
+    required this.practiceTests,
+    required this.catalogues,
+    required this.assets,
+  });
+
+  final List<PackRevisionRef> packs;
+  final List<PackContentManifest> packManifests;
+  final List<PackContentRef> canonicalContents;
+  final List<LocalizedContentRef> localizations;
+  final List<PracticeTestRevisionRef> practiceTests;
+  final List<CatalogueRevisionRef> catalogues;
+  final List<ManifestAssetDescriptor> assets;
+}
+
+void _requireUnique(Iterable<String> keys, String fieldName) {
+  final seen = <String>{};
+  for (final key in keys) {
+    if (!seen.add(key)) {
+      throw ArgumentError.value(key, fieldName, 'contains duplicate exact membership');
+    }
+  }
+}
