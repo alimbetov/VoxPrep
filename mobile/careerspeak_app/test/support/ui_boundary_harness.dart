@@ -17,31 +17,11 @@ final class UiBoundaryCase {
 }
 
 const adaptiveUiBoundaryCases = <UiBoundaryCase>[
-  UiBoundaryCase(
-    name: 'small-phone',
-    size: Size(320, 568),
-    textScale: 1,
-  ),
-  UiBoundaryCase(
-    name: 'compact-phone',
-    size: Size(360, 640),
-    textScale: 1.3,
-  ),
-  UiBoundaryCase(
-    name: 'accessible-phone',
-    size: Size(390, 844),
-    textScale: 2,
-  ),
-  UiBoundaryCase(
-    name: 'small-tablet',
-    size: Size(600, 960),
-    textScale: 2,
-  ),
-  UiBoundaryCase(
-    name: 'tablet',
-    size: Size(800, 1024),
-    textScale: 1.3,
-  ),
+  UiBoundaryCase(name: 'small-phone', size: Size(320, 568), textScale: 1),
+  UiBoundaryCase(name: 'compact-phone', size: Size(360, 640), textScale: 1.3),
+  UiBoundaryCase(name: 'accessible-phone', size: Size(390, 844), textScale: 2),
+  UiBoundaryCase(name: 'small-tablet', size: Size(600, 960), textScale: 2),
+  UiBoundaryCase(name: 'tablet', size: Size(800, 1024), textScale: 1.3),
   UiBoundaryCase(
     name: 'desktop-accessible',
     size: Size(1280, 900),
@@ -95,11 +75,7 @@ void expectNoLayoutExceptions(WidgetTester tester, {required String reason}) {
     exceptions.add(exception!);
   }
 
-  expect(
-    exceptions,
-    isEmpty,
-    reason: '$reason\n${exceptions.join('\n---\n')}',
-  );
+  expect(exceptions, isEmpty, reason: '$reason\n${exceptions.join('\n---\n')}');
 }
 
 void expectFinderInsideViewport(
@@ -114,7 +90,11 @@ void expectFinderInsideViewport(
 
   expect(rect.left, greaterThanOrEqualTo(-tolerance), reason: reason);
   expect(rect.top, greaterThanOrEqualTo(-tolerance), reason: reason);
-  expect(rect.right, lessThanOrEqualTo(viewport.width + tolerance), reason: reason);
+  expect(
+    rect.right,
+    lessThanOrEqualTo(viewport.width + tolerance),
+    reason: reason,
+  );
   expect(
     rect.bottom,
     lessThanOrEqualTo(viewport.height + tolerance),
