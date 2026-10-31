@@ -146,23 +146,16 @@ final class ContentSyncCoordinator {
       return _finishFailure(activeRunId, persistResult.failure);
     }
 
-    if (plan.isNoOp) {
-      final successTransition = await _transition(
-        activeRunId,
-        SyncRunState.succeeded,
-      );
-      if (successTransition != null) return FailureResult(successTransition);
-      return Success(ContentSyncNoOp(activeRunId));
-    }
-
-    final stagingTransition = await _transition(
-      activeRunId,
-      SyncRunState.staging,
-    );
-    if (stagingTransition != null) return FailureResult(stagingTransition);
-
+    var stagingEntered = false;
     if (targetRoot.practiceTests.isNotEmpty ||
         targetRoot.catalogues.isNotEmpty) {
+      final stagingTransition = await _transition(
+        activeRunId,
+        SyncRunState.staging,
+      );
+      if (stagingTransition != null) return FailureResult(stagingTransition);
+      stagingEntered = true;
+
       final snapshotStager = _snapshotStager;
       if (snapshotStager == null) {
         return _finishFailure(
@@ -178,6 +171,26 @@ final class ContentSyncCoordinator {
       if (staged is FailureResult<void>) {
         return _finishFailure(activeRunId, staged.failure);
       }
+    }
+
+    // A pack-level no-op can still require idempotent auxiliary repair after an
+    // app upgrade or interrupted previous run. Only finish after exact tests and
+    // catalogues for the CURRENT root have been staged successfully.
+    if (plan.isNoOp) {
+      final successTransition = await _transition(
+        activeRunId,
+        SyncRunState.succeeded,
+      );
+      if (successTransition != null) return FailureResult(successTransition);
+      return Success(ContentSyncNoOp(activeRunId));
+    }
+
+    if (!stagingEntered) {
+      final stagingTransition = await _transition(
+        activeRunId,
+        SyncRunState.staging,
+      );
+      if (stagingTransition != null) return FailureResult(stagingTransition);
     }
 
     final executionResult = await _executor.execute(
