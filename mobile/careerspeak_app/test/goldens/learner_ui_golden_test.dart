@@ -78,9 +78,7 @@ void main() {
           },
         ),
         interviewAudioClipStateProvider.overrideWith(
-          (ref) => Stream<RoleAudioClipState>.value(
-            const RoleAudioClipState(),
-          ),
+          (ref) => Stream<RoleAudioClipState>.value(const RoleAudioClipState()),
         ),
       ],
       child: const ContentDetailPanel(item: goldenInterview),
@@ -211,17 +209,11 @@ Future<void> _pumpGolden(
       overrides: overrides,
       child: MaterialApp(
         debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          useMaterial3: true,
-          colorSchemeSeed: Colors.indigo,
-        ),
+        theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.indigo),
         home: Directionality(
           textDirection: textDirection,
           child: Scaffold(
-            body: RepaintBoundary(
-              key: _goldenRootKey,
-              child: child,
-            ),
+            body: RepaintBoundary(key: _goldenRootKey, child: child),
           ),
         ),
       ),
