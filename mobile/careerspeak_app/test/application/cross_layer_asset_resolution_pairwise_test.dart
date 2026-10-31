@@ -31,63 +31,66 @@ enum _NetworkState { online, offline, badChecksum }
 
 void main() {
   group('C2 cache x network x resolution-policy pairwise qualification', () {
-    final scenarios = <({
-      _CacheState cache,
-      _NetworkState network,
-      AssetResolutionPolicy policy,
-      bool succeeds,
-      String? failureCode,
-    })>[
-      (
-        cache: _CacheState.present,
-        network: _NetworkState.offline,
-        policy: AssetResolutionPolicy.localOnly,
-        succeeds: true,
-        failureCode: null,
-      ),
-      (
-        cache: _CacheState.missing,
-        network: _NetworkState.online,
-        policy: AssetResolutionPolicy.localOnly,
-        succeeds: false,
-        failureCode: 'ASSET_NOT_AVAILABLE_OFFLINE',
-      ),
-      (
-        cache: _CacheState.missing,
-        network: _NetworkState.online,
-        policy: AssetResolutionPolicy.downloadIfMissing,
-        succeeds: true,
-        failureCode: null,
-      ),
-      (
-        cache: _CacheState.missing,
-        network: _NetworkState.offline,
-        policy: AssetResolutionPolicy.downloadIfMissing,
-        succeeds: false,
-        failureCode: 'NETWORK_OFFLINE',
-      ),
-      (
-        cache: _CacheState.missing,
-        network: _NetworkState.badChecksum,
-        policy: AssetResolutionPolicy.downloadIfMissing,
-        succeeds: false,
-        failureCode: 'ASSET_CHECKSUM_MISMATCH',
-      ),
-      (
-        cache: _CacheState.corrupt,
-        network: _NetworkState.online,
-        policy: AssetResolutionPolicy.downloadIfMissing,
-        succeeds: true,
-        failureCode: null,
-      ),
-      (
-        cache: _CacheState.corrupt,
-        network: _NetworkState.offline,
-        policy: AssetResolutionPolicy.localOnly,
-        succeeds: false,
-        failureCode: 'ASSET_NOT_AVAILABLE_OFFLINE',
-      ),
-    ];
+    final scenarios =
+        <
+          ({
+            _CacheState cache,
+            _NetworkState network,
+            AssetResolutionPolicy policy,
+            bool succeeds,
+            String? failureCode,
+          })
+        >[
+          (
+            cache: _CacheState.present,
+            network: _NetworkState.offline,
+            policy: AssetResolutionPolicy.localOnly,
+            succeeds: true,
+            failureCode: null,
+          ),
+          (
+            cache: _CacheState.missing,
+            network: _NetworkState.online,
+            policy: AssetResolutionPolicy.localOnly,
+            succeeds: false,
+            failureCode: 'ASSET_NOT_AVAILABLE_OFFLINE',
+          ),
+          (
+            cache: _CacheState.missing,
+            network: _NetworkState.online,
+            policy: AssetResolutionPolicy.downloadIfMissing,
+            succeeds: true,
+            failureCode: null,
+          ),
+          (
+            cache: _CacheState.missing,
+            network: _NetworkState.offline,
+            policy: AssetResolutionPolicy.downloadIfMissing,
+            succeeds: false,
+            failureCode: 'NETWORK_OFFLINE',
+          ),
+          (
+            cache: _CacheState.missing,
+            network: _NetworkState.badChecksum,
+            policy: AssetResolutionPolicy.downloadIfMissing,
+            succeeds: false,
+            failureCode: 'ASSET_CHECKSUM_MISMATCH',
+          ),
+          (
+            cache: _CacheState.corrupt,
+            network: _NetworkState.online,
+            policy: AssetResolutionPolicy.downloadIfMissing,
+            succeeds: true,
+            failureCode: null,
+          ),
+          (
+            cache: _CacheState.corrupt,
+            network: _NetworkState.offline,
+            policy: AssetResolutionPolicy.localOnly,
+            succeeds: false,
+            failureCode: 'ASSET_NOT_AVAILABLE_OFFLINE',
+          ),
+        ];
 
     for (final scenario in scenarios) {
       test(
@@ -122,9 +125,8 @@ void main() {
             ).ensureLocal(_asset);
             expect(seeded, isA<Success<AssetDownloadOutcome>>());
             if (scenario.cache == _CacheState.corrupt) {
-              final path = (seeded as Success<AssetDownloadOutcome>)
-                  .value
-                  .localPath;
+              final path =
+                  (seeded as Success<AssetDownloadOutcome>).value.localPath;
               await File(path).writeAsBytes(const <int>[9, 9, 9, 9]);
             }
           }
