@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('HttpContentManifestGateway', () {
-    test('sends locale and ETag when checking the root manifest', () async {
+    test('sends ETag without locale when checking the root manifest', () async {
       final apiClient = _RecordingApiClient(<Result<ApiResponse>>[
         Success<ApiResponse>(
           ApiResponse(
@@ -19,10 +19,7 @@ void main() {
       ]);
       final gateway = HttpContentManifestGateway(apiClient: apiClient);
 
-      final result = await gateway.fetchRootManifest(
-        translationLocale: 'kk',
-        etag: 'etag-107',
-      );
+      final result = await gateway.fetchRootManifest(etag: 'etag-107');
 
       expect(result, isA<Success<RootManifestFetch>>());
       final fetch = (result as Success<RootManifestFetch>).value;
@@ -32,7 +29,7 @@ void main() {
       final request = apiClient.requests.single;
       expect(request.method, ApiMethod.get);
       expect(request.path, '/api/v1/content/manifest');
-      expect(request.queryParameters, const <String, String>{'locale': 'kk'});
+      expect(request.queryParameters, isEmpty);
       expect(request.headers['if-none-match'], 'etag-107');
       expect(request.authentication, ApiAuthentication.installation);
     });
@@ -50,7 +47,7 @@ void main() {
       ]);
       final gateway = HttpContentManifestGateway(apiClient: apiClient);
 
-      final result = await gateway.fetchRootManifest(translationLocale: 'en');
+      final result = await gateway.fetchRootManifest();
 
       expect(result, isA<FailureResult<RootManifestFetch>>());
       final failure = (result as FailureResult<RootManifestFetch>).failure;
@@ -66,7 +63,6 @@ void main() {
       final gateway = HttpContentManifestGateway(apiClient: apiClient);
 
       final result = await gateway.fetchRootManifest(
-        translationLocale: 'en',
         etag: 'etag-107\r\nx-injected: true',
       );
 
@@ -78,7 +74,7 @@ void main() {
       expect(apiClient.requests, isEmpty);
     });
 
-    test('decodes changed root manifest through the typed boundary', () async {
+    test('decodes changed locale-independent root through typed boundary', () async {
       final apiClient = _RecordingApiClient(<Result<ApiResponse>>[
         Success<ApiResponse>(
           ApiResponse(
@@ -90,7 +86,7 @@ void main() {
       ]);
       final gateway = HttpContentManifestGateway(apiClient: apiClient);
 
-      final result = await gateway.fetchRootManifest(translationLocale: 'ru');
+      final result = await gateway.fetchRootManifest();
 
       expect(result, isA<Success<RootManifestFetch>>());
       final fetch = (result as Success<RootManifestFetch>).value;
@@ -98,22 +94,7 @@ void main() {
       final changed = fetch as RootManifestChanged;
       expect(changed.manifest.contentVersion, 108);
       expect(changed.etag, 'etag-108');
-    });
-
-    test('invalid locale fails before transport', () async {
-      final apiClient = _RecordingApiClient(const <Result<ApiResponse>>[]);
-      final gateway = HttpContentManifestGateway(apiClient: apiClient);
-
-      final result = await gateway.fetchRootManifest(
-        translationLocale: '../kk',
-      );
-
-      expect(result, isA<FailureResult<RootManifestFetch>>());
-      expect(
-        (result as FailureResult<RootManifestFetch>).failure.code,
-        'LOCALE_INVALID',
-      );
-      expect(apiClient.requests, isEmpty);
+      expect(apiClient.requests.single.queryParameters, isEmpty);
     });
 
     test('fetches exact pack target from root manifest identity', () async {
@@ -181,7 +162,7 @@ void main() {
       ]);
       final gateway = HttpContentManifestGateway(apiClient: apiClient);
 
-      final result = await gateway.fetchRootManifest(translationLocale: 'en');
+      final result = await gateway.fetchRootManifest();
 
       expect(result, isA<FailureResult<RootManifestFetch>>());
       expect(
