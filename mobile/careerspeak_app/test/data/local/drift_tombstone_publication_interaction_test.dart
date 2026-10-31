@@ -1,4 +1,5 @@
 import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
+import 'package:careerspeak_app/application/content_delivery/content_payload.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_planner.dart';
 import 'package:careerspeak_app/application/content_sync/sync_models.dart';
 import 'package:careerspeak_app/application/ports/content_manifest_gateway.dart';
@@ -209,7 +210,11 @@ SyncPlan _retirementPlan() {
           currentManifestChecksum: _root108,
           etag: null,
           currentPacks: <PackRevisionRef>[
-            PackRevisionRef._unsafeForTest(),
+            PackRevisionRef(
+              identity: PackIdentity(code: 'OLD_PACK', variant: 'canonical'),
+              revision: 1,
+              checksum: _pack108,
+            ),
           ],
         ),
         remote: root,
@@ -352,7 +357,8 @@ final class _UnusedPayloadGateway implements ContentPayloadGateway {
   const _UnusedPayloadGateway();
 
   @override
-  Future<Result<dynamic>> fetch(dynamic target) async => const FailureResult(
+  Future<Result<ContentPayload>> fetch(ContentPayloadRef target) async =>
+      const FailureResult(
         ApplicationFailure(code: 'NOT_USED', message: 'not used'),
       );
 }
