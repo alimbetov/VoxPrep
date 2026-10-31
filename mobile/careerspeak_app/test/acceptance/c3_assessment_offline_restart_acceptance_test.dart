@@ -77,7 +77,7 @@ AssessmentScore _score(AssessmentRevisionBundle bundle) {
   return const AssessmentScorer().score(
     test: bundle.test,
     questions: bundle.questions,
-    answersByOrder: const {0: 0, 1: 1},
+    answersByOrder: const {0: 1, 1: 0},
   );
 }
 
