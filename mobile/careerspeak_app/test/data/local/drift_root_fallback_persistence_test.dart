@@ -13,72 +13,78 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/test_database_factory.dart';
 
 void main() {
-  test('sync commit persists Backend-owned fallback order with root identity', () async {
-    final database = createTestDatabase();
-    addTearDown(database.close);
-    final now = DateTime.utc(2026, 10, 31, 6);
-    final target = PackRevisionRef(
-      identity: PackIdentity(code: 'JAVA_SENIOR', variant: 'canonical'),
-      revision: 8,
-      checksum: _packChecksum,
-    );
-    final root = RootContentManifest(
-      schemaVersion: 1,
-      contentVersion: 120,
-      minimumAppContractVersion: 1,
-      publishedAt: now,
-      checksum: _rootChecksum,
-      packs: <PackRevisionRef>[target],
-      localeFallbacks: <LocaleFallbackRule>[
-        LocaleFallbackRule(
-          locale: 'ru-kz',
-          fallbackLocales: const <String>['kk', 'en'],
-        ),
-      ],
-      tombstones: const <ContentTombstone>[],
-    );
-    final plan = const ContentSyncPlanner()
-        .plan(
-          local: SyncLocalSnapshot(
-            currentContentVersion: null,
-            currentManifestChecksum: null,
-            etag: null,
-            currentPacks: const <PackRevisionRef>[],
+  test(
+    'sync commit persists Backend-owned fallback order with root identity',
+    () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      final now = DateTime.utc(2026, 10, 31, 6);
+      final target = PackRevisionRef(
+        identity: PackIdentity(code: 'JAVA_SENIOR', variant: 'canonical'),
+        revision: 8,
+        checksum: _packChecksum,
+      );
+      final root = RootContentManifest(
+        schemaVersion: 1,
+        contentVersion: 120,
+        minimumAppContractVersion: 1,
+        publishedAt: now,
+        checksum: _rootChecksum,
+        packs: <PackRevisionRef>[target],
+        localeFallbacks: <LocaleFallbackRule>[
+          LocaleFallbackRule(
+            locale: 'ru-kz',
+            fallbackLocales: const <String>['kk', 'en'],
           ),
-          remote: root,
-        )
-        .getOrThrow();
-    final journal = DriftSyncJournal(database, now: () => now);
-    await journal.startOrCoalesce(
-      runId: 'fallback-persistence',
-      trigger: SyncTrigger.startup,
-      translationLocale: 'ru-KZ',
-    );
-    await journal.persistPlan(runId: 'fallback-persistence', plan: plan);
+        ],
+        tombstones: const <ContentTombstone>[],
+      );
+      final plan = const ContentSyncPlanner()
+          .plan(
+            local: SyncLocalSnapshot(
+              currentContentVersion: null,
+              currentManifestChecksum: null,
+              etag: null,
+              currentPacks: const <PackRevisionRef>[],
+            ),
+            remote: root,
+          )
+          .getOrThrow();
+      final journal = DriftSyncJournal(database, now: () => now);
+      await journal.startOrCoalesce(
+        runId: 'fallback-persistence',
+        trigger: SyncTrigger.startup,
+        translationLocale: 'ru-KZ',
+      );
+      await journal.persistPlan(runId: 'fallback-persistence', plan: plan);
 
-    final result = await DriftSyncPlanExecutor(
-      database,
-      _ManifestGateway(_emptyPack(target)),
-      const _RejectingPayloadGateway(),
-      now: () => now,
-    ).execute(runId: 'fallback-persistence', plan: plan);
+      final result = await DriftSyncPlanExecutor(
+        database,
+        _ManifestGateway(_emptyPack(target)),
+        const _RejectingPayloadGateway(),
+        now: () => now,
+      ).execute(runId: 'fallback-persistence', plan: plan);
 
-    expect(result, isA<Success<void>>());
-    final fallbackRows = await (database.select(database.rootLocaleFallbacks)
-          ..where((row) => row.contentVersion.equals(120))
-          ..orderBy([(row) => OrderingTerm.asc(row.position)]))
-        .get();
-    expect(fallbackRows, hasLength(2));
-    expect(fallbackRows.map((row) => row.locale).toSet(), <String>{'ru-KZ'});
-    expect(
-      fallbackRows.map((row) => row.fallbackLocale).toList(),
-      <String>['kk', 'en'],
-    );
+      expect(result, isA<Success<void>>());
+      final fallbackRows =
+          await (database.select(database.localeFallbackRules)
+                ..where((row) => row.sourceContentVersion.equals(120))
+                ..orderBy([(row) => OrderingTerm.asc(row.fallbackOrder)]))
+              .get();
+      expect(fallbackRows, hasLength(2));
+      expect(fallbackRows.map((row) => row.locale).toSet(), <String>{'ru-KZ'});
+      expect(fallbackRows.map((row) => row.fallbackLocale).toList(), <String>[
+        'kk',
+        'en',
+      ]);
 
-    final manifest = await database.select(database.contentManifestStates).getSingle();
-    expect(manifest.currentContentVersion, 120);
-    expect(manifest.currentManifestChecksum, _rootChecksum);
-  });
+      final manifest = await database
+          .select(database.contentManifestStates)
+          .getSingle();
+      expect(manifest.currentContentVersion, 120);
+      expect(manifest.currentManifestChecksum, _rootChecksum);
+    },
+  );
 }
 
 PackContentManifest _emptyPack(PackRevisionRef target) => PackContentManifest(

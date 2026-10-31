@@ -98,6 +98,7 @@ void main() {
               schemaVersion: 1,
               currentContentVersion: 108,
               currentManifestChecksum: _root108,
+              localePolicyContentVersion: const Value(108),
               updatedAt: now,
             ),
           );

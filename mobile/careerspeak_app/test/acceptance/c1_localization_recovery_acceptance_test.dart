@@ -5,7 +5,7 @@ import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_localized_content_repository.dart';
 import 'package:careerspeak_app/domain/content_identity.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -46,7 +46,7 @@ void main() {
       )).getOrThrow();
       expect(regionalRussian, isNotNull);
       expect(regionalRussian!.resolvedLocale, 'ru');
-      expect(regionalRussian.fallbackKind, LocaleFallbackKind.language);
+      expect(regionalRussian.fallbackKind, LocaleFallbackKind.configured);
       expect(regionalRussian.title, 'Русский заголовок');
 
       final kazakh = (await repository.resolve(
@@ -60,53 +60,59 @@ void main() {
       expect(kazakh.usesCanonicalEnglishOnly, isTrue);
       expect(kazakh.title, 'Canonical title');
 
-      final root = await database.select(database.contentManifestStates).getSingle();
+      final root = await database
+          .select(database.contentManifestStates)
+          .getSingle();
       expect(root.currentContentVersion, 42);
       expect(root.currentManifestChecksum, _rootChecksum);
     },
   );
 
-  test('tombstoned canonical content stays invisible after file-backed reopen', () async {
-    final directory = await Directory.systemTemp.createTemp(
-      'careerspeak-c1-tombstone-restart-',
-    );
-    addTearDown(() => directory.delete(recursive: true));
-    final file = File('${directory.path}/careerspeak.sqlite');
+  test(
+    'tombstoned canonical content stays invisible after file-backed reopen',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'careerspeak-c1-tombstone-restart-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final file = File('${directory.path}/careerspeak.sqlite');
 
-    var database = CareerSpeakDatabase(NativeDatabase(file));
-    await _seedCurrentLocalizedSnapshot(database);
-    await (database.update(database.localContentRecords)..where(
-          (row) =>
-              row.contentCode.equals(_identity.code) &
-              row.contentType.equals('INTERVIEW'),
-        ))
-        .write(
-          const LocalContentRecordsCompanion(
-            snapshotState: Value('TOMBSTONED'),
-          ),
-        );
-    await database.close();
+      var database = CareerSpeakDatabase(NativeDatabase(file));
+      await _seedCurrentLocalizedSnapshot(database);
+      await (database.update(database.localContentRecords)..where(
+            (row) =>
+                row.contentCode.equals(_identity.code) &
+                row.contentType.equals('INTERVIEW'),
+          ))
+          .write(
+            const LocalContentRecordsCompanion(
+              snapshotState: Value('TOMBSTONED'),
+            ),
+          );
+      await database.close();
 
-    database = CareerSpeakDatabase(NativeDatabase(file));
-    addTearDown(database.close);
-    final repository = DriftLocalizedContentRepository(database);
+      database = CareerSpeakDatabase(NativeDatabase(file));
+      addTearDown(database.close);
+      final repository = DriftLocalizedContentRepository(database);
 
-    final resolved = (await repository.resolve(
-      identity: _identity,
-      contentRevision: 1,
-      requestedLocale: 'ru',
-    )).getOrThrow();
+      final resolved = (await repository.resolve(
+        identity: _identity,
+        contentRevision: 1,
+        requestedLocale: 'ru',
+      )).getOrThrow();
 
-    expect(resolved, isNull);
-    final rows = await (database.select(database.localContentRecords)..where(
-          (row) =>
-              row.contentCode.equals(_identity.code) &
-              row.contentType.equals('INTERVIEW'),
-        ))
-        .get();
-    expect(rows, hasLength(1));
-    expect(rows.single.snapshotState, 'TOMBSTONED');
-  });
+      expect(resolved, isNull);
+      final rows =
+          await (database.select(database.localContentRecords)..where(
+                (row) =>
+                    row.contentCode.equals(_identity.code) &
+                    row.contentType.equals('INTERVIEW'),
+              ))
+              .get();
+      expect(rows, hasLength(1));
+      expect(rows.single.snapshotState, 'TOMBSTONED');
+    },
+  );
 }
 
 Future<void> _seedCurrentLocalizedSnapshot(CareerSpeakDatabase database) async {
@@ -120,10 +126,31 @@ Future<void> _seedCurrentLocalizedSnapshot(CareerSpeakDatabase database) async {
           schemaVersion: 1,
           currentContentVersion: 42,
           currentManifestChecksum: _rootChecksum,
+          localePolicyContentVersion: const Value(42),
           remoteContentVersionSeen: const Value(42),
           remoteManifestChecksum: const Value(_rootChecksum),
           lastSuccessfulSyncAt: Value(now),
           updatedAt: now,
+        ),
+      );
+  await database
+      .into(database.localeFallbackRules)
+      .insert(
+        LocaleFallbackRulesCompanion.insert(
+          locale: 'ru-KZ',
+          fallbackOrder: 0,
+          fallbackLocale: 'ru',
+          sourceContentVersion: 42,
+        ),
+      );
+  await database
+      .into(database.localeFallbackRules)
+      .insert(
+        LocaleFallbackRulesCompanion.insert(
+          locale: 'ru-KZ',
+          fallbackOrder: 1,
+          fallbackLocale: 'en',
+          sourceContentVersion: 42,
         ),
       );
 

@@ -89,7 +89,7 @@ void main() {
     );
 
     final plan = (result as Success<SyncPlan>).value;
-    expect(plan.rootChanged, isFalse);
+    expect(plan.rootChanged, isTrue);
     expect(plan.isNoOp, isFalse);
     expect(plan.changedPacks, hasLength(1));
     expect(plan.changedPacks.single.identity, locale.identity);

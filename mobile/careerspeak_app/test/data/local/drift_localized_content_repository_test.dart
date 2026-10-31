@@ -1,10 +1,11 @@
 import 'package:careerspeak_app/application/content_delivery/locale_fallback.dart';
+import 'package:careerspeak_app/application/content_delivery/localized_content_resolution.dart';
 import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_localized_content_repository.dart';
 import 'package:careerspeak_app/domain/content_identity.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
-import 'package:drift/drift.dart' hide isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_database_factory.dart';
@@ -23,7 +24,12 @@ void main() {
     await database.close();
   });
 
-  test('exact locale overlays language fallback field by field', () async {
+  test('exact locale overlays configured fallback field by field', () async {
+    await _seedFallbackRule(
+      database,
+      locale: 'ru-KZ',
+      fallbackLocales: const <String>['ru', 'en'],
+    );
     await _seedLocalization(
       database,
       locale: 'ru',
@@ -58,8 +64,13 @@ void main() {
   });
 
   test(
-    'superseded exact locale is ignored and language fallback wins',
+    'superseded exact locale is ignored and configured fallback wins',
     () async {
+      await _seedFallbackRule(
+        database,
+        locale: 'ru-KZ',
+        fallbackLocales: const <String>['ru', 'en'],
+      );
       await _seedLocalization(
         database,
         locale: 'ru',
@@ -80,7 +91,7 @@ void main() {
 
       expect(resolved, isNotNull);
       expect(resolved!.resolvedLocale, 'ru');
-      expect(resolved.fallbackKind, LocaleFallbackKind.language);
+      expect(resolved.fallbackKind, LocaleFallbackKind.configured);
       expect(resolved.matchedLocalizationLocales, <String>['ru']);
       expect(resolved.title, 'Текущий русский заголовок');
     },
@@ -139,9 +150,9 @@ void main() {
       requestedLocale: 'ru',
     );
 
-    expect(result, isA<FailureResult>());
+    expect(result, isA<FailureResult<ResolvedLocalizedContent?>>());
     expect(
-      (result as FailureResult).failure.code,
+      (result as FailureResult<ResolvedLocalizedContent?>).failure.code,
       'LOCALIZED_CONTENT_READ_MODEL_INVALID',
     );
   });
@@ -170,9 +181,9 @@ void main() {
       requestedLocale: 'ru',
     );
 
-    expect(result, isA<FailureResult>());
+    expect(result, isA<FailureResult<ResolvedLocalizedContent?>>());
     expect(
-      (result as FailureResult).failure.code,
+      (result as FailureResult<ResolvedLocalizedContent?>).failure.code,
       'LOCALIZED_CONTENT_READ_MODEL_INVALID',
     );
   });
@@ -186,8 +197,11 @@ void main() {
         requestedLocale: 'ru_KZ',
       );
 
-      expect(result, isA<FailureResult>());
-      expect((result as FailureResult).failure.code, 'LOCALE_INVALID');
+      expect(result, isA<FailureResult<ResolvedLocalizedContent?>>());
+      expect(
+        (result as FailureResult<ResolvedLocalizedContent?>).failure.code,
+        'LOCALE_INVALID',
+      );
     },
   );
 }
@@ -227,6 +241,41 @@ Future<void> _seedCanonical(CareerSpeakDatabase database) async {
           createdAt: now,
         ),
       );
+}
+
+Future<void> _seedFallbackRule(
+  CareerSpeakDatabase database, {
+  required String locale,
+  required List<String> fallbackLocales,
+}) async {
+  final now = DateTime.utc(2026, 10, 31, 4);
+  await database
+      .into(database.contentManifestStates)
+      .insertOnConflictUpdate(
+        ContentManifestStatesCompanion.insert(
+          id: const Value(1),
+          schemaVersion: 1,
+          currentContentVersion: 1,
+          currentManifestChecksum: _rootChecksum,
+          localePolicyContentVersion: const Value(1),
+          updatedAt: now,
+        ),
+      );
+  await (database.delete(
+    database.localeFallbackRules,
+  )..where((row) => row.locale.equals(locale))).go();
+  for (var order = 0; order < fallbackLocales.length; order += 1) {
+    await database
+        .into(database.localeFallbackRules)
+        .insert(
+          LocaleFallbackRulesCompanion.insert(
+            locale: locale,
+            fallbackOrder: order,
+            fallbackLocale: fallbackLocales[order],
+            sourceContentVersion: 1,
+          ),
+        );
+  }
 }
 
 Future<void> _seedLocalization(
@@ -329,6 +378,8 @@ const _identity = ContentIdentity(
   type: ContentType.interview,
 );
 
+const _rootChecksum =
+    'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 const _canonicalChecksum =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const _packChecksum =

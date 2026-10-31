@@ -86,10 +86,20 @@ final class ContentSyncPlanner {
     final projectionChanged =
         currentVersion == remote.contentVersion &&
         !_samePackProjection(local.currentPacks, remote.packs);
+    final localePolicyChanged =
+        currentVersion == remote.contentVersion &&
+        !_sameLocaleFallbackPolicy(
+          local.currentLocaleFallbacks,
+          remote.localeFallbacks,
+        );
     return Success(
       SyncPlan(
         target: remote,
-        rootChanged: publicationRootChanged || projectionChanged,
+        rootChanged:
+            publicationRootChanged ||
+            projectionChanged ||
+            localePolicyChanged ||
+            local.localePolicyRepairRequired,
         changedPacks: changedPacks,
         tombstones: publicationRootChanged
             ? remote.tombstones
@@ -97,6 +107,33 @@ final class ContentSyncPlanner {
       ),
     );
   }
+}
+
+bool _sameLocaleFallbackPolicy(
+  Iterable<LocaleFallbackRule> current,
+  Iterable<LocaleFallbackRule> target,
+) {
+  Map<String, List<String>> normalize(
+    Iterable<LocaleFallbackRule> rules,
+  ) => <String, List<String>>{
+    for (final rule in rules)
+      if (rule.fallbackLocales.isNotEmpty) rule.locale: rule.fallbackLocales,
+  };
+
+  final currentByLocale = normalize(current);
+  final targetByLocale = normalize(target);
+  if (currentByLocale.length != targetByLocale.length) return false;
+
+  for (final entry in targetByLocale.entries) {
+    final installed = currentByLocale[entry.key];
+    if (installed == null || installed.length != entry.value.length) {
+      return false;
+    }
+    for (var index = 0; index < installed.length; index += 1) {
+      if (installed[index] != entry.value[index]) return false;
+    }
+  }
+  return true;
 }
 
 bool _samePackProjection(

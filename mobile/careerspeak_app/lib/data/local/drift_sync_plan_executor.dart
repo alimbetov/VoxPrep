@@ -18,10 +18,9 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
     this._database,
     this._manifestGateway,
     this._payloadGateway, {
-    LocalizedContentPayloadGateway? localizedPayloadGateway,
+    this._localizedPayloadGateway,
     DateTime Function()? now,
-  }) : _localizedPayloadGateway = localizedPayloadGateway,
-       _now = now ?? (() => DateTime.now().toUtc());
+  }) : _now = now ?? (() => DateTime.now().toUtc());
 
   final CareerSpeakDatabase _database;
   final ContentManifestGateway _manifestGateway;
@@ -425,15 +424,24 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
     DateTime now,
   ) async {
     final type = _contentTypeToStorage(content.identity.type);
-    final retired =
-        await (_database.select(_database.localContentRecords)..where(
+    final retirement =
+        await (_database.select(_database.contentRetirements)..where(
               (row) =>
                   row.contentCode.equals(content.identity.code) &
-                  row.contentType.equals(type) &
-                  row.snapshotState.equals('TOMBSTONED'),
-            )..limit(1))
+                  row.contentType.equals(type),
+            ))
             .getSingleOrNull();
-    if (retired != null) {
+    final legacyRetired =
+        await (_database.select(_database.localContentRecords)
+              ..where(
+                (row) =>
+                    row.contentCode.equals(content.identity.code) &
+                    row.contentType.equals(type) &
+                    row.snapshotState.equals('TOMBSTONED'),
+              )
+              ..limit(1))
+            .getSingleOrNull();
+    if (retirement != null || legacyRetired != null) {
       throw _SyncExecutorInvariant(
         ApplicationFailure(
           code: 'CONTENT_IDENTITY_RETIRED',
@@ -442,7 +450,8 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
             'contentCode': content.identity.code,
             'contentType': type,
             'incomingRevision': content.revision,
-            'retiredRevision': retired.revision,
+            'retiredRevision':
+                retirement?.retiredRevision ?? legacyRetired?.revision,
           },
         ),
       );
@@ -999,6 +1008,43 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
 
       for (final tombstone in plan.tombstones) {
         final type = _contentTypeToStorage(tombstone.identity.type);
+        final existingRetirement =
+            await (_database.select(_database.contentRetirements)..where(
+                  (row) =>
+                      row.contentCode.equals(tombstone.identity.code) &
+                      row.contentType.equals(type),
+                ))
+                .getSingleOrNull();
+        if (existingRetirement == null) {
+          await _database
+              .into(_database.contentRetirements)
+              .insert(
+                ContentRetirementsCompanion.insert(
+                  contentCode: tombstone.identity.code,
+                  contentType: type,
+                  retiredRevision: tombstone.revision,
+                  reason: tombstone.reason,
+                  sourceContentVersion: plan.target.contentVersion,
+                  retiredAt: now,
+                ),
+              );
+        } else if (existingRetirement.retiredRevision != tombstone.revision ||
+            existingRetirement.reason != tombstone.reason) {
+          throw _SyncExecutorInvariant(
+            ApplicationFailure(
+              code: 'CONTENT_RETIREMENT_IMMUTABLE_CONFLICT',
+              message:
+                  'A retired content identity received conflicting tombstone metadata.',
+              details: <String, Object?>{
+                'contentCode': tombstone.identity.code,
+                'contentType': type,
+                'existingRevision': existingRetirement.retiredRevision,
+                'incomingRevision': tombstone.revision,
+              },
+            ),
+          );
+        }
+
         await (_database.update(_database.localContentRecords)..where(
               (row) =>
                   row.contentCode.equals(tombstone.identity.code) &
@@ -1023,6 +1069,22 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
             );
       }
 
+      await _database.delete(_database.localeFallbackRules).go();
+      for (final rule in plan.target.localeFallbacks) {
+        for (var order = 0; order < rule.fallbackLocales.length; order += 1) {
+          await _database
+              .into(_database.localeFallbackRules)
+              .insert(
+                LocaleFallbackRulesCompanion.insert(
+                  locale: rule.locale,
+                  fallbackOrder: order,
+                  fallbackLocale: rule.fallbackLocales[order],
+                  sourceContentVersion: plan.target.contentVersion,
+                ),
+              );
+        }
+      }
+
       await _database
           .into(_database.contentManifestStates)
           .insertOnConflictUpdate(
@@ -1031,6 +1093,7 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
               schemaVersion: plan.target.schemaVersion,
               currentContentVersion: plan.target.contentVersion,
               currentManifestChecksum: plan.target.checksum,
+              localePolicyContentVersion: Value(plan.target.contentVersion),
               remoteContentVersionSeen: Value(plan.target.contentVersion),
               remoteManifestChecksum: Value(plan.target.checksum),
               lastCheckedAt: Value(now),

@@ -5,7 +5,7 @@ import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_localized_content_repository.dart';
 import 'package:careerspeak_app/domain/content_identity.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_database_factory.dart';
@@ -34,6 +34,33 @@ void main() {
       'LOCALIZED_CONTENT_READ_MODEL_INVALID',
     );
   });
+
+  test(
+    'uncommitted CURRENT-version fallback rows fail closed offline',
+    () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      await _seedCanonicalAndRussian(database, contentVersion: 2);
+      await _seedFallback(
+        database,
+        locale: 'ru-KZ',
+        sourceContentVersion: 2,
+        fallbackLocales: const <String>['ru', 'en'],
+      );
+
+      final result = await DriftLocalizedContentRepository(database).resolve(
+        identity: _identity,
+        contentRevision: 1,
+        requestedLocale: 'ru-KZ',
+      );
+
+      expect(result, isA<FailureResult<ResolvedLocalizedContent?>>());
+      expect(
+        (result as FailureResult<ResolvedLocalizedContent?>).failure.code,
+        'LOCALIZED_CONTENT_READ_MODEL_INVALID',
+      );
+    },
+  );
 
   test('missing Backend rule never invents base-language fallback', () async {
     final database = createTestDatabase();

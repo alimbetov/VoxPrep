@@ -15,15 +15,15 @@ void main() {
     await database.close();
   });
 
-  test('schema version 5 creates the production content foundation', () async {
+  test('schema version 6 creates the production content foundation', () async {
     await database.customSelect('SELECT 1').getSingle();
 
-    expect(database.schemaVersion, 5);
+    expect(database.schemaVersion, 6);
 
     final userVersion = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(userVersion.read<int>('user_version'), 5);
+    expect(userVersion.read<int>('user_version'), 6);
 
     final foreignKeys = await database
         .customSelect('PRAGMA foreign_keys')
@@ -47,6 +47,8 @@ void main() {
         'local_content_records',
         'pack_content_refs',
         'pack_localization_refs',
+        'locale_fallback_rules',
+        'content_retirements',
         'asset_catalog',
         'content_asset_refs',
         'pack_asset_refs',

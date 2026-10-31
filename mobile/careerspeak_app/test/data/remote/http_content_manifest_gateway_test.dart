@@ -222,6 +222,7 @@ Map<String, Object?> _packManifest() {
     'revision': 8,
     'checksum': _shaB,
     'contents': const <Object?>[],
+    'localizations': const <Object?>[],
     'assets': const <Object?>[],
     'contentAssets': const <Object?>[],
   };

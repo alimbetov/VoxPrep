@@ -83,6 +83,50 @@ final class ContentTombstone {
   final String reason;
 }
 
+final class LocaleFallbackRule {
+  factory LocaleFallbackRule({
+    required String locale,
+    required Iterable<String> fallbackLocales,
+  }) {
+    final normalizedLocale = _canonicalizeLocale(locale, 'locale');
+    final fallbacks = fallbackLocales
+        .map((value) => _canonicalizeLocale(value, 'fallbackLocales'))
+        .toList(growable: false);
+
+    final seen = <String>{normalizedLocale};
+    for (final fallback in fallbacks) {
+      if (!seen.add(fallback)) {
+        throw ArgumentError.value(
+          fallback,
+          'fallbackLocales',
+          'contains a duplicate or the requested locale',
+        );
+      }
+    }
+    final englishIndex = fallbacks.indexOf('en');
+    if (englishIndex >= 0 && englishIndex != fallbacks.length - 1) {
+      throw ArgumentError.value(
+        fallbacks,
+        'fallbackLocales',
+        'canonical English must be terminal',
+      );
+    }
+
+    return LocaleFallbackRule._(
+      locale: normalizedLocale,
+      fallbackLocales: List<String>.unmodifiable(fallbacks),
+    );
+  }
+
+  const LocaleFallbackRule._({
+    required this.locale,
+    required this.fallbackLocales,
+  });
+
+  final String locale;
+  final List<String> fallbackLocales;
+}
+
 final class RootContentManifest {
   factory RootContentManifest({
     required int schemaVersion,
@@ -91,11 +135,14 @@ final class RootContentManifest {
     required DateTime publishedAt,
     required String checksum,
     required Iterable<PackRevisionRef> packs,
+    Iterable<LocaleFallbackRule> localeFallbacks = const <LocaleFallbackRule>[],
     required Iterable<ContentTombstone> tombstones,
   }) {
     final packList = List<PackRevisionRef>.unmodifiable(packs);
+    final fallbackList = List<LocaleFallbackRule>.unmodifiable(localeFallbacks);
     final tombstoneList = List<ContentTombstone>.unmodifiable(tombstones);
     _requireUniquePackIdentities(packList);
+    _requireUniqueLocaleFallbacks(fallbackList);
     _requireUniqueTombstoneIdentities(tombstoneList);
 
     return RootContentManifest._(
@@ -108,6 +155,7 @@ final class RootContentManifest {
       publishedAt: _requireUtc(publishedAt, 'publishedAt'),
       checksum: normalizeSha256(checksum, 'checksum'),
       packs: packList,
+      localeFallbacks: fallbackList,
       tombstones: tombstoneList,
     );
   }
@@ -119,6 +167,7 @@ final class RootContentManifest {
     required this.publishedAt,
     required this.checksum,
     required this.packs,
+    required this.localeFallbacks,
     required this.tombstones,
   });
 
@@ -128,6 +177,7 @@ final class RootContentManifest {
   final DateTime publishedAt;
   final String checksum;
   final List<PackRevisionRef> packs;
+  final List<LocaleFallbackRule> localeFallbacks;
   final List<ContentTombstone> tombstones;
 }
 
@@ -184,7 +234,7 @@ final class LocalizedContentRef {
     return LocalizedContentRef._(
       identity: identity,
       contentRevision: _requirePositive(contentRevision, 'contentRevision'),
-      locale: _requireLocale(locale, 'locale'),
+      locale: _canonicalizeLocale(locale, 'locale'),
       localizationRevision: _requirePositive(
         localizationRevision,
         'localizationRevision',
@@ -354,6 +404,7 @@ final _businessCodePattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._-]*$');
 final _localePattern = RegExp(r'^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$');
 final _opaqueIdPattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._:-]*$');
 final _deliverySegmentPattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._-]*$');
+final _alphaPattern = RegExp(r'^[A-Za-z]+$');
 
 String _requireBusinessCode(String value, String fieldName) {
   final normalized = _requireNonBlank(value, fieldName);
@@ -382,8 +433,7 @@ String _requireVariant(String value) {
   }
 
   final locale = normalized.substring('locale:'.length);
-  _requireLocale(locale, 'variant');
-  return normalized;
+  return 'locale:${_canonicalizeLocale(locale, 'variant')}';
 }
 
 String _requireLocale(String value, String fieldName) {
@@ -396,6 +446,24 @@ String _requireLocale(String value, String fieldName) {
     );
   }
   return normalized;
+}
+
+String _canonicalizeLocale(String value, String fieldName) {
+  final normalized = _requireLocale(value, fieldName);
+  final parts = normalized.split('-');
+  final result = <String>[parts.first.toLowerCase()];
+  for (final part in parts.skip(1)) {
+    if (part.length == 2 && _alphaPattern.hasMatch(part)) {
+      result.add(part.toUpperCase());
+    } else if (part.length == 4 && _alphaPattern.hasMatch(part)) {
+      result.add(
+        '${part.substring(0, 1).toUpperCase()}${part.substring(1).toLowerCase()}',
+      );
+    } else {
+      result.add(part.toLowerCase());
+    }
+  }
+  return result.join('-');
 }
 
 String _requireOpaqueId(String value, String fieldName) {
@@ -468,6 +536,19 @@ void _requireUniquePackIdentities(List<PackRevisionRef> packs) {
         pack.identity,
         'packs',
         'contains duplicate pack identity',
+      );
+    }
+  }
+}
+
+void _requireUniqueLocaleFallbacks(List<LocaleFallbackRule> rules) {
+  final locales = <String>{};
+  for (final rule in rules) {
+    if (!locales.add(rule.locale)) {
+      throw ArgumentError.value(
+        rule.locale,
+        'localeFallbacks',
+        'contains duplicate locale fallback rule',
       );
     }
   }

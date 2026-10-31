@@ -4,6 +4,7 @@ import '../../application/content_delivery/locale_fallback.dart';
 import '../../application/content_delivery/localized_content_resolution.dart';
 import '../../application/ports/localized_content_repository.dart';
 import '../../application/result/result.dart';
+import '../../domain/application_preferences.dart';
 import '../../domain/content_identity.dart';
 import 'content_type_storage.dart';
 import 'database/careerspeak_database.dart';
@@ -29,9 +30,9 @@ final class DriftLocalizedContentRepository
       );
     }
 
-    final LocaleFallbackPlan fallback;
+    final String normalizedRequestedLocale;
     try {
-      fallback = LocaleFallbackPlan(requestedLocale);
+      normalizedRequestedLocale = LocaleCode.canonicalize(requestedLocale);
     } on FormatException {
       return FailureResult<ResolvedLocalizedContent?>(
         ApplicationFailure(
@@ -43,6 +44,21 @@ final class DriftLocalizedContentRepository
     }
 
     try {
+      final configuredFallbacks = await _readConfiguredFallbacks(
+        normalizedRequestedLocale,
+      );
+      final LocaleFallbackPlan fallback;
+      try {
+        fallback = LocaleFallbackPlan(
+          requestedLocale: normalizedRequestedLocale,
+          configuredFallbackLocales: configuredFallbacks,
+        );
+      } on FormatException catch (error) {
+        throw _LocalizedReadInvariant(
+          'persisted Backend fallback chain is invalid: ${error.message}',
+        );
+      }
+
       final canonical = await _readCanonical(
         identity: identity,
         contentRevision: contentRevision,
@@ -118,6 +134,47 @@ final class DriftLocalizedContentRepository
         ),
       );
     }
+  }
+
+  Future<List<String>> _readConfiguredFallbacks(String locale) async {
+    if (locale == LocaleFallbackPlan.canonicalEnglishLocale) {
+      return const <String>[];
+    }
+
+    final manifest = await (_database.select(
+      _database.contentManifestStates,
+    )..where((row) => row.id.equals(1))).getSingleOrNull();
+    if (manifest == null || manifest.currentContentVersion <= 0) {
+      return const <String>[];
+    }
+
+    final rows =
+        await (_database.select(_database.localeFallbackRules)
+              ..where((row) => row.locale.equals(locale))
+              ..orderBy([(row) => OrderingTerm.asc(row.fallbackOrder)]))
+            .get();
+    if (manifest.localePolicyContentVersion != manifest.currentContentVersion) {
+      if (rows.isEmpty) {
+        return const <String>[];
+      }
+      throw _LocalizedReadInvariant(
+        'Backend fallback rows are not committed for the CURRENT root',
+      );
+    }
+    for (var index = 0; index < rows.length; index += 1) {
+      final row = rows[index];
+      if (row.fallbackOrder != index) {
+        throw _LocalizedReadInvariant(
+          'Backend fallback chain for $locale has a non-contiguous order',
+        );
+      }
+      if (row.sourceContentVersion != manifest.currentContentVersion) {
+        throw _LocalizedReadInvariant(
+          'Backend fallback chain for $locale belongs to a stale root version',
+        );
+      }
+    }
+    return List<String>.unmodifiable(rows.map((row) => row.fallbackLocale));
   }
 
   Future<_CanonicalProjection?> _readCanonical({

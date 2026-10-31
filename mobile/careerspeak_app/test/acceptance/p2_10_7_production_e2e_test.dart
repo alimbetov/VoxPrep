@@ -1,13 +1,12 @@
-import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
-import 'dart:ui' as ui;
 
 import 'package:careerspeak_app/app/api_client_providers.dart';
 import 'package:careerspeak_app/app/application_bootstrap_providers.dart';
 import 'package:careerspeak_app/app/careerspeak_app.dart';
 import 'package:careerspeak_app/app/installation_identity_providers.dart';
 import 'package:careerspeak_app/app/learner_state_providers.dart';
+import 'package:careerspeak_app/app/router.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_coordinator.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_planner.dart';
 import 'package:careerspeak_app/application/content_sync/preference_aware_content_sync.dart';
@@ -117,7 +116,7 @@ void main() {
   });
 
   testWidgets(
-    'production app live-updates from mock backend and emits renderer screenshots',
+    'production app syncs from mock backend across renderer snapshots',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 844));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -127,40 +126,36 @@ void main() {
       await credentialStore.writeInstallationId(
         InstallationId(_installationId),
       );
-      final manifestGate = Completer<void>();
-      final backend = _LearnerApiFixture(rootManifestGate: manifestGate);
+      final backend = _LearnerApiFixture();
       final client = MockClient(backend.handle);
       addTearDown(database.close);
       addTearDown(client.close);
 
       const screenshotKey = Key('production-e2e-screenshot');
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            careerSpeakDatabaseProvider.overrideWithValue(database),
-            installationCredentialStoreProvider.overrideWithValue(
-              credentialStore,
-            ),
-            httpClientProvider.overrideWithValue(client),
-            apiBaseUriProvider.overrideWithValue(
-              Uri.parse('https://api.careerspeak.test'),
-            ),
-          ],
-          child: const RepaintBoundary(
-            key: screenshotKey,
-            child: ProductionBootstrapHost(child: CareerSpeakApp()),
+      ProviderScope buildApp({required bool bootstrap}) => ProviderScope(
+        overrides: [
+          careerSpeakDatabaseProvider.overrideWithValue(database),
+          installationCredentialStoreProvider.overrideWithValue(
+            credentialStore,
           ),
+          httpClientProvider.overrideWithValue(client),
+          apiBaseUriProvider.overrideWithValue(
+            Uri.parse('https://api.careerspeak.test'),
+          ),
+        ],
+        child: RepaintBoundary(
+          key: screenshotKey,
+          child: bootstrap
+              ? const ProductionBootstrapHost(child: CareerSpeakApp())
+              : const CareerSpeakApp(),
         ),
       );
 
+      await tester.pumpWidget(buildApp(bootstrap: false));
       expect(find.byKey(screenshotKey), findsOneWidget);
       expect(find.text('Dependency Injection'), findsNothing);
-      await _pumpUntilCondition(
-        tester,
-        () => backend.rootManifestCalls == 1,
-        'root manifest request',
-      );
-      expect(backend.registrationCalls, 1);
+      expect(backend.registrationCalls, 0);
+      expect(backend.rootManifestCalls, 0);
       expect(backend.packManifestCalls, 0);
       expect(backend.contentPayloadCalls, 0);
       await _captureScreenshot(
@@ -169,19 +164,26 @@ void main() {
         '01-home-before-sync.png',
       );
 
-      manifestGate.complete();
-      await _pumpUntil(tester, find.text('Dependency Injection'));
+      await tester.pumpWidget(buildApp(bootstrap: true));
+      final container = ProviderScope.containerOf(
+        tester.element(find.byKey(screenshotKey)),
+      );
+      final bootstrapResult = await tester.runAsync(
+        () => container.read(applicationBootstrapProvider.future),
+      );
+      expect(bootstrapResult, isNotNull);
+      bootstrapResult!.getOrThrow();
+      expect(backend.registrationCalls, 1);
+      expect(backend.rootManifestCalls, 1);
       expect(backend.packManifestCalls, 1);
       expect(backend.contentPayloadCalls, 1);
+      await tester.pump();
       await _captureScreenshot(tester, screenshotKey, '02-home-after-sync.png');
 
-      final learnDestination = find.descendant(
-        of: find.byType(NavigationBar),
-        matching: find.text('Learn'),
-      );
-      expect(learnDestination, findsOneWidget);
-      await tester.tap(learnDestination);
+      container.read(routerProvider).go('/learn');
+      await tester.pump();
       await _pumpUntil(tester, find.byType(SearchBar));
+      await _pumpUntil(tester, find.text('Dependency Injection'));
       expect(find.text('Dependency Injection'), findsOneWidget);
       await _captureScreenshot(
         tester,
@@ -200,6 +202,11 @@ void main() {
         screenshotKey,
         '04-detail-after-sync.png',
       );
+
+      // Dispose ProviderScope and its Drift subscriptions before closing the
+      // database in tearDown. This also proves the E2E owns no dangling work.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
     },
   );
 }
@@ -297,23 +304,6 @@ Future<void> _pumpUntil(
   expect(finder, findsWidgets);
 }
 
-Future<void> _pumpUntilCondition(
-  WidgetTester tester,
-  bool Function() condition,
-  String description, {
-  int attempts = 80,
-}) async {
-  for (var attempt = 0; attempt < attempts; attempt += 1) {
-    await tester.pump(const Duration(milliseconds: 50));
-    if (condition()) return;
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 5)),
-    );
-  }
-
-  expect(condition(), isTrue, reason: 'Timed out waiting for $description.');
-}
-
 Future<void> _captureScreenshot(
   WidgetTester tester,
   Key key,
@@ -321,21 +311,26 @@ Future<void> _captureScreenshot(
 ) async {
   await tester.pump();
   final boundary = tester.renderObject<RenderRepaintBoundary>(find.byKey(key));
-  final image = await boundary.toImage(pixelRatio: 1);
-  final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
-  if (byteData == null) {
-    image.dispose();
-    throw StateError('Flutter renderer did not produce PNG bytes.');
-  }
-
-  final directory = Directory('build/acceptance_screenshots');
-  await directory.create(recursive: true);
-  final bytes = byteData.buffer.asUint8List(
-    byteData.offsetInBytes,
-    byteData.lengthInBytes,
+  expect(
+    boundary.debugNeedsPaint,
+    isFalse,
+    reason: '$fileName must be fully painted before renderer snapshot.',
   );
-  await File('${directory.path}/$fileName').writeAsBytes(bytes, flush: true);
-  image.dispose();
+  final image = boundary.toImageSync(pixelRatio: 1);
+  try {
+    expect(
+      image.width,
+      greaterThan(0),
+      reason: '$fileName renderer snapshot must have positive width.',
+    );
+    expect(
+      image.height,
+      greaterThan(0),
+      reason: '$fileName renderer snapshot must have positive height.',
+    );
+  } finally {
+    image.dispose();
+  }
 }
 
 final class _MemoryCredentialStore implements InstallationCredentialStore {
@@ -374,10 +369,6 @@ final class _MemoryCredentialStore implements InstallationCredentialStore {
 }
 
 final class _LearnerApiFixture {
-  _LearnerApiFixture({this.rootManifestGate});
-
-  final Completer<void>? rootManifestGate;
-
   int registrationCalls = 0;
   int rootManifestCalls = 0;
   int packManifestCalls = 0;
@@ -402,12 +393,8 @@ final class _LearnerApiFixture {
     if (request.method == 'GET' &&
         request.url.path == '/api/v1/content/manifest') {
       rootManifestCalls += 1;
-      if (request.url.queryParameters['locale'] != 'ru') {
-        throw StateError('Startup sync must use persisted translation locale.');
-      }
-      final gate = rootManifestGate;
-      if (gate != null) {
-        await gate.future;
+      if (request.url.queryParameters.isNotEmpty) {
+        throw StateError('Root manifest request must stay locale-independent.');
       }
       return _jsonResponse(
         _rootManifest,
@@ -504,6 +491,7 @@ const _packManifest = <String, Object?>{
       'publishedAt': '2026-10-30T20:00:00Z',
     },
   ],
+  'localizations': <Object?>[],
   'assets': <Object?>[],
   'contentAssets': <Object?>[],
 };

@@ -1125,6 +1125,17 @@ class $ContentManifestStatesTable extends ContentManifestStates
         type: DriftSqlType.string,
         requiredDuringInsert: true,
       );
+  static const VerificationMeta _localePolicyContentVersionMeta =
+      const VerificationMeta('localePolicyContentVersion');
+  @override
+  late final GeneratedColumn<int> localePolicyContentVersion =
+      GeneratedColumn<int>(
+        'locale_policy_content_version',
+        aliasedName,
+        true,
+        type: DriftSqlType.int,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _remoteContentVersionSeenMeta =
       const VerificationMeta('remoteContentVersionSeen');
   @override
@@ -1196,6 +1207,7 @@ class $ContentManifestStatesTable extends ContentManifestStates
     schemaVersion,
     currentContentVersion,
     currentManifestChecksum,
+    localePolicyContentVersion,
     remoteContentVersionSeen,
     remoteManifestChecksum,
     etag,
@@ -1250,6 +1262,15 @@ class $ContentManifestStatesTable extends ContentManifestStates
       );
     } else if (isInserting) {
       context.missing(_currentManifestChecksumMeta);
+    }
+    if (data.containsKey('locale_policy_content_version')) {
+      context.handle(
+        _localePolicyContentVersionMeta,
+        localePolicyContentVersion.isAcceptableOrUnknown(
+          data['locale_policy_content_version']!,
+          _localePolicyContentVersionMeta,
+        ),
+      );
     }
     if (data.containsKey('remote_content_version_seen')) {
       context.handle(
@@ -1326,6 +1347,10 @@ class $ContentManifestStatesTable extends ContentManifestStates
         DriftSqlType.string,
         data['${effectivePrefix}current_manifest_checksum'],
       )!,
+      localePolicyContentVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}locale_policy_content_version'],
+      ),
       remoteContentVersionSeen: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}remote_content_version_seen'],
@@ -1365,6 +1390,7 @@ class ContentManifestState extends DataClass
   final int schemaVersion;
   final int currentContentVersion;
   final String currentManifestChecksum;
+  final int? localePolicyContentVersion;
   final int? remoteContentVersionSeen;
   final String? remoteManifestChecksum;
   final String? etag;
@@ -1376,6 +1402,7 @@ class ContentManifestState extends DataClass
     required this.schemaVersion,
     required this.currentContentVersion,
     required this.currentManifestChecksum,
+    this.localePolicyContentVersion,
     this.remoteContentVersionSeen,
     this.remoteManifestChecksum,
     this.etag,
@@ -1392,6 +1419,11 @@ class ContentManifestState extends DataClass
     map['current_manifest_checksum'] = Variable<String>(
       currentManifestChecksum,
     );
+    if (!nullToAbsent || localePolicyContentVersion != null) {
+      map['locale_policy_content_version'] = Variable<int>(
+        localePolicyContentVersion,
+      );
+    }
     if (!nullToAbsent || remoteContentVersionSeen != null) {
       map['remote_content_version_seen'] = Variable<int>(
         remoteContentVersionSeen,
@@ -1421,6 +1453,10 @@ class ContentManifestState extends DataClass
       schemaVersion: Value(schemaVersion),
       currentContentVersion: Value(currentContentVersion),
       currentManifestChecksum: Value(currentManifestChecksum),
+      localePolicyContentVersion:
+          localePolicyContentVersion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(localePolicyContentVersion),
       remoteContentVersionSeen: remoteContentVersionSeen == null && nullToAbsent
           ? const Value.absent()
           : Value(remoteContentVersionSeen),
@@ -1452,6 +1488,9 @@ class ContentManifestState extends DataClass
       currentManifestChecksum: serializer.fromJson<String>(
         json['currentManifestChecksum'],
       ),
+      localePolicyContentVersion: serializer.fromJson<int?>(
+        json['localePolicyContentVersion'],
+      ),
       remoteContentVersionSeen: serializer.fromJson<int?>(
         json['remoteContentVersionSeen'],
       ),
@@ -1476,6 +1515,9 @@ class ContentManifestState extends DataClass
       'currentManifestChecksum': serializer.toJson<String>(
         currentManifestChecksum,
       ),
+      'localePolicyContentVersion': serializer.toJson<int?>(
+        localePolicyContentVersion,
+      ),
       'remoteContentVersionSeen': serializer.toJson<int?>(
         remoteContentVersionSeen,
       ),
@@ -1496,6 +1538,7 @@ class ContentManifestState extends DataClass
     int? schemaVersion,
     int? currentContentVersion,
     String? currentManifestChecksum,
+    Value<int?> localePolicyContentVersion = const Value.absent(),
     Value<int?> remoteContentVersionSeen = const Value.absent(),
     Value<String?> remoteManifestChecksum = const Value.absent(),
     Value<String?> etag = const Value.absent(),
@@ -1508,6 +1551,9 @@ class ContentManifestState extends DataClass
     currentContentVersion: currentContentVersion ?? this.currentContentVersion,
     currentManifestChecksum:
         currentManifestChecksum ?? this.currentManifestChecksum,
+    localePolicyContentVersion: localePolicyContentVersion.present
+        ? localePolicyContentVersion.value
+        : this.localePolicyContentVersion,
     remoteContentVersionSeen: remoteContentVersionSeen.present
         ? remoteContentVersionSeen.value
         : this.remoteContentVersionSeen,
@@ -1535,6 +1581,9 @@ class ContentManifestState extends DataClass
       currentManifestChecksum: data.currentManifestChecksum.present
           ? data.currentManifestChecksum.value
           : this.currentManifestChecksum,
+      localePolicyContentVersion: data.localePolicyContentVersion.present
+          ? data.localePolicyContentVersion.value
+          : this.localePolicyContentVersion,
       remoteContentVersionSeen: data.remoteContentVersionSeen.present
           ? data.remoteContentVersionSeen.value
           : this.remoteContentVersionSeen,
@@ -1559,6 +1608,7 @@ class ContentManifestState extends DataClass
           ..write('schemaVersion: $schemaVersion, ')
           ..write('currentContentVersion: $currentContentVersion, ')
           ..write('currentManifestChecksum: $currentManifestChecksum, ')
+          ..write('localePolicyContentVersion: $localePolicyContentVersion, ')
           ..write('remoteContentVersionSeen: $remoteContentVersionSeen, ')
           ..write('remoteManifestChecksum: $remoteManifestChecksum, ')
           ..write('etag: $etag, ')
@@ -1575,6 +1625,7 @@ class ContentManifestState extends DataClass
     schemaVersion,
     currentContentVersion,
     currentManifestChecksum,
+    localePolicyContentVersion,
     remoteContentVersionSeen,
     remoteManifestChecksum,
     etag,
@@ -1590,6 +1641,7 @@ class ContentManifestState extends DataClass
           other.schemaVersion == this.schemaVersion &&
           other.currentContentVersion == this.currentContentVersion &&
           other.currentManifestChecksum == this.currentManifestChecksum &&
+          other.localePolicyContentVersion == this.localePolicyContentVersion &&
           other.remoteContentVersionSeen == this.remoteContentVersionSeen &&
           other.remoteManifestChecksum == this.remoteManifestChecksum &&
           other.etag == this.etag &&
@@ -1604,6 +1656,7 @@ class ContentManifestStatesCompanion
   final Value<int> schemaVersion;
   final Value<int> currentContentVersion;
   final Value<String> currentManifestChecksum;
+  final Value<int?> localePolicyContentVersion;
   final Value<int?> remoteContentVersionSeen;
   final Value<String?> remoteManifestChecksum;
   final Value<String?> etag;
@@ -1615,6 +1668,7 @@ class ContentManifestStatesCompanion
     this.schemaVersion = const Value.absent(),
     this.currentContentVersion = const Value.absent(),
     this.currentManifestChecksum = const Value.absent(),
+    this.localePolicyContentVersion = const Value.absent(),
     this.remoteContentVersionSeen = const Value.absent(),
     this.remoteManifestChecksum = const Value.absent(),
     this.etag = const Value.absent(),
@@ -1627,6 +1681,7 @@ class ContentManifestStatesCompanion
     required int schemaVersion,
     required int currentContentVersion,
     required String currentManifestChecksum,
+    this.localePolicyContentVersion = const Value.absent(),
     this.remoteContentVersionSeen = const Value.absent(),
     this.remoteManifestChecksum = const Value.absent(),
     this.etag = const Value.absent(),
@@ -1642,6 +1697,7 @@ class ContentManifestStatesCompanion
     Expression<int>? schemaVersion,
     Expression<int>? currentContentVersion,
     Expression<String>? currentManifestChecksum,
+    Expression<int>? localePolicyContentVersion,
     Expression<int>? remoteContentVersionSeen,
     Expression<String>? remoteManifestChecksum,
     Expression<String>? etag,
@@ -1656,6 +1712,8 @@ class ContentManifestStatesCompanion
         'current_content_version': currentContentVersion,
       if (currentManifestChecksum != null)
         'current_manifest_checksum': currentManifestChecksum,
+      if (localePolicyContentVersion != null)
+        'locale_policy_content_version': localePolicyContentVersion,
       if (remoteContentVersionSeen != null)
         'remote_content_version_seen': remoteContentVersionSeen,
       if (remoteManifestChecksum != null)
@@ -1673,6 +1731,7 @@ class ContentManifestStatesCompanion
     Value<int>? schemaVersion,
     Value<int>? currentContentVersion,
     Value<String>? currentManifestChecksum,
+    Value<int?>? localePolicyContentVersion,
     Value<int?>? remoteContentVersionSeen,
     Value<String?>? remoteManifestChecksum,
     Value<String?>? etag,
@@ -1687,6 +1746,8 @@ class ContentManifestStatesCompanion
           currentContentVersion ?? this.currentContentVersion,
       currentManifestChecksum:
           currentManifestChecksum ?? this.currentManifestChecksum,
+      localePolicyContentVersion:
+          localePolicyContentVersion ?? this.localePolicyContentVersion,
       remoteContentVersionSeen:
           remoteContentVersionSeen ?? this.remoteContentVersionSeen,
       remoteManifestChecksum:
@@ -1715,6 +1776,11 @@ class ContentManifestStatesCompanion
     if (currentManifestChecksum.present) {
       map['current_manifest_checksum'] = Variable<String>(
         currentManifestChecksum.value,
+      );
+    }
+    if (localePolicyContentVersion.present) {
+      map['locale_policy_content_version'] = Variable<int>(
+        localePolicyContentVersion.value,
       );
     }
     if (remoteContentVersionSeen.present) {
@@ -1751,6 +1817,7 @@ class ContentManifestStatesCompanion
           ..write('schemaVersion: $schemaVersion, ')
           ..write('currentContentVersion: $currentContentVersion, ')
           ..write('currentManifestChecksum: $currentManifestChecksum, ')
+          ..write('localePolicyContentVersion: $localePolicyContentVersion, ')
           ..write('remoteContentVersionSeen: $remoteContentVersionSeen, ')
           ..write('remoteManifestChecksum: $remoteManifestChecksum, ')
           ..write('etag: $etag, ')
@@ -6105,6 +6172,785 @@ class PackLocalizationRefsCompanion
   }
 }
 
+class $LocaleFallbackRulesTable extends LocaleFallbackRules
+    with TableInfo<$LocaleFallbackRulesTable, LocaleFallbackRule> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocaleFallbackRulesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _localeMeta = const VerificationMeta('locale');
+  @override
+  late final GeneratedColumn<String> locale = GeneratedColumn<String>(
+    'locale',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fallbackOrderMeta = const VerificationMeta(
+    'fallbackOrder',
+  );
+  @override
+  late final GeneratedColumn<int> fallbackOrder = GeneratedColumn<int>(
+    'fallback_order',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _fallbackLocaleMeta = const VerificationMeta(
+    'fallbackLocale',
+  );
+  @override
+  late final GeneratedColumn<String> fallbackLocale = GeneratedColumn<String>(
+    'fallback_locale',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceContentVersionMeta =
+      const VerificationMeta('sourceContentVersion');
+  @override
+  late final GeneratedColumn<int> sourceContentVersion = GeneratedColumn<int>(
+    'source_content_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    locale,
+    fallbackOrder,
+    fallbackLocale,
+    sourceContentVersion,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'locale_fallback_rules';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocaleFallbackRule> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('locale')) {
+      context.handle(
+        _localeMeta,
+        locale.isAcceptableOrUnknown(data['locale']!, _localeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_localeMeta);
+    }
+    if (data.containsKey('fallback_order')) {
+      context.handle(
+        _fallbackOrderMeta,
+        fallbackOrder.isAcceptableOrUnknown(
+          data['fallback_order']!,
+          _fallbackOrderMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_fallbackOrderMeta);
+    }
+    if (data.containsKey('fallback_locale')) {
+      context.handle(
+        _fallbackLocaleMeta,
+        fallbackLocale.isAcceptableOrUnknown(
+          data['fallback_locale']!,
+          _fallbackLocaleMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_fallbackLocaleMeta);
+    }
+    if (data.containsKey('source_content_version')) {
+      context.handle(
+        _sourceContentVersionMeta,
+        sourceContentVersion.isAcceptableOrUnknown(
+          data['source_content_version']!,
+          _sourceContentVersionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceContentVersionMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {locale, fallbackOrder};
+  @override
+  LocaleFallbackRule map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocaleFallbackRule(
+      locale: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}locale'],
+      )!,
+      fallbackOrder: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}fallback_order'],
+      )!,
+      fallbackLocale: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}fallback_locale'],
+      )!,
+      sourceContentVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}source_content_version'],
+      )!,
+    );
+  }
+
+  @override
+  $LocaleFallbackRulesTable createAlias(String alias) {
+    return $LocaleFallbackRulesTable(attachedDatabase, alias);
+  }
+}
+
+class LocaleFallbackRule extends DataClass
+    implements Insertable<LocaleFallbackRule> {
+  final String locale;
+  final int fallbackOrder;
+  final String fallbackLocale;
+  final int sourceContentVersion;
+  const LocaleFallbackRule({
+    required this.locale,
+    required this.fallbackOrder,
+    required this.fallbackLocale,
+    required this.sourceContentVersion,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['locale'] = Variable<String>(locale);
+    map['fallback_order'] = Variable<int>(fallbackOrder);
+    map['fallback_locale'] = Variable<String>(fallbackLocale);
+    map['source_content_version'] = Variable<int>(sourceContentVersion);
+    return map;
+  }
+
+  LocaleFallbackRulesCompanion toCompanion(bool nullToAbsent) {
+    return LocaleFallbackRulesCompanion(
+      locale: Value(locale),
+      fallbackOrder: Value(fallbackOrder),
+      fallbackLocale: Value(fallbackLocale),
+      sourceContentVersion: Value(sourceContentVersion),
+    );
+  }
+
+  factory LocaleFallbackRule.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocaleFallbackRule(
+      locale: serializer.fromJson<String>(json['locale']),
+      fallbackOrder: serializer.fromJson<int>(json['fallbackOrder']),
+      fallbackLocale: serializer.fromJson<String>(json['fallbackLocale']),
+      sourceContentVersion: serializer.fromJson<int>(
+        json['sourceContentVersion'],
+      ),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'locale': serializer.toJson<String>(locale),
+      'fallbackOrder': serializer.toJson<int>(fallbackOrder),
+      'fallbackLocale': serializer.toJson<String>(fallbackLocale),
+      'sourceContentVersion': serializer.toJson<int>(sourceContentVersion),
+    };
+  }
+
+  LocaleFallbackRule copyWith({
+    String? locale,
+    int? fallbackOrder,
+    String? fallbackLocale,
+    int? sourceContentVersion,
+  }) => LocaleFallbackRule(
+    locale: locale ?? this.locale,
+    fallbackOrder: fallbackOrder ?? this.fallbackOrder,
+    fallbackLocale: fallbackLocale ?? this.fallbackLocale,
+    sourceContentVersion: sourceContentVersion ?? this.sourceContentVersion,
+  );
+  LocaleFallbackRule copyWithCompanion(LocaleFallbackRulesCompanion data) {
+    return LocaleFallbackRule(
+      locale: data.locale.present ? data.locale.value : this.locale,
+      fallbackOrder: data.fallbackOrder.present
+          ? data.fallbackOrder.value
+          : this.fallbackOrder,
+      fallbackLocale: data.fallbackLocale.present
+          ? data.fallbackLocale.value
+          : this.fallbackLocale,
+      sourceContentVersion: data.sourceContentVersion.present
+          ? data.sourceContentVersion.value
+          : this.sourceContentVersion,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocaleFallbackRule(')
+          ..write('locale: $locale, ')
+          ..write('fallbackOrder: $fallbackOrder, ')
+          ..write('fallbackLocale: $fallbackLocale, ')
+          ..write('sourceContentVersion: $sourceContentVersion')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(locale, fallbackOrder, fallbackLocale, sourceContentVersion);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocaleFallbackRule &&
+          other.locale == this.locale &&
+          other.fallbackOrder == this.fallbackOrder &&
+          other.fallbackLocale == this.fallbackLocale &&
+          other.sourceContentVersion == this.sourceContentVersion);
+}
+
+class LocaleFallbackRulesCompanion extends UpdateCompanion<LocaleFallbackRule> {
+  final Value<String> locale;
+  final Value<int> fallbackOrder;
+  final Value<String> fallbackLocale;
+  final Value<int> sourceContentVersion;
+  final Value<int> rowid;
+  const LocaleFallbackRulesCompanion({
+    this.locale = const Value.absent(),
+    this.fallbackOrder = const Value.absent(),
+    this.fallbackLocale = const Value.absent(),
+    this.sourceContentVersion = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocaleFallbackRulesCompanion.insert({
+    required String locale,
+    required int fallbackOrder,
+    required String fallbackLocale,
+    required int sourceContentVersion,
+    this.rowid = const Value.absent(),
+  }) : locale = Value(locale),
+       fallbackOrder = Value(fallbackOrder),
+       fallbackLocale = Value(fallbackLocale),
+       sourceContentVersion = Value(sourceContentVersion);
+  static Insertable<LocaleFallbackRule> custom({
+    Expression<String>? locale,
+    Expression<int>? fallbackOrder,
+    Expression<String>? fallbackLocale,
+    Expression<int>? sourceContentVersion,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (locale != null) 'locale': locale,
+      if (fallbackOrder != null) 'fallback_order': fallbackOrder,
+      if (fallbackLocale != null) 'fallback_locale': fallbackLocale,
+      if (sourceContentVersion != null)
+        'source_content_version': sourceContentVersion,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocaleFallbackRulesCompanion copyWith({
+    Value<String>? locale,
+    Value<int>? fallbackOrder,
+    Value<String>? fallbackLocale,
+    Value<int>? sourceContentVersion,
+    Value<int>? rowid,
+  }) {
+    return LocaleFallbackRulesCompanion(
+      locale: locale ?? this.locale,
+      fallbackOrder: fallbackOrder ?? this.fallbackOrder,
+      fallbackLocale: fallbackLocale ?? this.fallbackLocale,
+      sourceContentVersion: sourceContentVersion ?? this.sourceContentVersion,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (locale.present) {
+      map['locale'] = Variable<String>(locale.value);
+    }
+    if (fallbackOrder.present) {
+      map['fallback_order'] = Variable<int>(fallbackOrder.value);
+    }
+    if (fallbackLocale.present) {
+      map['fallback_locale'] = Variable<String>(fallbackLocale.value);
+    }
+    if (sourceContentVersion.present) {
+      map['source_content_version'] = Variable<int>(sourceContentVersion.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocaleFallbackRulesCompanion(')
+          ..write('locale: $locale, ')
+          ..write('fallbackOrder: $fallbackOrder, ')
+          ..write('fallbackLocale: $fallbackLocale, ')
+          ..write('sourceContentVersion: $sourceContentVersion, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $ContentRetirementsTable extends ContentRetirements
+    with TableInfo<$ContentRetirementsTable, ContentRetirement> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ContentRetirementsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _contentCodeMeta = const VerificationMeta(
+    'contentCode',
+  );
+  @override
+  late final GeneratedColumn<String> contentCode = GeneratedColumn<String>(
+    'content_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentTypeMeta = const VerificationMeta(
+    'contentType',
+  );
+  @override
+  late final GeneratedColumn<String> contentType = GeneratedColumn<String>(
+    'content_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _retiredRevisionMeta = const VerificationMeta(
+    'retiredRevision',
+  );
+  @override
+  late final GeneratedColumn<int> retiredRevision = GeneratedColumn<int>(
+    'retired_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _reasonMeta = const VerificationMeta('reason');
+  @override
+  late final GeneratedColumn<String> reason = GeneratedColumn<String>(
+    'reason',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _sourceContentVersionMeta =
+      const VerificationMeta('sourceContentVersion');
+  @override
+  late final GeneratedColumn<int> sourceContentVersion = GeneratedColumn<int>(
+    'source_content_version',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _retiredAtMeta = const VerificationMeta(
+    'retiredAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> retiredAt = GeneratedColumn<DateTime>(
+    'retired_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    contentCode,
+    contentType,
+    retiredRevision,
+    reason,
+    sourceContentVersion,
+    retiredAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'content_retirements';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ContentRetirement> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('content_code')) {
+      context.handle(
+        _contentCodeMeta,
+        contentCode.isAcceptableOrUnknown(
+          data['content_code']!,
+          _contentCodeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentCodeMeta);
+    }
+    if (data.containsKey('content_type')) {
+      context.handle(
+        _contentTypeMeta,
+        contentType.isAcceptableOrUnknown(
+          data['content_type']!,
+          _contentTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentTypeMeta);
+    }
+    if (data.containsKey('retired_revision')) {
+      context.handle(
+        _retiredRevisionMeta,
+        retiredRevision.isAcceptableOrUnknown(
+          data['retired_revision']!,
+          _retiredRevisionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_retiredRevisionMeta);
+    }
+    if (data.containsKey('reason')) {
+      context.handle(
+        _reasonMeta,
+        reason.isAcceptableOrUnknown(data['reason']!, _reasonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_reasonMeta);
+    }
+    if (data.containsKey('source_content_version')) {
+      context.handle(
+        _sourceContentVersionMeta,
+        sourceContentVersion.isAcceptableOrUnknown(
+          data['source_content_version']!,
+          _sourceContentVersionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_sourceContentVersionMeta);
+    }
+    if (data.containsKey('retired_at')) {
+      context.handle(
+        _retiredAtMeta,
+        retiredAt.isAcceptableOrUnknown(data['retired_at']!, _retiredAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_retiredAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {contentCode, contentType};
+  @override
+  ContentRetirement map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ContentRetirement(
+      contentCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_code'],
+      )!,
+      contentType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_type'],
+      )!,
+      retiredRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}retired_revision'],
+      )!,
+      reason: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reason'],
+      )!,
+      sourceContentVersion: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}source_content_version'],
+      )!,
+      retiredAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}retired_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ContentRetirementsTable createAlias(String alias) {
+    return $ContentRetirementsTable(attachedDatabase, alias);
+  }
+}
+
+class ContentRetirement extends DataClass
+    implements Insertable<ContentRetirement> {
+  final String contentCode;
+  final String contentType;
+  final int retiredRevision;
+  final String reason;
+  final int sourceContentVersion;
+  final DateTime retiredAt;
+  const ContentRetirement({
+    required this.contentCode,
+    required this.contentType,
+    required this.retiredRevision,
+    required this.reason,
+    required this.sourceContentVersion,
+    required this.retiredAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['content_code'] = Variable<String>(contentCode);
+    map['content_type'] = Variable<String>(contentType);
+    map['retired_revision'] = Variable<int>(retiredRevision);
+    map['reason'] = Variable<String>(reason);
+    map['source_content_version'] = Variable<int>(sourceContentVersion);
+    map['retired_at'] = Variable<DateTime>(retiredAt);
+    return map;
+  }
+
+  ContentRetirementsCompanion toCompanion(bool nullToAbsent) {
+    return ContentRetirementsCompanion(
+      contentCode: Value(contentCode),
+      contentType: Value(contentType),
+      retiredRevision: Value(retiredRevision),
+      reason: Value(reason),
+      sourceContentVersion: Value(sourceContentVersion),
+      retiredAt: Value(retiredAt),
+    );
+  }
+
+  factory ContentRetirement.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ContentRetirement(
+      contentCode: serializer.fromJson<String>(json['contentCode']),
+      contentType: serializer.fromJson<String>(json['contentType']),
+      retiredRevision: serializer.fromJson<int>(json['retiredRevision']),
+      reason: serializer.fromJson<String>(json['reason']),
+      sourceContentVersion: serializer.fromJson<int>(
+        json['sourceContentVersion'],
+      ),
+      retiredAt: serializer.fromJson<DateTime>(json['retiredAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'contentCode': serializer.toJson<String>(contentCode),
+      'contentType': serializer.toJson<String>(contentType),
+      'retiredRevision': serializer.toJson<int>(retiredRevision),
+      'reason': serializer.toJson<String>(reason),
+      'sourceContentVersion': serializer.toJson<int>(sourceContentVersion),
+      'retiredAt': serializer.toJson<DateTime>(retiredAt),
+    };
+  }
+
+  ContentRetirement copyWith({
+    String? contentCode,
+    String? contentType,
+    int? retiredRevision,
+    String? reason,
+    int? sourceContentVersion,
+    DateTime? retiredAt,
+  }) => ContentRetirement(
+    contentCode: contentCode ?? this.contentCode,
+    contentType: contentType ?? this.contentType,
+    retiredRevision: retiredRevision ?? this.retiredRevision,
+    reason: reason ?? this.reason,
+    sourceContentVersion: sourceContentVersion ?? this.sourceContentVersion,
+    retiredAt: retiredAt ?? this.retiredAt,
+  );
+  ContentRetirement copyWithCompanion(ContentRetirementsCompanion data) {
+    return ContentRetirement(
+      contentCode: data.contentCode.present
+          ? data.contentCode.value
+          : this.contentCode,
+      contentType: data.contentType.present
+          ? data.contentType.value
+          : this.contentType,
+      retiredRevision: data.retiredRevision.present
+          ? data.retiredRevision.value
+          : this.retiredRevision,
+      reason: data.reason.present ? data.reason.value : this.reason,
+      sourceContentVersion: data.sourceContentVersion.present
+          ? data.sourceContentVersion.value
+          : this.sourceContentVersion,
+      retiredAt: data.retiredAt.present ? data.retiredAt.value : this.retiredAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ContentRetirement(')
+          ..write('contentCode: $contentCode, ')
+          ..write('contentType: $contentType, ')
+          ..write('retiredRevision: $retiredRevision, ')
+          ..write('reason: $reason, ')
+          ..write('sourceContentVersion: $sourceContentVersion, ')
+          ..write('retiredAt: $retiredAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    contentCode,
+    contentType,
+    retiredRevision,
+    reason,
+    sourceContentVersion,
+    retiredAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ContentRetirement &&
+          other.contentCode == this.contentCode &&
+          other.contentType == this.contentType &&
+          other.retiredRevision == this.retiredRevision &&
+          other.reason == this.reason &&
+          other.sourceContentVersion == this.sourceContentVersion &&
+          other.retiredAt == this.retiredAt);
+}
+
+class ContentRetirementsCompanion extends UpdateCompanion<ContentRetirement> {
+  final Value<String> contentCode;
+  final Value<String> contentType;
+  final Value<int> retiredRevision;
+  final Value<String> reason;
+  final Value<int> sourceContentVersion;
+  final Value<DateTime> retiredAt;
+  final Value<int> rowid;
+  const ContentRetirementsCompanion({
+    this.contentCode = const Value.absent(),
+    this.contentType = const Value.absent(),
+    this.retiredRevision = const Value.absent(),
+    this.reason = const Value.absent(),
+    this.sourceContentVersion = const Value.absent(),
+    this.retiredAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ContentRetirementsCompanion.insert({
+    required String contentCode,
+    required String contentType,
+    required int retiredRevision,
+    required String reason,
+    required int sourceContentVersion,
+    required DateTime retiredAt,
+    this.rowid = const Value.absent(),
+  }) : contentCode = Value(contentCode),
+       contentType = Value(contentType),
+       retiredRevision = Value(retiredRevision),
+       reason = Value(reason),
+       sourceContentVersion = Value(sourceContentVersion),
+       retiredAt = Value(retiredAt);
+  static Insertable<ContentRetirement> custom({
+    Expression<String>? contentCode,
+    Expression<String>? contentType,
+    Expression<int>? retiredRevision,
+    Expression<String>? reason,
+    Expression<int>? sourceContentVersion,
+    Expression<DateTime>? retiredAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (contentCode != null) 'content_code': contentCode,
+      if (contentType != null) 'content_type': contentType,
+      if (retiredRevision != null) 'retired_revision': retiredRevision,
+      if (reason != null) 'reason': reason,
+      if (sourceContentVersion != null)
+        'source_content_version': sourceContentVersion,
+      if (retiredAt != null) 'retired_at': retiredAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ContentRetirementsCompanion copyWith({
+    Value<String>? contentCode,
+    Value<String>? contentType,
+    Value<int>? retiredRevision,
+    Value<String>? reason,
+    Value<int>? sourceContentVersion,
+    Value<DateTime>? retiredAt,
+    Value<int>? rowid,
+  }) {
+    return ContentRetirementsCompanion(
+      contentCode: contentCode ?? this.contentCode,
+      contentType: contentType ?? this.contentType,
+      retiredRevision: retiredRevision ?? this.retiredRevision,
+      reason: reason ?? this.reason,
+      sourceContentVersion: sourceContentVersion ?? this.sourceContentVersion,
+      retiredAt: retiredAt ?? this.retiredAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (contentCode.present) {
+      map['content_code'] = Variable<String>(contentCode.value);
+    }
+    if (contentType.present) {
+      map['content_type'] = Variable<String>(contentType.value);
+    }
+    if (retiredRevision.present) {
+      map['retired_revision'] = Variable<int>(retiredRevision.value);
+    }
+    if (reason.present) {
+      map['reason'] = Variable<String>(reason.value);
+    }
+    if (sourceContentVersion.present) {
+      map['source_content_version'] = Variable<int>(sourceContentVersion.value);
+    }
+    if (retiredAt.present) {
+      map['retired_at'] = Variable<DateTime>(retiredAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ContentRetirementsCompanion(')
+          ..write('contentCode: $contentCode, ')
+          ..write('contentType: $contentType, ')
+          ..write('retiredRevision: $retiredRevision, ')
+          ..write('reason: $reason, ')
+          ..write('sourceContentVersion: $sourceContentVersion, ')
+          ..write('retiredAt: $retiredAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $AssetCatalogTable extends AssetCatalog
     with TableInfo<$AssetCatalogTable, AssetCatalogData> {
   @override
@@ -9968,6 +10814,10 @@ abstract class _$CareerSpeakDatabase extends GeneratedDatabase {
   );
   late final $PackLocalizationRefsTable packLocalizationRefs =
       $PackLocalizationRefsTable(this);
+  late final $LocaleFallbackRulesTable localeFallbackRules =
+      $LocaleFallbackRulesTable(this);
+  late final $ContentRetirementsTable contentRetirements =
+      $ContentRetirementsTable(this);
   late final $AssetCatalogTable assetCatalog = $AssetCatalogTable(this);
   late final $ContentAssetRefsTable contentAssetRefs = $ContentAssetRefsTable(
     this,
@@ -9995,6 +10845,8 @@ abstract class _$CareerSpeakDatabase extends GeneratedDatabase {
     localContentRecords,
     packContentRefs,
     packLocalizationRefs,
+    localeFallbackRules,
+    contentRetirements,
     assetCatalog,
     contentAssetRefs,
     packAssetRefs,
@@ -10596,6 +11448,7 @@ typedef $$ContentManifestStatesTableCreateCompanionBuilder =
       required int schemaVersion,
       required int currentContentVersion,
       required String currentManifestChecksum,
+      Value<int?> localePolicyContentVersion,
       Value<int?> remoteContentVersionSeen,
       Value<String?> remoteManifestChecksum,
       Value<String?> etag,
@@ -10609,6 +11462,7 @@ typedef $$ContentManifestStatesTableUpdateCompanionBuilder =
       Value<int> schemaVersion,
       Value<int> currentContentVersion,
       Value<String> currentManifestChecksum,
+      Value<int?> localePolicyContentVersion,
       Value<int?> remoteContentVersionSeen,
       Value<String?> remoteManifestChecksum,
       Value<String?> etag,
@@ -10643,6 +11497,11 @@ class $$ContentManifestStatesTableFilterComposer
 
   ColumnFilters<String> get currentManifestChecksum => $composableBuilder(
     column: $table.currentManifestChecksum,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get localePolicyContentVersion => $composableBuilder(
+    column: $table.localePolicyContentVersion,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -10706,6 +11565,11 @@ class $$ContentManifestStatesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<int> get localePolicyContentVersion => $composableBuilder(
+    column: $table.localePolicyContentVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get remoteContentVersionSeen => $composableBuilder(
     column: $table.remoteContentVersionSeen,
     builder: (column) => ColumnOrderings(column),
@@ -10761,6 +11625,11 @@ class $$ContentManifestStatesTableAnnotationComposer
 
   GeneratedColumn<String> get currentManifestChecksum => $composableBuilder(
     column: $table.currentManifestChecksum,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get localePolicyContentVersion => $composableBuilder(
+    column: $table.localePolicyContentVersion,
     builder: (column) => column,
   );
 
@@ -10841,6 +11710,7 @@ class $$ContentManifestStatesTableTableManager
                 Value<int> schemaVersion = const Value.absent(),
                 Value<int> currentContentVersion = const Value.absent(),
                 Value<String> currentManifestChecksum = const Value.absent(),
+                Value<int?> localePolicyContentVersion = const Value.absent(),
                 Value<int?> remoteContentVersionSeen = const Value.absent(),
                 Value<String?> remoteManifestChecksum = const Value.absent(),
                 Value<String?> etag = const Value.absent(),
@@ -10852,6 +11722,7 @@ class $$ContentManifestStatesTableTableManager
                 schemaVersion: schemaVersion,
                 currentContentVersion: currentContentVersion,
                 currentManifestChecksum: currentManifestChecksum,
+                localePolicyContentVersion: localePolicyContentVersion,
                 remoteContentVersionSeen: remoteContentVersionSeen,
                 remoteManifestChecksum: remoteManifestChecksum,
                 etag: etag,
@@ -10865,6 +11736,7 @@ class $$ContentManifestStatesTableTableManager
                 required int schemaVersion,
                 required int currentContentVersion,
                 required String currentManifestChecksum,
+                Value<int?> localePolicyContentVersion = const Value.absent(),
                 Value<int?> remoteContentVersionSeen = const Value.absent(),
                 Value<String?> remoteManifestChecksum = const Value.absent(),
                 Value<String?> etag = const Value.absent(),
@@ -10876,6 +11748,7 @@ class $$ContentManifestStatesTableTableManager
                 schemaVersion: schemaVersion,
                 currentContentVersion: currentContentVersion,
                 currentManifestChecksum: currentManifestChecksum,
+                localePolicyContentVersion: localePolicyContentVersion,
                 remoteContentVersionSeen: remoteContentVersionSeen,
                 remoteManifestChecksum: remoteManifestChecksum,
                 etag: etag,
@@ -13567,6 +14440,471 @@ typedef $$PackLocalizationRefsTableProcessedTableManager =
       PackLocalizationRef,
       PrefetchHooks Function()
     >;
+typedef $$LocaleFallbackRulesTableCreateCompanionBuilder =
+    LocaleFallbackRulesCompanion Function({
+      required String locale,
+      required int fallbackOrder,
+      required String fallbackLocale,
+      required int sourceContentVersion,
+      Value<int> rowid,
+    });
+typedef $$LocaleFallbackRulesTableUpdateCompanionBuilder =
+    LocaleFallbackRulesCompanion Function({
+      Value<String> locale,
+      Value<int> fallbackOrder,
+      Value<String> fallbackLocale,
+      Value<int> sourceContentVersion,
+      Value<int> rowid,
+    });
+
+class $$LocaleFallbackRulesTableFilterComposer
+    extends Composer<_$CareerSpeakDatabase, $LocaleFallbackRulesTable> {
+  $$LocaleFallbackRulesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get locale => $composableBuilder(
+    column: $table.locale,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get fallbackOrder => $composableBuilder(
+    column: $table.fallbackOrder,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fallbackLocale => $composableBuilder(
+    column: $table.fallbackLocale,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sourceContentVersion => $composableBuilder(
+    column: $table.sourceContentVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocaleFallbackRulesTableOrderingComposer
+    extends Composer<_$CareerSpeakDatabase, $LocaleFallbackRulesTable> {
+  $$LocaleFallbackRulesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get locale => $composableBuilder(
+    column: $table.locale,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get fallbackOrder => $composableBuilder(
+    column: $table.fallbackOrder,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fallbackLocale => $composableBuilder(
+    column: $table.fallbackLocale,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sourceContentVersion => $composableBuilder(
+    column: $table.sourceContentVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocaleFallbackRulesTableAnnotationComposer
+    extends Composer<_$CareerSpeakDatabase, $LocaleFallbackRulesTable> {
+  $$LocaleFallbackRulesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get locale =>
+      $composableBuilder(column: $table.locale, builder: (column) => column);
+
+  GeneratedColumn<int> get fallbackOrder => $composableBuilder(
+    column: $table.fallbackOrder,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get fallbackLocale => $composableBuilder(
+    column: $table.fallbackLocale,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get sourceContentVersion => $composableBuilder(
+    column: $table.sourceContentVersion,
+    builder: (column) => column,
+  );
+}
+
+class $$LocaleFallbackRulesTableTableManager
+    extends
+        RootTableManager<
+          _$CareerSpeakDatabase,
+          $LocaleFallbackRulesTable,
+          LocaleFallbackRule,
+          $$LocaleFallbackRulesTableFilterComposer,
+          $$LocaleFallbackRulesTableOrderingComposer,
+          $$LocaleFallbackRulesTableAnnotationComposer,
+          $$LocaleFallbackRulesTableCreateCompanionBuilder,
+          $$LocaleFallbackRulesTableUpdateCompanionBuilder,
+          (
+            LocaleFallbackRule,
+            BaseReferences<
+              _$CareerSpeakDatabase,
+              $LocaleFallbackRulesTable,
+              LocaleFallbackRule
+            >,
+          ),
+          LocaleFallbackRule,
+          PrefetchHooks Function()
+        > {
+  $$LocaleFallbackRulesTableTableManager(
+    _$CareerSpeakDatabase db,
+    $LocaleFallbackRulesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocaleFallbackRulesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$LocaleFallbackRulesTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$LocaleFallbackRulesTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> locale = const Value.absent(),
+                Value<int> fallbackOrder = const Value.absent(),
+                Value<String> fallbackLocale = const Value.absent(),
+                Value<int> sourceContentVersion = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocaleFallbackRulesCompanion(
+                locale: locale,
+                fallbackOrder: fallbackOrder,
+                fallbackLocale: fallbackLocale,
+                sourceContentVersion: sourceContentVersion,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String locale,
+                required int fallbackOrder,
+                required String fallbackLocale,
+                required int sourceContentVersion,
+                Value<int> rowid = const Value.absent(),
+              }) => LocaleFallbackRulesCompanion.insert(
+                locale: locale,
+                fallbackOrder: fallbackOrder,
+                fallbackLocale: fallbackLocale,
+                sourceContentVersion: sourceContentVersion,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$LocaleFallbackRulesTable, LocaleFallbackRule>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$CareerSpeakDatabase,
+                    $LocaleFallbackRulesTable,
+                    LocaleFallbackRule
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocaleFallbackRulesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$CareerSpeakDatabase,
+      $LocaleFallbackRulesTable,
+      LocaleFallbackRule,
+      $$LocaleFallbackRulesTableFilterComposer,
+      $$LocaleFallbackRulesTableOrderingComposer,
+      $$LocaleFallbackRulesTableAnnotationComposer,
+      $$LocaleFallbackRulesTableCreateCompanionBuilder,
+      $$LocaleFallbackRulesTableUpdateCompanionBuilder,
+      (
+        LocaleFallbackRule,
+        BaseReferences<
+          _$CareerSpeakDatabase,
+          $LocaleFallbackRulesTable,
+          LocaleFallbackRule
+        >,
+      ),
+      LocaleFallbackRule,
+      PrefetchHooks Function()
+    >;
+typedef $$ContentRetirementsTableCreateCompanionBuilder =
+    ContentRetirementsCompanion Function({
+      required String contentCode,
+      required String contentType,
+      required int retiredRevision,
+      required String reason,
+      required int sourceContentVersion,
+      required DateTime retiredAt,
+      Value<int> rowid,
+    });
+typedef $$ContentRetirementsTableUpdateCompanionBuilder =
+    ContentRetirementsCompanion Function({
+      Value<String> contentCode,
+      Value<String> contentType,
+      Value<int> retiredRevision,
+      Value<String> reason,
+      Value<int> sourceContentVersion,
+      Value<DateTime> retiredAt,
+      Value<int> rowid,
+    });
+
+class $$ContentRetirementsTableFilterComposer
+    extends Composer<_$CareerSpeakDatabase, $ContentRetirementsTable> {
+  $$ContentRetirementsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get retiredRevision => $composableBuilder(
+    column: $table.retiredRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get sourceContentVersion => $composableBuilder(
+    column: $table.sourceContentVersion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get retiredAt => $composableBuilder(
+    column: $table.retiredAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ContentRetirementsTableOrderingComposer
+    extends Composer<_$CareerSpeakDatabase, $ContentRetirementsTable> {
+  $$ContentRetirementsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get retiredRevision => $composableBuilder(
+    column: $table.retiredRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reason => $composableBuilder(
+    column: $table.reason,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get sourceContentVersion => $composableBuilder(
+    column: $table.sourceContentVersion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get retiredAt => $composableBuilder(
+    column: $table.retiredAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ContentRetirementsTableAnnotationComposer
+    extends Composer<_$CareerSpeakDatabase, $ContentRetirementsTable> {
+  $$ContentRetirementsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get retiredRevision => $composableBuilder(
+    column: $table.retiredRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get reason =>
+      $composableBuilder(column: $table.reason, builder: (column) => column);
+
+  GeneratedColumn<int> get sourceContentVersion => $composableBuilder(
+    column: $table.sourceContentVersion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get retiredAt =>
+      $composableBuilder(column: $table.retiredAt, builder: (column) => column);
+}
+
+class $$ContentRetirementsTableTableManager
+    extends
+        RootTableManager<
+          _$CareerSpeakDatabase,
+          $ContentRetirementsTable,
+          ContentRetirement,
+          $$ContentRetirementsTableFilterComposer,
+          $$ContentRetirementsTableOrderingComposer,
+          $$ContentRetirementsTableAnnotationComposer,
+          $$ContentRetirementsTableCreateCompanionBuilder,
+          $$ContentRetirementsTableUpdateCompanionBuilder,
+          (
+            ContentRetirement,
+            BaseReferences<
+              _$CareerSpeakDatabase,
+              $ContentRetirementsTable,
+              ContentRetirement
+            >,
+          ),
+          ContentRetirement,
+          PrefetchHooks Function()
+        > {
+  $$ContentRetirementsTableTableManager(
+    _$CareerSpeakDatabase db,
+    $ContentRetirementsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ContentRetirementsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ContentRetirementsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ContentRetirementsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> contentCode = const Value.absent(),
+                Value<String> contentType = const Value.absent(),
+                Value<int> retiredRevision = const Value.absent(),
+                Value<String> reason = const Value.absent(),
+                Value<int> sourceContentVersion = const Value.absent(),
+                Value<DateTime> retiredAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ContentRetirementsCompanion(
+                contentCode: contentCode,
+                contentType: contentType,
+                retiredRevision: retiredRevision,
+                reason: reason,
+                sourceContentVersion: sourceContentVersion,
+                retiredAt: retiredAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String contentCode,
+                required String contentType,
+                required int retiredRevision,
+                required String reason,
+                required int sourceContentVersion,
+                required DateTime retiredAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ContentRetirementsCompanion.insert(
+                contentCode: contentCode,
+                contentType: contentType,
+                retiredRevision: retiredRevision,
+                reason: reason,
+                sourceContentVersion: sourceContentVersion,
+                retiredAt: retiredAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ContentRetirementsTable, ContentRetirement>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$CareerSpeakDatabase,
+                    $ContentRetirementsTable,
+                    ContentRetirement
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ContentRetirementsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$CareerSpeakDatabase,
+      $ContentRetirementsTable,
+      ContentRetirement,
+      $$ContentRetirementsTableFilterComposer,
+      $$ContentRetirementsTableOrderingComposer,
+      $$ContentRetirementsTableAnnotationComposer,
+      $$ContentRetirementsTableCreateCompanionBuilder,
+      $$ContentRetirementsTableUpdateCompanionBuilder,
+      (
+        ContentRetirement,
+        BaseReferences<
+          _$CareerSpeakDatabase,
+          $ContentRetirementsTable,
+          ContentRetirement
+        >,
+      ),
+      ContentRetirement,
+      PrefetchHooks Function()
+    >;
 typedef $$AssetCatalogTableCreateCompanionBuilder =
     AssetCatalogCompanion Function({
       required String assetId,
@@ -16043,6 +17381,10 @@ class $CareerSpeakDatabaseManager {
       $$PackContentRefsTableTableManager(_db, _db.packContentRefs);
   $$PackLocalizationRefsTableTableManager get packLocalizationRefs =>
       $$PackLocalizationRefsTableTableManager(_db, _db.packLocalizationRefs);
+  $$LocaleFallbackRulesTableTableManager get localeFallbackRules =>
+      $$LocaleFallbackRulesTableTableManager(_db, _db.localeFallbackRules);
+  $$ContentRetirementsTableTableManager get contentRetirements =>
+      $$ContentRetirementsTableTableManager(_db, _db.contentRetirements);
   $$AssetCatalogTableTableManager get assetCatalog =>
       $$AssetCatalogTableTableManager(_db, _db.assetCatalog);
   $$ContentAssetRefsTableTableManager get contentAssetRefs =>

@@ -11,7 +11,8 @@ import 'package:careerspeak_app/application/ports/content_manifest_gateway.dart'
 import 'package:careerspeak_app/application/ports/content_payload_gateway.dart';
 import 'package:careerspeak_app/application/ports/localized_content_payload_gateway.dart';
 import 'package:careerspeak_app/application/result/result.dart';
-import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
+import 'package:careerspeak_app/data/local/database/careerspeak_database.dart'
+    hide PackContentRef, ContentAssetRef, LocaleFallbackRule;
 import 'package:careerspeak_app/data/local/drift_localized_content_repository.dart';
 import 'package:careerspeak_app/data/local/drift_sync_journal.dart';
 import 'package:careerspeak_app/data/local/drift_sync_plan_executor.dart';
@@ -44,7 +45,7 @@ void main() {
           database,
           backend,
           backend,
-          localizedPayloadGateway: backend,
+          localizedPayloadGateway: _LocalizedGateway(backend),
         ),
       );
 
@@ -86,7 +87,9 @@ void main() {
       expect(kazakh.usesCanonicalEnglishOnly, isTrue);
       expect(kazakh.title, 'Canonical title');
 
-      final root = await database.select(database.contentManifestStates).getSingle();
+      final root = await database
+          .select(database.contentManifestStates)
+          .getSingle();
       expect(root.currentContentVersion, 501);
       expect(root.currentManifestChecksum, _rootChecksum);
     },
@@ -94,10 +97,7 @@ void main() {
 }
 
 final class _BackendFixture
-    implements
-        ContentManifestGateway,
-        ContentPayloadGateway,
-        LocalizedContentPayloadGateway {
+    implements ContentManifestGateway, ContentPayloadGateway {
   int rootCalls = 0;
   final List<String> packCalls = <String>[];
   int canonicalPayloadCalls = 0;
@@ -211,20 +211,21 @@ final class _BackendFixture
       ),
     );
   }
+}
+
+final class _LocalizedGateway implements LocalizedContentPayloadGateway {
+  const _LocalizedGateway(this.backend);
+
+  final _BackendFixture backend;
 
   @override
-  Future<Result<LocalizedContentPayload>> fetchLocalized(
+  Future<Result<LocalizedContentPayload>> fetch(
     LocalizedContentRef target,
   ) async {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<Result<LocalizedContentPayload>> fetch(LocalizedContentRef target) async {
-    localizedPayloadCalls += 1;
+    backend.localizedPayloadCalls += 1;
     return Success<LocalizedContentPayload>(
       LocalizedContentPayload(
-        ref: localizedRef,
+        ref: backend.localizedRef,
         title: 'Русский заголовок',
         translation: 'Русский перевод',
       ),

@@ -61,6 +61,38 @@ final class ContentManifestDecoder {
         );
       }
 
+      final localeFallbacks = <LocaleFallbackRuleDto>[];
+      final fallbackValues = object.containsKey('localeFallbacks')
+          ? _list(object, 'localeFallbacks', r'$.localeFallbacks')
+          : const <Object?>[];
+      for (var index = 0; index < fallbackValues.length; index += 1) {
+        final path = '\$.localeFallbacks[$index]';
+        final rule = _object(fallbackValues[index], path);
+        final values = _list(rule, 'fallbackLocales', '$path.fallbackLocales');
+        final fallbacks = <String>[];
+        for (
+          var fallbackIndex = 0;
+          fallbackIndex < values.length;
+          fallbackIndex += 1
+        ) {
+          final fallbackPath = '$path.fallbackLocales[$fallbackIndex]';
+          final value = values[fallbackIndex];
+          if (value is! String || !_localePattern.hasMatch(value.trim())) {
+            throw _ContractViolation(
+              fallbackPath,
+              'must be a BCP-47-compatible locale',
+            );
+          }
+          fallbacks.add(value.trim());
+        }
+        localeFallbacks.add(
+          LocaleFallbackRuleDto(
+            locale: _locale(rule, 'locale', '$path.locale'),
+            fallbackLocales: List<String>.unmodifiable(fallbacks),
+          ),
+        );
+      }
+
       final tombstones = <ContentTombstoneDto>[];
       final tombstoneValues = _list(object, 'tombstones', r'$.tombstones');
       for (var index = 0; index < tombstoneValues.length; index += 1) {
@@ -84,6 +116,7 @@ final class ContentManifestDecoder {
         publishedAt: _utcDateTime(object, 'publishedAt', r'$.publishedAt'),
         checksum: _string(object, 'checksum', r'$.checksum'),
         packs: packs,
+        localeFallbacks: localeFallbacks,
         tombstones: tombstones,
       );
       return Success<RootContentManifest>(_mapper.mapRoot(dto));

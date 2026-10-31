@@ -39,6 +39,7 @@ class ContentManifestStates extends Table {
   IntColumn get schemaVersion => integer()();
   IntColumn get currentContentVersion => integer()();
   TextColumn get currentManifestChecksum => text()();
+  IntColumn get localePolicyContentVersion => integer().nullable()();
   IntColumn get remoteContentVersionSeen => integer().nullable()();
   TextColumn get remoteManifestChecksum => text().nullable()();
   TextColumn get etag => text().nullable()();

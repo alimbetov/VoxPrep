@@ -77,6 +77,10 @@ void main() {
       ),
     );
 
-    expect(find.byType(SlideTransition), findsOneWidget);
+    expect(transition, isA<FadeTransition>());
+    final fade = transition as FadeTransition;
+    expect(fade.child, isA<SlideTransition>());
+    final slide = fade.child! as SlideTransition;
+    expect(slide.position.value.dx, closeTo(-0.04, 0.000001));
   });
 }

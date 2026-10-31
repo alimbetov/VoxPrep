@@ -20,10 +20,10 @@ void main() {
     expect(manifest.packs.single.identity.toString(), 'JAVA_SENIOR/canonical');
     expect(manifest.localeFallbacks, hasLength(2));
     expect(manifest.localeFallbacks.first.locale, 'ru-KZ');
-    expect(
-      manifest.localeFallbacks.first.fallbackLocales,
-      <String>['ru', 'en'],
-    );
+    expect(manifest.localeFallbacks.first.fallbackLocales, <String>[
+      'ru',
+      'en',
+    ]);
     expect(manifest.tombstones.single.identity.type, ContentType.interview);
   });
 

@@ -198,6 +198,7 @@ Map<String, Object?> _packManifest() {
         'publishedAt': '2026-10-29T11:00:00Z',
       },
     ],
+    'localizations': <Object?>[],
     'assets': <Object?>[
       <String, Object?>{
         'assetId': 'asset-1',

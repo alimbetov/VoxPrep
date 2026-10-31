@@ -62,9 +62,16 @@ void main() {
     expect(learningStates, hasLength(1));
     expect(learningStates.single.listenCount, 3);
     expect(learningStates.single.lastRevisionSeen, 7);
-    expect(await migratedDatabase.select(migratedDatabase.syncRuns).get(), isEmpty);
     expect(
-      await migratedDatabase.select(migratedDatabase.rootLocaleFallbacks).get(),
+      await migratedDatabase.select(migratedDatabase.syncRuns).get(),
+      isEmpty,
+    );
+    expect(
+      await migratedDatabase.select(migratedDatabase.localeFallbackRules).get(),
+      isEmpty,
+    );
+    expect(
+      await migratedDatabase.select(migratedDatabase.contentRetirements).get(),
       isEmpty,
     );
 
@@ -102,7 +109,11 @@ void main() {
     expect(runs.single.runId, 'sync-v2');
     expect(runs.single.state, 'PLANNING');
     expect(
-      await migratedDatabase.select(migratedDatabase.rootLocaleFallbacks).get(),
+      await migratedDatabase.select(migratedDatabase.localeFallbackRules).get(),
+      isEmpty,
+    );
+    expect(
+      await migratedDatabase.select(migratedDatabase.contentRetirements).get(),
       isEmpty,
     );
 
@@ -140,57 +151,74 @@ void main() {
       isEmpty,
     );
     expect(
-      await migratedDatabase.select(migratedDatabase.localizedContentReads).get(),
+      await migratedDatabase
+          .select(migratedDatabase.localizedContentReads)
+          .get(),
       isEmpty,
     );
     expect(
-      await migratedDatabase.select(migratedDatabase.rootLocaleFallbacks).get(),
+      await migratedDatabase.select(migratedDatabase.localeFallbackRules).get(),
+      isEmpty,
+    );
+    expect(
+      await migratedDatabase.select(migratedDatabase.contentRetirements).get(),
       isEmpty,
     );
 
     await migratedDatabase.close();
   });
 
-  test('v5 to v6 preserves localization data and adds no invented fallback', () async {
-    final schema = await verifier.schemaAt(5);
-    final storedNow =
-        DateTime.utc(2026, 10, 31, 6).millisecondsSinceEpoch ~/ 1000;
-    const localizedChecksum =
-        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  test(
+    'v5 to v6 preserves localization data and adds no invented fallback',
+    () async {
+      final schema = await verifier.schemaAt(5);
+      final storedNow =
+          DateTime.utc(2026, 10, 31, 6).millisecondsSinceEpoch ~/ 1000;
+      const localizedChecksum =
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
-    final oldDatabase = v5.DatabaseAtV5(schema.newConnection());
-    await oldDatabase
-        .into(oldDatabase.localizedContentReads)
-        .insert(
-          v5.LocalizedContentReadsCompanion.insert(
-            contentCode: 'JAVA_DI_001',
-            contentType: 'INTERVIEW',
-            contentRevision: 1,
-            locale: 'ru',
-            localizationRevision: 2,
-            checksum: localizedChecksum,
-            title: const Value('Русский заголовок'),
-            createdAt: storedNow,
-          ),
-        );
-    await oldDatabase.close();
+      final oldDatabase = v5.DatabaseAtV5(schema.newConnection());
+      await oldDatabase
+          .into(oldDatabase.localizedContentReads)
+          .insert(
+            v5.LocalizedContentReadsCompanion.insert(
+              contentCode: 'JAVA_DI_001',
+              contentType: 'INTERVIEW',
+              contentRevision: 1,
+              locale: 'ru',
+              localizationRevision: 2,
+              checksum: localizedChecksum,
+              title: const Value('Русский заголовок'),
+              createdAt: storedNow,
+            ),
+          );
+      await oldDatabase.close();
 
-    final database = CareerSpeakDatabase(schema.newConnection());
-    await verifier.migrateAndValidate(database, 6);
-    await database.close();
+      final database = CareerSpeakDatabase(schema.newConnection());
+      await verifier.migrateAndValidate(database, 6);
+      await database.close();
 
-    final migratedDatabase = v6.DatabaseAtV6(schema.newConnection());
-    final localized = await migratedDatabase
-        .select(migratedDatabase.localizedContentReads)
-        .get();
-    expect(localized, hasLength(1));
-    expect(localized.single.locale, 'ru');
-    expect(localized.single.localizationRevision, 2);
-    expect(
-      await migratedDatabase.select(migratedDatabase.rootLocaleFallbacks).get(),
-      isEmpty,
-    );
+      final migratedDatabase = v6.DatabaseAtV6(schema.newConnection());
+      final localized = await migratedDatabase
+          .select(migratedDatabase.localizedContentReads)
+          .get();
+      expect(localized, hasLength(1));
+      expect(localized.single.locale, 'ru');
+      expect(localized.single.localizationRevision, 2);
+      expect(
+        await migratedDatabase
+            .select(migratedDatabase.localeFallbackRules)
+            .get(),
+        isEmpty,
+      );
+      expect(
+        await migratedDatabase
+            .select(migratedDatabase.contentRetirements)
+            .get(),
+        isEmpty,
+      );
 
-    await migratedDatabase.close();
-  });
+      await migratedDatabase.close();
+    },
+  );
 }

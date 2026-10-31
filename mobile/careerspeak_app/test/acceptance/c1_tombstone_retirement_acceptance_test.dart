@@ -7,12 +7,14 @@ import 'package:careerspeak_app/application/content_sync/sync_models.dart';
 import 'package:careerspeak_app/application/ports/content_manifest_gateway.dart';
 import 'package:careerspeak_app/application/ports/content_payload_gateway.dart';
 import 'package:careerspeak_app/application/result/result.dart';
-import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
+import 'package:careerspeak_app/data/local/database/careerspeak_database.dart'
+    hide PackContentRef, ContentAssetRef, LocaleFallbackRule;
 import 'package:careerspeak_app/data/local/drift_content_repository.dart';
 import 'package:careerspeak_app/data/local/drift_sync_journal.dart';
 import 'package:careerspeak_app/data/local/drift_sync_plan_executor.dart';
 import 'package:careerspeak_app/domain/content_identity.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -151,6 +153,93 @@ void main() {
       expect(resurrectionPack, isEmpty);
     },
   );
+
+  test(
+    'fresh install persists retirement without a prior content row',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'careerspeak-c1-fresh-retirement-',
+      );
+      addTearDown(() async {
+        if (await directory.exists()) {
+          await directory.delete(recursive: true);
+        }
+      });
+      final file = File('${directory.path}/careerspeak.sqlite');
+
+      var database = CareerSpeakDatabase(NativeDatabase(file));
+      final retired = await _publish(
+        database: database,
+        runId: 'fresh-retire',
+        root: _root(
+          contentVersion: 1,
+          checksum: _rootV1,
+          tombstones: <ContentTombstone>[
+            ContentTombstone(
+              identity: _identity,
+              revision: 2,
+              reason: 'RETIRED',
+            ),
+          ],
+        ),
+      );
+      expect(retired, isA<Success<void>>());
+      expect(
+        await database.select(database.localContentRecords).get(),
+        isEmpty,
+      );
+      final retirement = await database
+          .select(database.contentRetirements)
+          .getSingle();
+      expect(retirement.contentCode, _identity.code);
+      expect(retirement.retiredRevision, 2);
+      expect(retirement.sourceContentVersion, 1);
+
+      await database.close();
+      database = CareerSpeakDatabase(NativeDatabase(file));
+      addTearDown(database.close);
+
+      final resurrection = await _publish(
+        database: database,
+        runId: 'fresh-resurrection',
+        root: _root(
+          contentVersion: 2,
+          checksum: _rootV2,
+          pack: _packRef(revision: 1, checksum: _packV1),
+        ),
+        pack: _packManifest(
+          packRevision: 1,
+          packChecksum: _packV1,
+          contentRevision: 3,
+          contentChecksum: _contentV1,
+        ),
+        payload: _payload(
+          revision: 3,
+          checksum: _contentV1,
+          title: 'Fresh-install resurrection attempt',
+        ),
+      );
+
+      expect(resurrection, isA<FailureResult<void>>());
+      expect(
+        (resurrection as FailureResult<void>).failure.code,
+        'CONTENT_IDENTITY_RETIRED',
+      );
+      expect(
+        await database.select(database.localContentRecords).get(),
+        isEmpty,
+      );
+      expect(
+        await database.select(database.contentRetirements).get(),
+        hasLength(1),
+      );
+      final manifest = await database
+          .select(database.contentManifestStates)
+          .getSingle();
+      expect(manifest.currentContentVersion, 1);
+      expect(manifest.currentManifestChecksum, _rootV1);
+    },
+  );
 }
 
 Future<Result<void>> _publish({
@@ -224,12 +313,13 @@ Future<void> _expectRetired(CareerSpeakDatabase database) async {
   ).getByIdentity(_identity)).getOrThrow();
   expect(content, isNull);
 
-  final rows = await (database.select(database.localContentRecords)..where(
-        (row) =>
-            row.contentCode.equals(_identity.code) &
-            row.contentType.equals('INTERVIEW'),
-      ))
-      .get();
+  final rows =
+      await (database.select(database.localContentRecords)..where(
+            (row) =>
+                row.contentCode.equals(_identity.code) &
+                row.contentType.equals('INTERVIEW'),
+          ))
+          .get();
   expect(rows.map((row) => row.revision).toSet(), <int>{1, 2});
   expect(rows.every((row) => row.snapshotState == 'TOMBSTONED'), isTrue);
 }

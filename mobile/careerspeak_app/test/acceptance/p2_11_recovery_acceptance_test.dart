@@ -389,6 +389,7 @@ Map<String, Object?> _packManifest(int revision) => <String, Object?>{
       'publishedAt': '2026-10-31T00:00:00Z',
     },
   ],
+  'localizations': <Object?>[],
   'assets': <Object?>[],
   'contentAssets': <Object?>[],
 };

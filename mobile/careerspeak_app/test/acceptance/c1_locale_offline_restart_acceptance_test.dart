@@ -10,7 +10,8 @@ import 'package:careerspeak_app/application/ports/content_manifest_gateway.dart'
 import 'package:careerspeak_app/application/ports/content_payload_gateway.dart';
 import 'package:careerspeak_app/application/ports/localized_content_payload_gateway.dart';
 import 'package:careerspeak_app/application/result/result.dart';
-import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
+import 'package:careerspeak_app/data/local/database/careerspeak_database.dart'
+    hide PackContentRef, ContentAssetRef, LocaleFallbackRule;
 import 'package:careerspeak_app/data/local/drift_app_preferences_repository.dart';
 import 'package:careerspeak_app/data/local/drift_localized_content_repository.dart';
 import 'package:careerspeak_app/data/local/drift_sync_journal.dart';
@@ -57,7 +58,8 @@ void main() {
       addTearDown(database.close);
 
       final reopenedPreferences = DriftAppPreferencesRepository(database);
-      final restored = (await reopenedPreferences.getPreferences()).getOrThrow();
+      final restored = (await reopenedPreferences.getPreferences())
+          .getOrThrow();
       expect(restored.translationLocale.code, 'ru');
 
       final resolver = DriftLocalizedContentRepository(database);
@@ -79,7 +81,8 @@ void main() {
         ),
         isA<Success<void>>(),
       );
-      final switched = (await reopenedPreferences.getPreferences()).getOrThrow();
+      final switched = (await reopenedPreferences.getPreferences())
+          .getOrThrow();
       expect(switched.translationLocale.code, 'kk');
 
       final kazakhOffline = (await resolver.resolve(
@@ -89,10 +92,7 @@ void main() {
       )).getOrThrow();
       expect(kazakhOffline, isNotNull);
       expect(kazakhOffline!.resolvedLocale, 'en');
-      expect(
-        kazakhOffline.fallbackKind,
-        LocaleFallbackKind.canonicalEnglish,
-      );
+      expect(kazakhOffline.fallbackKind, LocaleFallbackKind.canonicalEnglish);
       expect(kazakhOffline.usesCanonicalEnglishOnly, isTrue);
       expect(kazakhOffline.title, 'Dependency Injection');
       expect(kazakhOffline.description, 'Canonical description');
@@ -281,8 +281,7 @@ final class _PayloadGateway implements ContentPayloadGateway {
   }
 }
 
-final class _LocalizedPayloadGateway
-    implements LocalizedContentPayloadGateway {
+final class _LocalizedPayloadGateway implements LocalizedContentPayloadGateway {
   const _LocalizedPayloadGateway();
 
   @override

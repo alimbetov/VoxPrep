@@ -7,26 +7,29 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   const decoder = ContentManifestDecoder();
 
-  test('materializer follows Backend rule instead of deriving base language', () {
-    final decoded = decoder.decodeRoot(_rootManifest());
-    expect(decoded, isA<Success<RootContentManifest>>());
-    final root = decoded.getOrThrow();
+  test(
+    'materializer follows Backend rule instead of deriving base language',
+    () {
+      final decoded = decoder.decodeRoot(_rootManifest());
+      expect(decoded, isA<Success<RootContentManifest>>());
+      final root = decoded.getOrThrow();
 
-    final projected = const RootManifestMaterializer()
-        .materialize(root: root, translationLocale: 'ru-kz')
-        .getOrThrow();
+      final projected = const RootManifestMaterializer()
+          .materialize(root: root, translationLocale: 'ru-kz')
+          .getOrThrow();
 
-    expect(projected.contentVersion, root.contentVersion);
-    expect(projected.checksum, root.checksum);
-    expect(
-      projected.packs.map((pack) => pack.identity.variant).toList(),
-      <String>['canonical', 'locale:ru-KZ', 'locale:kk'],
-    );
-    expect(
-      projected.packs.map((pack) => pack.identity.variant),
-      isNot(contains('locale:ru')),
-    );
-  });
+      expect(projected.contentVersion, root.contentVersion);
+      expect(projected.checksum, root.checksum);
+      expect(
+        projected.packs.map((pack) => pack.identity.variant).toList(),
+        <String>['canonical', 'locale:ru-KZ', 'locale:kk'],
+      );
+      expect(
+        projected.packs.map((pack) => pack.identity.variant),
+        isNot(contains('locale:ru')),
+      );
+    },
+  );
 
   test('invalid Backend fallback metadata fails manifest decoding closed', () {
     final manifest = _rootManifest();
