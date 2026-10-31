@@ -8,6 +8,7 @@ import '../../application/query/page.dart';
 import '../../application/query/practice_test_query.dart';
 import '../../application/result/result.dart';
 import '../../domain/assessment.dart';
+import '../../domain/assessment_bundle.dart';
 import '../../domain/practice_test.dart';
 import 'database/careerspeak_database.dart';
 
@@ -47,8 +48,10 @@ final class DriftPracticeTestRepository implements PracticeTestRepository {
       sql.write(' AND p.practice_test_code > ?');
       variables.add(Variable<String>(afterCode));
     }
-    sql.write(' GROUP BY p.practice_test_code, p.revision, p.checksum, '
-        't.title, t.subtitle, t.mode ORDER BY p.practice_test_code LIMIT ?');
+    sql.write(
+      ' GROUP BY p.practice_test_code, p.revision, p.checksum, '
+      't.title, t.subtitle, t.mode ORDER BY p.practice_test_code LIMIT ?',
+    );
     variables.add(Variable<int>(query.page.limit + 1));
 
     try {
@@ -121,7 +124,9 @@ final class DriftPracticeTestRepository implements PracticeTestRepository {
       if (refs.isEmpty) return const Success<PracticeTest?>(null);
       if (refs.length != 1) {
         return FailureResult<PracticeTest?>(
-          _invalidLocal(StateError('duplicate CURRENT practice-test membership')),
+          _invalidLocal(
+            StateError('duplicate CURRENT practice-test membership'),
+          ),
         );
       }
 
@@ -133,10 +138,12 @@ final class DriftPracticeTestRepository implements PracticeTestRepository {
         revision: revision,
         checksum: checksum,
       );
-      if (bundleResult case FailureResult(:final failure)) {
+      if (bundleResult
+          case FailureResult<AssessmentRevisionBundle?>(:final failure)) {
         return FailureResult<PracticeTest?>(failure);
       }
-      final bundle = (bundleResult as Success).value;
+      final bundle =
+          (bundleResult as Success<AssessmentRevisionBundle?>).value;
       if (bundle == null) {
         return FailureResult<PracticeTest?>(
           ApplicationFailure(
