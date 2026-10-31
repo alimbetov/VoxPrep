@@ -1,3 +1,5 @@
+import 'package:drift/drift.dart';
+
 import '../../application/content_delivery/asset_retention.dart';
 import '../../application/content_delivery/content_manifest.dart';
 import '../../application/ports/asset_cache_retention_repository.dart';
@@ -118,9 +120,9 @@ final class DriftAssetCacheRetentionRepository
         ORDER BY last_accessed_at ASC, asset_id ASC
         LIMIT ?
         ''',
-        variables: <Object?>[
-          accessedBefore.toUtc().millisecondsSinceEpoch,
-          limit,
+        variables: <Variable<Object>>[
+          Variable<int>(accessedBefore.toUtc().millisecondsSinceEpoch),
+          Variable<int>(limit),
         ],
       ).get();
 
