@@ -10,6 +10,7 @@ final class LearningVerticalDecoder {
 
     const allowed = <String>{
       'code',
+      'sectionCode',
       'title',
       'description',
       'iconAssetId',
@@ -25,6 +26,7 @@ final class LearningVerticalDecoder {
     }
 
     final code = value['code'];
+    final sectionCode = value['sectionCode'];
     final title = value['title'];
     final description = value['description'];
     final iconAssetId = value['iconAssetId'];
@@ -32,6 +34,7 @@ final class LearningVerticalDecoder {
     final active = value['active'];
 
     if (code is! String ||
+        sectionCode is! String ||
         title is! String ||
         description is! String ||
         iconAssetId is! String ||
@@ -44,6 +47,7 @@ final class LearningVerticalDecoder {
 
     return LearningVerticalProjection(
       code: code,
+      sectionCode: sectionCode,
       title: title,
       description: description,
       iconAssetId: iconAssetId,

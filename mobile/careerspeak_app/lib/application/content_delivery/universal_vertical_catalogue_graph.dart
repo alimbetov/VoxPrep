@@ -1,13 +1,17 @@
 import 'learning_vertical.dart';
 import 'product_catalog.dart';
+import 'vertical_catalogue_presentation.dart';
 
 final class UniversalVerticalCatalogueGraph {
   factory UniversalVerticalCatalogueGraph({
+    required Iterable<VerticalSectionProjection> sections,
     required Iterable<LearningVerticalProjection> verticals,
     required Iterable<LearningGoalProjection> goals,
     required Iterable<LearningTrackProjection> tracks,
     required Iterable<LearningCollectionProjection> collections,
+    required VerticalCataloguePresentation presentation,
   }) {
+    final frozenSections = List<VerticalSectionProjection>.unmodifiable(sections);
     final frozenVerticals = List<LearningVerticalProjection>.unmodifiable(
       verticals,
     );
@@ -17,6 +21,11 @@ final class UniversalVerticalCatalogueGraph {
       collections,
     );
 
+    final sectionByCode = _indexByCode(
+      frozenSections,
+      (item) => item.code,
+      'sections',
+    );
     final verticalByCode = _indexByCode(
       frozenVerticals,
       (item) => item.code,
@@ -36,6 +45,26 @@ final class UniversalVerticalCatalogueGraph {
       frozenCollections.map((item) => item.code),
       'collections',
     );
+
+    for (final vertical in frozenVerticals) {
+      if (!sectionByCode.containsKey(vertical.sectionCode)) {
+        throw ArgumentError.value(
+          vertical.sectionCode,
+          'verticals',
+          'vertical ${vertical.code} references an unknown section',
+        );
+      }
+    }
+
+    final featuredSectionCode = presentation.featuredSectionCode;
+    if (featuredSectionCode != null &&
+        !sectionByCode.containsKey(featuredSectionCode)) {
+      throw ArgumentError.value(
+        featuredSectionCode,
+        'presentation',
+        'references an unknown featured section',
+      );
+    }
 
     for (final goal in frozenGoals) {
       if (!verticalByCode.containsKey(goal.verticalCode)) {
@@ -98,24 +127,30 @@ final class UniversalVerticalCatalogueGraph {
     }
 
     return UniversalVerticalCatalogueGraph._(
+      sections: frozenSections,
       verticals: frozenVerticals,
       goals: frozenGoals,
       tracks: frozenTracks,
       collections: frozenCollections,
+      presentation: presentation,
     );
   }
 
   const UniversalVerticalCatalogueGraph._({
+    required this.sections,
     required this.verticals,
     required this.goals,
     required this.tracks,
     required this.collections,
+    required this.presentation,
   });
 
+  final List<VerticalSectionProjection> sections;
   final List<LearningVerticalProjection> verticals;
   final List<LearningGoalProjection> goals;
   final List<LearningTrackProjection> tracks;
   final List<LearningCollectionProjection> collections;
+  final VerticalCataloguePresentation presentation;
 }
 
 Map<String, T> _indexByCode<T>(

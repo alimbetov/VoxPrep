@@ -11,6 +11,7 @@ void main() {
   test('freezes Goal Track Collection with exact ordered revision refs', () {
     final goal = LearningGoalProjection(
       code: 'JOB_INTERVIEW',
+      verticalCode: 'JAVA_INTERVIEW',
       title: 'Job interview',
       description: 'Prepare for international job interviews.',
       sortOrder: 0,
@@ -18,6 +19,7 @@ void main() {
     );
     final track = LearningTrackProjection(
       code: 'JAVA_SENIOR_INTERVIEW',
+      verticalCode: goal.verticalCode,
       goalCode: goal.code,
       title: 'Senior Java interview',
       description: 'Practice senior Java interview English.',
@@ -28,6 +30,7 @@ void main() {
     );
     final collection = LearningCollectionProjection(
       code: 'JAVA_DI',
+      verticalCode: track.verticalCode,
       trackCode: track.code,
       title: 'Dependency injection',
       description: 'Explain dependency injection clearly.',
@@ -51,7 +54,9 @@ void main() {
     );
 
     expect(track.goalCode, goal.code);
+    expect(track.verticalCode, goal.verticalCode);
     expect(collection.trackCode, track.code);
+    expect(collection.verticalCode, track.verticalCode);
     expect(collection.contentRefs.single.revision, 3);
     expect(collection.practiceTestRefs.single.practiceTestCode, 'JAVA_DI_TEST');
   });
@@ -60,6 +65,7 @@ void main() {
     expect(
       () => LearningCollectionProjection(
         code: 'EMPTY',
+        verticalCode: 'JAVA_INTERVIEW',
         trackCode: 'TRACK',
         title: 'Empty',
         description: 'No material.',
@@ -80,6 +86,7 @@ void main() {
     expect(
       () => LearningCollectionProjection(
         code: 'DUPLICATE',
+        verticalCode: 'JAVA_INTERVIEW',
         trackCode: 'TRACK',
         title: 'Duplicate',
         description: 'Invalid membership.',

@@ -1,7 +1,9 @@
 import 'package:careerspeak_app/application/content_delivery/catalogue_payload.dart';
 import 'package:careerspeak_app/application/content_delivery/catalogue_revision_ref.dart';
+import 'package:careerspeak_app/application/content_delivery/vertical_catalogue_presentation.dart';
 import 'package:careerspeak_app/data/mock/demo_catalogue_payload_gateway.dart';
 import 'package:careerspeak_app/data/remote/learning_vertical_decoder.dart';
+import 'package:careerspeak_app/data/remote/vertical_catalogue_presentation_decoder.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -17,6 +19,7 @@ void main() {
 
     final vertical = decoder.decode(<String, dynamic>{
       'code': 'NEW_VERTICAL_2027',
+      'sectionCode': 'SOFTWARE_ENGINEERING',
       'title': 'New Vertical',
       'description': 'Delivered only by backend data.',
       'iconAssetId': 'asset-vertical-new',
@@ -25,6 +28,7 @@ void main() {
     });
 
     expect(vertical.code, 'NEW_VERTICAL_2027');
+    expect(vertical.sectionCode, 'SOFTWARE_ENGINEERING');
     expect(vertical.title, 'New Vertical');
     expect(vertical.active, isTrue);
   });
@@ -35,6 +39,7 @@ void main() {
     expect(
       () => decoder.decode(<String, dynamic>{
         'code': 'JAVA_INTERVIEW',
+        'sectionCode': 'SOFTWARE_ENGINEERING',
         'title': 'Java Interview',
         'description': 'Interview English',
         'iconAssetId': 'asset-java',
@@ -44,6 +49,20 @@ void main() {
       }),
       throwsFormatException,
     );
+  });
+
+  test('backend controls carousel shelves and grid presentation', () {
+    const decoder = VerticalCataloguePresentationDecoder();
+
+    final presentation = decoder.decodePresentation(<String, dynamic>{
+      'mode': 'SHELVES',
+      'showFeatured': true,
+      'showSeeAll': true,
+      'featuredSectionCode': 'FEATURED',
+    });
+
+    expect(presentation.mode, VerticalCataloguePresentationMode.shelves);
+    expect(presentation.showSeeAll, isTrue);
   });
 
   test('demo gateway uses the same exact catalogue payload contract', () async {
@@ -57,6 +76,7 @@ void main() {
       items: <Object>[
         <String, dynamic>{
           'code': 'MEDICAL_ENGLISH',
+          'sectionCode': 'ENGLISH_COMMUNICATION',
           'title': 'Medical English',
           'description': 'Medical communication',
           'iconAssetId': 'asset-medical',

@@ -1,6 +1,7 @@
 final class LearningVerticalProjection {
   factory LearningVerticalProjection({
     required String code,
+    required String sectionCode,
     required String title,
     required String description,
     required String iconAssetId,
@@ -9,6 +10,7 @@ final class LearningVerticalProjection {
   }) {
     return LearningVerticalProjection._(
       code: _stableCode(code, 'code'),
+      sectionCode: _stableCode(sectionCode, 'sectionCode'),
       title: _nonBlank(title, 'title'),
       description: _nonBlank(description, 'description'),
       iconAssetId: _nonBlank(iconAssetId, 'iconAssetId'),
@@ -19,6 +21,7 @@ final class LearningVerticalProjection {
 
   const LearningVerticalProjection._({
     required this.code,
+    required this.sectionCode,
     required this.title,
     required this.description,
     required this.iconAssetId,
@@ -27,6 +30,7 @@ final class LearningVerticalProjection {
   });
 
   final String code;
+  final String sectionCode;
   final String title;
   final String description;
   final String iconAssetId;
