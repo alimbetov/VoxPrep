@@ -19,10 +19,13 @@ void main() {
       revision: 1,
       checksum: _sha,
     );
+    // Schema v1 keeps this test focused on commit ordering. Universal-v2 graph
+    // membership is qualified independently by the publication/materializer
+    // acceptance suite.
     final root = RootContentManifest(
-      schemaVersion: 2,
+      schemaVersion: 1,
       contentVersion: 2,
-      minimumAppContractVersion: 2,
+      minimumAppContractVersion: 1,
       publishedAt: DateTime.utc(2026, 11, 1),
       checksum: _sha,
       packs: <PackRevisionRef>[pack],
