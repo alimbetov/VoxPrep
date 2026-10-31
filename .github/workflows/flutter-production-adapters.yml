@@ -46,6 +46,7 @@ jobs:
             --companions \
             drift_schemas/ \
             test/generated_migrations/
+          dart format test/generated_migrations
           git diff --exit-code -- \
             lib/data/local/database/careerspeak_database.g.dart \
             drift_schemas/drift_schema_v1.json \
