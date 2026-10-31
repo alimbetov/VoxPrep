@@ -25,6 +25,38 @@ class PackContentRefs extends Table {
   ];
 }
 
+class PackLocalizationRefs extends Table {
+  TextColumn get packCode => text()();
+  TextColumn get variantKey => text()();
+  IntColumn get packRevision => integer()();
+  TextColumn get contentCode => text()();
+  TextColumn get contentType => text()();
+  IntColumn get contentRevision => integer()();
+  TextColumn get locale => text()();
+  IntColumn get localizationRevision => integer()();
+  TextColumn get checksum => text()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {
+    packCode,
+    variantKey,
+    packRevision,
+    contentCode,
+    contentType,
+    contentRevision,
+    locale,
+  };
+
+  @override
+  List<String> get customConstraints => const [
+    'CHECK (pack_revision > 0)',
+    'CHECK (content_revision > 0)',
+    'CHECK (localization_revision > 0)',
+    'CHECK (length(trim(locale)) > 0)',
+    'CHECK (length(trim(checksum)) > 0)',
+  ];
+}
+
 class AssetCatalog extends Table {
   TextColumn get assetId => text()();
   TextColumn get checksumSha256 => text()();
