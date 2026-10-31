@@ -91,12 +91,12 @@ class ContentDetailPanel extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         ContentMarkerChips(state: marker),
-        if (item.hasAudio) ...[
+        if (item.type == ContentType.interview) ...[
           const SizedBox(height: 24),
-          if (item.type == ContentType.interview)
-            _InterviewAudioControls(item: item)
-          else
-            _AudioPlaybackControls(item: item, marker: marker),
+          _InterviewAudioControls(item: item),
+        ] else if (item.hasAudio) ...[
+          const SizedBox(height: 24),
+          _AudioPlaybackControls(item: item, marker: marker),
         ],
         const SizedBox(height: 24),
         Wrap(
