@@ -149,11 +149,52 @@ jobs:
       - name: C1 exhaustive contract matrices
         run: flutter test test/application/content_delivery/combinatorial_contract_matrix_test.dart
 
-      - name: C2 pairwise cross-layer qualification
+      - name: C2 cross-layer cache network policy matrix
         run: flutter test test/application/cross_layer_asset_resolution_pairwise_test.dart
 
       - name: C3-C5 positive negative adversarial catalogue scenarios
         run: flutter test test/application/content_delivery/catalogue_scenario_qualification_test.dart
+
+      - name: T3 critical-domain qualification
+        run: |
+          flutter test test/application/content_delivery/content_audio_policy_test.dart
+          flutter test test/application/content_delivery/content_audio_publication_membership_test.dart
+          flutter test test/application/content_delivery/learning_collection_membership_test.dart
+          flutter test test/application/content_delivery/product_catalog_test.dart
+          flutter test test/application/content_delivery/universal_vertical_catalogue_graph_test.dart
+          flutter test test/application/content_sync/root_manifest_v2_membership_test.dart
+
+      - name: T4 repository and storage qualification
+        run: |
+          flutter test test/data/local/drift_universal_catalogue_repository_test.dart
+          flutter test test/data/local/drift_universal_catalogue_graph_materializer_test.dart
+          flutter test test/data/local/drift_catalogue_snapshot_repository_test.dart
+          flutter test test/data/local/drift_practice_test_snapshot_repository_test.dart
+          flutter test test/data/local/drift_atomic_snapshot_visibility_test.dart
+          flutter test test/data/local/drift_tombstone_publication_interaction_test.dart
+          flutter test test/data/local/database/careerspeak_database_test.dart
+
+      - name: T5 controller and state qualification
+        run: |
+          flutter test test/application/asset_cache_retention_manager_test.dart
+          flutter test test/application/asset_resolver_concurrency_adversarial_test.dart
+          flutter test test/application/audio_playback_controller_test.dart
+          flutter test test/application/audio_playback_concurrency_adversarial_test.dart
+          flutter test test/application/role_audio_clip_controller_test.dart
+          flutter test test/application/role_audio_clip_concurrency_adversarial_test.dart
+          flutter test test/app/audio_playback_providers_test.dart
+
+      - name: T6 learner UI state qualification
+        run: |
+          flutter test test/features/catalogue/catalogue_screen_test.dart
+          flutter test test/features/catalogue/catalogue_parent_activity_test.dart
+          flutter test test/features/content/content_detail_learner_state_interaction_test.dart
+          flutter test test/features/content/content_detail_supersession_ui_test.dart
+          flutter test test/features/content/content_detail_localized_hint_test.dart
+          flutter test test/features/settings/settings_adaptive_visual_boundary_test.dart
+          flutter test test/features/tests/test_session_adaptive_visual_boundary_test.dart
+          flutter test test/features/shared/learner_surfaces_adaptive_visual_boundary_test.dart
+          flutter test test/goldens/learner_ui_golden_test.dart
 
       - name: Content Detail audio E2E
         run: |
