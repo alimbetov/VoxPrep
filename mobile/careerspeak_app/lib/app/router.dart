@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/adaptive/careerspeak_adaptive_scaffold.dart';
 import '../core/motion/careerspeak_motion.dart';
+import '../features/catalogue/catalogue_screen.dart';
 import '../features/content/content_detail_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/learn/learn_screen.dart';
@@ -25,6 +26,58 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/',
             pageBuilder: (context, state) =>
                 _page(state: state, child: const HomeScreen()),
+          ),
+          GoRoute(
+            path: '/catalogue',
+            pageBuilder: (context, state) =>
+                _page(state: state, child: const CatalogueScreen()),
+          ),
+          GoRoute(
+            path: '/catalogue/vertical/:verticalCode',
+            pageBuilder: (context, state) => _page(
+              state: state,
+              hierarchical: true,
+              child: CatalogueVerticalScreen(
+                verticalCode: state.pathParameters['verticalCode']!,
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/catalogue/vertical/:verticalCode/goal/:goalCode',
+            pageBuilder: (context, state) => _page(
+              state: state,
+              hierarchical: true,
+              child: CatalogueGoalScreen(
+                verticalCode: state.pathParameters['verticalCode']!,
+                goalCode: state.pathParameters['goalCode']!,
+              ),
+            ),
+          ),
+          GoRoute(
+            path:
+                '/catalogue/vertical/:verticalCode/goal/:goalCode/track/:trackCode',
+            pageBuilder: (context, state) => _page(
+              state: state,
+              hierarchical: true,
+              child: CatalogueTrackScreen(
+                verticalCode: state.pathParameters['verticalCode']!,
+                goalCode: state.pathParameters['goalCode']!,
+                trackCode: state.pathParameters['trackCode']!,
+              ),
+            ),
+          ),
+          GoRoute(
+            path:
+                '/catalogue/vertical/:verticalCode/goal/:goalCode/track/:trackCode/collection/:collectionCode',
+            pageBuilder: (context, state) => _page(
+              state: state,
+              hierarchical: true,
+              child: CatalogueCollectionScreen(
+                verticalCode: state.pathParameters['verticalCode']!,
+                trackCode: state.pathParameters['trackCode']!,
+                collectionCode: state.pathParameters['collectionCode']!,
+              ),
+            ),
           ),
           GoRoute(
             path: '/learn',
@@ -61,7 +114,7 @@ final routerProvider = Provider<GoRouter>((ref) {
                 typeCode: state.pathParameters['type'],
                 code: state.pathParameters['code'],
               );
-              return identity == null ? '/learn' : null;
+              return identity == null ? '/catalogue' : null;
             },
             pageBuilder: (context, state) => _page(
               state: state,
