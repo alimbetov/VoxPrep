@@ -204,23 +204,38 @@ class CatalogueTrackScreen extends ConsumerWidget {
 class CatalogueCollectionScreen extends ConsumerWidget {
   const CatalogueCollectionScreen({
     required this.verticalCode,
+    required this.goalCode,
     required this.trackCode,
     required this.collectionCode,
     super.key,
   });
 
   final String verticalCode;
+  final String goalCode;
   final String trackCode;
   final String collectionCode;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return _withSnapshot(ref, (snapshot) {
-      final collection = snapshot.graph.collections
+      final graph = snapshot.graph;
+      final parentTrack = graph.tracks
+          .where(
+            (item) =>
+                item.code == trackCode &&
+                item.goalCode == goalCode &&
+                item.verticalCode == verticalCode &&
+                item.active,
+          )
+          .firstOrNull;
+      if (parentTrack == null) {
+        return const _NotFound(message: 'Learning collection is unavailable.');
+      }
+      final collection = graph.collections
           .where(
             (item) =>
                 item.code == collectionCode &&
-                item.trackCode == trackCode &&
+                item.trackCode == parentTrack.code &&
                 item.verticalCode == verticalCode &&
                 item.active,
           )
