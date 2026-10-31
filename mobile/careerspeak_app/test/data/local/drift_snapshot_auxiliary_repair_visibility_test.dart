@@ -31,79 +31,86 @@ const _question =
     'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
 
 void main() {
-  test('same-version auxiliary repair invalidates an active learner stream', () async {
-    final database = createTestDatabase();
-    addTearDown(database.close);
-    await PublicationSnapshotStorage(database).ensureReady();
+  test(
+    'same-version auxiliary repair invalidates an active learner stream',
+    () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      await PublicationSnapshotStorage(database).ensureReady();
 
-    final now = DateTime.utc(2026, 10, 31, 18);
-    await database.into(database.contentManifestStates).insert(
-          ContentManifestStatesCompanion.insert(
-            id: const Value(1),
-            schemaVersion: 1,
-            currentContentVersion: 108,
-            currentManifestChecksum: _root,
-            updatedAt: now,
+      final now = DateTime.utc(2026, 10, 31, 18);
+      await database
+          .into(database.contentManifestStates)
+          .insert(
+            ContentManifestStatesCompanion.insert(
+              id: const Value(1),
+              schemaVersion: 1,
+              currentContentVersion: 108,
+              currentManifestChecksum: _root,
+              updatedAt: now,
+            ),
+          );
+
+      final assessmentRepository = DriftAssessmentRevisionRepository(database);
+      await assessmentRepository.saveBundle(_bundle());
+
+      final learnerRepository = DriftPracticeTestRepository(
+        database,
+        assessmentRepository,
+      );
+      final iterator = StreamIterator<Result<Page<PracticeTestSummary>>>(
+        learnerRepository.watchTests(const PracticeTestQuery()),
+      );
+      addTearDown(iterator.cancel);
+
+      expect(await iterator.moveNext(), isTrue);
+      expect(iterator.current.getOrThrow().items, isEmpty);
+
+      final loader = AssessmentRevisionLoader(
+        gateway: const _UnusedAssessmentGateway(),
+        repository: assessmentRepository,
+      );
+      final stager = DriftPublicationSnapshotStager(
+        database,
+        loader,
+        const _UnusedCatalogueGateway(),
+        now: () => now.add(const Duration(minutes: 1)),
+      );
+      final target = RootContentManifest(
+        schemaVersion: 1,
+        contentVersion: 108,
+        minimumAppContractVersion: 1,
+        publishedAt: now,
+        checksum: _root,
+        packs: const <PackRevisionRef>[],
+        practiceTests: <PracticeTestRevisionRef>[
+          PracticeTestRevisionRef(
+            practiceTestCode: 'JAVA_TEST',
+            revision: 1,
+            checksum: _test,
           ),
-        );
+        ],
+        catalogues: const <CatalogueRevisionRef>[],
+        tombstones: const <ContentTombstone>[],
+      );
 
-    final assessmentRepository = DriftAssessmentRevisionRepository(database);
-    await assessmentRepository.saveBundle(_bundle());
+      final staged = await stager.stage(target);
+      expect(staged, isA<Success<void>>());
 
-    final learnerRepository = DriftPracticeTestRepository(
-      database,
-      assessmentRepository,
-    );
-    final iterator = StreamIterator<Result<Page<PracticeTestSummary>>>(
-      learnerRepository.watchTests(const PracticeTestQuery()),
-    );
-    addTearDown(iterator.cancel);
+      expect(await iterator.moveNext(), isTrue);
+      final page = iterator.current.getOrThrow();
+      expect(page.items, hasLength(1));
+      expect(page.items.single.code, 'JAVA_TEST');
+      expect(page.items.single.title, 'CURRENT repaired test');
 
-    expect(await iterator.moveNext(), isTrue);
-    expect(iterator.current.getOrThrow().items, isEmpty);
-
-    final loader = AssessmentRevisionLoader(
-      gateway: const _UnusedAssessmentGateway(),
-      repository: assessmentRepository,
-    );
-    final stager = DriftPublicationSnapshotStager(
-      database,
-      loader,
-      const _UnusedCatalogueGateway(),
-      now: () => now.add(const Duration(minutes: 1)),
-    );
-    final target = RootContentManifest(
-      schemaVersion: 1,
-      contentVersion: 108,
-      minimumAppContractVersion: 1,
-      publishedAt: now,
-      checksum: _root,
-      packs: const <PackRevisionRef>[],
-      practiceTests: <PracticeTestRevisionRef>[
-        PracticeTestRevisionRef(
-          practiceTestCode: 'JAVA_TEST',
-          revision: 1,
-          checksum: _test,
-        ),
-      ],
-      catalogues: const <CatalogueRevisionRef>[],
-      tombstones: const <ContentTombstone>[],
-    );
-
-    final staged = await stager.stage(target);
-    expect(staged, isA<Success<void>>());
-
-    expect(await iterator.moveNext(), isTrue);
-    final page = iterator.current.getOrThrow();
-    expect(page.items, hasLength(1));
-    expect(page.items.single.code, 'JAVA_TEST');
-    expect(page.items.single.title, 'CURRENT repaired test');
-
-    final root = await database.select(database.contentManifestStates).getSingle();
-    expect(root.currentContentVersion, 108);
-    expect(root.currentManifestChecksum, _root);
-    expect(root.updatedAt, now.add(const Duration(minutes: 1)));
-  });
+      final root = await database
+          .select(database.contentManifestStates)
+          .getSingle();
+      expect(root.currentContentVersion, 108);
+      expect(root.currentManifestChecksum, _root);
+      expect(root.updatedAt, now.add(const Duration(minutes: 1)));
+    },
+  );
 }
 
 AssessmentRevisionBundle _bundle() {
