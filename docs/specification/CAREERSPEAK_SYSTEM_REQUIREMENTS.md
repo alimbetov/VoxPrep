@@ -3,13 +3,14 @@
 **Repository:** `alimbetov/VoxPrep`  
 **Product name:** CareerSpeak  
 **Codename:** VoxPrep  
-**Document version:** 0.12  
-**Status:** Consolidated P0 architecture baseline  
+**Document version:** 0.13  
+**Status:** Consolidated P0 product + architecture baseline  
 **Target platforms:** Android, iOS  
 **Primary learning model:** Read → Listen → Repeat → Test → Review
 
 Normative documents:
 
+- [`CAREERSPEAK_PRODUCT_REQUIREMENTS.md`](CAREERSPEAK_PRODUCT_REQUIREMENTS.md)
 - [`../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md`](../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md)
 - [`CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md`](CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md)
 - [`CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md`](CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
@@ -33,18 +34,19 @@ Mobile detailed contracts:
 
 ## 1. Product purpose
 
-CareerSpeak is an offline-first English-learning application focused on:
+CareerSpeak is an offline-first English performance coach focused primarily on:
 
 ```text
-IELTS preparation
 international job interviews
-professional/technical English
-vocabulary/topics/phrases/shadowing
-practice/mock tests
-local review and progress
+professional / technical English
+international career progression
 ```
 
+IELTS remains a supported but separate learner goal path.
+
 CareerSpeak teaches English only. Other languages support UI, translations, hints and explanations.
+
+The product SHALL be goal-driven rather than only catalogue-driven.
 
 Learner runtime does not require runtime AI, STT, pronunciation scoring or runtime TTS.
 
@@ -53,10 +55,12 @@ Learner runtime does not require runtime AI, STT, pronunciation scoring or runti
 ## 2. Product principles
 
 ```text
+career/interview first positioning
+goal-driven learner journeys
 one-time paid app initial model
 no ads initially
 no mandatory learner account
-local-first learner progress
+local-first learner intent/progress
 offline-first consumption
 published content immutable by revision
 server can deactivate content without destructive deletion
@@ -65,9 +69,58 @@ simple infrastructure until measured need
 adaptive mobile UI
 Material Design 3 as the single UI design system
 privacy-first installation identity
-durable local learner markers
+durable local learner markers/review schedules
 multi-locale product architecture
+no learner-facing implementation jargon
 ```
+
+---
+
+## 2A. Normative product hierarchy
+
+Backend-owned product structure:
+
+```text
+LearningGoal
+    ↓
+LearningTrack
+    ↓
+LearningCollection
+    ↓
+LearningActivity
+    ↓
+Content / PracticeTest
+```
+
+Mandatory distinction:
+
+```text
+Profession / CareerTrack
+= career taxonomy
+
+LearningGoal
+= learner outcome
+
+LearningTrack
+= curated curriculum path toward a learner outcome
+```
+
+These concepts SHALL NOT be collapsed into one persistence or API entity merely for convenience.
+
+Backend owns mutable product catalogues for:
+
+```text
+LearningGoal
+LearningTrack
+LearningCollection
+Category
+Level
+Skill
+SupportedLocale
+TtsVoice learner-facing projection
+```
+
+Flutter stores local projections and device-owned learner selections/progress.
 
 ---
 
@@ -98,7 +151,9 @@ random installationId
 → platform Secure Storage
 ```
 
-Backend does not build a learner profile from progress/favorites/test history.
+Backend does not build a learner profile from progress/favorites/test history in MVP.
+
+Local learner intent may include selected goal/track/level/locale/voice preferences.
 
 ### TTS WORKER
 
@@ -117,6 +172,7 @@ runtime learner TTS
 social/messaging/leaderboards
 complex gamification
 server learner-progress sync
+server learner profile
 multi-user admin identity platform
 parallel custom iOS design system
 RabbitMQ
@@ -142,6 +198,7 @@ careerspeak-backend
 ├── admin
 ├── assessment
 ├── catalog
+├── learning
 ├── installation
 ├── interview
 ├── localization
@@ -154,6 +211,8 @@ careerspeak-backend
 ├── tts
 └── vocabulary
 ```
+
+`learning` owns goal/track/collection/activity product structure. `profession` owns career taxonomy. The exact Java package/module boundaries may be refined, but ownership semantics remain distinct.
 
 Baseline:
 
@@ -183,6 +242,8 @@ Spring MVC + JPA/JDBC + HikariCP + PostgreSQL
 
 Use native SQL where queue/concurrency semantics require it, notably TTS claim/lease operations.
 
+Persistence entities SHALL be derived from domain invariants and SHALL NOT mirror Flutter DTO shape.
+
 ---
 
 ## 6. Flutter architecture
@@ -211,6 +272,7 @@ StorageRetentionManager
 AudioPlaybackController
 ReviewScheduler
 LearnerContentStateRepository
+LearnerIntentRepository / equivalent local ownership
 ```
 
 Adaptive width classes:
@@ -226,7 +288,64 @@ Adaptive presentation never forks business logic by device type.
 
 ---
 
-## 7. UI design system
+## 7. Learner experience contract
+
+### 7.1 Onboarding
+
+First-run onboarding is short, skippable, account-free and restart-safe.
+
+It SHOULD gather:
+
+```text
+LearningGoal
+approximate English level or Not sure
+support/translation locale
+preferred accent/voice where available
+starter-pack download preference
+```
+
+Skipping onboarding creates deterministic defaults and never blocks browsing.
+
+### 7.2 Home hierarchy
+
+Home prioritizes:
+
+```text
+Next best action / Continue
+Current goal/track
+Goal/track progress
+Due review
+Recommended next collection/content
+Browse shortcuts
+Secondary statistics
+```
+
+Database counters such as Completed/Listened/Favorites are secondary.
+
+### 7.3 Learn hierarchy
+
+Learner discovery favors:
+
+```text
+Continue your track
+Goals / tracks
+Collections
+Recommended
+Categories
+Browse all / Search
+```
+
+Technical content types are not the only learner-facing navigation model.
+
+### 7.4 Learner-facing copy
+
+Production UI does not expose implementation terms such as repository, adapter, persistence, manifest, DTO, qualification, Drift or RustFS.
+
+Raw transport/database errors are not learner-facing strings.
+
+---
+
+## 8. UI design system
 
 CareerSpeak uses exactly one learner UI design system:
 
@@ -248,6 +367,7 @@ System / Light / Dark modes
 Material NavigationBar / NavigationRail adaptive mapping
 central spacing/radius/type/motion tokens
 Material components before bespoke replacements
+CareerSpeak branded components remain Material-based
 Study Ambience is decorative, not a second design system
 large-text and accessibility qualification
 RTL/mixed-direction support
@@ -257,7 +377,7 @@ No separate visual framework is created for iOS, Shadowing, Assessment or tablet
 
 ---
 
-## 8. Production topology
+## 9. Production topology
 
 ```text
 ADMIN Browser
@@ -286,7 +406,7 @@ Initial deployment may run Backend, TTS Worker, RustFS and reverse proxy on one 
 
 ---
 
-## 9. Backend content lifecycle
+## 10. Backend content lifecycle
 
 Revision status:
 
@@ -315,7 +435,7 @@ Meaning: visible/deliverable/downloadable according to learner contracts.
 
 ---
 
-## 10. Flutter lifecycle terminology
+## 11. Flutter lifecycle terminology
 
 Local metadata states:
 
@@ -349,28 +469,17 @@ Flutter READY = complete offline bundle locally verified
 
 ---
 
-## 11. Learner content markers
+## 12. Learner content markers and intent
 
 Flutter owns three independent durable learner markers:
 
 ```text
 FAVORITE
-= explicit learner curation
-
 LISTENED
-= qualified audio consumption completed
-
 COMPLETED
-= pedagogical unit completed according to feature policy
 ```
 
-The states are independent:
-
-```text
-FAVORITE + LISTENED + COMPLETED
-```
-
-is valid.
+The states are independent. Any valid combination is allowed.
 
 Rules:
 
@@ -383,11 +492,56 @@ Completed does not replace detailed test/review history
 markers remain local in MVP
 ```
 
-Catalogs may filter by Favorites, Listened/Not listened and Completed/Not completed.
+Flutter also owns local learner intent:
+
+```text
+onboardingCompleted
+selectedGoalCode
+selectedTrackCode?
+selfAssessedLevelCode?
+uiLocale
+translationLocale
+preferredAccent / preferredVoiceCode?
+```
+
+Selected mutable product codes are sourced from backend-owned catalogues.
 
 ---
 
-## 12. Content versioning and manifest
+## 13. Review scheduling semantics
+
+MVP review scheduling is deterministic and local.
+
+Required state:
+
+```text
+nextReviewAt
+reviewStage
+lastReviewedAt
+lastReviewOutcome
+```
+
+Mandatory rule:
+
+```text
+Due = nextReviewAt <= now
+Due != !Completed
+```
+
+Possible outcomes include:
+
+```text
+incorrect
+hard
+correct
+known
+```
+
+Review schedules survive restart/cache eviction and do not require runtime AI.
+
+---
+
+## 14. Content versioning and manifest
 
 Backend publishes one root learner snapshot:
 
@@ -417,7 +571,7 @@ Metadata update is atomic; optional media bytes do not block normal metadata act
 
 ---
 
-## 13. Offline bundle replacement
+## 15. Offline bundle replacement
 
 Explicit offline bundle has independent readiness.
 
@@ -433,23 +587,35 @@ Old READY bundle remains usable until replacement verifies.
 
 ---
 
-## 14. Publication/assessment reproducibility
+## 16. Publication / content / assessment reproducibility
 
 Published content revisions are immutable.
+
+The backend learner-content contract uses a shared envelope plus typed immutable bodies for at least:
+
+```text
+VocabularyBody
+InterviewBody
+TopicBody
+PhraseBody
+ShadowingBody
+```
 
 Published tests reference exact immutable `QuestionRevision` records.
 
 Flutter test attempts persist exact test/question revisions/snapshots so completed attempts remain reviewable after later content changes/cache eviction.
 
+Assessment feedback can use stable `skillCode` identity and explanations to identify weak/strong skills and recommend a next learning action.
+
 ---
 
-## 15. Localization
+## 17. Localization
 
 ```text
 learningLanguage = en
 uiLocale
 translationLocale
-preferredAccent
+preferredAccent / preferredVoiceCode where applicable
 ```
 
 UI strings:
@@ -463,6 +629,7 @@ Content translation/hints/explanations:
 ```text
 Backend typed localization tables
 → locale pack variants
+→ immutable localized payload delivery
 ```
 
 CareerSpeak is a multi-locale platform. Runtime locale contracts accept arbitrary supported BCP-47-compatible identifiers; they must not assume `locale ∈ {ru, kk}`.
@@ -499,11 +666,11 @@ tr
 
 RTL/mixed-direction architecture must be qualified using at least `ar` even if Arabic content is not enabled in the first commercial release.
 
-The authoritative detailed contract is `CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md` v1.1.
+The authoritative detailed contract is `CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md`.
 
 ---
 
-## 16. RustFS / media
+## 18. RustFS / media
 
 RustFS stores binary objects; PostgreSQL stores metadata/lifecycle.
 
@@ -526,9 +693,11 @@ deliveryKey
 
 Do not persist CDN hostname as durable domain identity.
 
+Published media authorization policy must be explicit; the installation token must not be described as protecting CDN bytes unless the delivery path actually enforces it.
+
 ---
 
-## 17. TTS architecture
+## 19. TTS architecture
 
 Logical `TtsVoice` and exact immutable `TtsVoiceModel` are separate.
 
@@ -566,7 +735,7 @@ Exact Backend implementation requirements are defined in `docs/backend/CAREERSPE
 
 ---
 
-## 18. TTS queue
+## 20. TTS queue
 
 PostgreSQL durable queue using atomic claim with:
 
@@ -600,35 +769,37 @@ RabbitMQ is not required initially.
 
 ---
 
-## 19. Content delivery
+## 21. Content delivery
 
-Learner lists use cursor/keyset pagination.
-
-Flutter syncs via:
+MVP backend synchronization truth is:
 
 ```text
 root manifest
 pack manifests
-locale variants
-localized payloads
+canonical immutable payloads
+localized immutable payloads
+product/catalog capability snapshots
 tombstones
 checksums
 ```
 
-Tombstones explicitly retire content; absence from a paginated list never implies deletion.
+Learner browsing/filtering/pagination is performed against local Drift projections after synchronization unless a separate remote collection use case is explicitly approved.
+
+Tombstones explicitly retire content; absence from a list never implies deletion.
 
 Changing translation locale reuses unchanged canonical English/audio/assets and downloads only the required locale delta.
 
 ---
 
-## 20. Local persistence and retention
+## 22. Local persistence and retention
 
 Drift separates:
 
 ```text
 system/sync state
-versioned content/cache
-learner durable state
+versioned product/content cache
+durable learner state
+local learner intent
 ```
 
 Durable learner state includes:
@@ -647,11 +818,11 @@ Disposable storage management:
 TTL + LRU + quota + pin/download protection + reference-safe deletion
 ```
 
-Cache/media eviction never erases learner progress or markers.
+Cache/media eviction never erases learner intent, progress, review schedules or markers.
 
 ---
 
-## 21. Adaptive UI
+## 23. Adaptive UI
 
 CareerSpeak adapts to available window width, including phone, tablet, split-screen and landscape windows.
 
@@ -665,14 +836,14 @@ master/detail only for natural master-detail domains
 reading width constrained on tablets
 large text support
 RTL/mixed-direction support
-resize without route/test/audio/marker state loss
+resize without route/test/audio/marker/review/onboarding state loss
 ```
 
 RTL qualification must cover mixed RTL guidance with LTR English learning content.
 
 ---
 
-## 22. Security zones
+## 24. Security zones
 
 ```text
 /admin/**
@@ -685,12 +856,14 @@ RTL qualification must cover mixed RTL guidance with LTR English learning conten
 → worker token
 
 private RustFS
-→ Backend-owned credentials; learner delivery only through configured published origin/CDN path
+→ Backend-owned credentials; learner delivery only through configured published origin/CDN policy
 ```
+
+Installation token lifecycle must define longevity, revocation/re-registration and bounded credential-specific 401 recovery.
 
 ---
 
-## 23. Failure isolation
+## 25. Failure isolation
 
 ```text
 Backend down
@@ -709,17 +882,42 @@ Worker crash
 → lease expires/reclaim
 ```
 
-Durable learner markers remain intact across recoverable sync/cache failures.
+Durable learner intent, review schedules and markers remain intact across recoverable sync/cache failures.
 
 A missing translation locale must fall back deterministically without making canonical English content unavailable.
 
 ---
 
-## 24. P0 acceptance
+## 26. Product activation semantics
 
-Before implementation freeze, accept:
+Product activation means:
 
 ```text
+onboarding completed or explicitly skipped deterministically
+AND
+at least one meaningful learning activity completed
+```
+
+Meaningful activities include qualified audio listen, content completion, completed practice test or completed review.
+
+Server learner analytics are not required for MVP. Future telemetry requires a separate privacy/data contract.
+
+---
+
+## 27. P0 acceptance
+
+Before implementation/domain freeze, accept:
+
+```text
+Product Requirements normative baseline
+career/interview-first positioning with IELTS as separate goal path
+LearningGoal / LearningTrack / LearningCollection / LearningActivity ownership
+LearningGoal distinct from Profession/CareerTrack
+local learner-intent ownership
+onboarding complete/skip/fallback semantics
+Home next-action/current-goal hierarchy
+real Due review semantics
+learner-facing copy policy
 common identifiers/time/error contracts
 Backend publication/availability lifecycle
 cross-system ACTIVE/CURRENT/READY terminology
@@ -727,6 +925,10 @@ root manifest/pack variant version contract
 locale-independent root identity
 Backend-owned SupportedLocale catalog
 localized payload delivery contract
+typed learning-content body contract
+assessment production contract
+Category/Level/Skill catalog ownership
+learner-facing TtsVoice capability ownership
 arbitrary BCP-47 locale handling
 configured locale fallback contract
 RTL structural qualification
@@ -742,6 +944,8 @@ OpenAPI learner/worker contracts
 failure/recovery qualification matrix
 ```
 
-The TTS Worker machine-readable contract is now represented by `docs/backend/openapi/tts-worker-v1.yaml`; production acceptance still requires the real Backend A01-A11 qualification.
+The TTS Worker machine-readable contract is represented by `docs/backend/openapi/tts-worker-v1.yaml`; production acceptance still requires real Backend ↔ Worker qualification.
 
-This is the authoritative system baseline for CareerSpeak v0.12.
+Backend content/JPA schema SHALL NOT be considered frozen until the product hierarchy, typed content, assessment, publication, localization and installation lifecycle contracts above are closed.
+
+This is the authoritative system baseline for CareerSpeak v0.13.
