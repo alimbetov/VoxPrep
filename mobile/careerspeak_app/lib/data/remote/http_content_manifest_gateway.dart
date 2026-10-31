@@ -18,19 +18,7 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
   final ContentManifestDecoder _decoder;
 
   @override
-  Future<Result<RootManifestFetch>> fetchRootManifest({
-    required String translationLocale,
-    String? etag,
-  }) async {
-    final locale = _normalizeLocale(translationLocale);
-    if (locale == null) {
-      return const FailureResult<RootManifestFetch>(
-        ApplicationFailure(
-          code: 'LOCALE_INVALID',
-          message: 'Translation locale is invalid.',
-        ),
-      );
-    }
+  Future<Result<RootManifestFetch>> fetchRootManifest({String? etag}) async {
     if (_containsUnsafeHeaderCharacter(etag)) {
       return const FailureResult<RootManifestFetch>(
         ApplicationFailure(
@@ -48,7 +36,6 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
       ApiRequest(
         method: ApiMethod.get,
         path: '/api/v1/content/manifest',
-        queryParameters: <String, String>{'locale': locale},
         headers: headers,
       ),
     );
@@ -162,14 +149,6 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
     return Success<PackContentManifest>(manifest);
   }
 
-  static String? _normalizeLocale(String value) {
-    final normalized = value.trim();
-    if (!_localePattern.hasMatch(normalized)) {
-      return null;
-    }
-    return normalized;
-  }
-
   static String? _normalizeOptionalHeaderValue(String? value) {
     if (_containsUnsafeHeaderCharacter(value)) {
       return null;
@@ -182,5 +161,3 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
     return value != null && (value.contains('\r') || value.contains('\n'));
   }
 }
-
-final _localePattern = RegExp(r'^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$');
