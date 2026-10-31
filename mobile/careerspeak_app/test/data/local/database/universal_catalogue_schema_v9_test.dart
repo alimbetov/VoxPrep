@@ -1,5 +1,5 @@
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:drift_dev/api/migrations_native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
