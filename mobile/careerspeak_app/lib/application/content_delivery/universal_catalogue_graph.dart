@@ -11,14 +11,30 @@ final class UniversalCatalogueGraph {
     required Iterable<LearningCollectionProjection> collections,
     required VerticalCataloguePresentation presentation,
   }) {
-    final sectionList = List<VerticalSectionProjection>.unmodifiable(sections);
-    final verticalList = List<LearningVerticalProjection>.unmodifiable(
-      verticals,
+    final sectionList = _sortedByOrderThenCode(
+      sections,
+      sortOrderOf: (item) => item.sortOrder,
+      codeOf: (item) => item.code,
     );
-    final goalList = List<LearningGoalProjection>.unmodifiable(goals);
-    final trackList = List<LearningTrackProjection>.unmodifiable(tracks);
-    final collectionList = List<LearningCollectionProjection>.unmodifiable(
+    final verticalList = _sortedByOrderThenCode(
+      verticals,
+      sortOrderOf: (item) => item.sortOrder,
+      codeOf: (item) => item.code,
+    );
+    final goalList = _sortedByOrderThenCode(
+      goals,
+      sortOrderOf: (item) => item.sortOrder,
+      codeOf: (item) => item.code,
+    );
+    final trackList = _sortedByOrderThenCode(
+      tracks,
+      sortOrderOf: (item) => item.sortOrder,
+      codeOf: (item) => item.code,
+    );
+    final collectionList = _sortedByOrderThenCode(
       collections,
+      sortOrderOf: (item) => item.sortOrder,
+      codeOf: (item) => item.code,
     );
 
     _requireUnique(sectionList.map((item) => item.code), 'sections');
@@ -122,6 +138,20 @@ final class UniversalCatalogueGraph {
   final List<LearningTrackProjection> tracks;
   final List<LearningCollectionProjection> collections;
   final VerticalCataloguePresentation presentation;
+}
+
+List<T> _sortedByOrderThenCode<T>(
+  Iterable<T> items, {
+  required int Function(T item) sortOrderOf,
+  required String Function(T item) codeOf,
+}) {
+  final sorted = List<T>.of(items);
+  sorted.sort((left, right) {
+    final order = sortOrderOf(left).compareTo(sortOrderOf(right));
+    if (order != 0) return order;
+    return codeOf(left).compareTo(codeOf(right));
+  });
+  return List<T>.unmodifiable(sorted);
 }
 
 void _requireUnique(Iterable<String> values, String field) {
