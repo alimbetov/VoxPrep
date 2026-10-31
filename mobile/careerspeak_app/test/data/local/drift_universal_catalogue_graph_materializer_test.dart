@@ -1,6 +1,7 @@
 import 'package:careerspeak_app/application/content_delivery/catalogue_payload.dart';
 import 'package:careerspeak_app/application/content_delivery/catalogue_revision_ref.dart';
 import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
+import 'package:careerspeak_app/application/content_delivery/product_catalog.dart';
 import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_universal_catalogue_graph_materializer.dart';
@@ -189,6 +190,40 @@ void main() {
         'UNIVERSAL_CATALOGUE_GRAPH_INVALID',
       );
     });
+
+    test('rejects practice test outside exact snapshot membership', () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      await database.customSelect('SELECT 1').getSingle();
+
+      final root = RootContentManifest(
+        schemaVersion: 2,
+        contentVersion: 104,
+        minimumAppContractVersion: 2,
+        publishedAt: DateTime.utc(2026, 10, 31, 19),
+        checksum: _hash,
+        packs: const <PackRevisionRef>[],
+        practiceTests: <PracticeTestRevisionRef>[
+          PracticeTestRevisionRef(
+            practiceTestCode: 'TEST_ALPHA',
+            revision: 2,
+            checksum: _hash,
+          ),
+        ],
+        catalogues: _catalogueRefs(),
+        tombstones: const <ContentTombstone>[],
+      );
+
+      final result = await DriftUniversalCatalogueGraphMaterializer(
+        database,
+      ).materialize(root: root, payloads: _payloads());
+
+      expect(result, isA<FailureResult<void>>());
+      expect(
+        (result as FailureResult<void>).failure.code,
+        'UNIVERSAL_CATALOGUE_GRAPH_INVALID',
+      );
+    });
   });
 }
 
@@ -200,19 +235,30 @@ RootContentManifest _root(int contentVersion) {
     publishedAt: DateTime.utc(2026, 10, 31, 19),
     checksum: _hash,
     packs: const <PackRevisionRef>[],
-    catalogues: <CatalogueRevisionRef>[
-      for (final kind in <CatalogueKind>[
-        CatalogueKind.verticalSections,
-        CatalogueKind.verticals,
-        CatalogueKind.verticalPresentation,
-        CatalogueKind.learningGoals,
-        CatalogueKind.learningTracks,
-        CatalogueKind.learningCollections,
-      ])
-        CatalogueRevisionRef(kind: kind, revision: 1, checksum: _hash),
+    practiceTests: <PracticeTestRevisionRef>[
+      PracticeTestRevisionRef(
+        practiceTestCode: 'TEST_ALPHA',
+        revision: 1,
+        checksum: _hash,
+      ),
     ],
+    catalogues: _catalogueRefs(),
     tombstones: const <ContentTombstone>[],
   );
+}
+
+List<CatalogueRevisionRef> _catalogueRefs() {
+  return <CatalogueRevisionRef>[
+    for (final kind in <CatalogueKind>[
+      CatalogueKind.verticalSections,
+      CatalogueKind.verticals,
+      CatalogueKind.verticalPresentation,
+      CatalogueKind.learningGoals,
+      CatalogueKind.learningTracks,
+      CatalogueKind.learningCollections,
+    ])
+      CatalogueRevisionRef(kind: kind, revision: 1, checksum: _hash),
+  ];
 }
 
 Iterable<CataloguePayload> _payloads() sync* {
