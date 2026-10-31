@@ -61,8 +61,9 @@ void main() {
   });
 
   test('newer cached catalogue stays hidden outside CURRENT root', () async {
-    final payload = (await repository.readCurrent(CatalogueKind.categories))
-        .getOrThrow();
+    final payload = (await repository.readCurrent(
+      CatalogueKind.categories,
+    )).getOrThrow();
 
     expect(payload, isNotNull);
     expect(payload!.ref.revision, 1);
@@ -82,8 +83,9 @@ void main() {
         ),
       );
 
-      final payload = (await repository.readCurrent(CatalogueKind.categories))
-          .getOrThrow();
+      final payload = (await repository.readCurrent(
+        CatalogueKind.categories,
+      )).getOrThrow();
 
       expect(payload, isNotNull);
       expect(payload!.ref.revision, 2);

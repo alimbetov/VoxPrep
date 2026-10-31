@@ -60,7 +60,8 @@ final class HttpAssessmentPayloadGateway implements AssessmentPayloadGateway {
       return FailureResult<PracticeTestRevision>(
         ApplicationFailure(
           code: 'ASSESSMENT_PAYLOAD_MISMATCH',
-          message: 'The practice-test payload does not match the requested revision.',
+          message:
+              'The practice-test payload does not match the requested revision.',
           traceId: apiResponse.traceId,
           details: <String, Object?>{
             'expectedCode': normalizedCode,

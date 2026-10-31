@@ -22,7 +22,8 @@ final class PublicationManifestWireGuard {
       return FailureResult<void>(
         ApplicationFailure(
           code: 'MANIFEST_NON_PUBLICATION_FIELD',
-          message: 'The root manifest contains fields outside the immutable publication contract.',
+          message:
+              'The root manifest contains fields outside the immutable publication contract.',
           details: <String, Object?>{
             'field': error.path,
             'reason': error.reason,
@@ -45,7 +46,8 @@ final class PublicationManifestWireGuard {
       return FailureResult<void>(
         ApplicationFailure(
           code: 'PACK_MANIFEST_NON_PUBLICATION_FIELD',
-          message: 'The pack manifest contains fields outside the immutable publication contract.',
+          message:
+              'The pack manifest contains fields outside the immutable publication contract.',
           details: <String, Object?>{
             'field': error.path,
             'reason': error.reason,

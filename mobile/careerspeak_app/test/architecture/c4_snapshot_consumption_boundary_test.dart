@@ -33,7 +33,8 @@ void main() {
       expect(
         violations,
         isEmpty,
-        reason: 'C4 publication consumption must resolve exact revisions from immutable snapshot membership, never latest/current remote aliases.',
+        reason:
+            'C4 publication consumption must resolve exact revisions from immutable snapshot membership, never latest/current remote aliases.',
       );
     },
   );
