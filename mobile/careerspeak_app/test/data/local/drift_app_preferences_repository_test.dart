@@ -38,25 +38,40 @@ void main() {
     expect(rows.single.id, 1);
   });
 
-  test('typed updates are reactive and idempotent', () async {
-    await repository.setUiLocale(AppUiLocale.kazakh);
-    await repository.setTranslationLocale(AppTranslationLocale.kazakh);
+  test('BCP-47 locale updates are reactive and idempotent', () async {
+    await repository.setUiLocale(AppUiLocale.arabic);
+    await repository.setTranslationLocale(
+      AppTranslationLocale.brazilianPortuguese,
+    );
     await repository.setPreferredAccent(PreferredEnglishAccent.uk);
     await repository.setTheme(AppThemePreference.dark);
     await repository.setFocusMode(true);
     await repository.setStorageQuotaBytes(1024 * 1024);
-    await repository.setTranslationLocale(AppTranslationLocale.kazakh);
+    await repository.setTranslationLocale(
+      AppTranslationLocale.brazilianPortuguese,
+    );
 
     final preferences = await repository.watchPreferences().first;
     final value = preferences.getOrThrow();
 
-    expect(value.uiLocale, AppUiLocale.kazakh);
-    expect(value.translationLocale, AppTranslationLocale.kazakh);
+    expect(value.uiLocale, AppUiLocale.arabic);
+    expect(value.uiLocale.isRtl, isTrue);
+    expect(value.translationLocale.code, 'pt-BR');
     expect(value.preferredAccent, PreferredEnglishAccent.uk);
     expect(value.theme, AppThemePreference.dark);
     expect(value.focusMode, isTrue);
     expect(value.storageQuotaBytes, 1024 * 1024);
     expect(await database.select(database.appPreferences).get(), hasLength(1));
+  });
+
+  test('future valid locale is restored without client enum release', () async {
+    final swahili = AppTranslationLocale('sw');
+    (await repository.setTranslationLocale(swahili)).getOrThrow();
+
+    final restored = (await repository.getPreferences()).getOrThrow();
+
+    expect(restored.translationLocale.code, 'sw');
+    expect(restored.translationLocale.label, 'sw');
   });
 
   test('negative storage quota fails without changing stored value', () async {
@@ -72,14 +87,14 @@ void main() {
     );
   });
 
-  test('unsupported stored preference fails closed', () async {
+  test('malformed stored locale fails closed', () async {
     final now = DateTime.utc(2026, 10, 30, 19);
     await database
         .into(database.appPreferences)
         .insert(
           AppPreferencesCompanion.insert(
             id: const Value<int>(1),
-            uiLocale: 'unsupported',
+            uiLocale: 'not_a_locale',
             translationLocale: 'ru',
             preferredAccent: const Value<String?>('en-US'),
             themeCode: 'system',
@@ -97,20 +112,20 @@ void main() {
     );
   });
 
-  test('preferences survive database close and reopen', () async {
+  test('multi-locale preferences survive database close and reopen', () async {
     await database.close();
 
     final directory = await Directory.systemTemp.createTemp(
-      'careerspeak-p2-10-4-preferences-',
+      'careerspeak-locale-preferences-',
     );
     addTearDown(() => directory.delete(recursive: true));
     final file = File('${directory.path}/careerspeak.sqlite');
 
     final firstDatabase = CareerSpeakDatabase(NativeDatabase(file));
     final firstRepository = DriftAppPreferencesRepository(firstDatabase);
-    (await firstRepository.setUiLocale(AppUiLocale.russian)).getOrThrow();
+    (await firstRepository.setUiLocale(AppUiLocale.turkish)).getOrThrow();
     (await firstRepository.setTranslationLocale(
-      AppTranslationLocale.kazakh,
+      AppTranslationLocale.brazilianPortuguese,
     )).getOrThrow();
     (await firstRepository.setPreferredAccent(
       PreferredEnglishAccent.australian,
@@ -122,8 +137,11 @@ void main() {
     final reopenedRepository = DriftAppPreferencesRepository(reopenedDatabase);
     final restored = (await reopenedRepository.getPreferences()).getOrThrow();
 
-    expect(restored.uiLocale, AppUiLocale.russian);
-    expect(restored.translationLocale, AppTranslationLocale.kazakh);
+    expect(restored.uiLocale, AppUiLocale.turkish);
+    expect(
+      restored.translationLocale,
+      AppTranslationLocale.brazilianPortuguese,
+    );
     expect(restored.preferredAccent, PreferredEnglishAccent.australian);
     expect(restored.theme, AppThemePreference.light);
 

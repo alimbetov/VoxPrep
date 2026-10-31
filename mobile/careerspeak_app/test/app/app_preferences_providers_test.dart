@@ -34,7 +34,7 @@ void main() {
     expect(preferences.theme, ApplicationPreferences.defaults.theme);
   });
 
-  test('translation locale provider exposes persisted sync locale', () async {
+  test('translation locale provider exposes persisted BCP-47 sync locale', () async {
     final database = createTestDatabase();
     addTearDown(database.close);
     final container = ProviderContainer(
@@ -42,13 +42,13 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    final kazakhObserved = Completer<void>();
+    final observed = Completer<void>();
     final subscription = container.listen<AsyncValue<String>>(
       translationLocaleProvider,
       (_, next) {
-        if (next.asData?.value == AppTranslationLocale.kazakh.code &&
-            !kazakhObserved.isCompleted) {
-          kazakhObserved.complete();
+        if (next.asData?.value == AppTranslationLocale.brazilianPortuguese.code &&
+            !observed.isCompleted) {
+          observed.complete();
         }
       },
       fireImmediately: true,
@@ -57,12 +57,12 @@ void main() {
 
     await container
         .read(appPreferencesControllerProvider)
-        .setTranslationLocale(AppTranslationLocale.kazakh);
-    await kazakhObserved.future.timeout(const Duration(seconds: 2));
+        .setTranslationLocale(AppTranslationLocale.brazilianPortuguese);
+    await observed.future.timeout(const Duration(seconds: 2));
 
     expect(
       container.read(translationLocaleProvider).asData?.value,
-      AppTranslationLocale.kazakh.code,
+      'pt-BR',
     );
   });
 }

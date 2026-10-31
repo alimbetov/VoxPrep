@@ -120,7 +120,7 @@ class SettingsScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'UI, translation locale and accent are stored locally. English remains the learning language; translation locale selects support/localization content packs.',
+          'Locale preferences persist BCP-47 codes. English remains the learning language; the backend SupportedLocale catalog is authoritative for translation availability.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         if (preferencesAsync.hasError) ...[
@@ -152,7 +152,7 @@ class SettingsScreen extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'Text scale and RTL remain structural preview controls; they are not persisted product preferences.',
+          'Text scale, RTL and reduced-motion controls are structural qualification previews; they are not persisted product preferences.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 8),
@@ -161,10 +161,20 @@ class SettingsScreen extends ConsumerWidget {
           secondary: const Icon(Icons.format_textdirection_r_to_l),
           title: const Text('RTL layout preview'),
           subtitle: const Text(
-            'Flip layout direction while keeping English learning content LTR.',
+            'Flip the application shell while canonical English learning text stays LTR.',
           ),
           value: visual.rtlPreview,
           onChanged: visualController.setRtlPreview,
+        ),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          secondary: const Icon(Icons.motion_photos_off_outlined),
+          title: const Text('Reduced motion preview'),
+          subtitle: const Text(
+            'Disable non-essential route, card and marker transitions.',
+          ),
+          value: visual.reducedMotionPreview,
+          onChanged: visualController.setReducedMotionPreview,
         ),
         const SizedBox(height: 20),
         Card(
@@ -175,13 +185,19 @@ class SettingsScreen extends ConsumerWidget {
               children: [
                 Text('Current', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
-                Text('UI: ${preferences.uiLocale.label}'),
-                Text('Translation: ${preferences.translationLocale.label}'),
+                Text('UI: ${preferences.uiLocale.label} (${preferences.uiLocale.code})'),
+                Text(
+                  'Translation: ${preferences.translationLocale.label} (${preferences.translationLocale.code})',
+                ),
+                Text('Direction: ${preferences.uiLocale.isRtl ? 'RTL' : 'LTR'}'),
                 Text(
                   'Accent: ${preferences.preferredAccent?.label ?? 'Default'}',
                 ),
                 Text('Theme: ${preferences.theme.code}'),
                 Text('Text scale preview: ${visual.textScale.label}'),
+                Text(
+                  'Reduced motion preview: ${visual.reducedMotionPreview ? 'On' : 'Off'}',
+                ),
               ],
             ),
           ),

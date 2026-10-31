@@ -12,10 +12,10 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/sync_orchestration_fakes.dart';
 
 void main() {
-  test('uses persisted translation locale for root manifest request', () async {
+  test('uses persisted BCP-47 translation locale for root manifest request', () async {
     final preferencesRepository = _FakePreferencesRepository(
       ApplicationPreferences.defaults.copyWith(
-        translationLocale: AppTranslationLocale.kazakh,
+        translationLocale: AppTranslationLocale.brazilianPortuguese,
       ),
     );
     final journal = FakeJournal(Success(emptySnapshot()));
@@ -44,7 +44,7 @@ void main() {
     );
 
     expect(result, isA<Success<ContentSyncOutcome>>());
-    expect(gateway.translationLocales, <String>['kk']);
+    expect(gateway.translationLocales, <String>['pt-BR']);
   });
 
   test('preference read failure prevents remote sync', () async {
