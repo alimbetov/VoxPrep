@@ -10,8 +10,7 @@ import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/application/services/asset_download_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const _sha =
-    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const _sha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 void main() {
   test('required-offline failure stops sync before commit executor', () async {
