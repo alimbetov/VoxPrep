@@ -44,6 +44,18 @@ final class ContentManifestMapper {
           publishedAt: content.publishedAt,
         ),
       ),
+      localizations: dto.localizations.map(
+        (localization) => LocalizedContentRef(
+          identity: _identity(
+            localization.contentCode,
+            localization.contentType,
+          ),
+          contentRevision: localization.contentRevision,
+          locale: localization.locale,
+          localizationRevision: localization.localizationRevision,
+          checksum: localization.checksum,
+        ),
+      ),
       assets: dto.assets.map(
         (asset) => ManifestAssetDescriptor(
           assetId: asset.assetId,
