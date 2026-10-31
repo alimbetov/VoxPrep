@@ -71,6 +71,12 @@ UniversalVerticalCatalogueGraph _graph({
     sortOrder: 0,
     active: true,
   );
+  final contentRef = ContentRevisionRef(
+    contentCode: 'CONTENT_ALPHA',
+    contentType: ContentType.topic,
+    revision: 1,
+    checksum: _hash,
+  );
   final collection = LearningCollectionProjection(
     code: 'COLLECTION_ALPHA',
     verticalCode: collectionVerticalCode,
@@ -79,15 +85,9 @@ UniversalVerticalCatalogueGraph _graph({
     description: 'Collection description',
     sortOrder: 0,
     active: true,
-    contentRefs: <ContentRevisionRef>[
-      ContentRevisionRef(
-        contentCode: 'CONTENT_ALPHA',
-        contentType: ContentType.topic,
-        revision: 1,
-        checksum: _hash,
-      ),
+    members: <LearningCollectionMember>[
+      LearningCollectionMember.content(position: 0, content: contentRef),
     ],
-    practiceTestRefs: const <PracticeTestRevisionRef>[],
   );
 
   return UniversalVerticalCatalogueGraph(
