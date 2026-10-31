@@ -14,9 +14,6 @@ on:
       - 'contracts/**'
       - '.github/workflows/flutter-production-adapters.yml'
 
-permissions:
-  contents: write
-
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -44,32 +41,6 @@ jobs:
       - name: Lockfile reproducibility
         run: git diff --exit-code -- pubspec.lock
 
-      - name: Apply vertical acceptance lifecycle fixes
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          test_path = Path('test/acceptance/p2_10_7_production_e2e_test.dart')
-          test_text = test_path.read_text()
-          old_test = """      await _pumpUntil(\n        tester,\n        find.text('No learning content is available yet.'),\n      );\n"""
-          new_test = """      await _pumpUntil(tester, find.byType(NavigationBar));\n      expect(find.text('Dependency Injection'), findsNothing);\n"""
-          if old_test in test_text:
-              test_text = test_text.replace(old_test, new_test, 1)
-              test_path.write_text(test_text)
-          elif new_test not in test_text:
-              raise SystemExit('pre-sync UI assertion patch anchor not found')
-
-          executor_path = Path('lib/data/local/drift_sync_plan_executor.dart')
-          executor_text = executor_path.read_text()
-          marker = """          );\n    });\n  }\n\n  Future<void> _setRunState"""
-          lifecycle = """          );\n\n      for (final target in plan.changedPacks) {\n        await _setPackState(\n          runId,\n          target,\n          SyncPackUpdateState.committed,\n        );\n      }\n      await _setRunState(runId, SyncRunState.cleaning);\n    });\n  }\n\n  Future<void> _setRunState"""
-          if marker in executor_text:
-              executor_text = executor_text.replace(marker, lifecycle, 1)
-              executor_path.write_text(executor_text)
-          elif lifecycle not in executor_text:
-              raise SystemExit('atomic lifecycle patch anchor not found')
-          PY
-
       - name: Format handwritten Dart
         run: |
           mapfile -t dart_files < <(
@@ -78,17 +49,7 @@ jobs:
               ! -path 'test/generated_migrations/*' \
               -print
           )
-          dart format "${dart_files[@]}"
-
-      - name: Commit vertical acceptance lifecycle fixes
-        run: |
-          if [[ -n "$(git status --porcelain -- lib test)" ]]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add lib test
-            git commit -m "fix(p2): align atomic sync lifecycle with live UI acceptance"
-            git push origin HEAD:feat/p2-flutter-production-adapters
-          fi
+          dart format --output=none --set-exit-if-changed "${dart_files[@]}"
 
       - name: Drift codegen
         run: dart run build_runner build --delete-conflicting-outputs
