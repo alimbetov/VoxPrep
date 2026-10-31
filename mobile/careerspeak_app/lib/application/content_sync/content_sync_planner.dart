@@ -1,4 +1,5 @@
 import '../content_delivery/content_manifest.dart';
+import '../content_delivery/publication_snapshot_identity.dart';
 import '../result/result.dart';
 import 'sync_models.dart';
 
@@ -8,6 +9,7 @@ final class ContentSyncPlanner {
   Result<SyncPlan> plan({
     required SyncLocalSnapshot local,
     required RootContentManifest remote,
+    String? remoteEtag,
     Iterable<PackIdentity>? immutableRootPackIdentities,
   }) {
     final currentVersion = local.currentContentVersion;
@@ -26,16 +28,36 @@ final class ContentSyncPlanner {
       );
     }
 
-    if (currentVersion == remote.contentVersion &&
-        local.currentManifestChecksum != remote.checksum) {
-      return FailureResult(
-        ApplicationFailure(
-          code: 'CONTENT_VERSION_CHECKSUM_CONFLICT',
-          message:
-              'The same content version was observed with a different manifest checksum.',
-          details: <String, Object?>{'contentVersion': remote.contentVersion},
-        ),
+    if (currentVersion == remote.contentVersion && currentVersion != null) {
+      final localIdentity = PublicationSnapshotIdentity(
+        schemaVersion: supportedContentManifestSchemaVersion,
+        contentVersion: currentVersion,
+        checksum: local.currentManifestChecksum!,
+        etag: local.etag,
       );
+      final remoteIdentity = PublicationSnapshotIdentity.fromRootManifest(
+        remote,
+        etag: remoteEtag,
+      );
+
+      try {
+        localIdentity.requireCompatibleWith(remoteIdentity);
+      } on PublicationSnapshotIdentityConflict {
+        return FailureResult(
+          ApplicationFailure(
+            code: 'PUBLICATION_SNAPSHOT_IDENTITY_CONFLICT',
+            message:
+                'The same content version was observed with a different immutable publication identity.',
+            details: <String, Object?>{
+              'contentVersion': remote.contentVersion,
+              'localChecksum': local.currentManifestChecksum,
+              'remoteChecksum': remote.checksum,
+              'localEtag': local.etag,
+              'remoteEtag': remoteEtag,
+            },
+          ),
+        );
+      }
     }
 
     final currentByIdentity = <PackIdentity, PackRevisionRef>{
