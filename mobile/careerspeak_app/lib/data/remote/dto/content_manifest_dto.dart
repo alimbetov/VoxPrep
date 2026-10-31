@@ -64,6 +64,24 @@ final class PackContentRefDto {
   final DateTime? publishedAt;
 }
 
+final class LocalizedContentRefDto {
+  const LocalizedContentRefDto({
+    required this.contentCode,
+    required this.contentType,
+    required this.contentRevision,
+    required this.locale,
+    required this.localizationRevision,
+    required this.checksum,
+  });
+
+  final String contentCode;
+  final String contentType;
+  final int contentRevision;
+  final String locale;
+  final int localizationRevision;
+  final String checksum;
+}
+
 final class ManifestAssetDescriptorDto {
   const ManifestAssetDescriptorDto({
     required this.assetId,
@@ -106,6 +124,7 @@ final class PackContentManifestDto {
     required this.revision,
     required this.checksum,
     required this.contents,
+    required this.localizations,
     required this.assets,
     required this.contentAssets,
   });
@@ -116,6 +135,7 @@ final class PackContentManifestDto {
   final int revision;
   final String checksum;
   final List<PackContentRefDto> contents;
+  final List<LocalizedContentRefDto> localizations;
   final List<ManifestAssetDescriptorDto> assets;
   final List<ContentAssetRefDto> contentAssets;
 }
