@@ -39,6 +39,65 @@ void main() {
     );
   });
 
+  test('binds a frozen collection projection to the same exact ordered refs', () {
+    final content = _contentRef('JAVA_Q_001', 1, _shaC);
+    final practiceTest = PracticeTestRevisionRef(
+      practiceTestCode: 'JAVA_TEST_001',
+      revision: 2,
+      checksum: _shaT,
+    );
+    final projection = LearningCollectionProjection(
+      code: 'JAVA_INTERVIEW_CORE',
+      trackCode: 'JAVA_SENIOR',
+      title: 'Java interview core',
+      description: 'Exact publication-owned learning sequence.',
+      sortOrder: 0,
+      active: true,
+      contentRefs: <ContentRevisionRef>[content],
+      practiceTestRefs: <PracticeTestRevisionRef>[practiceTest],
+    );
+
+    final membership = projection.bindToPublication(
+      publication: _publication(),
+      orderedMembers: <LearningCollectionMemberRef>[
+        LearningCollectionContentMemberRef(content),
+        LearningCollectionPracticeTestMemberRef(practiceTest),
+      ],
+    );
+
+    expect(membership.collectionCode, projection.code);
+    expect(membership.members, hasLength(2));
+  });
+
+  test('projection binding rejects an omitted frozen exact ref', () {
+    final content = _contentRef('JAVA_Q_001', 1, _shaC);
+    final practiceTest = PracticeTestRevisionRef(
+      practiceTestCode: 'JAVA_TEST_001',
+      revision: 2,
+      checksum: _shaT,
+    );
+    final projection = LearningCollectionProjection(
+      code: 'JAVA_INTERVIEW_CORE',
+      trackCode: 'JAVA_SENIOR',
+      title: 'Java interview core',
+      description: 'Exact publication-owned learning sequence.',
+      sortOrder: 0,
+      active: true,
+      contentRefs: <ContentRevisionRef>[content],
+      practiceTestRefs: <PracticeTestRevisionRef>[practiceTest],
+    );
+
+    expect(
+      () => projection.bindToPublication(
+        publication: _publication(),
+        orderedMembers: <LearningCollectionMemberRef>[
+          LearningCollectionContentMemberRef(content),
+        ],
+      ),
+      throwsArgumentError,
+    );
+  });
+
   test('rejects content revision outside publication snapshot', () {
     expect(
       () => LearningCollectionMembership(
