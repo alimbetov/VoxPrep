@@ -251,22 +251,25 @@ void main() {
       );
     });
 
-    test('rejects catalogue icon whose exact asset is not image media', () async {
-      final database = createTestDatabase();
-      addTearDown(database.close);
-      await database.customSelect('SELECT 1').getSingle();
-      await _seedIconAsset(database, mediaType: 'audio/mpeg');
+    test(
+      'rejects catalogue icon whose exact asset is not image media',
+      () async {
+        final database = createTestDatabase();
+        addTearDown(database.close);
+        await database.customSelect('SELECT 1').getSingle();
+        await _seedIconAsset(database, mediaType: 'audio/mpeg');
 
-      final result = await DriftUniversalCatalogueGraphMaterializer(
-        database,
-      ).materialize(root: _root(106), payloads: _payloads());
+        final result = await DriftUniversalCatalogueGraphMaterializer(
+          database,
+        ).materialize(root: _root(106), payloads: _payloads());
 
-      expect(result, isA<FailureResult<void>>());
-      expect(
-        (result as FailureResult<void>).failure.code,
-        'UNIVERSAL_CATALOGUE_GRAPH_INVALID',
-      );
-    });
+        expect(result, isA<FailureResult<void>>());
+        expect(
+          (result as FailureResult<void>).failure.code,
+          'UNIVERSAL_CATALOGUE_GRAPH_INVALID',
+        );
+      },
+    );
   });
 }
 
