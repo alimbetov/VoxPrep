@@ -1,5 +1,6 @@
 import '../content_delivery/content_manifest.dart';
 import '../ports/content_manifest_gateway.dart';
+import '../ports/publication_snapshot_stager.dart';
 import '../ports/sync_journal.dart';
 import '../ports/sync_plan_executor.dart';
 import '../result/result.dart';
@@ -30,12 +31,14 @@ final class ContentSyncCoordinator {
     required ContentManifestGateway manifestGateway,
     required ContentSyncPlanner planner,
     required SyncPlanExecutor executor,
+    PublicationSnapshotStager? snapshotStager,
   }) {
     return ContentSyncCoordinator._(
       journal,
       manifestGateway,
       planner,
       executor,
+      snapshotStager,
     );
   }
 
@@ -44,12 +47,14 @@ final class ContentSyncCoordinator {
     this._manifestGateway,
     this._planner,
     this._executor,
+    this._snapshotStager,
   );
 
   final SyncJournal _journal;
   final ContentManifestGateway _manifestGateway;
   final ContentSyncPlanner _planner;
   final SyncPlanExecutor _executor;
+  final PublicationSnapshotStager? _snapshotStager;
 
   Future<Result<ContentSyncOutcome>> synchronize({
     required String runId,
@@ -155,6 +160,24 @@ final class ContentSyncCoordinator {
       SyncRunState.staging,
     );
     if (stagingTransition != null) return FailureResult(stagingTransition);
+
+    if (targetRoot.practiceTests.isNotEmpty || targetRoot.catalogues.isNotEmpty) {
+      final snapshotStager = _snapshotStager;
+      if (snapshotStager == null) {
+        return _finishFailure(
+          activeRunId,
+          const ApplicationFailure(
+            code: 'PUBLICATION_SNAPSHOT_STAGER_MISSING',
+            message:
+                'The publication declares tests or catalogues but no production snapshot stager is configured.',
+          ),
+        );
+      }
+      final staged = await snapshotStager.stage(targetRoot);
+      if (staged is FailureResult<void>) {
+        return _finishFailure(activeRunId, staged.failure);
+      }
+    }
 
     final executionResult = await _executor.execute(
       runId: activeRunId,
