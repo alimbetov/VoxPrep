@@ -92,7 +92,9 @@ jobs:
           flutter test test/data/local/drift_assessment_revision_repository_test.dart
           flutter test test/data/local/database/careerspeak_database_test.dart
           flutter test test/data/local/database/careerspeak_database_migration_test.dart
+          flutter test test/app/assessment_providers_test.dart
           flutter test test/acceptance/c3_assessment_offline_restart_acceptance_test.dart
+          flutter test test/acceptance/c3_assessment_revision_history_acceptance_test.dart
           flutter test test/acceptance/c3_assessment_adversarial_acceptance_test.dart
           flutter test test/acceptance/p2_8_asset_resolution_test.dart
       - name: Full regression
@@ -107,5 +109,6 @@ jobs:
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mobile/careerspeak_app
           git commit -m 'chore(c3): generate qualified Drift v8 baseline'
           git push origin HEAD:feat/backend-contract-gap-audit
