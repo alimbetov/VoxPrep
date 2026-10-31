@@ -13,7 +13,9 @@ import '../../support/ui_boundary_harness.dart';
 
 void main() {
   for (final boundary in adaptiveUiBoundaryCases) {
-    testWidgets('Practice test survives long text for $boundary', (tester) async {
+    testWidgets('Practice test survives long text for $boundary', (
+      tester,
+    ) async {
       await pumpAdaptiveSurface(
         tester,
         boundary: boundary,

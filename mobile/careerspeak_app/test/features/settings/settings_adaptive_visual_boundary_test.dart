@@ -35,7 +35,8 @@ void main() {
 
           expectNoLayoutExceptions(
             tester,
-            reason: 'Settings initial viewport must not overflow for $boundary $direction',
+            reason:
+                'Settings initial viewport must not overflow for $boundary $direction',
           );
 
           expect(find.text('Settings'), findsOneWidget);
@@ -52,7 +53,8 @@ void main() {
 
           expectNoLayoutExceptions(
             tester,
-            reason: 'Settings full scroll must not overflow for $boundary $direction',
+            reason:
+                'Settings full scroll must not overflow for $boundary $direction',
           );
           expect(find.text('RTL layout preview'), findsOneWidget);
           expect(find.text('Reduced motion preview'), findsOneWidget);
