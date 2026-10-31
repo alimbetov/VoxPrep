@@ -6,7 +6,10 @@ import 'package:careerspeak_app/application/content_delivery/content_manifest.da
 import 'package:careerspeak_app/application/ports/asset_catalog_repository.dart';
 import 'package:careerspeak_app/application/ports/learner_state_repository.dart';
 import 'package:careerspeak_app/application/result/result.dart';
-import 'package:careerspeak_app/application/services/role_audio_clip_controller.dart';
+import 'package:careerspeak_app/application/services/audio_playback_controller.dart'
+    as content_audio;
+import 'package:careerspeak_app/application/services/role_audio_clip_controller.dart'
+    as role_audio;
 import 'package:careerspeak_app/domain/content_identity.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
 import 'package:careerspeak_app/domain/content_marker_state.dart';
@@ -31,7 +34,10 @@ void main() {
 
     expect(find.text('Question'), findsOneWidget);
     expect(find.text('Sample answer'), findsNothing);
-    expect(find.text('No interview audio is published for this revision.'), findsNothing);
+    expect(
+      find.text('No interview audio is published for this revision.'),
+      findsNothing,
+    );
   });
 
   testWidgets('INTERVIEW shows only SAMPLE_ANSWER when question is absent', (
@@ -76,7 +82,10 @@ void main() {
       assetCatalog: const _FailingRoleCatalog(),
     );
 
-    expect(find.textContaining('Interview audio metadata unavailable:'), findsOneWidget);
+    expect(
+      find.textContaining('Interview audio metadata unavailable:'),
+      findsOneWidget,
+    );
     expect(find.text('Question'), findsNothing);
     expect(find.text('Sample answer'), findsNothing);
   });
@@ -87,8 +96,8 @@ void main() {
       item: _interview,
       repository: _FakeLearnerStateRepository(),
       assetCatalog: const _RoleCatalog(<String>{'question'}),
-      roleState: const RoleAudioClipState(
-        phase: AudioPlaybackPhase.failed,
+      roleState: const role_audio.RoleAudioClipState(
+        phase: role_audio.AudioPlaybackPhase.failed,
         role: ContentAudioRole.question,
         failure: ApplicationFailure(
           code: 'SYNTHETIC_PLAYBACK_FAILURE',
@@ -98,6 +107,98 @@ void main() {
     );
 
     expect(find.text('synthetic playback failure'), findsOneWidget);
+  });
+
+  testWidgets('generic audio failure is shown only for current exact revision', (
+    tester,
+  ) async {
+    final identity = ContentIdentity.fromItem(_topicWithAudio);
+    await _pump(
+      tester,
+      item: _topicWithAudio,
+      repository: _FakeLearnerStateRepository(),
+      assetCatalog: const _RoleCatalog(<String>{}),
+      playbackState: content_audio.ContentPlaybackState(
+        phase: content_audio.AudioPlaybackPhase.failed,
+        content: identity,
+        revision: _topicWithAudio.revision,
+        failure: const ApplicationFailure(
+          code: 'SYNTHETIC_GENERIC_AUDIO_FAILURE',
+          message: 'generic playback failed',
+        ),
+      ),
+    );
+
+    expect(find.text('generic playback failed'), findsOneWidget);
+    expect(find.text('Play'), findsOneWidget);
+  });
+
+  testWidgets('stale playback failure from another item never leaks into UI', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      item: _topicWithAudio,
+      repository: _FakeLearnerStateRepository(),
+      assetCatalog: const _RoleCatalog(<String>{}),
+      playbackState: const content_audio.ContentPlaybackState(
+        phase: content_audio.AudioPlaybackPhase.failed,
+        content: ContentIdentity(
+          code: 'OTHER_TOPIC',
+          type: ContentType.topic,
+        ),
+        revision: 99,
+        failure: ApplicationFailure(
+          code: 'STALE_FAILURE',
+          message: 'must not leak',
+        ),
+      ),
+    );
+
+    expect(find.text('must not leak'), findsNothing);
+    expect(find.text('Play'), findsOneWidget);
+  });
+
+  testWidgets('completed generic audio exposes Replay for current revision', (
+    tester,
+  ) async {
+    final identity = ContentIdentity.fromItem(_topicWithAudio);
+    await _pump(
+      tester,
+      item: _topicWithAudio,
+      repository: _FakeLearnerStateRepository(),
+      assetCatalog: const _RoleCatalog(<String>{}),
+      playbackState: content_audio.ContentPlaybackState(
+        phase: content_audio.AudioPlaybackPhase.completed,
+        content: identity,
+        revision: _topicWithAudio.revision,
+        positionMs: 60000,
+        durationMs: 60000,
+      ),
+    );
+
+    expect(find.text('Replay'), findsOneWidget);
+  });
+
+  testWidgets('idle generic audio disables seek and stop controls', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      item: _topicWithAudio,
+      repository: _FakeLearnerStateRepository(),
+      assetCatalog: const _RoleCatalog(<String>{}),
+    );
+
+    expect(tester.widget<IconButton>(find.byTooltip('Back 10 seconds')).onPressed, isNull);
+    expect(
+      tester.widget<IconButton>(find.byTooltip('Forward 10 seconds')).onPressed,
+      isNull,
+    );
+    expect(
+      tester.widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Stop')).onPressed,
+      isNull,
+    );
   });
 
   testWidgets('stale saved position is not resumed for a newer revision', (
@@ -140,7 +241,10 @@ void main() {
     await tester.tap(find.byTooltip('Add favorite'));
     await tester.pump();
 
-    expect(find.textContaining('Unable to update learner state:'), findsOneWidget);
+    expect(
+      find.textContaining('Unable to update learner state:'),
+      findsOneWidget,
+    );
     expect(find.byTooltip('Add favorite'), findsOneWidget);
   });
 
@@ -158,7 +262,10 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Mark completed'));
     await tester.pump();
 
-    expect(find.textContaining('Unable to update learner state:'), findsOneWidget);
+    expect(
+      find.textContaining('Unable to update learner state:'),
+      findsOneWidget,
+    );
     expect(find.text('Mark completed'), findsOneWidget);
   });
 
@@ -173,7 +280,7 @@ void main() {
     );
 
     expect(find.text('Interview audio'), findsNothing);
-    expect(find.byIcon(Icons.play_arrow), findsNothing);
+    expect(find.text('Audio'), findsNothing);
   });
 }
 
@@ -182,7 +289,10 @@ Future<void> _pump(
   required ContentItem item,
   required LearnerStateRepository repository,
   required AssetCatalogRepository assetCatalog,
-  RoleAudioClipState roleState = const RoleAudioClipState(),
+  role_audio.RoleAudioClipState roleState =
+      const role_audio.RoleAudioClipState(),
+  content_audio.ContentPlaybackState playbackState =
+      const content_audio.ContentPlaybackState(),
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -190,7 +300,12 @@ Future<void> _pump(
         learnerStateRepositoryProvider.overrideWithValue(repository),
         assetCatalogRepositoryProvider.overrideWithValue(assetCatalog),
         interviewAudioClipStateProvider.overrideWith(
-          (ref) => Stream<RoleAudioClipState>.value(roleState),
+          (ref) => Stream<role_audio.RoleAudioClipState>.value(roleState),
+        ),
+        audioPlaybackStateProvider.overrideWith(
+          (ref) => Stream<content_audio.ContentPlaybackState>.value(
+            playbackState,
+          ),
         ),
       ],
       child: MaterialApp(
@@ -211,6 +326,19 @@ const _interview = ContentItem(
   level: 'B2',
   minutes: 4,
   revision: 3,
+  hasAudio: true,
+);
+
+const _topicWithAudio = ContentItem(
+  code: 'TOPIC_AUDIO',
+  type: ContentType.topic,
+  title: 'Topic with audio',
+  subtitle: 'Topic subtitle',
+  description: 'Topic description',
+  category: 'JAVA',
+  level: 'B2',
+  minutes: 4,
+  revision: 2,
   hasAudio: true,
 );
 
