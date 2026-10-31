@@ -16,16 +16,16 @@ void main() {
   });
 
   test(
-    'schema version 8 creates the production assessment foundation',
+    'schema version 9 creates the production assessment foundation',
     () async {
       await database.customSelect('SELECT 1').getSingle();
 
-      expect(database.schemaVersion, 8);
+      expect(database.schemaVersion, 9);
 
       final userVersion = await database
           .customSelect('PRAGMA user_version')
           .getSingle();
-      expect(userVersion.read<int>('user_version'), 8);
+      expect(userVersion.read<int>('user_version'), 9);
 
       final foreignKeys = await database
           .customSelect('PRAGMA foreign_keys')
