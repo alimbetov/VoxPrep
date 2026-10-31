@@ -146,17 +146,6 @@ replace_once(
       await _captureScreenshot(tester, screenshotKey, '02-home-after-sync.png');
 ''',
 )
-replace_once(
-    e2e,
-    '''      await tester.tap(learnDestination);
-      await _pumpUntil(tester, find.byType(SearchBar));
-      expect(find.text('Dependency Injection'), findsOneWidget);
-''',
-    '''      await _pumpUntil(tester, find.byType(SearchBar));
-      await _pumpUntil(tester, find.text('Dependency Injection'));
-      expect(find.text('Dependency Injection'), findsOneWidget);
-''',
-)
 
 # Adaptive navigation has its own P1.7 acceptance. This production renderer E2E
 # validates the stable router contract instead of coupling to NavigationBar vs
@@ -177,6 +166,16 @@ replace_once(
 ''',
     '''      container.read(routerProvider).go('/learn');
       await tester.pump();
+''',
+)
+replace_once(
+    e2e,
+    '''      await _pumpUntil(tester, find.byType(SearchBar));
+      expect(find.text('Dependency Injection'), findsOneWidget);
+''',
+    '''      await _pumpUntil(tester, find.byType(SearchBar));
+      await _pumpUntil(tester, find.text('Dependency Injection'));
+      expect(find.text('Dependency Injection'), findsOneWidget);
 ''',
 )
 
