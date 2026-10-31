@@ -15,6 +15,7 @@ permissions:
 
 jobs:
   format:
+    # Keep this branch-level formatter deterministic for hardening slices.
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
