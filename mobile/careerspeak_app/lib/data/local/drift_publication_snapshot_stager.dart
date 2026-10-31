@@ -9,6 +9,7 @@ import '../../application/ports/catalogue_payload_gateway.dart';
 import '../../application/ports/publication_snapshot_stager.dart';
 import '../../application/result/result.dart';
 import 'database/careerspeak_database.dart';
+import 'publication_snapshot_storage.dart';
 
 final class DriftPublicationSnapshotStager implements PublicationSnapshotStager {
   const DriftPublicationSnapshotStager(
@@ -23,6 +24,19 @@ final class DriftPublicationSnapshotStager implements PublicationSnapshotStager 
 
   @override
   Future<Result<void>> stage(RootContentManifest target) async {
+    try {
+      await PublicationSnapshotStorage(_database).ensureReady();
+    } catch (error) {
+      return FailureResult<void>(
+        ApplicationFailure(
+          code: 'PUBLICATION_SNAPSHOT_STORAGE_FAILED',
+          message: 'Publication snapshot storage could not be initialized.',
+          retryable: true,
+          details: <String, Object?>{'errorType': error.runtimeType.toString()},
+        ),
+      );
+    }
+
     for (final ref in target.practiceTests) {
       final loaded = await _assessmentLoader.load(
         practiceTestCode: ref.practiceTestCode,
