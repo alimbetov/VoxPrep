@@ -115,14 +115,12 @@ remove_once(
 
 ''',
 )
-replace_once(
+remove_once(
     e2e,
-    '''final class _LearnerApiFixture {
-  _LearnerApiFixture({this.rootManifestGate});
+    '''  _LearnerApiFixture({this.rootManifestGate});
 
   final Completer<void>? rootManifestGate;
-''',
-    '''final class _LearnerApiFixture {
+
 ''',
 )
 remove_once(
