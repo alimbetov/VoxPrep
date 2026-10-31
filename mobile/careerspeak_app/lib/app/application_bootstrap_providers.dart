@@ -7,6 +7,7 @@ import '../application/services/application_bootstrap_service.dart';
 import '../application/services/installation_bootstrap_service.dart';
 import '../data/remote/http_installation_registration_gateway.dart';
 import 'api_client_providers.dart';
+import 'asset_cache_retention_providers.dart';
 import 'content_sync_providers.dart';
 import 'installation_identity_providers.dart';
 
@@ -37,8 +38,19 @@ final applicationBootstrapServiceProvider =
     });
 
 final applicationBootstrapProvider =
-    FutureProvider<Result<ApplicationBootstrapOutcome>>((ref) {
-      return ref.watch(applicationBootstrapServiceProvider).bootstrap();
+    FutureProvider<Result<ApplicationBootstrapOutcome>>((ref) async {
+      final result = await ref
+          .watch(applicationBootstrapServiceProvider)
+          .bootstrap();
+
+      if (result is Success<ApplicationBootstrapOutcome>) {
+        final manager = await ref.watch(assetCacheRetentionManagerProvider.future);
+        // Cache maintenance is deliberately best-effort. Failure must never
+        // prevent startup or invalidate the last committed publication.
+        await manager.cleanupExpiredAudio();
+      }
+
+      return result;
     });
 
 final class ProductionBootstrapHost extends ConsumerWidget {
