@@ -154,10 +154,7 @@ CurrentUniversalCatalogueSnapshot goldenCatalogueSnapshot() {
           sortOrder: 10,
           active: true,
           members: [
-            LearningCollectionMember.content(
-              position: 0,
-              content: contentRef,
-            ),
+            LearningCollectionMember.content(position: 0, content: contentRef),
           ],
         ),
       ],
