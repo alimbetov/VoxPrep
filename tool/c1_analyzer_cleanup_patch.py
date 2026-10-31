@@ -88,3 +88,48 @@ for path in (
         path,
         "import 'package:careerspeak_app/application/result/result.dart';\n",
     )
+
+# The renderer acceptance no longer suspends a manifest HTTP request while a
+# screenshot is captured. Remove the obsolete Completer plumbing and polling
+# helper so analyzer sees the final E2E lifecycle rather than the previous gate.
+e2e = 'mobile/careerspeak_app/test/acceptance/p2_10_7_production_e2e_test.dart'
+remove_once(e2e, "import 'dart:async';\n")
+remove_once(
+    e2e,
+    '''Future<void> _pumpUntilCondition(
+  WidgetTester tester,
+  bool Function() condition,
+  String description, {
+  int attempts = 80,
+}) async {
+  for (var attempt = 0; attempt < attempts; attempt += 1) {
+    await tester.pump(const Duration(milliseconds: 50));
+    if (condition()) return;
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 5)),
+    );
+  }
+
+  expect(condition(), isTrue, reason: 'Timed out waiting for $description.');
+}
+
+''',
+)
+replace_once(
+    e2e,
+    '''final class _LearnerApiFixture {
+  _LearnerApiFixture({this.rootManifestGate});
+
+  final Completer<void>? rootManifestGate;
+''',
+    '''final class _LearnerApiFixture {
+''',
+)
+remove_once(
+    e2e,
+    '''      final gate = rootManifestGate;
+      if (gate != null) {
+        await gate.future;
+      }
+''',
+)
