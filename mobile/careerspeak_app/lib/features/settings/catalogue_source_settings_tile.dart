@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/application_bootstrap_providers.dart';
 import '../../app/catalogue_payload_providers.dart';
 import '../../app/catalogue_source_providers.dart';
+import '../../application/result/result.dart';
 import '../../domain/catalogue_source_mode.dart';
 
 class CatalogueSourceSettingsTile extends ConsumerStatefulWidget {
@@ -29,14 +30,25 @@ class _CatalogueSourceSettingsTileState
     final mode = enabled
         ? CatalogueSourceMode.demo
         : CatalogueSourceMode.production;
-    final result = await ref
+    final saved = await ref
         .read(catalogueSourceModeControllerProvider)
         .setMode(mode);
-    if (result is! dynamic || !mounted) return;
+
+    if (!mounted) return;
+    if (saved case FailureResult<void>(:final failure)) {
+      setState(() {
+        _error = failure.message;
+        _changing = false;
+      });
+      return;
+    }
 
     try {
       ref.invalidate(applicationBootstrapProvider);
-      await ref.read(applicationBootstrapProvider.future);
+      final bootstrap = await ref.read(applicationBootstrapProvider.future);
+      if (bootstrap case FailureResult(:final failure)) {
+        setState(() => _error = failure.message);
+      }
       ref.invalidate(currentUniversalCatalogueProvider);
     } on Object catch (error) {
       if (mounted) {
