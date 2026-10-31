@@ -101,6 +101,7 @@ helper = '''Future<void> _seedFallbackRule(
           schemaVersion: 1,
           currentContentVersion: 1,
           currentManifestChecksum: _rootChecksum,
+          localePolicyContentVersion: const Value(1),
           updatedAt: now,
         ),
       );
@@ -139,13 +140,23 @@ if checksum_replacement not in text:
     text = text.replace(checksum_anchor, checksum_replacement, 1)
 repo_test.write_text(text)
 
-# File-backed restart acceptance persists Backend policy before reopen.
+# File-backed restart acceptance persists a committed Backend policy before reopen.
 restart = Path(
     'mobile/careerspeak_app/test/acceptance/c1_localization_recovery_acceptance_test.dart'
 )
 text = restart.read_text().replace(
     'LocaleFallbackKind.language',
     'LocaleFallbackKind.configured',
+)
+text = text.replace(
+    '''          currentManifestChecksum: _rootChecksum,
+          remoteContentVersionSeen: const Value(42),
+''',
+    '''          currentManifestChecksum: _rootChecksum,
+          localePolicyContentVersion: const Value(42),
+          remoteContentVersionSeen: const Value(42),
+''',
+    1,
 )
 manifest_seed = '''      );
 
