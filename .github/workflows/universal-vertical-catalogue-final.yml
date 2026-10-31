@@ -71,6 +71,12 @@ jobs:
       - name: Dependencies
         run: flutter pub get
 
+      - name: UI adversarial qualification
+        run: |
+          flutter test test/features/catalogue/catalogue_screen_test.dart
+          flutter test test/features/catalogue/catalogue_parent_activity_test.dart
+          flutter test test/application/content_delivery/universal_catalogue_presentation_order_test.dart
+
       - name: V10 full demo graph
         run: flutter test test/data/mock/demo_full_learning_graph_test.dart
 
