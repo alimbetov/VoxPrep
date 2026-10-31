@@ -56,8 +56,8 @@ RISK ACCEPTANCE
 | BGA-002 | P0 | Localization | Locale pack has no learner payload transport for translations/hints/explanations |
 | BGA-003 | P0 | Content domain | Current canonical `ContentPayload` is too shallow for real Vocabulary/Interview/Topic/Phrase/Shadowing pedagogy |
 | BGA-004 | P0 | Assessment | Practice tests/questions are not production-backed |
-| BGA-005 | P0 | Publication | Backend atomic publication snapshot / monotonic `contentVersion` issuance is specified conceptually but not frozen as an implementation contract |
-| BGA-006 | P0 | Installation security | Token expiry/revocation/re-registration/401 recovery semantics are not frozen |
+| BGA-005 | P0 | Publication | RESOLVED by frozen C4: atomic immutable `PublicationSnapshot`, monotonic `contentVersion`, security-independent identity, stable asset delivery identity, and fail-closed local projection |
+| BGA-006 | P0 | Installation security | RESOLVED by frozen C5: stable `installationId`, fresh token on every cold bootstrap, centralized Bearer use, bounded single-flight 401 re-issuance, second 401 fail-closed |
 | BGA-007 | P1 | Taxonomy | Category/Level/Skill are not first-class revisioned backend catalogs |
 | BGA-008 | P1 | Capability catalogs | Supported locales and learner-facing TTS voice/accent availability are not backend-owned revisioned catalogs |
 | BGA-009 | P1 | Learner delivery | Specification describes cursor collection APIs while implemented mobile architecture uses manifest sync + local Drift queries; source-of-truth path is ambiguous |
@@ -316,13 +316,15 @@ Completed attempts must remain reproducible against exact immutable test/questio
 
 ---
 
-## BGA-005 — Backend atomic publication snapshot needs a concrete contract
+## BGA-005 — Backend atomic publication snapshot contract is frozen
 
-**Severity:** P0 BLOCKER
+**Severity:** P0 BLOCKER — RESOLVED BY C4
 
-Flutter already assumes the root is an immutable, internally consistent publication barrier. Backend must therefore publish it as a transactional domain artifact, not dynamically assemble an unstable view from mutable tables.
+**Normative contract:** `docs/backend/C4_ATOMIC_PUBLICATION_CONTRACT.md`.
 
-### Required invariant
+Flutter assumes the learner root is an immutable, internally consistent publication barrier. C4 now freezes this as a first-class backend transaction boundary rather than a dynamically assembled view over mutable rows.
+
+### Frozen publication invariant
 
 A new learner root becomes visible only after all referenced objects are valid:
 
@@ -335,21 +337,59 @@ checksums calculated
 cross-references validated
 ```
 
-Then backend performs one atomic publication decision:
+Backend then performs one atomic publication decision:
 
 ```text
 allocate monotonic contentVersion
-persist immutable root snapshot
+persist immutable PublicationSnapshot
 persist exact pack refs/checksum
 switch current learner-root pointer
 COMMIT
 ```
 
-`contentVersion` must never be reused for different root content.
+`contentVersion` is never reused for different root content and a failed publication attempt never exposes a partial root.
 
-A failed publication attempt must not expose a partial new root.
+### Security-independent publication identity
 
-### Recommended backend aggregate
+C4 explicitly separates publication truth from C5 installation security:
+
+```text
+PublicationSnapshot identity
+!= installationId
+!= installation token/session
+```
+
+The following MUST NOT affect `contentVersion`, root/pack/payload checksum, revision identity or ETag semantics:
+
+```text
+installationId
+Authorization token
+token issuance/expiry/rotation
+request session
+signed URL expiration
+```
+
+Credential rotation therefore cannot manufacture a different publication identity.
+
+### Stable media identity
+
+Immutable manifests carry stable media identity such as:
+
+```text
+assetId
+checksumSha256
+deliveryKey
+```
+
+They do not embed expiring signed URLs into publication identity. Authorization or short-lived delivery grants belong to C5/edge delivery and may change without changing the publication snapshot.
+
+### Mid-sync credential recovery
+
+If a client synchronizing publication `v42` receives a legitimate `401`, C5 may re-issue the installation credential and retry the **same exact immutable resource once**. A successful retry must still resolve the same exact revision/checksum selected by C4.
+
+A token change does not start a new publication transaction and does not permit mixing `v42` and `v43` inside one local projection. Checksum/revision mismatch or repeated authentication failure fails closed; the previous committed local publication remains authoritative.
+
+### Backend aggregate
 
 ```text
 PublicationSnapshot
@@ -361,39 +401,76 @@ PublicationSnapshot
 └── tombstones[]
 ```
 
-The implementation can use tables different from this projection, but the invariant must be first-class.
+The implementation may use different persistence tables, but these invariants are normative.
 
 ---
 
-## BGA-006 — Installation token lifecycle and 401 recovery are not frozen
+## BGA-006 — Installation token lifecycle and 401 recovery contract is frozen
 
-**Severity:** P0 BLOCKER
+**Severity:** P0 BLOCKER — RESOLVED BY C5
 
-Registration is described as idempotent, but the following are still ambiguous:
+**Normative contract:** `docs/backend/C5_INSTALLATION_EXTERNAL_SECURITY_CONTRACT.md`.
+
+The learner security model no longer treats the installation token as a permanent or long-lived application secret.
+
+### Frozen identity model
 
 ```text
-does re-registration return the same token or rotate it?
-can a token expire?
-can backend revoke it?
-what happens after database restore/token loss?
-what does Flutter do after a legitimate 401?
+installationId = stable installation identity
+token          = temporary backend-issued credential
 ```
 
-Flutter bootstrap currently re-registers only when a token is missing. A rejected stored token remains a stored token unless an explicit recovery policy is added.
+`installationId` survives normal application restarts and is the identity used to request a session credential. The token is replaceable runtime security state.
 
-### Recommended MVP contract
+### Cold-bootstrap issuance
 
-Keep it simple:
+Every cold application bootstrap performs:
 
-- installation token is opaque and long-lived;
-- backend stores only a verifier/hash where practical;
-- `POST /installations` is safe to retry;
-- re-registration for the same installation identity issues/re-establishes one valid current token deterministically;
-- a backend `401` with an installation-credential rejection code causes Flutter to clear only the token, preserve installationId, re-register once, then retry the original safe startup flow;
-- repeated auth failure fails closed rather than loops;
-- registration endpoint is rate-limited.
+```text
+preserve/get installationId
+→ POST /api/v1/installations
+→ backend issues a fresh token
+→ TokenStore atomically replaces the previous token
+→ centralized HTTP client uses the current Bearer token
+```
 
-If token expiry is not needed in MVP, say so explicitly rather than leaving it undefined.
+A stored token MUST NOT be used as a reason to skip cold-start issuance. Business repositories/features do not own or manually propagate `Authorization`.
+
+### 401 recovery
+
+For an installation-credential rejection:
+
+```text
+request with current token
+→ 401
+→ single-flight token re-issuance for the same installationId
+→ atomically replace TokenStore token
+→ retry the original safe/idempotent request once
+```
+
+A second `401` fails closed. There is no infinite recovery loop.
+
+Concurrent requests that observe the same rejected token must share one re-issuance operation rather than independently rotating credentials.
+
+### Revocation and failure semantics
+
+Backend may reject a disabled/revoked installation. In that case credential issuance/re-issuance fails closed; the client does not create a new installation identity to bypass revocation.
+
+`POST /api/v1/installations` remains safe to retry at the transport boundary under its explicit idempotency contract and is rate-limited against abuse.
+
+### Explicit non-goals
+
+C5 intentionally does not introduce:
+
+```text
+learner login/password
+refresh token
+OAuth/OIDC identity platform
+static token embedded in Flutter
+business-layer Authorization handling
+```
+
+Token TTL/expiry is an implementation policy of the temporary credential and MUST NOT alter the frozen bootstrap/re-issuance lifecycle above.
 
 ---
 
