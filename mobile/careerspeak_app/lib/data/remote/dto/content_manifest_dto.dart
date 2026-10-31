@@ -12,6 +12,16 @@ final class PackRevisionDto {
   final String checksum;
 }
 
+final class LocaleFallbackRuleDto {
+  const LocaleFallbackRuleDto({
+    required this.locale,
+    required this.fallbackLocales,
+  });
+
+  final String locale;
+  final List<String> fallbackLocales;
+}
+
 final class ContentTombstoneDto {
   const ContentTombstoneDto({
     required this.contentCode,
@@ -34,6 +44,7 @@ final class RootContentManifestDto {
     required this.publishedAt,
     required this.checksum,
     required this.packs,
+    required this.localeFallbacks,
     required this.tombstones,
   });
 
@@ -43,6 +54,7 @@ final class RootContentManifestDto {
   final DateTime publishedAt;
   final String checksum;
   final List<PackRevisionDto> packs;
+  final List<LocaleFallbackRuleDto> localeFallbacks;
   final List<ContentTombstoneDto> tombstones;
 }
 
