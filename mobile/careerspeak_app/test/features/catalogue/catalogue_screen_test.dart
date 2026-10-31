@@ -21,19 +21,7 @@ void main() {
       'production catalogue home renders backend-owned ${mode.wireName}',
       (tester) async {
         final snapshot = _snapshot(mode);
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              universalCatalogueRepositoryProvider.overrideWithValue(
-                _FakeRepository(snapshot),
-              ),
-            ],
-            child: const MaterialApp(
-              home: Scaffold(body: CatalogueHomeScreen()),
-            ),
-          ),
-        );
-        await tester.pumpAndSettle();
+        await _pump(tester, snapshot, const CatalogueHomeScreen());
 
         expect(find.text('Learning catalogue'), findsOneWidget);
         expect(find.text('Future Vertical 2030'), findsOneWidget);
@@ -51,21 +39,11 @@ void main() {
     tester,
   ) async {
     final snapshot = _snapshot(VerticalCataloguePresentationMode.shelves);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          universalCatalogueRepositoryProvider.overrideWithValue(
-            _FakeRepository(snapshot),
-          ),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: CatalogueVerticalScreen(verticalCode: 'FUTURE_VERTICAL_2030'),
-          ),
-        ),
-      ),
+    await _pump(
+      tester,
+      snapshot,
+      const CatalogueVerticalScreen(verticalCode: 'FUTURE_VERTICAL_2030'),
     );
-    await tester.pumpAndSettle();
 
     expect(find.text('Future Vertical 2030'), findsOneWidget);
     expect(find.text('Future Goal'), findsOneWidget);
@@ -77,24 +55,14 @@ void main() {
     tester,
   ) async {
     final snapshot = _snapshot(VerticalCataloguePresentationMode.shelves);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          universalCatalogueRepositoryProvider.overrideWithValue(
-            _FakeRepository(snapshot),
-          ),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: CatalogueGoalScreen(
-              verticalCode: 'FUTURE_VERTICAL_2030',
-              goalCode: 'GOAL_ALPHA',
-            ),
-          ),
-        ),
+    await _pump(
+      tester,
+      snapshot,
+      const CatalogueGoalScreen(
+        verticalCode: 'FUTURE_VERTICAL_2030',
+        goalCode: 'GOAL_ALPHA',
       ),
     );
-    await tester.pumpAndSettle();
 
     expect(find.text('Future Goal'), findsOneWidget);
     expect(find.text('Future Track'), findsOneWidget);
@@ -103,25 +71,15 @@ void main() {
 
   testWidgets('track drill-down renders collection summary', (tester) async {
     final snapshot = _snapshot(VerticalCataloguePresentationMode.shelves);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          universalCatalogueRepositoryProvider.overrideWithValue(
-            _FakeRepository(snapshot),
-          ),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: CatalogueTrackScreen(
-              verticalCode: 'FUTURE_VERTICAL_2030',
-              goalCode: 'GOAL_ALPHA',
-              trackCode: 'TRACK_ALPHA',
-            ),
-          ),
-        ),
+    await _pump(
+      tester,
+      snapshot,
+      const CatalogueTrackScreen(
+        verticalCode: 'FUTURE_VERTICAL_2030',
+        goalCode: 'GOAL_ALPHA',
+        trackCode: 'TRACK_ALPHA',
       ),
     );
-    await tester.pumpAndSettle();
 
     expect(find.text('Future Track'), findsOneWidget);
     expect(find.text('Future Collection'), findsOneWidget);
@@ -130,25 +88,16 @@ void main() {
 
   testWidgets('collection preserves ordered learning sequence', (tester) async {
     final snapshot = _snapshot(VerticalCataloguePresentationMode.shelves);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          universalCatalogueRepositoryProvider.overrideWithValue(
-            _FakeRepository(snapshot),
-          ),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: CatalogueCollectionScreen(
-              verticalCode: 'FUTURE_VERTICAL_2030',
-              trackCode: 'TRACK_ALPHA',
-              collectionCode: 'COLLECTION_ALPHA',
-            ),
-          ),
-        ),
+    await _pump(
+      tester,
+      snapshot,
+      const CatalogueCollectionScreen(
+        verticalCode: 'FUTURE_VERTICAL_2030',
+        goalCode: 'GOAL_ALPHA',
+        trackCode: 'TRACK_ALPHA',
+        collectionCode: 'COLLECTION_ALPHA',
       ),
     );
-    await tester.pumpAndSettle();
 
     expect(find.text('Future Collection'), findsOneWidget);
     expect(find.text('Learning sequence'), findsOneWidget);
@@ -156,27 +105,151 @@ void main() {
     expect(find.text('Step 1'), findsOneWidget);
   });
 
-  testWidgets('unknown hierarchy route fails closed as unavailable', (
+  testWidgets('unknown vertical route fails closed', (tester) async {
+    final snapshot = _snapshot(VerticalCataloguePresentationMode.shelves);
+    await _pump(
+      tester,
+      snapshot,
+      const CatalogueVerticalScreen(verticalCode: 'UNKNOWN_VERTICAL'),
+    );
+
+    expect(find.text('Learning vertical is unavailable.'), findsOneWidget);
+  });
+
+  testWidgets('goal cannot be opened through a different vertical', (
     tester,
   ) async {
     final snapshot = _snapshot(VerticalCataloguePresentationMode.shelves);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          universalCatalogueRepositoryProvider.overrideWithValue(
-            _FakeRepository(snapshot),
-          ),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(
-            body: CatalogueVerticalScreen(verticalCode: 'UNKNOWN_VERTICAL'),
-          ),
-        ),
+    await _pump(
+      tester,
+      snapshot,
+      const CatalogueGoalScreen(
+        verticalCode: 'OTHER_VERTICAL',
+        goalCode: 'GOAL_ALPHA',
       ),
     );
-    await tester.pumpAndSettle();
 
-    expect(find.text('Learning vertical is unavailable.'), findsOneWidget);
+    expect(find.text('Learning goal is unavailable.'), findsOneWidget);
+    expect(find.text('Future Goal'), findsNothing);
+  });
+
+  testWidgets('track cannot be opened through a different goal', (
+    tester,
+  ) async {
+    final snapshot = _snapshot(VerticalCataloguePresentationMode.shelves);
+    await _pump(
+      tester,
+      snapshot,
+      const CatalogueTrackScreen(
+        verticalCode: 'FUTURE_VERTICAL_2030',
+        goalCode: 'OTHER_GOAL',
+        trackCode: 'TRACK_ALPHA',
+      ),
+    );
+
+    expect(find.text('Learning track is unavailable.'), findsOneWidget);
+    expect(find.text('Future Track'), findsNothing);
+  });
+
+  testWidgets('collection cannot bypass goal ownership through a valid track', (
+    tester,
+  ) async {
+    final snapshot = _snapshot(VerticalCataloguePresentationMode.shelves);
+    await _pump(
+      tester,
+      snapshot,
+      const CatalogueCollectionScreen(
+        verticalCode: 'FUTURE_VERTICAL_2030',
+        goalCode: 'OTHER_GOAL',
+        trackCode: 'TRACK_ALPHA',
+        collectionCode: 'COLLECTION_ALPHA',
+      ),
+    );
+
+    expect(find.text('Learning collection is unavailable.'), findsOneWidget);
+    expect(find.text('Future Collection'), findsNothing);
+  });
+
+  testWidgets('collection cannot bypass vertical ownership', (tester) async {
+    final snapshot = _snapshot(VerticalCataloguePresentationMode.shelves);
+    await _pump(
+      tester,
+      snapshot,
+      const CatalogueCollectionScreen(
+        verticalCode: 'OTHER_VERTICAL',
+        goalCode: 'GOAL_ALPHA',
+        trackCode: 'TRACK_ALPHA',
+        collectionCode: 'COLLECTION_ALPHA',
+      ),
+    );
+
+    expect(find.text('Learning collection is unavailable.'), findsOneWidget);
+  });
+
+  testWidgets('inactive vertical is never learner-visible', (tester) async {
+    final snapshot = _snapshot(
+      VerticalCataloguePresentationMode.grid,
+      verticalActive: false,
+    );
+    await _pump(tester, snapshot, const CatalogueHomeScreen());
+
+    expect(find.text('Future Vertical 2030'), findsNothing);
+    expect(find.text('No active learning paths.'), findsOneWidget);
+  });
+
+  testWidgets('inactive goal is hidden from an active vertical', (tester) async {
+    final snapshot = _snapshot(
+      VerticalCataloguePresentationMode.shelves,
+      goalActive: false,
+    );
+    await _pump(
+      tester,
+      snapshot,
+      const CatalogueVerticalScreen(verticalCode: 'FUTURE_VERTICAL_2030'),
+    );
+
+    expect(find.text('Future Goal'), findsNothing);
+    expect(
+      find.text('No learning goals are published for this vertical.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('inactive track cannot be deep-linked', (tester) async {
+    final snapshot = _snapshot(
+      VerticalCataloguePresentationMode.shelves,
+      trackActive: false,
+    );
+    await _pump(
+      tester,
+      snapshot,
+      const CatalogueTrackScreen(
+        verticalCode: 'FUTURE_VERTICAL_2030',
+        goalCode: 'GOAL_ALPHA',
+        trackCode: 'TRACK_ALPHA',
+      ),
+    );
+
+    expect(find.text('Learning track is unavailable.'), findsOneWidget);
+  });
+
+  testWidgets('inactive collection cannot be deep-linked', (tester) async {
+    final snapshot = _snapshot(
+      VerticalCataloguePresentationMode.shelves,
+      collectionActive: false,
+    );
+    await _pump(
+      tester,
+      snapshot,
+      const CatalogueCollectionScreen(
+        verticalCode: 'FUTURE_VERTICAL_2030',
+        goalCode: 'GOAL_ALPHA',
+        trackCode: 'TRACK_ALPHA',
+        collectionCode: 'COLLECTION_ALPHA',
+      ),
+    );
+
+    expect(find.text('Learning collection is unavailable.'), findsOneWidget);
   });
 
   testWidgets('missing CURRENT catalogue renders an explicit empty state', (
@@ -231,9 +304,31 @@ void main() {
   });
 }
 
+Future<void> _pump(
+  WidgetTester tester,
+  CurrentUniversalCatalogueSnapshot snapshot,
+  Widget child,
+) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        universalCatalogueRepositoryProvider.overrideWithValue(
+          _FakeRepository(snapshot),
+        ),
+      ],
+      child: MaterialApp(home: Scaffold(body: child)),
+    ),
+  );
+  await tester.pumpAndSettle();
+}
+
 CurrentUniversalCatalogueSnapshot _snapshot(
-  VerticalCataloguePresentationMode mode,
-) {
+  VerticalCataloguePresentationMode mode, {
+  bool verticalActive = true,
+  bool goalActive = true,
+  bool trackActive = true,
+  bool collectionActive = true,
+}) {
   final graph = UniversalCatalogueGraph(
     sections: [
       VerticalSectionProjection(
@@ -252,7 +347,7 @@ CurrentUniversalCatalogueSnapshot _snapshot(
         description: 'A vertical unknown to this Flutter release.',
         iconAssetId: 'asset-future',
         sortOrder: 0,
-        active: true,
+        active: verticalActive,
       ),
     ],
     goals: [
@@ -262,7 +357,7 @@ CurrentUniversalCatalogueSnapshot _snapshot(
         title: 'Future Goal',
         description: 'Goal description',
         sortOrder: 0,
-        active: true,
+        active: goalActive,
       ),
     ],
     tracks: [
@@ -274,7 +369,7 @@ CurrentUniversalCatalogueSnapshot _snapshot(
         description: 'Track description',
         levelCode: 'B2',
         sortOrder: 0,
-        active: true,
+        active: trackActive,
       ),
     ],
     collections: [
@@ -285,7 +380,7 @@ CurrentUniversalCatalogueSnapshot _snapshot(
         title: 'Future Collection',
         description: 'Collection description',
         sortOrder: 0,
-        active: true,
+        active: collectionActive,
         members: [
           LearningCollectionMember.content(
             position: 0,
