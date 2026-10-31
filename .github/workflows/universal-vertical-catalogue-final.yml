@@ -86,6 +86,12 @@ jobs:
           flutter test test/acceptance/content_detail_audio_redownload_e2e_test.dart
           flutter test test/acceptance/content_detail_audio_adversarial_e2e_test.dart
 
+      - name: Audio concurrency adversarial qualification
+        run: |
+          flutter test test/application/audio_playback_concurrency_adversarial_test.dart
+          flutter test test/application/role_audio_clip_concurrency_adversarial_test.dart
+          flutter test test/application/asset_resolver_concurrency_adversarial_test.dart
+
       - name: V10 full demo graph
         run: flutter test test/data/mock/demo_full_learning_graph_test.dart
 
