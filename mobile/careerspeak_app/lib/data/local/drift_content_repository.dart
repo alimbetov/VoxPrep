@@ -70,10 +70,7 @@ final class DriftContentRepository implements ContentRepository {
               Variable<String>(identity.code),
               Variable<String>(contentTypeToStorage(identity.type)),
             ],
-            readsFrom: <ResultSetImplementation>{
-              _database.localContentRecords,
-              _database.contentCatalogReads,
-            },
+            readsFrom: _publicationReadDependencies,
           )
           .get();
 
@@ -180,12 +177,18 @@ final class DriftContentRepository implements ContentRepository {
     return _database.customSelect(
       sql.toString(),
       variables: variables,
-      readsFrom: <ResultSetImplementation>{
-        _database.localContentRecords,
-        _database.contentCatalogReads,
-      },
+      readsFrom: _publicationReadDependencies,
     );
   }
+
+  Set<ResultSetImplementation> get _publicationReadDependencies =>
+      <ResultSetImplementation>{
+        _database.localContentRecords,
+        _database.contentCatalogReads,
+        _database.contentManifestStates,
+        _database.contentPackRevisions,
+        _database.packContentRefs,
+      };
 
   Page<ContentItem> _pageFromRows(List<QueryRow> rows, int limit) {
     final projections = rows.map(_projection).toList(growable: false);
@@ -393,6 +396,31 @@ String _escapeLike(String value) {
 
 const _nullSortOrder = 2147483647;
 
+const _snapshotVisibilityPredicate = '''
+  l.snapshot_state = 'CURRENT'
+  AND (
+    NOT EXISTS (
+      SELECT 1
+      FROM content_manifest_states legacy_guard
+      WHERE legacy_guard.id = 1
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM content_manifest_states root
+      INNER JOIN content_pack_revisions pack
+        ON pack.source_content_version = root.current_content_version
+       AND pack.state = 'CURRENT'
+      INNER JOIN pack_content_refs member
+        ON member.pack_code = pack.pack_code
+       AND member.variant_key = pack.variant_key
+       AND member.pack_revision = pack.revision
+      WHERE root.id = 1
+        AND member.content_code = l.content_code
+        AND member.content_type = l.content_type
+        AND member.content_revision = l.revision
+    )
+  )''';
+
 const _catalogSelectPrefix = '''
 WITH current_content AS (
   SELECT
@@ -401,7 +429,7 @@ WITH current_content AS (
       PARTITION BY l.content_code, l.content_type
     ) AS current_count
   FROM local_content_records l
-  WHERE l.snapshot_state = 'CURRENT'
+  WHERE $_snapshotVisibilityPredicate
 )
 SELECT
   r.content_code,
@@ -436,7 +464,7 @@ WITH current_content AS (
       PARTITION BY l.content_code, l.content_type
     ) AS current_count
   FROM local_content_records l
-  WHERE l.snapshot_state = 'CURRENT'
+  WHERE $_snapshotVisibilityPredicate
 )
 SELECT
   r.content_code,
