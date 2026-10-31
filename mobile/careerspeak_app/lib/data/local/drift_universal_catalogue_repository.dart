@@ -1,3 +1,5 @@
+import 'package:drift/drift.dart';
+
 import '../../application/content_delivery/learning_vertical.dart';
 import '../../application/content_delivery/product_catalog.dart';
 import '../../application/content_delivery/universal_catalogue_graph.dart';
@@ -48,20 +50,13 @@ final class DriftUniversalCatalogueRepository
         );
       }
 
-      final sections = await _readSections(contentVersion);
-      final verticals = await _readVerticals(contentVersion);
-      final goals = await _readGoals(contentVersion);
-      final tracks = await _readTracks(contentVersion);
-      final collections = await _readCollections(contentVersion);
-      final presentation = await _readPresentation(contentVersion);
-
       final graph = UniversalCatalogueGraph(
-        sections: sections,
-        verticals: verticals,
-        goals: goals,
-        tracks: tracks,
-        collections: collections,
-        presentation: presentation,
+        sections: await _readSections(contentVersion),
+        verticals: await _readVerticals(contentVersion),
+        goals: await _readGoals(contentVersion),
+        tracks: await _readTracks(contentVersion),
+        collections: await _readCollections(contentVersion),
+        presentation: await _readPresentation(contentVersion),
       );
 
       return Success<CurrentUniversalCatalogueSnapshot?>(
@@ -225,9 +220,7 @@ final class DriftUniversalCatalogueRepository
       variables: [Variable<int>(version), Variable<String>(collectionCode)],
     ).get();
 
-    return [
-      for (final row in rows) _member(row),
-    ];
+    return [for (final row in rows) _member(row)];
   }
 
   LearningCollectionMember _member(QueryRow row) {
