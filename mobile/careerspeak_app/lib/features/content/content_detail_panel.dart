@@ -165,8 +165,14 @@ class _InterviewAudioControls extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final playback = ref.watch(interviewAudioClipStateProvider);
-    return playback.when(
+    final roles = ref.watch(
+      interviewAudioAvailableRolesProvider((
+        content: ContentIdentity.fromItem(item),
+        revision: item.revision,
+      )),
+    );
+
+    return roles.when(
       loading: () => const Card(
         child: Padding(
           padding: EdgeInsets.all(16),
@@ -176,10 +182,37 @@ class _InterviewAudioControls extends ConsumerWidget {
       error: (error, stackTrace) => Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Text('Interview audio unavailable: $error'),
+          child: Text('Interview audio metadata unavailable: $error'),
         ),
       ),
-      data: (state) => _buildControls(context, ref, state),
+      data: (availableRoles) {
+        if (availableRoles.isEmpty) {
+          return const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('No interview audio is published for this revision.'),
+            ),
+          );
+        }
+
+        final playback = ref.watch(interviewAudioClipStateProvider);
+        return playback.when(
+          loading: () => const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: LinearProgressIndicator(value: 0),
+            ),
+          ),
+          error: (error, stackTrace) => Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('Interview audio unavailable: $error'),
+            ),
+          ),
+          data: (state) =>
+              _buildControls(context, ref, state, availableRoles),
+        );
+      },
     );
   }
 
@@ -187,6 +220,7 @@ class _InterviewAudioControls extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     role_audio.RoleAudioClipState state,
+    Set<ContentAudioRole> availableRoles,
   ) {
     final controller = ref.read(interviewAudioClipControllerProvider);
     final activeRole = state.role;
@@ -256,16 +290,18 @@ class _InterviewAudioControls extends ConsumerWidget {
               spacing: 8,
               runSpacing: 8,
               children: [
-                roleButton(
-                  ContentAudioRole.question,
-                  'Question',
-                  Icons.help_outline,
-                ),
-                roleButton(
-                  ContentAudioRole.sampleAnswer,
-                  'Sample answer',
-                  Icons.chat_bubble_outline,
-                ),
+                if (availableRoles.contains(ContentAudioRole.question))
+                  roleButton(
+                    ContentAudioRole.question,
+                    'Question',
+                    Icons.help_outline,
+                  ),
+                if (availableRoles.contains(ContentAudioRole.sampleAnswer))
+                  roleButton(
+                    ContentAudioRole.sampleAnswer,
+                    'Sample answer',
+                    Icons.chat_bubble_outline,
+                  ),
                 OutlinedButton.icon(
                   onPressed: state.phase == role_audio.AudioPlaybackPhase.idle ||
                           state.phase == role_audio.AudioPlaybackPhase.stopped
