@@ -10,18 +10,18 @@ const _hash =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 void main() {
-  group('universal catalogue Drift v9', () {
-    test('fresh database creates snapshot-scoped universal catalogue tables', () async {
+  group('universal catalogue Drift v9 + retention v10', () {
+    test('fresh database creates catalogue and retention tables', () async {
       final database = createTestDatabase();
       addTearDown(database.close);
 
       await database.customSelect('SELECT 1').getSingle();
 
-      expect(database.schemaVersion, 9);
+      expect(database.schemaVersion, 10);
       final userVersion = await database
           .customSelect('PRAGMA user_version')
           .getSingle();
-      expect(userVersion.read<int>('user_version'), 9);
+      expect(userVersion.read<int>('user_version'), 10);
 
       final rows = await database.customSelect(
         "SELECT name FROM sqlite_master WHERE type = 'table'",
@@ -39,11 +39,12 @@ void main() {
           'learning_collection_reads',
           'learning_collection_member_reads',
           'vertical_presentation_reads',
+          'asset_cache_retention',
         }),
       );
     });
 
-    test('opening a v1 database migrates through the full chain to v9', () async {
+    test('opening a v1 database migrates through the full chain to v10', () async {
       final verifier = SchemaVerifier(GeneratedHelper());
       final schema = await verifier.schemaAt(1);
       final database = CareerSpeakDatabase(schema.newConnection());
@@ -54,7 +55,7 @@ void main() {
       final userVersion = await database
           .customSelect('PRAGMA user_version')
           .getSingle();
-      expect(userVersion.read<int>('user_version'), 9);
+      expect(userVersion.read<int>('user_version'), 10);
 
       final rows = await database.customSelect(
         "SELECT name FROM sqlite_master WHERE type = 'table'",
@@ -74,11 +75,12 @@ void main() {
           'publication_snapshots',
           'learning_vertical_reads',
           'learning_collection_member_reads',
+          'asset_cache_retention',
         }),
       );
     });
 
-    test('opening a v8 database migrates it to v9 without generated v9 types', () async {
+    test('opening a v8 database migrates it to v10 without generated v9/v10 types', () async {
       final verifier = SchemaVerifier(GeneratedHelper());
       final schema = await verifier.schemaAt(8);
       final database = CareerSpeakDatabase(schema.newConnection());
@@ -89,12 +91,17 @@ void main() {
       final userVersion = await database
           .customSelect('PRAGMA user_version')
           .getSingle();
-      expect(userVersion.read<int>('user_version'), 9);
+      expect(userVersion.read<int>('user_version'), 10);
 
-      final table = await database.customSelect(
+      final catalogueTable = await database.customSelect(
         "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'publication_snapshots'",
       ).getSingleOrNull();
-      expect(table, isNotNull);
+      expect(catalogueTable, isNotNull);
+
+      final retentionTable = await database.customSelect(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'asset_cache_retention'",
+      ).getSingleOrNull();
+      expect(retentionTable, isNotNull);
     });
 
     test('staged snapshot rows stay invisible until CURRENT pointer switches', () async {
