@@ -43,6 +43,41 @@ void main() {
       );
     });
 
+    test('opening a v1 database migrates through the full chain to v9', () async {
+      final verifier = SchemaVerifier(GeneratedHelper());
+      final schema = await verifier.schemaAt(1);
+      final database = CareerSpeakDatabase(schema.newConnection());
+      addTearDown(database.close);
+
+      await database.customSelect('SELECT 1').getSingle();
+
+      final userVersion = await database
+          .customSelect('PRAGMA user_version')
+          .getSingle();
+      expect(userVersion.read<int>('user_version'), 9);
+
+      final rows = await database.customSelect(
+        "SELECT name FROM sqlite_master WHERE type = 'table'",
+      ).get();
+      final names = rows.map((row) => row.read<String>('name')).toSet();
+      expect(
+        names,
+        containsAll(<String>{
+          'sync_runs',
+          'pack_content_refs',
+          'content_catalog_reads',
+          'localized_content_reads',
+          'content_retirements',
+          'typed_content_reads',
+          'assessment_question_reads',
+          'practice_test_revision_reads',
+          'publication_snapshots',
+          'learning_vertical_reads',
+          'learning_collection_member_reads',
+        }),
+      );
+    });
+
     test('opening a v8 database migrates it to v9 without generated v9 types', () async {
       final verifier = SchemaVerifier(GeneratedHelper());
       final schema = await verifier.schemaAt(8);
