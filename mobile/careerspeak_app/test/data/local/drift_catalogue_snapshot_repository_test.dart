@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:careerspeak_app/application/content_delivery/catalogue_revision_ref.dart';
+import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_catalogue_snapshot_repository.dart';
 import 'package:careerspeak_app/data/local/publication_snapshot_storage.dart';
