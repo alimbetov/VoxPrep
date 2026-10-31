@@ -57,10 +57,8 @@ final class ContentPayloadMapper {
       return TopicBody(
         sections: dto.sections
             .map(
-              (section) => TopicSection(
-                heading: section.heading,
-                text: section.text,
-              ),
+              (section) =>
+                  TopicSection(heading: section.heading, text: section.text),
             )
             .toList(growable: false),
       );
@@ -87,6 +85,10 @@ final class ContentPayloadMapper {
             .toList(growable: false),
       );
     }
-    throw ArgumentError.value(dto.kind, 'body.kind', 'contains an unsupported kind');
+    throw ArgumentError.value(
+      dto.kind,
+      'body.kind',
+      'contains an unsupported kind',
+    );
   }
 }

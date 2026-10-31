@@ -176,10 +176,7 @@ String _requireStableCode(String value, String fieldName) {
   return normalized;
 }
 
-List<String> _requireUniqueStableCodes(
-  List<String> values,
-  String fieldName,
-) {
+List<String> _requireUniqueStableCodes(List<String> values, String fieldName) {
   final normalized = <String>[];
   final seen = <String>{};
   for (var index = 0; index < values.length; index++) {

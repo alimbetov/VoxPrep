@@ -82,10 +82,7 @@ final class ShadowingSegmentDto {
 }
 
 final class ShadowingBodyDto extends ContentBodyDto {
-  const ShadowingBodyDto({
-    required this.transcript,
-    required this.segments,
-  });
+  const ShadowingBodyDto({required this.transcript, required this.segments});
 
   @override
   String get kind => 'shadowing';

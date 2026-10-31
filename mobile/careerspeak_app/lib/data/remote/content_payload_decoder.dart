@@ -112,10 +112,11 @@ final class ContentPayloadDecoder {
       case 'topic':
         _requireExactKeys(object, _topicKeys, r'$.body');
         return TopicBodyDto(
-          sections: _objectList(object, 'sections', r'$.body')
-              .indexed
+          sections: _objectList(object, 'sections', r'$.body').indexed
               .map((entry) {
-                final path = r'$.body.sections[' '${entry.$1}]';
+                final path =
+                    r'$.body.sections['
+                    '${entry.$1}]';
                 final section = entry.$2;
                 _requireExactKeys(section, _topicSectionKeys, path);
                 return TopicSectionDto(
@@ -136,10 +137,11 @@ final class ContentPayloadDecoder {
         _requireExactKeys(object, _shadowingKeys, r'$.body');
         return ShadowingBodyDto(
           transcript: _string(object, 'transcript', r'$.body'),
-          segments: _objectList(object, 'segments', r'$.body')
-              .indexed
+          segments: _objectList(object, 'segments', r'$.body').indexed
               .map((entry) {
-                final path = r'$.body.segments[' '${entry.$1}]';
+                final path =
+                    r'$.body.segments['
+                    '${entry.$1}]';
                 final segment = entry.$2;
                 _requireExactKeys(segment, _shadowingSegmentKeys, path);
                 return ShadowingSegmentDto(
@@ -205,7 +207,10 @@ final class ContentPayloadDecoder {
       return null;
     }
     if (value is! String || value.trim().isEmpty) {
-      throw _PayloadViolation('$path.$key', 'must be null or a non-blank string');
+      throw _PayloadViolation(
+        '$path.$key',
+        'must be null or a non-blank string',
+      );
     }
     return value.trim();
   }
@@ -218,11 +223,7 @@ final class ContentPayloadDecoder {
     return value;
   }
 
-  int? _optionalInteger(
-    Map<String, Object?> object,
-    String key,
-    String path,
-  ) {
+  int? _optionalInteger(Map<String, Object?> object, String key, String path) {
     final value = object[key];
     if (value == null) {
       return null;
@@ -340,22 +341,12 @@ const _vocabularyKeys = <String>{
   'partOfSpeech',
   'examples',
 };
-const _interviewKeys = <String>{
-  'kind',
-  'prompt',
-  'modelAnswer',
-  'keyPoints',
-};
+const _interviewKeys = <String>{'kind', 'prompt', 'modelAnswer', 'keyPoints'};
 const _topicKeys = <String>{'kind', 'sections'};
 const _topicSectionKeys = <String>{'heading', 'text'};
 const _phraseKeys = <String>{'kind', 'phrase', 'usage', 'examples'};
 const _shadowingKeys = <String>{'kind', 'transcript', 'segments'};
-const _shadowingSegmentKeys = <String>{
-  'order',
-  'text',
-  'startMs',
-  'endMs',
-};
+const _shadowingSegmentKeys = <String>{'order', 'text', 'startMs', 'endMs'};
 
 final _contentCodePattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._-]*$');
 final _stableCodePattern = RegExp(r'^[A-Z0-9][A-Z0-9._-]*$');
