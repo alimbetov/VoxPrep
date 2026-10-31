@@ -1,4 +1,6 @@
+import '../../application/content_delivery/catalogue_revision_ref.dart';
 import '../../application/content_delivery/content_manifest.dart';
+import '../../application/content_delivery/product_catalog.dart';
 import '../../domain/content_identity.dart';
 import 'dto/content_manifest_dto.dart';
 
@@ -19,6 +21,28 @@ final class ContentManifestMapper {
           checksum: pack.checksum,
         ),
       ),
+      practiceTests: dto.practiceTests.map(
+        (test) => PracticeTestRevisionRef(
+          practiceTestCode: test.practiceTestCode,
+          revision: test.revision,
+          checksum: test.checksum,
+        ),
+      ),
+      catalogues: dto.catalogues.map((catalogue) {
+        final kind = CatalogueKind.fromWireName(catalogue.kind);
+        if (kind == null) {
+          throw ArgumentError.value(
+            catalogue.kind,
+            'catalogue.kind',
+            'contains an unsupported catalogue kind',
+          );
+        }
+        return CatalogueRevisionRef(
+          kind: kind,
+          revision: catalogue.revision,
+          checksum: catalogue.checksum,
+        );
+      }),
       localeFallbacks: dto.localeFallbacks.map(
         (rule) => LocaleFallbackRule(
           locale: rule.locale,
