@@ -5,7 +5,7 @@ import 'package:careerspeak_app/application/query/practice_test_query.dart';
 import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/domain/practice_test.dart';
 import 'package:careerspeak_app/features/tests/test_session_screen.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
