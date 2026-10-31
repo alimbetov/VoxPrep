@@ -68,8 +68,8 @@ final class RootContentManifestDto {
     required this.publishedAt,
     required this.checksum,
     required this.packs,
-    required this.practiceTests,
-    required this.catalogues,
+    this.practiceTests = const <PracticeTestRevisionDto>[],
+    this.catalogues = const <CatalogueRevisionDto>[],
     required this.localeFallbacks,
     required this.tombstones,
   });
