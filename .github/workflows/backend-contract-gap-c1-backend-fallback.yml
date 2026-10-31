@@ -19,6 +19,10 @@ on:
       - 'mobile/careerspeak_app/lib/data/local/database/careerspeak_locale_tables.dart'
       - 'mobile/careerspeak_app/lib/data/local/database/careerspeak_retirement_tables.dart'
 
+concurrency:
+  group: backend-contract-gap-c1-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: write
 
