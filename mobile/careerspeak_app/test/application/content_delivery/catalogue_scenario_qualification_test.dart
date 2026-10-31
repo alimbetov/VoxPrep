@@ -23,24 +23,23 @@ void main() {
 
     test('physical input permutation is normalized deterministically', () {
       final graph = _graph(
-        sections: [
-          _section('SECTION_B', 20),
-          _section('SECTION_A', 10),
-        ],
+        sections: [_section('SECTION_B', 20), _section('SECTION_A', 10)],
         additionalVerticals: [
           _vertical('VERTICAL_B', 'SECTION_B', 20),
           _vertical('VERTICAL_A', 'SECTION_A', 10),
         ],
       );
 
-      expect(
-        graph.sections.map((item) => item.code),
-        ['SECTION_A', 'SECTION_B', 'SECTION_MAIN'],
-      );
-      expect(
-        graph.verticals.map((item) => item.code),
-        ['VERTICAL_A', 'VERTICAL_B', 'VERTICAL_MAIN'],
-      );
+      expect(graph.sections.map((item) => item.code), [
+        'SECTION_A',
+        'SECTION_B',
+        'SECTION_MAIN',
+      ]);
+      expect(graph.verticals.map((item) => item.code), [
+        'VERTICAL_A',
+        'VERTICAL_B',
+        'VERTICAL_MAIN',
+      ]);
     });
   });
 
@@ -54,10 +53,7 @@ void main() {
         name: 'missing vertical for goal',
         run: () => _graph(goalVertical: 'NO_VERTICAL'),
       ),
-      (
-        name: 'missing goal for track',
-        run: () => _graph(trackGoal: 'NO_GOAL'),
-      ),
+      (name: 'missing goal for track', run: () => _graph(trackGoal: 'NO_GOAL')),
       (
         name: 'cross-vertical track ownership',
         run: () => _graph(trackVertical: 'OTHER_VERTICAL'),
@@ -87,9 +83,7 @@ void main() {
     test('duplicate backend-owned vertical code fails closed', () {
       expect(
         () => _graph(
-          additionalVerticals: [
-            _vertical('VERTICAL_MAIN', 'SECTION_MAIN', 99),
-          ],
+          additionalVerticals: [_vertical('VERTICAL_MAIN', 'SECTION_MAIN', 99)],
         ),
         throwsFormatException,
       );
@@ -150,11 +144,7 @@ UniversalCatalogueGraph _graph({
   String? featuredSection,
 }) {
   final mainSection = _section('SECTION_MAIN', 30);
-  final mainVertical = _vertical(
-    'VERTICAL_MAIN',
-    verticalSection,
-    30,
-  );
+  final mainVertical = _vertical('VERTICAL_MAIN', verticalSection, 30);
   final goal = LearningGoalProjection(
     code: 'GOAL_MAIN',
     verticalCode: goalVertical,
