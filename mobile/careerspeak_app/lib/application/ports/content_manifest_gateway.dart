@@ -18,10 +18,7 @@ final class RootManifestNotModified extends RootManifestFetch {
 }
 
 abstract interface class ContentManifestGateway {
-  Future<Result<RootManifestFetch>> fetchRootManifest({
-    required String translationLocale,
-    String? etag,
-  });
+  Future<Result<RootManifestFetch>> fetchRootManifest({String? etag});
 
   Future<Result<PackContentManifest>> fetchPackManifest(PackRevisionRef target);
 }
