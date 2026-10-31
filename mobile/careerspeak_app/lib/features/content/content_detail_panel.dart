@@ -119,8 +119,8 @@ class ContentDetailPanel extends ConsumerWidget {
             ),
           ],
         ),
-        if (item.type != ContentType.interview &&
-            marker.lastPositionMs case final position?) ...[
+        if (marker.lastPositionMs case final position?
+            when item.type != ContentType.interview) ...[
           const SizedBox(height: 12),
           Text(
             marker.lastRevisionSeen == item.revision
