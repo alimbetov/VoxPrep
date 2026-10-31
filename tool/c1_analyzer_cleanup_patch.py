@@ -159,6 +159,22 @@ replace_once(
 ''',
 )
 
+# NavigationDestination owns its label as a String and Material does not expose
+# that label as a stable descendant Text widget in every state. Target the
+# actual compact navigation contract instead of its internal rendering detail.
+replace_once(
+    e2e,
+    '''      final learnDestination = find.descendant(
+        of: find.byType(NavigationBar),
+        matching: find.text('Learn'),
+      );
+''',
+    '''      final learnDestination = find.byWidgetPredicate(
+        (widget) => widget is NavigationDestination && widget.label == 'Learn',
+      );
+''',
+)
+
 # Async RenderRepaintBoundary.toImage()/PNG encoding can leave flutter_test
 # waiting for engine raster work even after the test body has completed. The
 # CI acceptance only needs to prove the real production subtree painted and is
