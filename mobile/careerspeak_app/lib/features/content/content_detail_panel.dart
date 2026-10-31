@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/audio_playback_providers.dart';
 import '../../app/learner_state_providers.dart';
 import '../../application/content_delivery/content_audio_policy.dart';
+import '../../application/result/result.dart';
 import '../../application/services/audio_playback_controller.dart';
 import '../../application/services/role_audio_clip_controller.dart'
     as role_audio;
@@ -243,7 +244,7 @@ class _InterviewAudioControls extends ConsumerWidget {
           (await controller.play(item, role)).getOrThrow();
         }
       } catch (error) {
-        if (!context.mounted) return;
+        if (_isBenignAudioSupersession(error) || !context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Interview audio failed: $error')),
         );
@@ -391,7 +392,7 @@ class _AudioPlaybackControls extends ConsumerWidget {
         final controller = ref.read(audioPlaybackControllerProvider);
         await operation(controller);
       } catch (error) {
-        if (!context.mounted) return;
+        if (_isBenignAudioSupersession(error) || !context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Audio playback failed: $error')),
         );
@@ -474,9 +475,8 @@ class _AudioPlaybackControls extends ConsumerWidget {
                   tooltip: 'Back 10 seconds',
                   onPressed: canControl
                       ? () => run((controller) async {
-                          (await controller.seek(
-                            position - 10000,
-                          )).getOrThrow();
+                          (await controller.seek(position - 10000))
+                              .getOrThrow();
                         })
                       : null,
                   icon: const Icon(Icons.replay_10),
@@ -485,9 +485,8 @@ class _AudioPlaybackControls extends ConsumerWidget {
                   tooltip: 'Forward 10 seconds',
                   onPressed: canControl
                       ? () => run((controller) async {
-                          (await controller.seek(
-                            position + 10000,
-                          )).getOrThrow();
+                          (await controller.seek(position + 10000))
+                              .getOrThrow();
                         })
                       : null,
                   icon: const Icon(Icons.forward_10),
@@ -522,4 +521,10 @@ String _formatDuration(int milliseconds) {
   final minutes = totalSeconds ~/ 60;
   final seconds = totalSeconds % 60;
   return '$minutes:${seconds.toString().padLeft(2, '0')}';
+}
+
+bool _isBenignAudioSupersession(Object error) {
+  if (error is! ApplicationFailureException) return false;
+  return error.failure.code == 'PLAYBACK_SUPERSEDED' ||
+      error.failure.code == 'ROLE_AUDIO_REQUEST_SUPERSEDED';
 }
