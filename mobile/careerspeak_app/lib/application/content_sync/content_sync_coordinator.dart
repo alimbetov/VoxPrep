@@ -253,8 +253,8 @@ final class ContentSyncCoordinator {
   static SyncRunState _terminalStateFor(ApplicationFailure failure) {
     return switch (failure.code) {
       'OFFLINE' => SyncRunState.deferredOffline,
-      'SCHEMA_UNSUPPORTED' || 'APP_UPDATE_REQUIRED' =>
-        SyncRunState.blockedSchema,
+      'SCHEMA_UNSUPPORTED' ||
+      'APP_UPDATE_REQUIRED' => SyncRunState.blockedSchema,
       'UNAUTHORIZED' => SyncRunState.failedRetryable,
       _ when failure.retryable => SyncRunState.failedRetryable,
       _ => SyncRunState.failedFatal,
