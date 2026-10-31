@@ -140,6 +140,35 @@ final class ContentManifestDecoder {
         );
       }
 
+      final localizations = <LocalizedContentRefDto>[];
+      final localizationValues = _list(
+        object,
+        'localizations',
+        r'$.localizations',
+      );
+      for (var index = 0; index < localizationValues.length; index += 1) {
+        final path = '\$.localizations[$index]';
+        final localization = _object(localizationValues[index], path);
+        localizations.add(
+          LocalizedContentRefDto(
+            contentCode: _contentCode(localization, path),
+            contentType: _contentType(localization, path),
+            contentRevision: _integer(
+              localization,
+              'contentRevision',
+              '$path.contentRevision',
+            ),
+            locale: _locale(localization, 'locale', '$path.locale'),
+            localizationRevision: _integer(
+              localization,
+              'localizationRevision',
+              '$path.localizationRevision',
+            ),
+            checksum: _string(localization, 'checksum', '$path.checksum'),
+          ),
+        );
+      }
+
       final assets = <ManifestAssetDescriptorDto>[];
       final assetValues = _list(object, 'assets', r'$.assets');
       for (var index = 0; index < assetValues.length; index += 1) {
@@ -197,6 +226,7 @@ final class ContentManifestDecoder {
         revision: _integer(object, 'revision', r'$.revision'),
         checksum: _string(object, 'checksum', r'$.checksum'),
         contents: contents,
+        localizations: localizations,
         assets: assets,
         contentAssets: contentAssets,
       );
@@ -275,6 +305,18 @@ final class ContentManifestDecoder {
       );
     }
     return typeName;
+  }
+
+  String _locale(
+    Map<String, Object?> object,
+    String key,
+    String path,
+  ) {
+    final locale = _string(object, key, path);
+    if (!_localePattern.hasMatch(locale)) {
+      throw _ContractViolation(path, 'must be a BCP-47-compatible locale');
+    }
+    return locale;
   }
 
   Map<String, Object?> _object(Object? value, String path) {
@@ -377,6 +419,7 @@ final class ContentManifestDecoder {
 }
 
 final _contentCodePattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._-]*$');
+final _localePattern = RegExp(r'^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$');
 final _utcTimestampPattern = RegExp(
   r'^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?Z$',
 );
