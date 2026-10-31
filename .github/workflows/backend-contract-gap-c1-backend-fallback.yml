@@ -20,7 +20,7 @@ on:
       - 'mobile/careerspeak_app/lib/data/local/database/careerspeak_retirement_tables.dart'
 
 concurrency:
-  group: backend-contract-gap-c1-${{ github.ref }}
+  group: backend-contract-gap-c1-final-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
