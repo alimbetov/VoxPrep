@@ -1,5 +1,7 @@
 import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
+import 'catalogue_revision_ref.dart';
+import 'product_catalog.dart';
 
 const supportedContentManifestSchemaVersion = 1;
 const careerSpeakAppContractVersion = 1;
@@ -73,11 +75,6 @@ final class ContentTombstone {
     required this.reason,
   });
 
-  /// Retires the whole stable business identity from this root snapshot onward.
-  ///
-  /// [revision] is the highest canonical revision that had been published before
-  /// retirement. It is audit/integrity metadata and does not scope the
-  /// retirement to only that revision.
   final ContentIdentity identity;
   final int revision;
   final String reason;
@@ -135,13 +132,22 @@ final class RootContentManifest {
     required DateTime publishedAt,
     required String checksum,
     required Iterable<PackRevisionRef> packs,
+    Iterable<PracticeTestRevisionRef> practiceTests =
+        const <PracticeTestRevisionRef>[],
+    Iterable<CatalogueRevisionRef> catalogues = const <CatalogueRevisionRef>[],
     Iterable<LocaleFallbackRule> localeFallbacks = const <LocaleFallbackRule>[],
     required Iterable<ContentTombstone> tombstones,
   }) {
     final packList = List<PackRevisionRef>.unmodifiable(packs);
+    final practiceTestList = List<PracticeTestRevisionRef>.unmodifiable(
+      practiceTests,
+    );
+    final catalogueList = List<CatalogueRevisionRef>.unmodifiable(catalogues);
     final fallbackList = List<LocaleFallbackRule>.unmodifiable(localeFallbacks);
     final tombstoneList = List<ContentTombstone>.unmodifiable(tombstones);
     _requireUniquePackIdentities(packList);
+    _requireUniquePracticeTestRefs(practiceTestList);
+    _requireUniqueCatalogueRefs(catalogueList);
     _requireUniqueLocaleFallbacks(fallbackList);
     _requireUniqueTombstoneIdentities(tombstoneList);
 
@@ -155,6 +161,8 @@ final class RootContentManifest {
       publishedAt: _requireUtc(publishedAt, 'publishedAt'),
       checksum: normalizeSha256(checksum, 'checksum'),
       packs: packList,
+      practiceTests: practiceTestList,
+      catalogues: catalogueList,
       localeFallbacks: fallbackList,
       tombstones: tombstoneList,
     );
@@ -167,6 +175,8 @@ final class RootContentManifest {
     required this.publishedAt,
     required this.checksum,
     required this.packs,
+    required this.practiceTests,
+    required this.catalogues,
     required this.localeFallbacks,
     required this.tombstones,
   });
@@ -177,6 +187,8 @@ final class RootContentManifest {
   final DateTime publishedAt;
   final String checksum;
   final List<PackRevisionRef> packs;
+  final List<PracticeTestRevisionRef> practiceTests;
+  final List<CatalogueRevisionRef> catalogues;
   final List<LocaleFallbackRule> localeFallbacks;
   final List<ContentTombstone> tombstones;
 }
@@ -219,10 +231,6 @@ final class PackContentRef {
   final DateTime? publishedAt;
 }
 
-/// Exact immutable localized projection referenced by a locale pack.
-///
-/// It targets one exact canonical content revision without duplicating the
-/// canonical English payload or its shared assets.
 final class LocalizedContentRef {
   factory LocalizedContentRef({
     required ContentIdentity identity,
@@ -536,6 +544,32 @@ void _requireUniquePackIdentities(List<PackRevisionRef> packs) {
         pack.identity,
         'packs',
         'contains duplicate pack identity',
+      );
+    }
+  }
+}
+
+void _requireUniquePracticeTestRefs(List<PracticeTestRevisionRef> refs) {
+  final identities = <String>{};
+  for (final ref in refs) {
+    if (!identities.add(ref.practiceTestCode)) {
+      throw ArgumentError.value(
+        ref.practiceTestCode,
+        'practiceTests',
+        'contains duplicate practice test identity',
+      );
+    }
+  }
+}
+
+void _requireUniqueCatalogueRefs(List<CatalogueRevisionRef> refs) {
+  final identities = <CatalogueKind>{};
+  for (final ref in refs) {
+    if (!identities.add(ref.kind)) {
+      throw ArgumentError.value(
+        ref.kind.wireName,
+        'catalogues',
+        'contains duplicate catalogue kind',
       );
     }
   }
