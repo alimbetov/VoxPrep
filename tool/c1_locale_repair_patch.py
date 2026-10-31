@@ -42,3 +42,23 @@ if new not in text:
     if old not in text:
         raise SystemExit('missing locale repair journal anchor')
     path.write_text(text.replace(old, new, 1))
+
+# These tests represent a healthy v6 CURRENT root whose locale policy is
+# already committed. Keep that invariant explicit so the assertions isolate
+# localized-payload repair rather than simultaneously requesting policy repair.
+test_path = Path(
+    'mobile/careerspeak_app/test/data/local/drift_sync_locale_repair_test.dart'
+)
+test_text = test_path.read_text()
+needle = """            currentManifestChecksum: _rootChecksum,
+            updatedAt: now,
+"""
+replacement = """            currentManifestChecksum: _rootChecksum,
+            localePolicyContentVersion: const Value(108),
+            updatedAt: now,
+"""
+if replacement not in test_text:
+    if test_text.count(needle) != 2:
+        raise SystemExit('unexpected locale repair manifest fixture count')
+    test_text = test_text.replace(needle, replacement)
+test_path.write_text(test_text)
