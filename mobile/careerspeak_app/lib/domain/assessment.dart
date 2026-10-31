@@ -8,7 +8,11 @@ final class QuestionRevisionId {
   }) {
     final normalizedCode = questionCode.trim();
     if (normalizedCode.isEmpty) {
-      throw ArgumentError.value(questionCode, 'questionCode', 'must not be blank');
+      throw ArgumentError.value(
+        questionCode,
+        'questionCode',
+        'must not be blank',
+      );
     }
     if (revision < 1) {
       throw ArgumentError.value(revision, 'revision', 'must be positive');
@@ -67,10 +71,18 @@ final class SingleChoiceQuestionBody extends AssessmentQuestionBody {
         .map((option) => _nonBlank(option, 'options'))
         .toList(growable: false);
     if (normalizedOptions.length < 2) {
-      throw ArgumentError.value(options, 'options', 'must contain at least two');
+      throw ArgumentError.value(
+        options,
+        'options',
+        'must contain at least two',
+      );
     }
     if (normalizedOptions.toSet().length != normalizedOptions.length) {
-      throw ArgumentError.value(options, 'options', 'must not contain duplicates');
+      throw ArgumentError.value(
+        options,
+        'options',
+        'must not contain duplicates',
+      );
     }
     if (correctOptionIndex < 0 ||
         correctOptionIndex >= normalizedOptions.length) {
@@ -174,7 +186,11 @@ final class PracticeTestRevision {
     final refs = questionRefs.toList(growable: false)
       ..sort((left, right) => left.order.compareTo(right.order));
     if (refs.isEmpty) {
-      throw ArgumentError.value(questionRefs, 'questionRefs', 'must not be empty');
+      throw ArgumentError.value(
+        questionRefs,
+        'questionRefs',
+        'must not be empty',
+      );
     }
     for (var index = 0; index < refs.length; index++) {
       if (refs[index].order != index) {
