@@ -1,0 +1,108 @@
+name: C2.4 Drift Typed Persistence V3 Once
+
+on:
+  push:
+    branches:
+      - feat/backend-contract-gap-audit
+    paths:
+      - '.github/workflows/c2-4-drift-v3-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        working-directory: mobile/careerspeak_app
+        run: flutter pub get
+      - name: Apply deterministic C2.4 patch and qualification repairs
+        run: |
+          python3 tool/c2_4_patch.py
+          python3 - <<'PY'
+          from pathlib import Path
+
+          migration = Path('mobile/careerspeak_app/test/data/local/database/careerspeak_database_migration_test.dart')
+          source = migration.read_text()
+          old = """            minutes: 6,\n            hasAudio: true,\n            createdAt: storedNow,"""
+          new = """            minutes: 6,\n            hasAudio: 1,\n            createdAt: storedNow,"""
+          if source.count(old) != 1:
+              raise SystemExit('v6 migration boolean-storage fixture anchor mismatch')
+          migration.write_text(source.replace(old, new))
+
+          asset = Path('mobile/careerspeak_app/test/acceptance/p2_8_asset_resolution_test.dart')
+          source = asset.read_text()
+          old = '      expect(database.schemaVersion, 6);'
+          if source.count(old) != 1:
+              raise SystemExit('P2.8 schema version anchor mismatch')
+          asset.write_text(source.replace(old, '      expect(database.schemaVersion, 7);'))
+
+          database = Path('mobile/careerspeak_app/test/data/local/database/careerspeak_database_test.dart')
+          source = database.read_text()
+          repairs = {
+              "test('schema version 6 creates the production content foundation'":
+                  "test('schema version 7 creates the production content foundation'",
+              'expect(database.schemaVersion, 6);': 'expect(database.schemaVersion, 7);',
+              "expect(userVersion.read<int>('user_version'), 6);":
+                  "expect(userVersion.read<int>('user_version'), 7);",
+          }
+          for old, new in repairs.items():
+              if source.count(old) != 1:
+                  raise SystemExit(f'database schema version anchor mismatch: {old}')
+              source = source.replace(old, new)
+          database.write_text(source)
+          PY
+      - name: Format C2.4 sources
+        working-directory: mobile/careerspeak_app
+        run: dart format lib test
+      - name: Generate Drift v7 baseline
+        working-directory: mobile/careerspeak_app
+        run: |
+          dart run build_runner build
+          dart run drift_dev schema dump \
+            lib/data/local/database/careerspeak_database.dart \
+            drift_schemas/drift_schema_v7.json
+          rm -rf test/generated_migrations
+          dart run drift_dev schema generate \
+            --data-classes \
+            --companions \
+            drift_schemas/ \
+            test/generated_migrations/
+      - name: Analyze
+        working-directory: mobile/careerspeak_app
+        run: flutter analyze
+      - name: C2.4 targeted qualification
+        working-directory: mobile/careerspeak_app
+        run: |
+          flutter test \
+            test/data/remote/content_payload_decoder_test.dart \
+            test/data/local/drift_sync_plan_executor_test.dart \
+            test/data/local/database/careerspeak_database_test.dart \
+            test/data/local/database/careerspeak_database_migration_test.dart \
+            test/data/local/database/typed_content_read_restart_test.dart \
+            test/acceptance/p2_8_asset_resolution_test.dart
+      - name: Full regression suite
+        working-directory: mobile/careerspeak_app
+        run: flutter test
+      - name: Commit qualified C2.4 implementation
+        env:
+          BASE_SHA: ${{ github.sha }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mobile/careerspeak_app
+          if git diff --cached --quiet; then
+            echo 'No C2.4 implementation changes to commit.'
+            exit 1
+          fi
+          git commit -m 'feat(c2): persist typed content revisions in Drift v7'
+          git fetch origin feat/backend-contract-gap-audit
+          test "$(git rev-parse origin/feat/backend-contract-gap-audit)" = "$BASE_SHA"
+          git push origin HEAD:feat/backend-contract-gap-audit
