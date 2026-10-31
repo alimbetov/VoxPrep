@@ -1,5 +1,6 @@
 import '../../application/content_delivery/catalogue_payload.dart';
 import '../../application/content_delivery/content_manifest.dart';
+import '../../application/content_delivery/product_catalog.dart';
 import '../../application/ports/content_manifest_gateway.dart';
 import '../../application/result/result.dart';
 import 'demo_learning_fixture.dart';
