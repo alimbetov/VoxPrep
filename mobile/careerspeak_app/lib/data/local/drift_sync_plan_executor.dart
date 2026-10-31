@@ -339,15 +339,30 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
       return;
     }
 
-    if (existing.checksum != content.checksum ||
-        existing.sortOrder != content.sortOrder ||
-        existing.publishedAt != content.publishedAt ||
-        existing.sourceSchemaVersion != schemaVersion) {
-      throw const _SyncExecutorInvariant(
+    final checksumMatches = existing.checksum == content.checksum;
+    final sortOrderMatches = existing.sortOrder == content.sortOrder;
+    final publishedAtMatches = existing.publishedAt == content.publishedAt;
+    final schemaVersionMatches = existing.sourceSchemaVersion == schemaVersion;
+    if (!checksumMatches ||
+        !sortOrderMatches ||
+        !publishedAtMatches ||
+        !schemaVersionMatches) {
+      throw _SyncExecutorInvariant(
         ApplicationFailure(
           code: 'CONTENT_REVISION_IMMUTABLE_CONFLICT',
           message:
               'A persisted content revision conflicts with immutable metadata.',
+          details: <String, Object?>{
+            'contentCode': content.identity.code,
+            'contentType': type,
+            'revision': content.revision,
+            'checksumMatches': checksumMatches,
+            'sortOrderMatches': sortOrderMatches,
+            'publishedAtMatches': publishedAtMatches,
+            'schemaVersionMatches': schemaVersionMatches,
+            'existingPublishedAt': existing.publishedAt?.toIso8601String(),
+            'incomingPublishedAt': content.publishedAt?.toIso8601String(),
+          },
         ),
       );
     }
@@ -780,47 +795,25 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
               currentManifestChecksum: plan.target.checksum,
               remoteContentVersionSeen: Value(plan.target.contentVersion),
               remoteManifestChecksum: Value(plan.target.checksum),
-              etag: const Value(null),
               lastCheckedAt: Value(now),
               lastSuccessfulSyncAt: Value(now),
               updatedAt: now,
             ),
           );
-
-      await (_database.update(
-        _database.syncPackUpdates,
-      )..where((row) => row.runId.equals(runId))).write(
-        SyncPackUpdatesCompanion(
-          state: Value(SyncPackUpdateState.committed.storageCode),
-          updatedAt: Value(now),
-        ),
-      );
-      await (_database.update(
-        _database.syncRuns,
-      )..where((row) => row.runId.equals(runId))).write(
-        SyncRunsCompanion(
-          state: Value(SyncRunState.cleaning.storageCode),
-          updatedAt: Value(now),
-        ),
-      );
     });
   }
 
   Future<void> _setRunState(String runId, SyncRunState state) async {
-    final changed =
-        await (_database.update(
-          _database.syncRuns,
-        )..where((row) => row.runId.equals(runId))).write(
-          SyncRunsCompanion(
-            state: Value(state.storageCode),
-            updatedAt: Value(_now()),
-          ),
-        );
-    if (changed != 1) {
+    final updated = await (_database.update(
+      _database.syncRuns,
+    )..where((row) => row.runId.equals(runId))).write(
+      SyncRunsCompanion(state: Value(state.storageCode), updatedAt: Value(_now())),
+    );
+    if (updated != 1) {
       throw const _SyncExecutorInvariant(
         ApplicationFailure(
-          code: 'SYNC_RUN_NOT_FOUND',
-          message: 'The sync run does not exist.',
+          code: 'SYNC_RUN_MISSING',
+          message: 'The durable sync run disappeared during execution.',
         ),
       );
     }
@@ -831,24 +824,23 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
     PackRevisionRef target,
     SyncPackUpdateState state,
   ) async {
-    final changed =
-        await (_database.update(_database.syncPackUpdates)..where(
-              (row) =>
-                  row.runId.equals(runId) &
-                  row.packCode.equals(target.identity.code) &
-                  row.variantKey.equals(target.identity.variant),
-            ))
-            .write(
-              SyncPackUpdatesCompanion(
-                state: Value(state.storageCode),
-                updatedAt: Value(_now()),
-              ),
-            );
-    if (changed != 1) {
+    final updated = await (_database.update(_database.syncPackUpdates)..where(
+          (row) =>
+              row.runId.equals(runId) &
+              row.packCode.equals(target.identity.code) &
+              row.variantKey.equals(target.identity.variant),
+        ))
+        .write(
+          SyncPackUpdatesCompanion(
+            state: Value(state.storageCode),
+            updatedAt: Value(_now()),
+          ),
+        );
+    if (updated != 1) {
       throw const _SyncExecutorInvariant(
         ApplicationFailure(
-          code: 'SYNC_PACK_UPDATE_NOT_FOUND',
-          message: 'The planned pack update does not exist.',
+          code: 'SYNC_PACK_UPDATE_MISSING',
+          message: 'The durable pack update disappeared during execution.',
         ),
       );
     }
@@ -861,17 +853,18 @@ final class _SyncExecutorInvariant implements Exception {
   final ApplicationFailure failure;
 }
 
-bool _samePayloadTarget(ContentPayloadRef actual, ContentPayloadRef expected) {
-  return actual.identity == expected.identity &&
-      actual.revision == expected.revision &&
-      actual.checksum == expected.checksum;
+bool _samePayloadTarget(ContentPayloadRef left, ContentPayloadRef right) {
+  return left.identity == right.identity &&
+      left.revision == right.revision &&
+      left.checksum == right.checksum;
 }
 
-String _assetKind(String mediaType) {
-  if (mediaType.startsWith('audio/')) return 'AUDIO';
-  if (mediaType.startsWith('image/')) return 'IMAGE';
-  return 'BINARY';
-}
+String _contentKey(String code, String type, int revision) =>
+    '$code|$type|$revision';
+
+String _identityKey(String code, String type) => '$code|$type';
+
+String _packKey(String code, String variant) => '$code|$variant';
 
 String _contentTypeToStorage(ContentType type) => switch (type) {
   ContentType.vocabulary => 'VOCABULARY',
@@ -881,7 +874,8 @@ String _contentTypeToStorage(ContentType type) => switch (type) {
   ContentType.phrase => 'PHRASE',
 };
 
-String _packKey(String code, String variant) => '$code|$variant';
-String _identityKey(String code, String type) => '$code|$type';
-String _contentKey(String code, String type, int revision) =>
-    '$code|$type|$revision';
+String _assetKind(String mediaType) {
+  if (mediaType.startsWith('audio/')) return 'AUDIO';
+  if (mediaType.startsWith('image/')) return 'IMAGE';
+  return 'BINARY';
+}
