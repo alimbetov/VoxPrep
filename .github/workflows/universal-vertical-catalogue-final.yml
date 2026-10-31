@@ -124,8 +124,14 @@ jobs:
       - name: Targeted learner UI goldens
         run: flutter test test/goldens/learner_ui_golden_test.dart
 
-      - name: Combinatorial contract matrix
+      - name: C1 exhaustive contract matrices
         run: flutter test test/application/content_delivery/combinatorial_contract_matrix_test.dart
+
+      - name: C2 pairwise cross-layer qualification
+        run: flutter test test/application/cross_layer_asset_resolution_pairwise_test.dart
+
+      - name: C3-C5 positive negative adversarial catalogue scenarios
+        run: flutter test test/application/content_delivery/catalogue_scenario_qualification_test.dart
 
       - name: Content Detail audio E2E
         run: |
