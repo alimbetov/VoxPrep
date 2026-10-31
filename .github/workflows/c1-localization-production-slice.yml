@@ -1,0 +1,72 @@
+name: C1 Localization Production Slice
+
+on:
+  push:
+    branches: [feat/backend-contract-gap-audit]
+    paths: ['.github/workflows/c1-localization-production-slice.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  qualify-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        working-directory: mobile/careerspeak_app
+        run: flutter pub get
+
+      - name: Apply C1.5-C1.7 implementation patches
+        run: |
+          python3 tool/c1_complete_backend_fallback.py
+          python3 tool/c1_schema_v6_test_patch.py
+
+      - name: Format handwritten Dart
+        working-directory: mobile/careerspeak_app
+        run: |
+          mapfile -t dart_files < <(find lib test -type f -name '*.dart' ! -name '*.g.dart' ! -path 'test/generated_migrations/*' -print)
+          dart format "${dart_files[@]}"
+
+      - name: Generate Drift v6 artifacts
+        working-directory: mobile/careerspeak_app
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          dart run drift_dev schema dump lib/data/local/database/careerspeak_database.dart drift_schemas/drift_schema_v6.json
+          rm -rf test/generated_migrations
+          dart run drift_dev schema generate --data-classes --companions drift_schemas/ test/generated_migrations/
+
+      - name: Analyze
+        working-directory: mobile/careerspeak_app
+        run: flutter analyze
+
+      - name: C1 localization and recovery qualification
+        working-directory: mobile/careerspeak_app
+        run: |
+          flutter test test/application/content_delivery/locale_fallback_test.dart
+          flutter test test/contracts/backend_owned_locale_fallback_contract_test.dart
+          flutter test test/data/remote/content_manifest_decoder_test.dart
+          flutter test test/data/local/drift_localized_content_repository_test.dart
+          flutter test test/data/local/drift_sync_plan_executor_test.dart
+          flutter test test/data/local/database/careerspeak_database_test.dart
+          flutter test test/data/local/database/careerspeak_database_migration_test.dart
+          flutter test test/acceptance/c1_tombstone_retirement_acceptance_test.dart
+          flutter test test/acceptance/c1_locale_offline_restart_acceptance_test.dart
+          flutter test test/contracts/openapi_contract_baseline_test.dart
+
+      - name: Commit qualified production slice
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add contracts mobile/careerspeak_app/lib mobile/careerspeak_app/test mobile/careerspeak_app/drift_schemas
+          git commit -m 'feat(c1): complete localization fallback and recovery slice'
+          git push origin HEAD:feat/backend-contract-gap-audit
