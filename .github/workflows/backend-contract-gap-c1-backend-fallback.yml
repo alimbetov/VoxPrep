@@ -8,6 +8,7 @@ on:
       - 'tool/c1_backend_fallback_patch.py'
       - 'tool/c1_backend_fallback_test_patch.py'
       - 'tool/c1_locale_repair_patch.py'
+      - 'tool/c1_locale_canonicalization_patch.py'
 
 permissions:
   contents: write
@@ -32,6 +33,7 @@ jobs:
       - name: Apply Backend-owned fallback and locale repair
         run: |
           python3 tool/c1_backend_fallback_patch.py
+          python3 tool/c1_locale_canonicalization_patch.py
           python3 tool/c1_backend_fallback_test_patch.py
           python3 tool/c1_locale_repair_patch.py
 
