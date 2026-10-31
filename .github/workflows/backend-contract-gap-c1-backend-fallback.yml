@@ -67,8 +67,24 @@ jobs:
             test/generated_migrations/
 
       - name: Analyze
+        id: analyze
+        continue-on-error: true
         working-directory: mobile/careerspeak_app
-        run: flutter analyze
+        run: |
+          set -o pipefail
+          flutter analyze 2>&1 | tee ../../c1-analyze.log
+
+      - name: Upload analyzer diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: c1-analyzer-diagnostics
+          path: c1-analyze.log
+          if-no-files-found: error
+
+      - name: Enforce analyzer gate
+        if: steps.analyze.outcome == 'failure'
+        run: exit 1
 
       - name: C1 lifecycle qualification
         working-directory: mobile/careerspeak_app
