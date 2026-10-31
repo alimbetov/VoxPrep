@@ -4,10 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/catalogue_payload_providers.dart';
 import '../../app/content_locations.dart';
-import '../../application/content_delivery/learning_vertical.dart';
 import '../../application/content_delivery/product_catalog.dart';
 import '../../application/content_delivery/universal_catalogue_graph.dart';
-import '../../application/content_delivery/vertical_catalogue_presentation.dart';
 import '../../application/ports/universal_catalogue_repository.dart';
 import '../../domain/content_identity.dart';
 
@@ -32,25 +30,6 @@ String catalogueCollectionLocation(
 ) =>
     '${catalogueTrackLocation(verticalCode, goalCode, trackCode)}/collection/${Uri.encodeComponent(collectionCode)}';
 
-class CatalogueScreen extends ConsumerWidget {
-  const CatalogueScreen({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final snapshot = ref.watch(currentUniversalCatalogueProvider);
-    return snapshot.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => _CatalogueError(error: error),
-      data: (value) {
-        if (value == null) {
-          return const _CatalogueEmpty();
-        }
-        return _CatalogueHome(snapshot: value);
-      },
-    );
-  }
-}
-
 class CatalogueVerticalScreen extends ConsumerWidget {
   const CatalogueVerticalScreen({required this.verticalCode, super.key});
 
@@ -60,9 +39,7 @@ class CatalogueVerticalScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return _withSnapshot(ref, (snapshot) {
       final graph = snapshot.graph;
-      final vertical = graph.verticals
-          .where((item) => item.code == verticalCode && item.active)
-          .firstOrNull;
+      final vertical = _activeVertical(graph, verticalCode);
       if (vertical == null) {
         return const _NotFound(message: 'Learning vertical is unavailable.');
       }
@@ -101,14 +78,11 @@ class CatalogueGoalScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return _withSnapshot(ref, (snapshot) {
       final graph = snapshot.graph;
-      final goal = graph.goals
-          .where(
-            (item) =>
-                item.code == goalCode &&
-                item.verticalCode == verticalCode &&
-                item.active,
-          )
-          .firstOrNull;
+      final vertical = _activeVertical(graph, verticalCode);
+      if (vertical == null) {
+        return const _NotFound(message: 'Learning goal is unavailable.');
+      }
+      final goal = _activeGoal(graph, vertical.code, goalCode);
       if (goal == null) {
         return const _NotFound(message: 'Learning goal is unavailable.');
       }
@@ -116,7 +90,7 @@ class CatalogueGoalScreen extends ConsumerWidget {
           .where(
             (item) =>
                 item.goalCode == goal.code &&
-                item.verticalCode == verticalCode &&
+                item.verticalCode == vertical.code &&
                 item.active,
           )
           .toList(growable: false);
@@ -130,7 +104,7 @@ class CatalogueGoalScreen extends ConsumerWidget {
               description: track.description,
               supportingText: track.levelCode,
               onTap: () => context.push(
-                catalogueTrackLocation(verticalCode, goal.code, track.code),
+                catalogueTrackLocation(vertical.code, goal.code, track.code),
               ),
             ),
         ],
@@ -156,15 +130,13 @@ class CatalogueTrackScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return _withSnapshot(ref, (snapshot) {
       final graph = snapshot.graph;
-      final track = graph.tracks
-          .where(
-            (item) =>
-                item.code == trackCode &&
-                item.goalCode == goalCode &&
-                item.verticalCode == verticalCode &&
-                item.active,
-          )
-          .firstOrNull;
+      final vertical = _activeVertical(graph, verticalCode);
+      final goal = vertical == null
+          ? null
+          : _activeGoal(graph, vertical.code, goalCode);
+      final track = goal == null
+          ? null
+          : _activeTrack(graph, vertical!.code, goal.code, trackCode);
       if (track == null) {
         return const _NotFound(message: 'Learning track is unavailable.');
       }
@@ -172,7 +144,7 @@ class CatalogueTrackScreen extends ConsumerWidget {
           .where(
             (item) =>
                 item.trackCode == track.code &&
-                item.verticalCode == verticalCode &&
+                item.verticalCode == vertical!.code &&
                 item.active,
           )
           .toList(growable: false);
@@ -187,8 +159,8 @@ class CatalogueTrackScreen extends ConsumerWidget {
               supportingText: '${collection.members.length} items',
               onTap: () => context.push(
                 catalogueCollectionLocation(
-                  verticalCode,
-                  goalCode,
+                  vertical.code,
+                  goal.code,
                   track.code,
                   collection.code,
                 ),
@@ -219,27 +191,24 @@ class CatalogueCollectionScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return _withSnapshot(ref, (snapshot) {
       final graph = snapshot.graph;
-      final parentTrack = graph.tracks
-          .where(
-            (item) =>
-                item.code == trackCode &&
-                item.goalCode == goalCode &&
-                item.verticalCode == verticalCode &&
-                item.active,
-          )
-          .firstOrNull;
-      if (parentTrack == null) {
-        return const _NotFound(message: 'Learning collection is unavailable.');
-      }
-      final collection = graph.collections
-          .where(
-            (item) =>
-                item.code == collectionCode &&
-                item.trackCode == parentTrack.code &&
-                item.verticalCode == verticalCode &&
-                item.active,
-          )
-          .firstOrNull;
+      final vertical = _activeVertical(graph, verticalCode);
+      final goal = vertical == null
+          ? null
+          : _activeGoal(graph, vertical.code, goalCode);
+      final track = goal == null
+          ? null
+          : _activeTrack(graph, vertical!.code, goal.code, trackCode);
+      final collection = track == null
+          ? null
+          : graph.collections
+                .where(
+                  (item) =>
+                      item.code == collectionCode &&
+                      item.trackCode == track.code &&
+                      item.verticalCode == vertical!.code &&
+                      item.active,
+                )
+                .firstOrNull;
       if (collection == null) {
         return const _NotFound(message: 'Learning collection is unavailable.');
       }
@@ -279,208 +248,45 @@ Widget _withSnapshot(
   );
 }
 
-class _CatalogueHome extends StatelessWidget {
-  const _CatalogueHome({required this.snapshot});
-
-  final CurrentUniversalCatalogueSnapshot snapshot;
-
-  @override
-  Widget build(BuildContext context) {
-    final graph = snapshot.graph;
-    final activeVerticals = graph.verticals
-        .where((item) => item.active)
-        .toList();
-
-    return ListView(
-      padding: const EdgeInsets.all(24),
-      children: [
-        Text(
-          'Learning catalogue',
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-        const SizedBox(height: 6),
-        Text(
-          'Choose a learning path.',
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
-        const SizedBox(height: 24),
-        switch (graph.presentation.mode) {
-          VerticalCataloguePresentationMode.shelves => _Shelves(graph: graph),
-          VerticalCataloguePresentationMode.carousel => _Carousel(
-            verticals: activeVerticals,
-          ),
-          VerticalCataloguePresentationMode.grid => _VerticalGrid(
-            verticals: activeVerticals,
-          ),
-        },
-      ],
-    );
-  }
+LearningVerticalProjection? _activeVertical(
+  UniversalCatalogueGraph graph,
+  String verticalCode,
+) {
+  return graph.verticals
+      .where((item) => item.code == verticalCode && item.active)
+      .firstOrNull;
 }
 
-class _Shelves extends StatelessWidget {
-  const _Shelves({required this.graph});
-
-  final UniversalCatalogueGraph graph;
-
-  @override
-  Widget build(BuildContext context) {
-    final sections = graph.sections.where((item) => item.active).toList();
-    final featured = graph.presentation.featuredSectionCode;
-    if (graph.presentation.showFeatured && featured != null) {
-      sections.sort((a, b) {
-        if (a.code == featured) return -1;
-        if (b.code == featured) return 1;
-        return a.sortOrder.compareTo(b.sortOrder);
-      });
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final section in sections)
-          _Shelf(
-            section: section,
-            verticals: graph.verticals
-                .where(
-                  (item) => item.active && item.sectionCode == section.code,
-                )
-                .toList(growable: false),
-          ),
-      ],
-    );
-  }
+LearningGoalProjection? _activeGoal(
+  UniversalCatalogueGraph graph,
+  String verticalCode,
+  String goalCode,
+) {
+  return graph.goals
+      .where(
+        (item) =>
+            item.code == goalCode &&
+            item.verticalCode == verticalCode &&
+            item.active,
+      )
+      .firstOrNull;
 }
 
-class _Shelf extends StatelessWidget {
-  const _Shelf({required this.section, required this.verticals});
-
-  final VerticalSectionProjection section;
-  final List<LearningVerticalProjection> verticals;
-
-  @override
-  Widget build(BuildContext context) {
-    if (verticals.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 28),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(section.title, style: Theme.of(context).textTheme.titleLarge),
-          if (section.description != null) ...[
-            const SizedBox(height: 4),
-            Text(section.description!),
-          ],
-          const SizedBox(height: 10),
-          SizedBox(
-            height: 190,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: verticals.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) => SizedBox(
-                width: 260,
-                child: _VerticalCard(vertical: verticals[index]),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Carousel extends StatelessWidget {
-  const _Carousel({required this.verticals});
-
-  final List<LearningVerticalProjection> verticals;
-
-  @override
-  Widget build(BuildContext context) {
-    if (verticals.isEmpty) return const _CatalogueEmpty();
-    return SizedBox(
-      height: 250,
-      child: PageView.builder(
-        controller: PageController(viewportFraction: 0.88),
-        itemCount: verticals.length,
-        itemBuilder: (context, index) => Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 6),
-          child: _VerticalCard(vertical: verticals[index]),
-        ),
-      ),
-    );
-  }
-}
-
-class _VerticalGrid extends StatelessWidget {
-  const _VerticalGrid({required this.verticals});
-
-  final List<LearningVerticalProjection> verticals;
-
-  @override
-  Widget build(BuildContext context) {
-    if (verticals.isEmpty) return const _CatalogueEmpty();
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 1000
-            ? 4
-            : constraints.maxWidth >= 700
-            ? 3
-            : constraints.maxWidth >= 440
-            ? 2
-            : 1;
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.45,
-          ),
-          itemCount: verticals.length,
-          itemBuilder: (context, index) =>
-              _VerticalCard(vertical: verticals[index]),
-        );
-      },
-    );
-  }
-}
-
-class _VerticalCard extends StatelessWidget {
-  const _VerticalCard({required this.vertical});
-
-  final LearningVerticalProjection vertical;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => context.push(catalogueVerticalLocation(vertical.code)),
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.school_outlined, size: 30),
-              const Spacer(),
-              Text(
-                vertical.title,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                vertical.description,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+LearningTrackProjection? _activeTrack(
+  UniversalCatalogueGraph graph,
+  String verticalCode,
+  String goalCode,
+  String trackCode,
+) {
+  return graph.tracks
+      .where(
+        (item) =>
+            item.code == trackCode &&
+            item.goalCode == goalCode &&
+            item.verticalCode == verticalCode &&
+            item.active,
+      )
+      .firstOrNull;
 }
 
 class _HierarchyPage extends StatelessWidget {
