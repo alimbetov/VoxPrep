@@ -6,6 +6,7 @@ import '../application/content_delivery/content_audio_policy.dart';
 import '../application/ports/audio_playback_engine.dart';
 import '../application/services/asset_resolver.dart';
 import '../application/services/audio_playback_controller.dart';
+import '../application/services/role_audio_clip_controller.dart';
 import '../data/audio/audioplayers_playback_engine.dart';
 import 'asset_resolver_providers.dart';
 import 'learner_state_providers.dart';
@@ -35,24 +36,24 @@ final audioPlaybackControllerProvider = Provider<AudioPlaybackController>((
   return controller;
 });
 
-final interviewSampleAnswerPlaybackControllerProvider =
-    Provider<AudioPlaybackController>((ref) {
-      final controller = AudioPlaybackController(
-        resolveAudioAsset: (content, revision) async {
-          final resolver = await ref.read(assetResolverProvider.future);
-          return resolver.resolveContent(
-            content: content,
-            revision: revision,
-            role: ContentAudioRole.sampleAnswer.wireName,
-            policy: AssetResolutionPolicy.downloadIfMissing,
-          );
-        },
-        engine: ref.watch(audioPlaybackEngineProvider),
-        learnerState: ref.watch(learnerStateRepositoryProvider),
+final interviewAudioClipControllerProvider = Provider<RoleAudioClipController>((
+  ref,
+) {
+  final controller = RoleAudioClipController(
+    resolveAudioAsset: (content, revision, role) async {
+      final resolver = await ref.read(assetResolverProvider.future);
+      return resolver.resolveContent(
+        content: content,
+        revision: revision,
+        role: role.wireName,
+        policy: AssetResolutionPolicy.downloadIfMissing,
       );
-      ref.onDispose(() => unawaited(controller.dispose()));
-      return controller;
-    });
+    },
+    engine: ref.watch(audioPlaybackEngineProvider),
+  );
+  ref.onDispose(() => unawaited(controller.dispose()));
+  return controller;
+});
 
 final audioPlaybackStateProvider = StreamProvider<ContentPlaybackState>((
   ref,
@@ -62,11 +63,10 @@ final audioPlaybackStateProvider = StreamProvider<ContentPlaybackState>((
   yield* controller.states;
 });
 
-final interviewSampleAnswerPlaybackStateProvider =
-    StreamProvider<ContentPlaybackState>((ref) async* {
-      final controller = ref.watch(
-        interviewSampleAnswerPlaybackControllerProvider,
-      );
-      yield controller.state;
-      yield* controller.states;
-    });
+final interviewAudioClipStateProvider = StreamProvider<RoleAudioClipState>((
+  ref,
+) async* {
+  final controller = ref.watch(interviewAudioClipControllerProvider);
+  yield controller.state;
+  yield* controller.states;
+});
