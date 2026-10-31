@@ -14,9 +14,6 @@ on:
       - 'contracts/**'
       - '.github/workflows/flutter-production-adapters.yml'
 
-permissions:
-  contents: write
-
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -35,30 +32,64 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Flutter version
+        run: flutter --version
+
       - name: Dependencies
         run: flutter pub get
 
-      - name: Apply pre-sync invariant fix
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('test/acceptance/p2_10_7_production_e2e_test.dart')
-          text = path.read_text()
-          old = """      await _pumpUntil(tester, find.byType(NavigationBar));\n      expect(find.text('Dependency Injection'), findsNothing);\n"""
-          new = """      expect(find.byKey(screenshotKey), findsOneWidget);\n      expect(find.text('Dependency Injection'), findsNothing);\n"""
-          if old in text:
-              path.write_text(text.replace(old, new, 1))
-          elif new not in text:
-              raise SystemExit('pre-sync invariant patch anchor not found')
-          PY
-          dart format test/acceptance/p2_10_7_production_e2e_test.dart
+      - name: Lockfile reproducibility
+        run: git diff --exit-code -- pubspec.lock
 
-      - name: Commit pre-sync invariant fix
+      - name: Format handwritten Dart
         run: |
-          if [[ -n "$(git status --porcelain -- test)" ]]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add test
-            git commit -m "test(p2): assert pre-sync renderer boundary without navigation coupling"
-            git push origin HEAD:feat/p2-flutter-production-adapters
-          fi
+          mapfile -t dart_files < <(
+            find lib test -type f -name '*.dart' \
+              ! -name '*.g.dart' \
+              ! -path 'test/generated_migrations/*' \
+              -print
+          )
+          dart format --output=none --set-exit-if-changed "${dart_files[@]}"
+
+      - name: Drift codegen
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Drift schema snapshot
+        run: |
+          dart run drift_dev schema dump \
+            lib/data/local/database/careerspeak_database.dart \
+            drift_schemas/drift_schema_v4.json
+
+      - name: Drift migration test codegen
+        run: |
+          rm -rf test/generated_migrations
+          dart run drift_dev schema generate \
+            --data-classes \
+            --companions \
+            drift_schemas/ \
+            test/generated_migrations/
+
+      - name: Generated baseline reproducibility
+        run: |
+          git diff --exit-code -- \
+            lib/data/local/database/careerspeak_database.g.dart \
+            drift_schemas/drift_schema_v1.json \
+            drift_schemas/drift_schema_v2.json \
+            drift_schemas/drift_schema_v3.json \
+            drift_schemas/drift_schema_v4.json \
+            test/generated_migrations
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Upload production E2E screenshots
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: careerspeak-production-e2e-${{ github.sha }}
+          path: mobile/careerspeak_app/build/acceptance_screenshots/*.png
+          if-no-files-found: error
+          retention-days: 14
