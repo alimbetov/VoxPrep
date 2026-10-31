@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: CareerSpeak Learner API
-  version: 1.0.0
+  version: 1.1.0
   description: >-
     Wire contract consumed by the Flutter installation runtime. Backend persistence
     entities are explicitly not part of this contract.
@@ -34,15 +34,12 @@ paths:
   /api/v1/content/manifest:
     get:
       operationId: getRootContentManifest
+      description: >-
+        Returns one locale-independent immutable publication root. Locale selection
+        must not change root identity, checksum, ETag or contentVersion.
       security:
         - installationBearer: []
       parameters:
-        - name: locale
-          in: query
-          required: true
-          schema:
-            type: string
-            pattern: '^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$'
         - name: If-None-Match
           in: header
           required: false
@@ -50,7 +47,7 @@ paths:
             type: string
       responses:
         '200':
-          description: Current root content snapshot.
+          description: Current locale-independent root content snapshot.
           headers:
             ETag:
               schema:
@@ -118,7 +115,8 @@ paths:
       operationId: getCanonicalContentPayload
       description: >-
         Returns canonical English learner content for one exact immutable content
-        revision. Locale packs do not duplicate this payload.
+        revision. Locale payloads do not duplicate this canonical payload or its
+        shared media.
       security:
         - installationBearer: []
       parameters:
@@ -155,6 +153,59 @@ paths:
         '500':
           $ref: '#/components/responses/ApiError'
 
+  /api/v1/content/{contentType}/{contentCode}/revisions/{contentRevision}/localizations/{locale}/revisions/{localizationRevision}:
+    get:
+      operationId: getLocalizedContentPayload
+      description: >-
+        Returns one exact immutable localized projection for one exact canonical
+        content revision. Canonical English content and shared media are not
+        duplicated in this payload.
+      security:
+        - installationBearer: []
+      parameters:
+        - name: contentType
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ContentType'
+        - name: contentCode
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/BusinessCode'
+        - name: contentRevision
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/PositiveRevision'
+        - name: locale
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/LocaleCode'
+        - name: localizationRevision
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/PositiveRevision'
+      responses:
+        '200':
+          description: Exact localized learner payload revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalizedContentPayload'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
 components:
   securitySchemes:
     installationBearer:
@@ -180,6 +231,10 @@ components:
       type: string
       minLength: 1
       pattern: '^[A-Z0-9][A-Z0-9._-]*$'
+
+    LocaleCode:
+      type: string
+      pattern: '^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$'
 
     Sha256:
       type: string
@@ -270,6 +325,10 @@ components:
     ContentTombstone:
       type: object
       additionalProperties: false
+      description: >-
+        Retires the whole stable content business identity from this publication
+        snapshot onward. revision is the highest canonical revision that had been
+        published before retirement and is audit/integrity metadata only.
       required:
         - contentCode
         - contentType
@@ -348,6 +407,30 @@ components:
             - $ref: '#/components/schemas/CanonicalUtcInstant'
             - type: 'null'
 
+    LocalizedContentRef:
+      type: object
+      additionalProperties: false
+      required:
+        - contentCode
+        - contentType
+        - contentRevision
+        - locale
+        - localizationRevision
+        - checksum
+      properties:
+        contentCode:
+          $ref: '#/components/schemas/BusinessCode'
+        contentType:
+          $ref: '#/components/schemas/ContentType'
+        contentRevision:
+          $ref: '#/components/schemas/PositiveRevision'
+        locale:
+          $ref: '#/components/schemas/LocaleCode'
+        localizationRevision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+
     ManifestAssetDescriptor:
       type: object
       additionalProperties: false
@@ -409,6 +492,7 @@ components:
         - revision
         - checksum
         - contents
+        - localizations
         - assets
         - contentAssets
       properties:
@@ -428,6 +512,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PackContentRef'
+        localizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocalizedContentRef'
         assets:
           type: array
           items:
@@ -487,3 +575,60 @@ components:
           minimum: 1
         hasAudio:
           type: boolean
+
+    LocalizedContentPayload:
+      type: object
+      additionalProperties: false
+      description: >-
+        Immutable locale-owned learner copy for one exact canonical content
+        revision. At least one localized text field must be non-null.
+      required:
+        - contentCode
+        - contentType
+        - contentRevision
+        - locale
+        - localizationRevision
+        - checksum
+      properties:
+        contentCode:
+          $ref: '#/components/schemas/BusinessCode'
+        contentType:
+          $ref: '#/components/schemas/ContentType'
+        contentRevision:
+          $ref: '#/components/schemas/PositiveRevision'
+        locale:
+          $ref: '#/components/schemas/LocaleCode'
+        localizationRevision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+        title:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+        subtitle:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+        description:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+        translation:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+        hint:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+        explanation:
+          type:
+            - string
+            - 'null'
+          minLength: 1
