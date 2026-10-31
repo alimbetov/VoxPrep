@@ -8,6 +8,12 @@ const _verticalsChecksum =
     '2222222222222222222222222222222222222222222222222222222222222222';
 const _presentationChecksum =
     '3333333333333333333333333333333333333333333333333333333333333333';
+const _goalsChecksum =
+    '4444444444444444444444444444444444444444444444444444444444444444';
+const _tracksChecksum =
+    '5555555555555555555555555555555555555555555555555555555555555555';
+const _collectionsChecksum =
+    '6666666666666666666666666666666666666666666666666666666666666666';
 
 Map<String, CataloguePayload> buildDemoVerticalCataloguePayloads() {
   final sectionsRef = CatalogueRevisionRef(
@@ -24,6 +30,21 @@ Map<String, CataloguePayload> buildDemoVerticalCataloguePayloads() {
     kind: CatalogueKind.verticalPresentation,
     revision: 1,
     checksum: _presentationChecksum,
+  );
+  final goalsRef = CatalogueRevisionRef(
+    kind: CatalogueKind.learningGoals,
+    revision: 1,
+    checksum: _goalsChecksum,
+  );
+  final tracksRef = CatalogueRevisionRef(
+    kind: CatalogueKind.learningTracks,
+    revision: 1,
+    checksum: _tracksChecksum,
+  );
+  final collectionsRef = CatalogueRevisionRef(
+    kind: CatalogueKind.learningCollections,
+    revision: 1,
+    checksum: _collectionsChecksum,
   );
 
   final sections = <Object>[
@@ -117,6 +138,9 @@ Map<String, CataloguePayload> buildDemoVerticalCataloguePayloads() {
     _payload(ref: sectionsRef, items: sections),
     _payload(ref: verticalsRef, items: verticals),
     _payload(ref: presentationRef, items: presentation),
+    _payload(ref: goalsRef, items: const <Object>[]),
+    _payload(ref: tracksRef, items: const <Object>[]),
+    _payload(ref: collectionsRef, items: const <Object>[]),
   ];
 
   return Map<String, CataloguePayload>.unmodifiable(<String, CataloguePayload>{
