@@ -1,5 +1,6 @@
 import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
 import 'package:careerspeak_app/application/ports/asset_byte_source.dart';
+import 'package:careerspeak_app/application/ports/media_access_gateway.dart';
 import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/remote/http_asset_byte_source.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,14 +11,17 @@ const _checksum =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 void main() {
-  test('resolves immutable deliveryKey against CDN base path', () async {
+  test('downloads only from signed URL resolved by assetId', () async {
     Uri? requested;
+    final access = _AccessGateway([
+      Uri.parse('https://media.example.test/signed/a?signature=one'),
+    ]);
     final source = HttpAssetByteSource(
       client: MockClient((request) async {
         requested = request.url;
         return http.Response.bytes(<int>[1, 2, 3], 200);
       }),
-      baseUri: Uri.parse('https://cdn.example.test/published/'),
+      accessGateway: access,
     );
 
     final result = await source.open(_asset(size: 3));
@@ -25,14 +29,59 @@ void main() {
     expect(result, isA<Success<AssetByteStream>>());
     expect(
       requested,
-      Uri.parse('https://cdn.example.test/published/audio/a.mp3'),
+      Uri.parse('https://media.example.test/signed/a?signature=one'),
     );
+    expect(access.assetIds, ['asset-a']);
   });
 
-  test('maps temporary CDN failure to retryable failure', () async {
+  test('origin 403 refreshes grant once for the same immutable asset', () async {
+    final requested = <Uri>[];
+    final access = _AccessGateway([
+      Uri.parse('https://media.example.test/signed/a?signature=expired'),
+      Uri.parse('https://media.example.test/signed/a?signature=fresh'),
+    ]);
+    final source = HttpAssetByteSource(
+      client: MockClient((request) async {
+        requested.add(request.url);
+        if (requested.length == 1) return http.Response('', 403);
+        return http.Response.bytes(<int>[1, 2, 3], 200);
+      }),
+      accessGateway: access,
+    );
+
+    final result = await source.open(_asset(size: 3));
+
+    expect(result, isA<Success<AssetByteStream>>());
+    expect(requested.length, 2);
+    expect(access.assetIds, ['asset-a', 'asset-a']);
+  });
+
+  test('second origin 403 fails instead of refreshing forever', () async {
+    final access = _AccessGateway([
+      Uri.parse('https://media.example.test/signed/a?signature=one'),
+      Uri.parse('https://media.example.test/signed/a?signature=two'),
+    ]);
+    final source = HttpAssetByteSource(
+      client: MockClient((request) async => http.Response('', 403)),
+      accessGateway: access,
+    );
+
+    final result = await source.open(_asset(size: 3));
+
+    expect(result, isA<FailureResult<AssetByteStream>>());
+    expect(
+      (result as FailureResult<AssetByteStream>).failure.code,
+      'ASSET_DOWNLOAD_REJECTED',
+    );
+    expect(access.assetIds.length, 2);
+  });
+
+  test('maps temporary media-origin failure to retryable failure', () async {
     final source = HttpAssetByteSource(
       client: MockClient((request) async => http.Response('', 503)),
-      baseUri: Uri.parse('https://cdn.example.test/'),
+      accessGateway: _AccessGateway([
+        Uri.parse('https://media.example.test/signed/a?signature=one'),
+      ]),
     );
 
     final result = await source.open(_asset(size: 3));
@@ -42,6 +91,27 @@ void main() {
     expect(failure.code, 'ASSET_SOURCE_UNAVAILABLE');
     expect(failure.retryable, isTrue);
   });
+}
+
+final class _AccessGateway implements MediaAccessGateway {
+  _AccessGateway(this.urls);
+
+  final List<Uri> urls;
+  final assetIds = <String>[];
+  int _next = 0;
+
+  @override
+  Future<Result<MediaAccessGrant>> resolve(String assetId) async {
+    assetIds.add(assetId);
+    final url = urls[_next++];
+    return Success(
+      MediaAccessGrant(
+        assetId: assetId,
+        url: url,
+        expiresAt: DateTime.utc(2026, 11, 1, 12, 5),
+      ),
+    );
+  }
 }
 
 ManifestAssetDescriptor _asset({required int size}) => ManifestAssetDescriptor(
