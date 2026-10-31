@@ -173,7 +173,7 @@ Ephemeral media authorization belongs to C5:
 
 ```text
 authorized delivery resolution
-short-lived signed URL/access grant if used
+short-lived signed URL/access grant
 rate limiting / abuse controls
 ```
 
@@ -198,7 +198,9 @@ Add batch/bundle delivery only if measured pack size makes single-payload reques
 
 # C5 — Installation + external security
 
-**Learner security model is frozen in:** `docs/backend/C5_INSTALLATION_EXTERNAL_SECURITY_CONTRACT.md`.
+**Learner security model is frozen in:** `docs/backend/C5_INSTALLATION_EXTERNAL_SECURITY_CONTRACT.md`.  
+**Media security model is frozen in:** `docs/backend/C5_MEDIA_SECURITY_CONTRACT.md`.  
+**BGA-011 resolution:** `docs/backend/BGA_011_MEDIA_SECURITY_RESOLUTION.md`.
 
 Close:
 
@@ -239,16 +241,40 @@ second 401 → fail closed
 revoked installation → renewal fails closed
 ```
 
+Frozen media policy:
+
+```text
+C4 stores stable assetId + checksumSha256 + deliveryKey
+Flutter requests media access using authenticated learner API
+Backend validates current installation token + asset eligibility
+Backend issues short-lived signed/presigned URL
+RustFS/edge serves media bytes directly to Flutter
+Flutter verifies checksum before trusted local promotion
+```
+
+Media security rules:
+
+```text
+learner media is not public by default
+no RustFS credentials in Flutter
+client cannot request signing of arbitrary storage keys
+signed URL is ephemeral and never durable publication state
+default grant TTL = 5 minutes
+maximum grant TTL = 15 minutes
+expired grant → resolve same asset again, not publication resync
+revoked installation → cannot mint new grants
+normal media bytes do not proxy through Spring Boot
+```
+
 Also freeze:
 
 ```text
 429/Retry-After
 ADMIN cookie/CSRF/rate-limit/rotation basics
-public-vs-signed media decision
 entitlement risk acceptance/rejection
 ```
 
-Do not add user accounts or an identity platform for these MVP concerns.
+Do not add user accounts, DRM or an identity platform for these MVP concerns.
 
 ---
 
@@ -294,7 +320,7 @@ B5  typed content revisions
 B6  localization
 B7  assessment
 B8  publication snapshot + manifests
-B9  learner exact-payload/catalog APIs
+B9  learner exact-payload/catalog APIs + media access grant
 B10 TTS backend domain
 B11 simple Admin Content Studio
 B12 cross-system acceptance
