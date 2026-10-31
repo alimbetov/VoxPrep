@@ -12,6 +12,25 @@ void main() {
     expect(source, isNot(contains('data/mock/')));
   });
 
+  test('production sync stages exact tests and catalogues before commit', () {
+    final source = File('lib/app/content_sync_providers.dart').readAsStringSync();
+
+    expect(source, contains('DriftPublicationSnapshotStager'));
+    expect(source, contains('assessmentRevisionLoaderProvider'));
+    expect(source, contains('cataloguePayloadGatewayProvider'));
+    expect(source, contains('snapshotStager:'));
+  });
+
+  test('production catalogue reads are CURRENT snapshot fenced', () {
+    final source = File('lib/app/catalogue_payload_providers.dart')
+        .readAsStringSync();
+
+    expect(source, contains('HttpCataloguePayloadGateway'));
+    expect(source, contains('DriftCatalogueSnapshotRepository'));
+    expect(source, isNot(contains('Mock')));
+    expect(source, isNot(contains('Unavailable')));
+  });
+
   test(
     'production remote adapters do not use latest/current revision endpoints',
     () {
