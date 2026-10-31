@@ -132,12 +132,14 @@ class CatalogueTrackScreen extends ConsumerWidget {
     return _withSnapshot(ref, (snapshot) {
       final graph = snapshot.graph;
       final vertical = _activeVertical(graph, verticalCode);
-      final goal = vertical == null
-          ? null
-          : _activeGoal(graph, vertical.code, goalCode);
-      final track = goal == null
-          ? null
-          : _activeTrack(graph, vertical!.code, goal.code, trackCode);
+      if (vertical == null) {
+        return const _NotFound(message: 'Learning track is unavailable.');
+      }
+      final goal = _activeGoal(graph, vertical.code, goalCode);
+      if (goal == null) {
+        return const _NotFound(message: 'Learning track is unavailable.');
+      }
+      final track = _activeTrack(graph, vertical.code, goal.code, trackCode);
       if (track == null) {
         return const _NotFound(message: 'Learning track is unavailable.');
       }
@@ -145,7 +147,7 @@ class CatalogueTrackScreen extends ConsumerWidget {
           .where(
             (item) =>
                 item.trackCode == track.code &&
-                item.verticalCode == vertical!.code &&
+                item.verticalCode == vertical.code &&
                 item.active,
           )
           .toList(growable: false);
@@ -193,23 +195,26 @@ class CatalogueCollectionScreen extends ConsumerWidget {
     return _withSnapshot(ref, (snapshot) {
       final graph = snapshot.graph;
       final vertical = _activeVertical(graph, verticalCode);
-      final goal = vertical == null
-          ? null
-          : _activeGoal(graph, vertical.code, goalCode);
-      final track = goal == null
-          ? null
-          : _activeTrack(graph, vertical!.code, goal.code, trackCode);
-      final collection = track == null
-          ? null
-          : graph.collections
-                .where(
-                  (item) =>
-                      item.code == collectionCode &&
-                      item.trackCode == track.code &&
-                      item.verticalCode == vertical!.code &&
-                      item.active,
-                )
-                .firstOrNull;
+      if (vertical == null) {
+        return const _NotFound(message: 'Learning collection is unavailable.');
+      }
+      final goal = _activeGoal(graph, vertical.code, goalCode);
+      if (goal == null) {
+        return const _NotFound(message: 'Learning collection is unavailable.');
+      }
+      final track = _activeTrack(graph, vertical.code, goal.code, trackCode);
+      if (track == null) {
+        return const _NotFound(message: 'Learning collection is unavailable.');
+      }
+      final collection = graph.collections
+          .where(
+            (item) =>
+                item.code == collectionCode &&
+                item.trackCode == track.code &&
+                item.verticalCode == vertical.code &&
+                item.active,
+          )
+          .firstOrNull;
       if (collection == null) {
         return const _NotFound(message: 'Learning collection is unavailable.');
       }
