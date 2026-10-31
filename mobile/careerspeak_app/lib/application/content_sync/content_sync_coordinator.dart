@@ -5,6 +5,7 @@ import '../ports/sync_journal.dart';
 import '../ports/sync_plan_executor.dart';
 import '../result/result.dart';
 import 'content_sync_planner.dart';
+import 'required_offline_asset_prefetcher.dart';
 import 'root_manifest_materializer.dart';
 import 'sync_models.dart';
 
@@ -32,6 +33,7 @@ final class ContentSyncCoordinator {
     required ContentSyncPlanner planner,
     required SyncPlanExecutor executor,
     PublicationSnapshotStager? snapshotStager,
+    RequiredOfflineAssetPrefetcher? requiredOfflinePrefetcher,
   }) {
     return ContentSyncCoordinator._(
       journal,
@@ -39,6 +41,7 @@ final class ContentSyncCoordinator {
       planner,
       executor,
       snapshotStager,
+      requiredOfflinePrefetcher,
     );
   }
 
@@ -48,6 +51,7 @@ final class ContentSyncCoordinator {
     this._planner,
     this._executor,
     this._snapshotStager,
+    this._requiredOfflinePrefetcher,
   );
 
   final SyncJournal _journal;
@@ -55,6 +59,7 @@ final class ContentSyncCoordinator {
   final ContentSyncPlanner _planner;
   final SyncPlanExecutor _executor;
   final PublicationSnapshotStager? _snapshotStager;
+  final RequiredOfflineAssetPrefetcher? _requiredOfflinePrefetcher;
 
   Future<Result<ContentSyncOutcome>> synchronize({
     required String runId,
@@ -180,6 +185,18 @@ final class ContentSyncCoordinator {
       }
     }
 
+    // Publication-required offline assets are part of commit readiness. They
+    // must exist as verified local bytes before the executor can switch CURRENT.
+    final requiredOfflinePrefetcher = _requiredOfflinePrefetcher;
+    if (requiredOfflinePrefetcher != null) {
+      final prefetched = await requiredOfflinePrefetcher.prefetch(
+        targetRoot.packs,
+      );
+      if (prefetched is FailureResult<void>) {
+        return _finishFailure(activeRunId, prefetched.failure);
+      }
+    }
+
     final executionResult = await _executor.execute(
       runId: activeRunId,
       plan: plan,
@@ -236,8 +253,8 @@ final class ContentSyncCoordinator {
   static SyncRunState _terminalStateFor(ApplicationFailure failure) {
     return switch (failure.code) {
       'OFFLINE' => SyncRunState.deferredOffline,
-      'SCHEMA_UNSUPPORTED' ||
-      'APP_UPDATE_REQUIRED' => SyncRunState.blockedSchema,
+      'SCHEMA_UNSUPPORTED' || 'APP_UPDATE_REQUIRED' =>
+        SyncRunState.blockedSchema,
       'UNAUTHORIZED' => SyncRunState.failedRetryable,
       _ when failure.retryable => SyncRunState.failedRetryable,
       _ => SyncRunState.failedFatal,
