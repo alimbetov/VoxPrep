@@ -8,6 +8,7 @@ on:
     paths:
       - 'mobile/careerspeak_app/lib/**/*.dart'
       - 'mobile/careerspeak_app/test/**/*.dart'
+      - 'mobile/careerspeak_app/tool/**/*.dart'
       - '.github/workflows/c4-format-once.yml'
 
 permissions:
@@ -32,15 +33,15 @@ jobs:
         run: flutter pub get
       - name: Format Dart sources
         working-directory: mobile/careerspeak_app
-        run: dart format lib test
+        run: dart format lib test tool
       - name: Commit formatting
         run: |
-          if git diff --quiet -- mobile/careerspeak_app/lib mobile/careerspeak_app/test; then
+          if git diff --quiet -- mobile/careerspeak_app/lib mobile/careerspeak_app/test mobile/careerspeak_app/tool; then
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add mobile/careerspeak_app/lib mobile/careerspeak_app/test
+          git add mobile/careerspeak_app/lib mobile/careerspeak_app/test mobile/careerspeak_app/tool
           git commit -m 'style: apply canonical dart format'
           for attempt in 1 2 3; do
             git fetch origin "${GITHUB_REF_NAME}"
