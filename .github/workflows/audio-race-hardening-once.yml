@@ -1,0 +1,53 @@
+name: Audio Race Hardening Once
+
+on:
+  push:
+    branches:
+      - feat/universal-vertical-catalogue
+    paths:
+      - '.github/workflows/audio-race-hardening-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch stop-during-resolve cancellation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          patches = {
+              Path('mobile/careerspeak_app/lib/application/services/audio_playback_controller.dart'): (
+                  """  Future<Result<void>> stop() async {\n    if (_disposed) return _closedFailure();\n    if (_session == null) return const Success<void>(null);\n\n    final position = _state.positionMs;\n""",
+                  """  Future<Result<void>> stop() async {\n    if (_disposed) return _closedFailure();\n    if (_session == null) {\n      if (_state.phase == AudioPlaybackPhase.resolving) {\n        ++_generation;\n        _emit(\n          _state.copyWith(\n            phase: AudioPlaybackPhase.stopped,\n            clearFailure: true,\n          ),\n        );\n      }\n      return const Success<void>(null);\n    }\n\n    final position = _state.positionMs;\n""",
+              ),
+              Path('mobile/careerspeak_app/lib/application/services/role_audio_clip_controller.dart'): (
+                  """  Future<Result<void>> stop() async {\n    if (_disposed) return _closedFailure();\n    if (_session == null) return const Success<void>(null);\n    final result = await _closeCurrent();\n""",
+                  """  Future<Result<void>> stop() async {\n    if (_disposed) return _closedFailure();\n    if (_session == null) {\n      if (_state.phase == AudioPlaybackPhase.resolving) {\n        ++_generation;\n        _emit(\n          RoleAudioClipState(\n            phase: AudioPlaybackPhase.stopped,\n            role: _state.role,\n            positionMs: _state.positionMs,\n            durationMs: _state.durationMs,\n          ),\n        );\n      }\n      return const Success<void>(null);\n    }\n    final result = await _closeCurrent();\n""",
+              ),
+          }
+
+          for path, (old, new) in patches.items():
+              text = path.read_text()
+              if old not in text:
+                  raise SystemExit(f'expected patch target not found: {path}')
+              path.write_text(text.replace(old, new, 1))
+          PY
+      - name: Format patched controllers
+        working-directory: mobile/careerspeak_app
+        run: dart format lib/application/services/audio_playback_controller.dart lib/application/services/role_audio_clip_controller.dart
+      - name: Commit production fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mobile/careerspeak_app/lib/application/services/audio_playback_controller.dart \
+                  mobile/careerspeak_app/lib/application/services/role_audio_clip_controller.dart
+          git commit -m 'fix(audio): cancel pending resolve on stop'
+          git push origin HEAD:${GITHUB_REF_NAME}
