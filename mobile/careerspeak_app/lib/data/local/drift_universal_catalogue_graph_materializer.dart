@@ -37,6 +37,7 @@ final class DriftUniversalCatalogueGraphMaterializer {
       requireUniversalCatalogueManifestV2(root);
       graph = _decodeGraph(root, payloads);
       _requireExactPracticeTestMembership(root, graph);
+      await _requireExactIconAssetMembership(root, graph);
     } on Object catch (error) {
       return FailureResult<void>(
         ApplicationFailure(
@@ -262,6 +263,59 @@ final class DriftUniversalCatalogueGraphMaterializer {
             '${ref.practiceTestCode} outside exact snapshot membership.',
           );
         }
+      }
+    }
+  }
+
+  Future<void> _requireExactIconAssetMembership(
+    RootContentManifest root,
+    UniversalCatalogueGraph graph,
+  ) async {
+    final iconAssetIds = <String>{
+      for (final section in graph.sections)
+        if (section.iconAssetId case final String id) id,
+      for (final vertical in graph.verticals) vertical.iconAssetId,
+    };
+    if (iconAssetIds.isEmpty) return;
+
+    for (final assetId in iconAssetIds) {
+      String? mediaType;
+      for (final pack in root.packs) {
+        final row = await _database
+            .customSelect(
+              '''
+              SELECT a.mime_type
+              FROM asset_catalog a
+              JOIN pack_asset_refs pa ON pa.asset_id = a.asset_id
+              WHERE a.asset_id = ?
+                AND pa.pack_code = ?
+                AND pa.variant_key = ?
+                AND pa.pack_revision = ?
+              LIMIT 1
+              ''',
+              variables: <Variable<Object>>[
+                Variable<String>(assetId),
+                Variable<String>(pack.identity.code),
+                Variable<String>(pack.identity.variant),
+                Variable<int>(pack.revision),
+              ],
+            )
+            .getSingleOrNull();
+        if (row != null) {
+          mediaType = row.read<String>('mime_type');
+          break;
+        }
+      }
+
+      if (mediaType == null) {
+        throw FormatException(
+          'Catalogue icon $assetId is outside exact pack asset membership.',
+        );
+      }
+      if (!mediaType.toLowerCase().startsWith('image/')) {
+        throw FormatException(
+          'Catalogue icon $assetId must resolve to image/*, got $mediaType.',
+        );
       }
     }
   }
