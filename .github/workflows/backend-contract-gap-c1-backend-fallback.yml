@@ -5,12 +5,10 @@ on:
     branches: [feat/backend-contract-gap-audit]
     paths:
       - '.github/workflows/backend-contract-gap-c1-backend-fallback.yml'
-      - 'tool/c1_backend_fallback_patch.py'
-      - 'tool/c1_backend_fallback_test_patch.py'
+      - 'tool/c1_backend_fallback_v2_patch.py'
+      - 'tool/c1_backend_fallback_v2_test_patch.py'
       - 'tool/c1_locale_repair_patch.py'
-      - 'tool/c1_locale_canonicalization_patch.py'
       - 'tool/c1_acceptance_compile_patch.py'
-      - 'tool/c1_tombstone_retirement_hardening.py'
 
 permissions:
   contents: write
@@ -32,15 +30,12 @@ jobs:
         working-directory: mobile/careerspeak_app
         run: flutter pub get
 
-      - name: Apply Backend-owned fallback, locale repair and retirement hardening
+      - name: Apply unified C1 localization implementation
         run: |
-          python3 tool/c1_backend_fallback_patch.py
-          python3 tool/c1_locale_canonicalization_patch.py
-          python3 tool/c1_backend_fallback_test_patch.py
+          python3 tool/c1_backend_fallback_v2_patch.py
+          python3 tool/c1_backend_fallback_v2_test_patch.py
           python3 tool/c1_locale_repair_patch.py
           python3 tool/c1_acceptance_compile_patch.py
-          python3 tool/c1_tombstone_retirement_hardening.py
-          git checkout -- .github/workflows/flutter-production-adapters.yml
 
       - name: Format C1 sources
         working-directory: mobile/careerspeak_app
@@ -71,7 +66,7 @@ jobs:
         working-directory: mobile/careerspeak_app
         run: flutter analyze
 
-      - name: C1 backend-owned fallback qualification
+      - name: C1 localization lifecycle qualification
         working-directory: mobile/careerspeak_app
         run: |
           flutter test test/application/content_delivery/locale_fallback_test.dart
@@ -93,12 +88,13 @@ jobs:
         working-directory: mobile/careerspeak_app
         run: flutter test
 
-      - name: Commit qualified C1 contract and persistence
+      - name: Commit qualified C1 implementation
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add \
             contracts/learner-api-v1.yaml \
+            .github/workflows/flutter-production-adapters.yml \
             mobile/careerspeak_app/lib \
             mobile/careerspeak_app/test \
             mobile/careerspeak_app/drift_schemas
@@ -106,7 +102,7 @@ jobs:
             echo 'No generated or patch-applied changes to commit.'
             exit 0
           fi
-          git commit -m 'feat(c1): persist backend-owned locale fallback rules'
+          git commit -m 'feat(c1): complete backend-owned localization lifecycle'
           git fetch origin feat/backend-contract-gap-audit
           git rebase origin/feat/backend-contract-gap-audit
           git push origin HEAD:feat/backend-contract-gap-audit
