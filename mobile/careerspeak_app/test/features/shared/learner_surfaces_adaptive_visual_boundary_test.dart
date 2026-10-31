@@ -9,7 +9,7 @@ import 'package:careerspeak_app/domain/content_marker_state.dart';
 import 'package:careerspeak_app/features/home/home_screen.dart';
 import 'package:careerspeak_app/features/learn/learn_screen.dart';
 import 'package:careerspeak_app/features/review/review_screen.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
