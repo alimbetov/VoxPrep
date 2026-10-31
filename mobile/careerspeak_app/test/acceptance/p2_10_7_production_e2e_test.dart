@@ -153,7 +153,7 @@ void main() {
         ),
       );
 
-      await _pumpUntil(tester, find.byType(NavigationBar));
+      expect(find.byKey(screenshotKey), findsOneWidget);
       expect(find.text('Dependency Injection'), findsNothing);
       await _pumpUntilCondition(
         tester,
