@@ -18,7 +18,6 @@ import 'package:careerspeak_app/data/mock/demo_assessment_payload_gateway.dart';
 import 'package:careerspeak_app/data/mock/demo_catalogue_payload_gateway.dart';
 import 'package:careerspeak_app/data/mock/demo_content_manifest_gateway.dart';
 import 'package:careerspeak_app/data/mock/demo_content_payload_gateway.dart';
-import 'package:careerspeak_app/data/mock/demo_learning_fixture.dart';
 import 'package:careerspeak_app/data/mock/demo_vertical_catalogue_fixture.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -206,13 +205,18 @@ void main() {
       ).materialize(root: staged, payloads: demoPayloads.values);
       expect(materialized, isA<Success<void>>());
 
-      await database.customStatement(
-        '''
-        UPDATE learning_track_reads
-        SET goal_code = 'CORRUPTED_GOAL'
-        WHERE content_version = 8
-        ''',
-      );
+      await database.customStatement('PRAGMA foreign_keys = OFF');
+      try {
+        await database.customStatement(
+          '''
+          UPDATE learning_track_reads
+          SET goal_code = 'CORRUPTED_GOAL'
+          WHERE content_version = 8
+          ''',
+        );
+      } finally {
+        await database.customStatement('PRAGMA foreign_keys = ON');
+      }
 
       await _expectCurrent(database, version: 1, verticalCount: 8);
     });
