@@ -3,6 +3,7 @@ import '../ports/sync_journal.dart';
 import '../ports/sync_plan_executor.dart';
 import '../result/result.dart';
 import 'content_sync_planner.dart';
+import 'root_manifest_materializer.dart';
 import 'sync_models.dart';
 
 sealed class ContentSyncOutcome {
@@ -86,9 +87,8 @@ final class ContentSyncCoordinator {
     );
     if (remoteTransition != null) return FailureResult(remoteTransition);
 
-    // Root snapshot identity is deliberately locale-independent. The selected
-    // translation locale remains part of the durable sync run so the executor
-    // can choose the required locale pack from the one immutable root.
+    // Root identity is deliberately locale-independent. Locale selection only
+    // materializes a device-local pack projection from that immutable root.
     final remoteResult = await _manifestGateway.fetchRootManifest(etag: null);
     if (remoteResult is FailureResult<RootManifestFetch>) {
       return _finishFailure(activeRunId, remoteResult.failure);
@@ -105,6 +105,17 @@ final class ContentSyncCoordinator {
       );
     }
 
+    final fullRoot = remoteFetch.manifest;
+    final materializedResult = const RootManifestMaterializer().materialize(
+      root: fullRoot,
+      translationLocale: translationLocale,
+    );
+    if (materializedResult is FailureResult<RootContentManifest>) {
+      return _finishFailure(activeRunId, materializedResult.failure);
+    }
+    final targetRoot =
+        (materializedResult as Success<RootContentManifest>).value;
+
     final planningTransition = await _transition(
       activeRunId,
       SyncRunState.planning,
@@ -113,7 +124,8 @@ final class ContentSyncCoordinator {
 
     final planResult = _planner.plan(
       local: local,
-      remote: remoteFetch.manifest,
+      remote: targetRoot,
+      immutableRootPackIdentities: fullRoot.packs.map((pack) => pack.identity),
     );
     if (planResult is FailureResult<SyncPlan>) {
       return _finishFailure(activeRunId, planResult.failure);
