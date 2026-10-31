@@ -3,17 +3,22 @@ import '../ports/content_manifest_gateway.dart';
 import '../result/result.dart';
 import '../services/asset_download_manager.dart';
 
+typedef EnsureRequiredOfflineAsset =
+    Future<Result<AssetDownloadOutcome>> Function(
+      ManifestAssetDescriptor asset,
+    );
+
 /// Pre-commit barrier for assets whose publication contract requires a verified
 /// local copy. Optional/cacheable media remains lazy and does not block commit.
 final class RequiredOfflineAssetPrefetcher {
   const RequiredOfflineAssetPrefetcher({
     required ContentManifestGateway manifestGateway,
-    required AssetDownloadManager downloads,
+    required EnsureRequiredOfflineAsset ensureLocal,
   }) : _manifestGateway = manifestGateway,
-       _downloads = downloads;
+       _ensureLocal = ensureLocal;
 
   final ContentManifestGateway _manifestGateway;
-  final AssetDownloadManager _downloads;
+  final EnsureRequiredOfflineAsset _ensureLocal;
 
   Future<Result<void>> prefetch(Iterable<PackRevisionRef> packs) async {
     final seenAssets = <String>{};
@@ -45,7 +50,7 @@ final class RequiredOfflineAssetPrefetcher {
       for (final asset in manifest.assets) {
         if (!asset.requiredOffline || !seenAssets.add(asset.assetId)) continue;
 
-        final downloaded = await _downloads.ensureLocal(asset);
+        final downloaded = await _ensureLocal(asset);
         if (downloaded case FailureResult<AssetDownloadOutcome>(
           :final failure,
         )) {
