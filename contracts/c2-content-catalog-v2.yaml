@@ -1,0 +1,137 @@
+openapi: 3.1.0
+info:
+  title: CareerSpeak Universal Catalogue Contract
+  version: 2.0.0
+components:
+  schemas:
+    LearningCollectionDto:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - verticalCode
+        - trackCode
+        - title
+        - description
+        - sortOrder
+        - active
+        - members
+      properties:
+        code:
+          type: string
+        verticalCode:
+          type: string
+        trackCode:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        sortOrder:
+          type: integer
+          minimum: 0
+        active:
+          type: boolean
+        members:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/LearningCollectionMemberDto'
+
+    LearningCollectionMemberDto:
+      oneOf:
+        - $ref: '#/components/schemas/ContentCollectionMemberDto'
+        - $ref: '#/components/schemas/PracticeTestCollectionMemberDto'
+      discriminator:
+        propertyName: type
+        mapping:
+          CONTENT: '#/components/schemas/ContentCollectionMemberDto'
+          PRACTICE_TEST: '#/components/schemas/PracticeTestCollectionMemberDto'
+
+    ContentCollectionMemberDto:
+      type: object
+      additionalProperties: false
+      required:
+        - position
+        - type
+        - content
+        - practiceTest
+      properties:
+        position:
+          type: integer
+          minimum: 0
+        type:
+          const: CONTENT
+        content:
+          $ref: '#/components/schemas/ContentRevisionRefDto'
+        practiceTest:
+          type: 'null'
+
+    PracticeTestCollectionMemberDto:
+      type: object
+      additionalProperties: false
+      required:
+        - position
+        - type
+        - content
+        - practiceTest
+      properties:
+        position:
+          type: integer
+          minimum: 0
+        type:
+          const: PRACTICE_TEST
+        content:
+          type: 'null'
+        practiceTest:
+          $ref: '#/components/schemas/PracticeTestRevisionRefDto'
+
+    ContentRevisionRefDto:
+      type: object
+      additionalProperties: false
+      required:
+        - contentCode
+        - contentType
+        - revision
+        - checksum
+      properties:
+        contentCode:
+          type: string
+        contentType:
+          type: string
+          enum:
+            - vocabulary
+            - interview
+            - topic
+            - shadowing
+            - phrase
+        revision:
+          type: integer
+          minimum: 1
+        checksum:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+
+    PracticeTestRevisionRefDto:
+      type: object
+      additionalProperties: false
+      required:
+        - practiceTestCode
+        - revision
+        - checksum
+      properties:
+        practiceTestCode:
+          type: string
+        revision:
+          type: integer
+          minimum: 1
+        checksum:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+
+x-catalogue-invariants:
+  - LearningCollection.members MUST be ordered by contiguous position 0..N-1.
+  - A member MUST reference exactly one target according to its discriminator.
+  - PracticeTest MUST NOT directly own or reference Content in this MVP.
+  - Collection, Content and PracticeTest publication membership MUST remain within one vertical.
+  - Reordering or changing an exact member reference creates a new catalogue revision.

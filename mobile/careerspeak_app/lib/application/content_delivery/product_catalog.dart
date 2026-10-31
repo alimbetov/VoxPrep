@@ -62,6 +62,67 @@ final class PracticeTestRevisionRef {
   String get identityKey => '$practiceTestCode|$revision';
 }
 
+enum LearningCollectionMemberType {
+  content('CONTENT'),
+  practiceTest('PRACTICE_TEST');
+
+  const LearningCollectionMemberType(this.wireName);
+
+  final String wireName;
+
+  static LearningCollectionMemberType fromWireName(String value) {
+    for (final type in values) {
+      if (type.wireName == value) return type;
+    }
+    throw FormatException('Unsupported collection member type: $value');
+  }
+}
+
+final class LearningCollectionMember {
+  factory LearningCollectionMember.content({
+    required int position,
+    required ContentRevisionRef content,
+  }) {
+    return LearningCollectionMember._(
+      position: _position(position),
+      type: LearningCollectionMemberType.content,
+      contentRef: content,
+      practiceTestRef: null,
+    );
+  }
+
+  factory LearningCollectionMember.practiceTest({
+    required int position,
+    required PracticeTestRevisionRef practiceTest,
+  }) {
+    return LearningCollectionMember._(
+      position: _position(position),
+      type: LearningCollectionMemberType.practiceTest,
+      contentRef: null,
+      practiceTestRef: practiceTest,
+    );
+  }
+
+  const LearningCollectionMember._({
+    required this.position,
+    required this.type,
+    required this.contentRef,
+    required this.practiceTestRef,
+  });
+
+  final int position;
+  final LearningCollectionMemberType type;
+  final ContentRevisionRef? contentRef;
+  final PracticeTestRevisionRef? practiceTestRef;
+
+  String get identityKey => switch (type) {
+        LearningCollectionMemberType.content =>
+          '${type.wireName}|${contentRef!.identityKey}',
+        LearningCollectionMemberType.practiceTest =>
+          '${type.wireName}|${practiceTestRef!.identityKey}',
+      };
+}
+
 final class LearningGoalProjection {
   factory LearningGoalProjection({
     required String code,
@@ -155,19 +216,21 @@ final class LearningCollectionProjection {
     required String description,
     required int sortOrder,
     required bool active,
-    required List<ContentRevisionRef> contentRefs,
-    required List<PracticeTestRevisionRef> practiceTestRefs,
+    required List<LearningCollectionMember> members,
   }) {
-    if (contentRefs.isEmpty && practiceTestRefs.isEmpty) {
-      throw ArgumentError(
-        'a learning collection must contain content or a practice test',
-      );
+    if (members.isEmpty) {
+      throw ArgumentError('a learning collection must contain at least one member');
     }
-    _requireUnique(contentRefs.map((ref) => ref.identityKey), 'contentRefs');
-    _requireUnique(
-      practiceTestRefs.map((ref) => ref.identityKey),
-      'practiceTestRefs',
-    );
+    for (var index = 0; index < members.length; index++) {
+      if (members[index].position != index) {
+        throw ArgumentError.value(
+          members[index].position,
+          'members',
+          'positions must be contiguous and start at zero',
+        );
+      }
+    }
+    _requireUnique(members.map((member) => member.identityKey), 'members');
     return LearningCollectionProjection._(
       code: _stableCode(code, 'code'),
       verticalCode: _stableCode(verticalCode, 'verticalCode'),
@@ -176,10 +239,7 @@ final class LearningCollectionProjection {
       description: _nonBlank(description, 'description'),
       sortOrder: _sortOrder(sortOrder),
       active: active,
-      contentRefs: List<ContentRevisionRef>.unmodifiable(contentRefs),
-      practiceTestRefs: List<PracticeTestRevisionRef>.unmodifiable(
-        practiceTestRefs,
-      ),
+      members: List<LearningCollectionMember>.unmodifiable(members),
     );
   }
 
@@ -191,8 +251,7 @@ final class LearningCollectionProjection {
     required this.description,
     required this.sortOrder,
     required this.active,
-    required this.contentRefs,
-    required this.practiceTestRefs,
+    required this.members,
   });
 
   final String code;
@@ -202,8 +261,7 @@ final class LearningCollectionProjection {
   final String description;
   final int sortOrder;
   final bool active;
-  final List<ContentRevisionRef> contentRefs;
-  final List<PracticeTestRevisionRef> practiceTestRefs;
+  final List<LearningCollectionMember> members;
 }
 
 final class TaxonomyProjection {
@@ -339,15 +397,20 @@ String _stableCode(String value, String fieldName) {
 }
 
 String? _optionalStableCode(String? value, String fieldName) {
-  if (value == null) {
-    return null;
-  }
+  if (value == null) return null;
   return _stableCode(value, fieldName);
 }
 
 int _sortOrder(int value) {
   if (value < 0) {
     throw ArgumentError.value(value, 'sortOrder', 'must be non-negative');
+  }
+  return value;
+}
+
+int _position(int value) {
+  if (value < 0) {
+    throw ArgumentError.value(value, 'position', 'must be non-negative');
   }
   return value;
 }
@@ -364,11 +427,7 @@ void _requireUnique(Iterable<String> keys, String fieldName) {
   final seen = <String>{};
   for (final key in keys) {
     if (!seen.add(key)) {
-      throw ArgumentError.value(
-        key,
-        fieldName,
-        'contains a duplicate exact ref',
-      );
+      throw ArgumentError.value(key, fieldName, 'contains a duplicate exact ref');
     }
   }
 }

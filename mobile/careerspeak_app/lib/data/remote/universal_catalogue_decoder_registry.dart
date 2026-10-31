@@ -16,26 +16,13 @@ final class UniversalCatalogueDecoderRegistry {
 
   Object decode(CataloguePayload payload) {
     return switch (payload.ref.kind) {
-      CatalogueKind.verticalSections => presentationDecoder.decodeSections(
-          payload.items,
-        ),
+      CatalogueKind.verticalSections => presentationDecoder.decodeSections(payload.items),
       CatalogueKind.verticals => verticalDecoder.decodeAll(payload.items),
       CatalogueKind.verticalPresentation => _decodePresentation(payload),
-      CatalogueKind.learningGoals => _decodeAll(
-          payload.items,
-          _decodeGoal,
-          'learning goals',
-        ),
-      CatalogueKind.learningTracks => _decodeAll(
-          payload.items,
-          _decodeTrack,
-          'learning tracks',
-        ),
-      CatalogueKind.learningCollections => _decodeAll(
-          payload.items,
-          _decodeCollection,
-          'learning collections',
-        ),
+      CatalogueKind.learningGoals => _decodeAll(payload.items, _decodeGoal, 'learning goals'),
+      CatalogueKind.learningTracks => _decodeAll(payload.items, _decodeTrack, 'learning tracks'),
+      CatalogueKind.learningCollections =>
+        _decodeAll(payload.items, _decodeCollection, 'learning collections'),
       _ => payload.items,
     };
   }
@@ -136,18 +123,13 @@ final class UniversalCatalogueDecoderRegistry {
         'description',
         'sortOrder',
         'active',
-        'contentRefs',
-        'practiceTestRefs',
+        'members',
       },
       'Learning collection',
     );
-    final contentRefs = _list(map, 'contentRefs', 'Learning collection')
-        .map(_decodeContentRef)
+    final members = _list(map, 'members', 'Learning collection')
+        .map(_decodeCollectionMember)
         .toList(growable: false);
-    final practiceTestRefs =
-        _list(map, 'practiceTestRefs', 'Learning collection')
-            .map(_decodePracticeTestRef)
-            .toList(growable: false);
     return LearningCollectionProjection(
       code: _string(map, 'code', 'Learning collection'),
       verticalCode: _string(map, 'verticalCode', 'Learning collection'),
@@ -156,8 +138,67 @@ final class UniversalCatalogueDecoderRegistry {
       description: _string(map, 'description', 'Learning collection'),
       sortOrder: _int(map, 'sortOrder', 'Learning collection'),
       active: _bool(map, 'active', 'Learning collection'),
-      contentRefs: contentRefs,
-      practiceTestRefs: practiceTestRefs,
+      members: members,
+    );
+  }
+
+  LearningCollectionMember _decodeCollectionMember(Object value) {
+    final map = _object(value, 'Collection member');
+    _rejectUnexpected(
+      map,
+      const <String>{'position', 'type', 'content', 'practiceTest'},
+      'Collection member',
+    );
+    final position = _int(map, 'position', 'Collection member');
+    final type = LearningCollectionMemberType.fromWireName(
+      _string(map, 'type', 'Collection member'),
+    );
+    final content = map['content'];
+    final practiceTest = map['practiceTest'];
+
+    return switch (type) {
+      LearningCollectionMemberType.content => _contentMember(
+          position: position,
+          content: content,
+          practiceTest: practiceTest,
+        ),
+      LearningCollectionMemberType.practiceTest => _practiceTestMember(
+          position: position,
+          content: content,
+          practiceTest: practiceTest,
+        ),
+    };
+  }
+
+  LearningCollectionMember _contentMember({
+    required int position,
+    required Object? content,
+    required Object? practiceTest,
+  }) {
+    if (content == null || practiceTest != null) {
+      throw const FormatException(
+        'CONTENT member must contain content and no practiceTest.',
+      );
+    }
+    return LearningCollectionMember.content(
+      position: position,
+      content: _decodeContentRef(content),
+    );
+  }
+
+  LearningCollectionMember _practiceTestMember({
+    required int position,
+    required Object? content,
+    required Object? practiceTest,
+  }) {
+    if (practiceTest == null || content != null) {
+      throw const FormatException(
+        'PRACTICE_TEST member must contain practiceTest and no content.',
+      );
+    }
+    return LearningCollectionMember.practiceTest(
+      position: position,
+      practiceTest: _decodePracticeTestRef(practiceTest),
     );
   }
 
