@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - feat/backend-contract-gap-audit
+      - feat/universal-vertical-catalogue
     paths:
       - 'mobile/careerspeak_app/lib/**/*.dart'
       - 'mobile/careerspeak_app/test/**/*.dart'
+      - '.github/workflows/c4-format-once.yml'
 
 permissions:
   contents: write
@@ -27,7 +29,7 @@ jobs:
       - name: Dependencies
         working-directory: mobile/careerspeak_app
         run: flutter pub get
-      - name: Format C4 Dart sources
+      - name: Format Dart sources
         working-directory: mobile/careerspeak_app
         run: dart format lib test
       - name: Commit formatting
@@ -38,5 +40,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add mobile/careerspeak_app/lib mobile/careerspeak_app/test
-          git commit -m 'style(c4): apply quality-equivalent dart format'
-          git push origin HEAD:feat/backend-contract-gap-audit
+          git commit -m 'style: apply canonical dart format'
+          git push origin HEAD:${GITHUB_REF_NAME}
