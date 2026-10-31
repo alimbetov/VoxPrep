@@ -6,13 +6,14 @@ import 'package:careerspeak_app/application/ports/content_manifest_gateway.dart'
 import 'package:careerspeak_app/application/ports/content_payload_gateway.dart';
 import 'package:careerspeak_app/application/query/content_query.dart';
 import 'package:careerspeak_app/application/result/result.dart';
-import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
+import 'package:careerspeak_app/data/local/database/careerspeak_database.dart'
+    hide ContentAssetRef, PackContentRef;
 import 'package:careerspeak_app/data/local/drift_content_repository.dart';
 import 'package:careerspeak_app/data/local/drift_sync_journal.dart';
 import 'package:careerspeak_app/data/local/drift_sync_plan_executor.dart';
 import 'package:careerspeak_app/domain/content_identity.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNotNull;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_database_factory.dart';
