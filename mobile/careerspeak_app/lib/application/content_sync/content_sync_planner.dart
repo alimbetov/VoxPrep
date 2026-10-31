@@ -8,6 +8,7 @@ final class ContentSyncPlanner {
   Result<SyncPlan> plan({
     required SyncLocalSnapshot local,
     required RootContentManifest remote,
+    Iterable<PackIdentity>? immutableRootPackIdentities,
   }) {
     final currentVersion = local.currentContentVersion;
 
@@ -40,14 +41,14 @@ final class ContentSyncPlanner {
     final currentByIdentity = <PackIdentity, PackRevisionRef>{
       for (final pack in local.currentPacks) pack.identity: pack,
     };
+    final immutableIdentities = Set<PackIdentity>.unmodifiable(
+      immutableRootPackIdentities ?? remote.packs.map((pack) => pack.identity),
+    );
 
     if (currentVersion == remote.contentVersion) {
-      final remoteIdentities = remote.packs
-          .map((pack) => pack.identity)
-          .toSet();
       PackRevisionRef? unexpectedCurrentPack;
       for (final pack in local.currentPacks) {
-        if (!remoteIdentities.contains(pack.identity)) {
+        if (!immutableIdentities.contains(pack.identity)) {
           unexpectedCurrentPack = pack;
           break;
         }
@@ -81,16 +82,40 @@ final class ContentSyncPlanner {
       }
     }
 
-    final rootChanged = currentVersion != remote.contentVersion;
+    final publicationRootChanged = currentVersion != remote.contentVersion;
+    final projectionChanged =
+        currentVersion == remote.contentVersion &&
+        !_samePackProjection(local.currentPacks, remote.packs);
     return Success(
       SyncPlan(
         target: remote,
-        rootChanged: rootChanged,
+        rootChanged: publicationRootChanged || projectionChanged,
         changedPacks: changedPacks,
-        tombstones: rootChanged
+        tombstones: publicationRootChanged
             ? remote.tombstones
             : const <ContentTombstone>[],
       ),
     );
   }
+}
+
+bool _samePackProjection(
+  Iterable<PackRevisionRef> current,
+  Iterable<PackRevisionRef> target,
+) {
+  final currentByIdentity = <PackIdentity, PackRevisionRef>{
+    for (final pack in current) pack.identity: pack,
+  };
+  final targetList = target.toList(growable: false);
+  if (currentByIdentity.length != targetList.length) return false;
+
+  for (final pack in targetList) {
+    final installed = currentByIdentity[pack.identity];
+    if (installed == null ||
+        installed.revision != pack.revision ||
+        installed.checksum != pack.checksum) {
+      return false;
+    }
+  }
+  return true;
 }
