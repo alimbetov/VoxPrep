@@ -5,22 +5,21 @@ import 'package:path_provider/path_provider.dart';
 
 import '../application/ports/asset_byte_source.dart';
 import '../application/ports/asset_file_store.dart';
+import '../application/ports/media_access_gateway.dart';
 import '../application/services/asset_download_manager.dart';
 import '../data/local/file_system_asset_store.dart';
 import '../data/remote/http_asset_byte_source.dart';
+import '../data/remote/http_media_access_gateway.dart';
 import 'api_client_providers.dart';
 
-const _cdnBaseUrl = String.fromEnvironment(
-  'CAREERSPEAK_CDN_BASE_URL',
-  defaultValue: 'https://cdn.careerspeak.invalid/',
-);
-
-final cdnBaseUriProvider = Provider<Uri>((ref) => Uri.parse(_cdnBaseUrl));
+final mediaAccessGatewayProvider = Provider<MediaAccessGateway>((ref) {
+  return HttpMediaAccessGateway(apiClient: ref.watch(apiClientProvider));
+});
 
 final assetByteSourceProvider = Provider<AssetByteSource>((ref) {
   return HttpAssetByteSource(
     client: ref.watch(httpClientProvider),
-    baseUri: ref.watch(cdnBaseUriProvider),
+    accessGateway: ref.watch(mediaAccessGatewayProvider),
   );
 });
 
