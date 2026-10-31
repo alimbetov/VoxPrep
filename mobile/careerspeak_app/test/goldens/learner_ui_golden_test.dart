@@ -20,6 +20,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/golden_fixtures.dart';
 
+// G1 qualification: these seven states are the committed learner UI baselines.
 void main() {
   testWidgets('golden catalogue grid', (tester) async {
     await _pumpGolden(
