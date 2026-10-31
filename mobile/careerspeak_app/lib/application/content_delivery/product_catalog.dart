@@ -65,6 +65,7 @@ final class PracticeTestRevisionRef {
 final class LearningGoalProjection {
   factory LearningGoalProjection({
     required String code,
+    required String verticalCode,
     required String title,
     required String description,
     required int sortOrder,
@@ -72,6 +73,7 @@ final class LearningGoalProjection {
   }) {
     return LearningGoalProjection._(
       code: _stableCode(code, 'code'),
+      verticalCode: _stableCode(verticalCode, 'verticalCode'),
       title: _nonBlank(title, 'title'),
       description: _nonBlank(description, 'description'),
       sortOrder: _sortOrder(sortOrder),
@@ -81,6 +83,7 @@ final class LearningGoalProjection {
 
   const LearningGoalProjection._({
     required this.code,
+    required this.verticalCode,
     required this.title,
     required this.description,
     required this.sortOrder,
@@ -88,6 +91,7 @@ final class LearningGoalProjection {
   });
 
   final String code;
+  final String verticalCode;
   final String title;
   final String description;
   final int sortOrder;
@@ -97,6 +101,7 @@ final class LearningGoalProjection {
 final class LearningTrackProjection {
   factory LearningTrackProjection({
     required String code,
+    required String verticalCode,
     required String goalCode,
     required String title,
     required String description,
@@ -107,6 +112,7 @@ final class LearningTrackProjection {
   }) {
     return LearningTrackProjection._(
       code: _stableCode(code, 'code'),
+      verticalCode: _stableCode(verticalCode, 'verticalCode'),
       goalCode: _stableCode(goalCode, 'goalCode'),
       title: _nonBlank(title, 'title'),
       description: _nonBlank(description, 'description'),
@@ -119,6 +125,7 @@ final class LearningTrackProjection {
 
   const LearningTrackProjection._({
     required this.code,
+    required this.verticalCode,
     required this.goalCode,
     required this.title,
     required this.description,
@@ -129,6 +136,7 @@ final class LearningTrackProjection {
   });
 
   final String code;
+  final String verticalCode;
   final String goalCode;
   final String title;
   final String description;
@@ -141,6 +149,7 @@ final class LearningTrackProjection {
 final class LearningCollectionProjection {
   factory LearningCollectionProjection({
     required String code,
+    required String verticalCode,
     required String trackCode,
     required String title,
     required String description,
@@ -161,6 +170,7 @@ final class LearningCollectionProjection {
     );
     return LearningCollectionProjection._(
       code: _stableCode(code, 'code'),
+      verticalCode: _stableCode(verticalCode, 'verticalCode'),
       trackCode: _stableCode(trackCode, 'trackCode'),
       title: _nonBlank(title, 'title'),
       description: _nonBlank(description, 'description'),
@@ -175,6 +185,7 @@ final class LearningCollectionProjection {
 
   const LearningCollectionProjection._({
     required this.code,
+    required this.verticalCode,
     required this.trackCode,
     required this.title,
     required this.description,
@@ -185,6 +196,7 @@ final class LearningCollectionProjection {
   });
 
   final String code;
+  final String verticalCode;
   final String trackCode;
   final String title;
   final String description;
