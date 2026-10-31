@@ -1,11 +1,12 @@
 import '../../domain/application_preferences.dart';
 import '../content_delivery/content_manifest.dart';
+import '../content_delivery/locale_fallback.dart';
 import '../result/result.dart';
 
 /// Builds the device-local pack projection from one locale-independent backend
 /// root snapshot. The global contentVersion/checksum remain the identity of the
-/// full published root; only canonical + the selected locale variant are
-/// materialized locally.
+/// full published root; only canonical + the deterministic locale fallback
+/// chain are materialized locally.
 final class RootManifestMaterializer {
   const RootManifestMaterializer();
 
@@ -23,13 +24,14 @@ final class RootManifestMaterializer {
       );
     }
 
-    final selectedVariant = 'locale:${locale.code}';
+    final fallback = LocaleFallbackPlan(locale.code);
+    final selectedVariants = <String>{
+      'canonical',
+      for (final candidate in fallback.localizedCandidates)
+        'locale:${candidate.locale}',
+    };
     final packs = root.packs
-        .where(
-          (pack) =>
-              pack.identity.variant == 'canonical' ||
-              pack.identity.variant == selectedVariant,
-        )
+        .where((pack) => selectedVariants.contains(pack.identity.variant))
         .toList(growable: false);
 
     return Success<RootContentManifest>(
