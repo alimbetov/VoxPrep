@@ -30,67 +30,55 @@ enum _CacheState { present, missing, corrupt }
 enum _NetworkState { online, offline, badChecksum }
 
 void main() {
-  group('C2 cache x network x resolution-policy pairwise qualification', () {
-    final scenarios =
-        <
-          ({
-            _CacheState cache,
-            _NetworkState network,
-            AssetResolutionPolicy policy,
-            bool succeeds,
-            String? failureCode,
-          })
-        >[
-          (
-            cache: _CacheState.present,
-            network: _NetworkState.offline,
-            policy: AssetResolutionPolicy.localOnly,
-            succeeds: true,
-            failureCode: null,
-          ),
-          (
-            cache: _CacheState.missing,
-            network: _NetworkState.online,
-            policy: AssetResolutionPolicy.localOnly,
-            succeeds: false,
-            failureCode: 'ASSET_NOT_AVAILABLE_OFFLINE',
-          ),
-          (
-            cache: _CacheState.missing,
-            network: _NetworkState.online,
-            policy: AssetResolutionPolicy.downloadIfMissing,
-            succeeds: true,
-            failureCode: null,
-          ),
-          (
-            cache: _CacheState.missing,
-            network: _NetworkState.offline,
-            policy: AssetResolutionPolicy.downloadIfMissing,
-            succeeds: false,
-            failureCode: 'NETWORK_OFFLINE',
-          ),
-          (
-            cache: _CacheState.missing,
-            network: _NetworkState.badChecksum,
-            policy: AssetResolutionPolicy.downloadIfMissing,
-            succeeds: false,
-            failureCode: 'ASSET_CHECKSUM_MISMATCH',
-          ),
-          (
-            cache: _CacheState.corrupt,
-            network: _NetworkState.online,
-            policy: AssetResolutionPolicy.downloadIfMissing,
-            succeeds: true,
-            failureCode: null,
-          ),
-          (
-            cache: _CacheState.corrupt,
-            network: _NetworkState.offline,
-            policy: AssetResolutionPolicy.localOnly,
-            succeeds: false,
-            failureCode: 'ASSET_NOT_AVAILABLE_OFFLINE',
-          ),
-        ];
+  group('C2 cache x network x resolution-policy cross-layer matrix', () {
+    final scenarios = [
+      for (final cache in _CacheState.values)
+        for (final network in _NetworkState.values)
+          for (final policy in AssetResolutionPolicy.values)
+            (cache: cache, network: network, policy: policy),
+    ];
+
+    test('matrix covers every factor pair and all 18 combinations', () {
+      expect(scenarios, hasLength(18));
+
+      final cacheNetwork = {
+        for (final scenario in scenarios)
+          '${scenario.cache.name}|${scenario.network.name}',
+      };
+      final cachePolicy = {
+        for (final scenario in scenarios)
+          '${scenario.cache.name}|${scenario.policy.name}',
+      };
+      final networkPolicy = {
+        for (final scenario in scenarios)
+          '${scenario.network.name}|${scenario.policy.name}',
+      };
+
+      expect(
+        cacheNetwork,
+        {
+          for (final cache in _CacheState.values)
+            for (final network in _NetworkState.values)
+              '${cache.name}|${network.name}',
+        },
+      );
+      expect(
+        cachePolicy,
+        {
+          for (final cache in _CacheState.values)
+            for (final policy in AssetResolutionPolicy.values)
+              '${cache.name}|${policy.name}',
+        },
+      );
+      expect(
+        networkPolicy,
+        {
+          for (final network in _NetworkState.values)
+            for (final policy in AssetResolutionPolicy.values)
+              '${network.name}|${policy.name}',
+        },
+      );
+    });
 
     for (final scenario in scenarios) {
       test(
@@ -135,8 +123,13 @@ void main() {
             _asset.assetId,
             policy: scenario.policy,
           );
+          final expectation = _expected(
+            cache: scenario.cache,
+            network: scenario.network,
+            policy: scenario.policy,
+          );
 
-          if (scenario.succeeds) {
+          if (expectation.succeeds) {
             expect(result, isA<Success<ResolvedAsset>>());
             final resolved = (result as Success<ResolvedAsset>).value;
             expect(await File(resolved.localPath).readAsBytes(), _validBytes);
@@ -146,7 +139,7 @@ void main() {
             expect(result, isA<FailureResult<ResolvedAsset>>());
             expect(
               (result as FailureResult<ResolvedAsset>).failure.code,
-              scenario.failureCode,
+              expectation.failureCode,
             );
             expect(retention.accessCount, 0);
           }
@@ -154,6 +147,32 @@ void main() {
       );
     }
   });
+}
+
+({bool succeeds, String? failureCode}) _expected({
+  required _CacheState cache,
+  required _NetworkState network,
+  required AssetResolutionPolicy policy,
+}) {
+  if (cache == _CacheState.present) {
+    return (succeeds: true, failureCode: null);
+  }
+
+  if (policy == AssetResolutionPolicy.localOnly) {
+    return (succeeds: false, failureCode: 'ASSET_NOT_AVAILABLE_OFFLINE');
+  }
+
+  return switch (network) {
+    _NetworkState.online => (succeeds: true, failureCode: null),
+    _NetworkState.offline => (
+      succeeds: false,
+      failureCode: 'NETWORK_OFFLINE',
+    ),
+    _NetworkState.badChecksum => (
+      succeeds: false,
+      failureCode: 'ASSET_CHECKSUM_MISMATCH',
+    ),
+  };
 }
 
 final class _Catalog implements AssetCatalogRepository {
