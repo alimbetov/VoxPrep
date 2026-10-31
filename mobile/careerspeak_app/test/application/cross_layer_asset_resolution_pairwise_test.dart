@@ -181,10 +181,10 @@ final class _Source implements AssetByteSource {
   @override
   Future<Result<AssetByteStream>> open(ManifestAssetDescriptor asset) async {
     return switch (state) {
-      _NetworkState.online => const Success<AssetByteStream>(
+      _NetworkState.online => Success<AssetByteStream>(
         AssetByteStream(
-          bytes: Stream<List<int>>.empty(),
-          contentLength: 0,
+          bytes: Stream<List<int>>.value(_validBytes),
+          contentLength: _validBytes.length,
         ),
       ),
       _NetworkState.offline => const FailureResult<AssetByteStream>(
