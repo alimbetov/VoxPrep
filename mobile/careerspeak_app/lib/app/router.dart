@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/adaptive/careerspeak_adaptive_scaffold.dart';
 import '../core/motion/careerspeak_motion.dart';
+import '../features/catalogue/catalogue_home_screen.dart';
 import '../features/catalogue/catalogue_screen.dart';
 import '../features/content/content_detail_screen.dart';
 import '../features/home/home_screen.dart';
@@ -30,7 +31,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/catalogue',
             pageBuilder: (context, state) =>
-                _page(state: state, child: const CatalogueScreen()),
+                _page(state: state, child: const CatalogueHomeScreen()),
+          ),
+          GoRoute(
+            path: '/catalogue/all',
+            pageBuilder: (context, state) => _page(
+              state: state,
+              hierarchical: true,
+              child: const CatalogueAllScreen(),
+            ),
           ),
           GoRoute(
             path: '/catalogue/vertical/:verticalCode',
