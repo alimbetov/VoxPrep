@@ -5,35 +5,38 @@ import 'package:careerspeak_app/data/remote/http_media_access_gateway.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('posts exact assetId through installation-authenticated media API', () async {
-    final client = _RecordingApiClient(
-      Success<ApiResponse>(
-        ApiResponse(
-          statusCode: 200,
-          headers: const <String, String>{},
-          jsonBody: <String, Object?>{
-            'assetId': 'asset-a',
-            'url': 'https://media.example.test/signed/a?signature=abc',
-            'expiresAt': '2026-11-01T12:05:00Z',
-          },
+  test(
+    'posts exact assetId through installation-authenticated media API',
+    () async {
+      final client = _RecordingApiClient(
+        Success<ApiResponse>(
+          ApiResponse(
+            statusCode: 200,
+            headers: const <String, String>{},
+            jsonBody: <String, Object?>{
+              'assetId': 'asset-a',
+              'url': 'https://media.example.test/signed/a?signature=abc',
+              'expiresAt': '2026-11-01T12:05:00Z',
+            },
+          ),
         ),
-      ),
-    );
-    final gateway = HttpMediaAccessGateway(apiClient: client);
+      );
+      final gateway = HttpMediaAccessGateway(apiClient: client);
 
-    final result = await gateway.resolve('asset-a');
+      final result = await gateway.resolve('asset-a');
 
-    expect(result, isA<Success<MediaAccessGrant>>());
-    final grant = (result as Success<MediaAccessGrant>).value;
-    expect(grant.assetId, 'asset-a');
-    expect(grant.url.scheme, 'https');
-    expect(client.requests, hasLength(1));
-    final request = client.requests.single;
-    expect(request.method, ApiMethod.post);
-    expect(request.path, '/api/v1/media/access');
-    expect(request.authentication, ApiAuthentication.installation);
-    expect(request.jsonBody, <String, Object?>{'assetId': 'asset-a'});
-  });
+      expect(result, isA<Success<MediaAccessGrant>>());
+      final grant = (result as Success<MediaAccessGrant>).value;
+      expect(grant.assetId, 'asset-a');
+      expect(grant.url.scheme, 'https');
+      expect(client.requests, hasLength(1));
+      final request = client.requests.single;
+      expect(request.method, ApiMethod.post);
+      expect(request.path, '/api/v1/media/access');
+      expect(request.authentication, ApiAuthentication.installation);
+      expect(request.jsonBody, <String, Object?>{'assetId': 'asset-a'});
+    },
+  );
 
   test('rejects mismatched asset identity in access grant', () async {
     final gateway = HttpMediaAccessGateway(
