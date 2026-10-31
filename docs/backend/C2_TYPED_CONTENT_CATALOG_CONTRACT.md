@@ -3,6 +3,7 @@
 **Status:** ACTIVE CONTRACT IMPLEMENTATION  
 **Baseline:** C1 accepted at `4620142f28de20bc0bf84b686d879fd082df7e95`  
 **C2 contract source baseline:** `f9d51defbdf7e1ff7027b32a72d0f2834d8a617c`  
+**C2.3 typed production source:** `2a1a478942ad16c075556a8e01cecb819a6f9fb7`  
 **Normative component contract:** `contracts/c2-content-catalog-v1.yaml`
 
 ## 1. Scope
@@ -175,18 +176,22 @@ ETag may quote the root checksum, but ETag syntax is transport metadata and is n
 
 C2 Flutter domain types mirror contract semantics, not backend persistence entities. They intentionally have no database annotations and no HTTP concerns.
 
-The current C1 `ContentPayload` remains untouched in this first C2 slice. The next C2 slice will migrate the production decoder/gateway to `TypedContentPayload` semantics and then add offline persistence. This avoids partially changing the accepted C1 wire path before the typed-body contract is executable and tested.
+C2.3 makes the production canonical-content decoder require `skillCodes` and one typed body. Internal legacy constructors remain temporarily compatible only so C2.3 does not mix wire cutover with the C2.4 Drift migration. The production decoder/gateway does not accept legacy untyped server payloads.
+
+The learner endpoint path itself is unchanged. Final catalogue endpoint/publication composition remains a C4 concern; C2 freezes and qualifies the component semantics first.
 
 ## 6. C2 implementation slices
 
 ```text
-C2.1 typed body domain + component contract              ← CURRENT
-C2.2 Goal/Track/Collection + capability catalogue domain ← CURRENT
-C2.3 production ContentPayload decoder/gateway cutover   NEXT
-C2.4 Drift typed-body/catalogue persistence              NEXT
+C2.1 typed body domain + component contract              ✅ QUALIFIED
+C2.2 Goal/Track/Collection + capability catalogue domain ✅ QUALIFIED
+C2.3 production ContentPayload decoder/gateway cutover   🟡 QUALIFYING
+C2.4 Drift typed-body persistence                        NEXT
 C2.5 adversarial checksum/type mismatch qualification    NEXT
 C2.6 exact-SHA full production CI                        REQUIRED
 ```
+
+Catalogue persistence/delivery is intentionally not created before C4 defines how immutable catalogue projections participate in publication. C2 freezes their domain/wire shapes and selection semantics without creating orphan local tables.
 
 ## 7. Acceptance
 
