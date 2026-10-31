@@ -73,6 +73,11 @@ final class ContentTombstone {
     required this.reason,
   });
 
+  /// Retires the whole stable business identity from this root snapshot onward.
+  ///
+  /// [revision] is the highest canonical revision that had been published before
+  /// retirement. It is audit/integrity metadata and does not scope the
+  /// retirement to only that revision.
   final ContentIdentity identity;
   final int revision;
   final String reason;
@@ -164,6 +169,45 @@ final class PackContentRef {
   final DateTime? publishedAt;
 }
 
+/// Exact immutable localized projection referenced by a locale pack.
+///
+/// It targets one exact canonical content revision without duplicating the
+/// canonical English payload or its shared assets.
+final class LocalizedContentRef {
+  factory LocalizedContentRef({
+    required ContentIdentity identity,
+    required int contentRevision,
+    required String locale,
+    required int localizationRevision,
+    required String checksum,
+  }) {
+    return LocalizedContentRef._(
+      identity: identity,
+      contentRevision: _requirePositive(contentRevision, 'contentRevision'),
+      locale: _requireLocale(locale, 'locale'),
+      localizationRevision: _requirePositive(
+        localizationRevision,
+        'localizationRevision',
+      ),
+      checksum: normalizeSha256(checksum, 'checksum'),
+    );
+  }
+
+  const LocalizedContentRef._({
+    required this.identity,
+    required this.contentRevision,
+    required this.locale,
+    required this.localizationRevision,
+    required this.checksum,
+  });
+
+  final ContentIdentity identity;
+  final int contentRevision;
+  final String locale;
+  final int localizationRevision;
+  final String checksum;
+}
+
 final class ManifestAssetDescriptor {
   factory ManifestAssetDescriptor({
     required String assetId,
@@ -239,14 +283,19 @@ final class PackContentManifest {
     required int revision,
     required String checksum,
     required Iterable<PackContentRef> contents,
+    Iterable<LocalizedContentRef> localizations = const <LocalizedContentRef>[],
     required Iterable<ManifestAssetDescriptor> assets,
     required Iterable<ContentAssetRef> contentAssets,
   }) {
     final contentList = List<PackContentRef>.unmodifiable(contents);
+    final localizationList = List<LocalizedContentRef>.unmodifiable(
+      localizations,
+    );
     final assetList = List<ManifestAssetDescriptor>.unmodifiable(assets);
     final contentAssetList = List<ContentAssetRef>.unmodifiable(contentAssets);
 
     _requireUniqueContentIdentities(contentList);
+    _requireValidLocalizedRefs(identity, contentList, localizationList);
     _requireUniqueAssets(assetList);
     _requireValidContentAssetRefs(contentList, assetList, contentAssetList);
 
@@ -256,6 +305,7 @@ final class PackContentManifest {
       revision: _requirePositive(revision, 'revision'),
       checksum: normalizeSha256(checksum, 'checksum'),
       contents: contentList,
+      localizations: localizationList,
       assets: assetList,
       contentAssets: contentAssetList,
     );
@@ -267,6 +317,7 @@ final class PackContentManifest {
     required this.revision,
     required this.checksum,
     required this.contents,
+    required this.localizations,
     required this.assets,
     required this.contentAssets,
   });
@@ -276,6 +327,7 @@ final class PackContentManifest {
   final int revision;
   final String checksum;
   final List<PackContentRef> contents;
+  final List<LocalizedContentRef> localizations;
   final List<ManifestAssetDescriptor> assets;
   final List<ContentAssetRef> contentAssets;
 }
@@ -330,8 +382,18 @@ String _requireVariant(String value) {
   }
 
   final locale = normalized.substring('locale:'.length);
-  if (!_localePattern.hasMatch(locale)) {
-    throw ArgumentError.value(value, 'variant', 'contains an invalid locale');
+  _requireLocale(locale, 'variant');
+  return normalized;
+}
+
+String _requireLocale(String value, String fieldName) {
+  final normalized = _requireNonBlank(value, fieldName);
+  if (!_localePattern.hasMatch(normalized)) {
+    throw ArgumentError.value(
+      value,
+      fieldName,
+      'must be a BCP-47-compatible locale identifier',
+    );
   }
   return normalized;
 }
@@ -432,6 +494,59 @@ void _requireUniqueContentIdentities(List<PackContentRef> contents) {
         content.identity.code,
         'contents',
         'contains duplicate content identity',
+      );
+    }
+  }
+}
+
+void _requireValidLocalizedRefs(
+  PackIdentity packIdentity,
+  List<PackContentRef> contents,
+  List<LocalizedContentRef> localizations,
+) {
+  if (packIdentity.variant == 'canonical') {
+    if (localizations.isNotEmpty) {
+      throw ArgumentError.value(
+        localizations.length,
+        'localizations',
+        'canonical packs must not contain localized payload refs',
+      );
+    }
+    return;
+  }
+
+  final expectedLocale = packIdentity.variant.substring('locale:'.length);
+  final contentByIdentity = <ContentIdentity, PackContentRef>{
+    for (final content in contents) content.identity: content,
+  };
+  final keys = <String>{};
+
+  for (final localization in localizations) {
+    if (localization.locale != expectedLocale) {
+      throw ArgumentError.value(
+        localization.locale,
+        'localizations',
+        'must match the locale pack variant $expectedLocale',
+      );
+    }
+
+    final content = contentByIdentity[localization.identity];
+    if (content == null || content.revision != localization.contentRevision) {
+      throw ArgumentError.value(
+        localization.identity.code,
+        'localizations',
+        'references missing canonical content revision',
+      );
+    }
+
+    final key =
+        '${localization.identity.code}|${localization.identity.type.name}|'
+        '${localization.contentRevision}|${localization.locale}';
+    if (!keys.add(key)) {
+      throw ArgumentError.value(
+        key,
+        'localizations',
+        'contains duplicate localized content identity',
       );
     }
   }
