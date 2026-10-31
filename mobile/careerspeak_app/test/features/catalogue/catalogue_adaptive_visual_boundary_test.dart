@@ -130,7 +130,7 @@ CurrentUniversalCatalogueSnapshot _snapshot(
   VerticalCataloguePresentationMode mode,
 ) {
   final graph = UniversalCatalogueGraph(
-    sections: const [
+    sections: [
       VerticalSectionProjection(
         code: 'LONG_SECTION',
         title: _longSectionTitle,
@@ -139,7 +139,7 @@ CurrentUniversalCatalogueSnapshot _snapshot(
         active: true,
       ),
     ],
-    verticals: const [
+    verticals: [
       LearningVerticalProjection(
         code: 'LONG_VERTICAL',
         sectionCode: 'LONG_SECTION',
@@ -150,7 +150,7 @@ CurrentUniversalCatalogueSnapshot _snapshot(
         active: true,
       ),
     ],
-    goals: const [
+    goals: [
       LearningGoalProjection(
         code: 'LONG_GOAL',
         verticalCode: 'LONG_VERTICAL',
@@ -161,7 +161,7 @@ CurrentUniversalCatalogueSnapshot _snapshot(
         active: true,
       ),
     ],
-    tracks: const [
+    tracks: [
       LearningTrackProjection(
         code: 'LONG_TRACK',
         verticalCode: 'LONG_VERTICAL',
