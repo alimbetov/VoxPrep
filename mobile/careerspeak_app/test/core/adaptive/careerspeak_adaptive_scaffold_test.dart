@@ -101,4 +101,83 @@ void main() {
     final bar = tester.widget<NavigationBar>(find.byType(NavigationBar));
     expect(bar.selectedIndex, 1);
   });
+
+  testWidgets('compact landscape survives 200% text scale', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(640, 320));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MediaQuery(
+        data: MediaQueryData(
+          size: Size(640, 320),
+          textScaler: TextScaler.linear(2),
+        ),
+        child: MaterialApp(
+          home: CareerSpeakAdaptiveScaffold(
+            location: '/review',
+            child: Text('Landscape learner body'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Landscape learner body'), findsOneWidget);
+  });
+
+  testWidgets('RTL compact shell remains inside viewport at 200% text scale', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MediaQuery(
+        data: MediaQueryData(
+          size: Size(320, 568),
+          textScaler: TextScaler.linear(2),
+        ),
+        child: MaterialApp(
+          home: Directionality(
+            textDirection: TextDirection.rtl,
+            child: CareerSpeakAdaptiveScaffold(
+              location: '/settings',
+              child: Text('RTL learner body'),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(NavigationBar), findsOneWidget);
+    expect(find.text('RTL learner body'), findsOneWidget);
+  });
+
+  testWidgets('medium low-height rail does not overflow', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 420));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      const MediaQuery(
+        data: MediaQueryData(
+          size: Size(800, 420),
+          textScaler: TextScaler.linear(1.3),
+        ),
+        child: MaterialApp(
+          home: CareerSpeakAdaptiveScaffold(
+            location: '/tests',
+            child: Text('Low height body'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.byType(NavigationRail), findsOneWidget);
+    expect(find.text('Low height body'), findsOneWidget);
+  });
 }
