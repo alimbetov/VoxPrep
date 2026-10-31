@@ -1,7 +1,7 @@
 import 'package:careerspeak_app/application/query/content_query.dart';
+import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_content_repository.dart';
-import 'package:careerspeak_app/domain/content_item.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -112,7 +112,7 @@ void main() {
     },
   );
 
-  test('prepared CURRENT-looking rows are invisible before first root commit', () async {
+  test('prepared CURRENT-looking rows are invisible behind older root', () async {
     await _seedRevision(
       database,
       contentVersion: 109,
@@ -124,8 +124,6 @@ void main() {
       now: now,
     );
 
-    // Legacy/bootstrap compatibility intentionally applies only when there is no
-    // durable publication root yet. Once a root exists, membership is mandatory.
     await database.into(database.contentManifestStates).insert(
       ContentManifestStatesCompanion.insert(
         id: const Value(1),
