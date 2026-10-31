@@ -35,6 +35,8 @@ See:
 
 - `docs/backend/FLUTTER_BACKEND_CONTRACT_GAP_AUDIT.md`
 - `docs/backend/C1_ROOT_LOCALIZATION_ACCEPTANCE.md`
+- `docs/backend/C2_TYPED_CONTENT_CATALOG_CONTRACT.md`
+- `docs/backend/C2_QUALIFICATION_LEDGER.md`
 
 ### Contract-closed findings
 
@@ -46,12 +48,20 @@ BGA-002 localized payload delivery          CONTRACT CLOSED / C1 ACCEPTED
 BGA-017 tombstone retirement semantics      CONTRACT CLOSED / C1 ACCEPTED
 ```
 
+C2 closes these findings at the **domain/wire-contract + Flutter production lifecycle** boundary:
+
+```text
+BGA-003 typed learning-content payloads      CONTRACT CLOSED / C2 ACCEPTED
+BGA-007 taxonomy catalogue shapes            CONTRACT CLOSED / C2 ACCEPTED
+BGA-008 locale / learner voice capability    CONTRACT CLOSED / C2 ACCEPTED
+BGA-016 checksum canonicalization             CONTRACT CLOSED / C2 ACCEPTED
+```
+
 This does **not** mean the backend service is implemented. Backend persistence/controllers/publication code still belongs to the later backend implementation stream.
 
 ### Open P0 blockers before backend learner-domain/schema freeze
 
 ```text
-BGA-003 typed learning-content payloads
 BGA-004 production assessment contract
 BGA-005 atomic backend publication snapshot
 BGA-006 installation-token lifecycle / 401 recovery
@@ -72,8 +82,15 @@ C1 root + localization                       ACCEPTED
 ├─ C1.6 retirement + recovery hardening      ACCEPTED
 └─ C1.7 exact-SHA production qualification   ACCEPTED
 
-C2 typed content + small catalogues          NEXT
-C3 assessment                                PENDING
+C2 typed content + small catalogues          ACCEPTED
+├─ C2.1 typed body contract                  ACCEPTED
+├─ C2.2 product/capability catalogue shapes  ACCEPTED
+├─ C2.3 production typed wire cutover        ACCEPTED
+├─ C2.4 Drift typed persistence / schema v7  ACCEPTED
+├─ C2.5 adversarial + catalogue fallback     ACCEPTED
+└─ C2.6 exact-SHA production qualification   ACCEPTED
+
+C3 assessment                                NEXT
 C4 atomic publication                        PENDING
 C5 installation/security                     PENDING
 ```
@@ -89,46 +106,51 @@ C1 cleaned exact-SHA production baseline:
 
 ```text
 fa85f4240cdf96176098c64284fbd3a4629eb5ec
-chore(c1): finalize production gate and remove staging tooling
 ```
 
-`Flutter Production Adapters` run `41183382458` completed successfully on the exact `fa85f424...` SHA with:
+`Flutter Production Adapters` run `41183382458` completed successfully on that exact C1 SHA.
+
+C2 typed persistence production commit:
+
+```text
+eba871d51edb8dc6d4fb5425e7a13374246e6a30
+feat(c2): persist typed content revisions in Drift v7
+```
+
+C2 final clean qualification baseline:
+
+```text
+3c7b171c1123a33ec05e2ca6f4c92e6882727b4c
+```
+
+`Flutter Production Adapters` run `41197400808` completed successfully with:
 
 ```text
 format                         PASS
-Drift v6 reproducibility       PASS
+Drift v7 reproducibility       PASS
 flutter analyze                PASS
 full flutter test              PASS
 ```
 
-The learner wire contract uses one locale-independent root and an exact immutable localized payload identity:
+The C2 contract now freezes:
 
 ```text
-(contentCode, contentType, contentRevision,
- locale, localizationRevision, checksum)
+VOCABULARY / INTERVIEW / TOPIC / PHRASE / SHADOWING typed bodies
+LearningGoal → LearningTrack → LearningCollection shapes
+Category / Level / Skill stable-code catalogues
+SupportedLocale / learner-facing TtsVoice capability shapes
+RFC 8785 + SHA-256 checksum canonicalization
+safe deterministic fallback for inactive catalogue selections
 ```
 
-Localized payloads contain locale-owned support copy only. Canonical English content and shared audio/media remain owned by the canonical content revision.
-
-Fallback policy is Backend-owned publication metadata. Flutter canonicalizes BCP-47 identities and applies the supplied ordered chain; it does not infer a base-language fallback from the requested locale. Missing locale content therefore degrades according to the published policy and ultimately to canonical English without inventing client policy.
-
-The local production model keeps fallback policy and content retirement separate from per-run sync journal state:
+Drift schema v7 keeps C1 and C2 responsibilities separate:
 
 ```text
-immutable root
-    ├── packs / exact localization refs
-    └── locale fallback rules
-             ↓
-        Drift CURRENT policy
-
-root tombstone
-    ↓
-ContentRetirements
-    ↓
-permanent stable-business-identity guard
+ContentCatalogReads   = C1 presentation projection
+TypedContentReads     = C2 exact-revision typed projection
 ```
 
-`SyncTombstones` remains execution evidence only. Permanent no-resurrection semantics are owned by `ContentRetirements`, so later journal cleanup cannot make a retired identity publishable again.
+The backend shall not mirror these Flutter tables directly. Backend aggregate/schema design remains deferred until assessment/publication contracts are closed.
 
 ## Localization
 
@@ -159,9 +181,9 @@ C0P simple product contract       ACCEPTED
  ↓
 C1 root + localization            ACCEPTED
  ↓
-C2 typed content + small catalogues
+C2 typed content + catalogues     ACCEPTED
  ↓
-C3 assessment
+C3 assessment                     NEXT
  ↓
 C4 atomic publication
  ↓
@@ -196,7 +218,7 @@ Taxonomy
 SupportedLocale / learner-facing voice catalogue
 ```
 
-Localization wire identity and lifecycle semantics are now contract-closed by C1, but their backend persistence design should still be derived together with C2/C4 publication/domain decisions rather than prematurely mirroring Flutter tables.
+C1 and C2 contract semantics are now accepted, but final persistence design should still be derived together with C3 assessment and C4 publication decisions rather than prematurely mirroring Flutter projections.
 
 ## Anti-overengineering position
 

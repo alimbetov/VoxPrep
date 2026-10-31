@@ -2,6 +2,8 @@
 
 C1 is frozen at `4620142f28de20bc0bf84b686d879fd082df7e95` and is not modified by C2.
 
+**C2 status:** ACCEPTED
+
 ## C2.1 / C2.2 — typed domain and small catalogue components
 
 Qualified source baseline:
@@ -100,14 +102,14 @@ chore(c2): finalize Drift v7 production gate
 
 ## C2.5 — adversarial typed content + catalogue fallback
 
-Implementation candidate:
+Implementation:
 
 ```text
 700633663ce84398b034190514f7990d01d9039b
 test(c2): harden typed content and catalogue fallback
 ```
 
-The adversarial matrix now verifies all five frozen body kinds through the production decoder and keeps fail-closed behavior for discriminator/type mismatches, malformed body fields and duplicate/invalid catalogue identities.
+The adversarial matrix verifies all five frozen body kinds through the production decoder and keeps fail-closed behavior for discriminator/type mismatches, malformed body fields and duplicate/invalid catalogue identities.
 
 Catalogue selection semantics are deterministic:
 
@@ -118,24 +120,55 @@ no active choice           -> null
 identity duplicates        -> fail closed
 ```
 
-The first production attempt exposed only a package-aware formatting difference in `catalogue_selection.dart`. No C2 runtime semantic was changed. The official Flutter-package formatter produced:
+The first production attempt exposed only a package-aware formatting difference in `catalogue_selection.dart`. No runtime semantic changed. The official Flutter-package formatter produced:
 
 ```text
 d2bc610b4a0b76c2aa921d0c4fd6689366fa051e
 style(c2): apply official catalogue formatter
 ```
 
-The one-shot formatter workflow has been removed. This ledger commit is the clean-head trigger for the final C2.5/C2.6 production qualification.
+The one-shot formatter workflow was removed before final qualification.
 
 ## C2.6 — exact-SHA final production qualification
 
-Acceptance requires one clean `Flutter Production Adapters` run on the final C2 tree with:
+Clean qualification trigger:
 
 ```text
+3c7b171c1123a33ec05e2ca6f4c92e6882727b4c
+docs(c2): record typed persistence and hardening qualification
+```
+
+Production qualification:
+
+```text
+Flutter Production Adapters run 41197400808
 format                         PASS
 Drift v7 reproducibility       PASS
 flutter analyze                PASS
 full flutter test              PASS
 ```
 
-Only after that exact-SHA gate is green may C2 be marked `ACCEPTED` and `BGA-003`, `BGA-007`, `BGA-008`, `BGA-016` be marked contract-closed.
+## Acceptance result
+
+```text
+[x] all five body kinds are explicit and fail closed
+[x] contentType == body.kind is enforced on production decode
+[x] Goal -> Track -> Collection shapes are frozen
+[x] Category / Level / Skill shapes are frozen
+[x] SupportedLocale / TtsVoice learner projections are frozen
+[x] no Worker model internals leak into TtsVoice
+[x] RFC 8785 checksum scope is frozen
+[x] typed content survives Drift offline/restart
+[x] catalogue selection degrades safely when an item becomes inactive
+[x] exact-SHA production CI is green
+```
+
+C2 is therefore **ACCEPTED** at the contract + Flutter production lifecycle boundary.
+
+This does not mean backend persistence/controllers are implemented. Backend implementation must derive its aggregates and JPA/Liquibase model from these accepted contracts together with C3 assessment and C4 publication semantics.
+
+Next contract stage:
+
+```text
+C3 Assessment
+```

@@ -1,9 +1,10 @@
 # C2 Typed Content + Small Product Catalogues
 
-**Status:** ACTIVE CONTRACT IMPLEMENTATION  
+**Status:** ACCEPTED  
 **Baseline:** C1 accepted at `4620142f28de20bc0bf84b686d879fd082df7e95`  
 **C2 contract source baseline:** `f9d51defbdf7e1ff7027b32a72d0f2834d8a617c`  
-**C2.3 typed production source:** `2a1a478942ad16c075556a8e01cecb819a6f9fb7`  
+**C2 typed production source:** `2a1a478942ad16c075556a8e01cecb819a6f9fb7`  
+**C2 Drift v7 production source:** `eba871d51edb8dc6d4fb5425e7a13374246e6a30`  
 **Normative component contract:** `contracts/c2-content-catalog-v1.yaml`
 
 ## 1. Scope
@@ -17,7 +18,7 @@ BGA-008 locale / learner-facing voice capability
 BGA-016 checksum canonicalization
 ```
 
-C2 does **not** define backend JPA entities and does not add learner catalogue endpoints yet. Endpoint/publication wiring belongs to C4. Assessment body/scoring remains C3.
+C2 does **not** define backend JPA entities and does not add learner catalogue endpoints. Endpoint/publication wiring belongs to C4. Assessment body/scoring remains C3.
 
 The minimal product hierarchy remains:
 
@@ -139,6 +140,15 @@ active
 
 Piper model paths, checksums, Worker lease data and RustFS keys are not learner-facing voice fields.
 
+Catalogue selection is deterministic and client-safe:
+
+```text
+active selected code       -> preserve selection
+missing/inactive selection -> lowest sortOrder, then stable code
+no active choice           -> null
+identity duplicates        -> fail closed
+```
+
 ## 4. Checksum canonicalization — BGA-016
 
 All immutable learner JSON projections that carry a self checksum use the same rule:
@@ -176,38 +186,66 @@ ETag may quote the root checksum, but ETag syntax is transport metadata and is n
 
 C2 Flutter domain types mirror contract semantics, not backend persistence entities. They intentionally have no database annotations and no HTTP concerns.
 
-C2.3 makes the production canonical-content decoder require `skillCodes` and one typed body. Internal legacy constructors remain temporarily compatible only so C2.3 does not mix wire cutover with the C2.4 Drift migration. The production decoder/gateway does not accept legacy untyped server payloads.
+The production canonical-content decoder requires `skillCodes` and one typed body. Production HTTP does not accept legacy untyped server payloads.
+
+Drift schema v7 stores typed content in a separate exact-revision projection:
+
+```text
+ContentCatalogReads   = accepted C1 presentation projection
+TypedContentReads     = C2 typed exact-revision projection
+```
+
+C1 tables are not repurposed or widened to dictate the backend schema.
 
 The learner endpoint path itself is unchanged. Final catalogue endpoint/publication composition remains a C4 concern; C2 freezes and qualifies the component semantics first.
 
 ## 6. C2 implementation slices
 
 ```text
-C2.1 typed body domain + component contract              ✅ QUALIFIED
-C2.2 Goal/Track/Collection + capability catalogue domain ✅ QUALIFIED
-C2.3 production ContentPayload decoder/gateway cutover   🟡 QUALIFYING
-C2.4 Drift typed-body persistence                        NEXT
-C2.5 adversarial checksum/type mismatch qualification    NEXT
-C2.6 exact-SHA full production CI                        REQUIRED
+C2.1 typed body domain + component contract              ✅ ACCEPTED
+C2.2 Goal/Track/Collection + capability catalogue domain ✅ ACCEPTED
+C2.3 production ContentPayload decoder/gateway cutover   ✅ ACCEPTED
+C2.4 Drift typed-body persistence (schema v7)            ✅ ACCEPTED
+C2.5 adversarial typed-content + catalogue fallback      ✅ ACCEPTED
+C2.6 exact-SHA full production CI                        ✅ ACCEPTED
 ```
 
-Catalogue persistence/delivery is intentionally not created before C4 defines how immutable catalogue projections participate in publication. C2 freezes their domain/wire shapes and selection semantics without creating orphan local tables.
+Catalogue persistence/delivery is intentionally not created before C4 defines how immutable catalogue projections participate in publication. C2 freezes their domain/wire shapes and selection semantics without creating orphan local catalogue tables.
 
 ## 7. Acceptance
 
-C2 is accepted only when all are true:
-
 ```text
-[ ] all five body kinds are explicit and fail closed
-[ ] contentType == body.kind is enforced on production decode
-[ ] Goal → Track → Collection shapes are frozen
-[ ] Category / Level / Skill shapes are frozen
-[ ] SupportedLocale / TtsVoice learner projections are frozen
-[ ] no Worker model internals leak into TtsVoice
-[ ] RFC 8785 checksum scope is frozen
-[ ] typed content survives Drift offline/restart
-[ ] catalogue selection degrades safely when an item becomes inactive
-[ ] exact-SHA production CI is green
+[x] all five body kinds are explicit and fail closed
+[x] contentType == body.kind is enforced on production decode
+[x] Goal → Track → Collection shapes are frozen
+[x] Category / Level / Skill shapes are frozen
+[x] SupportedLocale / TtsVoice learner projections are frozen
+[x] no Worker model internals leak into TtsVoice
+[x] RFC 8785 checksum scope is frozen
+[x] typed content survives Drift offline/restart
+[x] catalogue selection degrades safely when an item becomes inactive
+[x] exact-SHA production CI is green
 ```
 
-Only after C2 acceptance should `BGA-003`, `BGA-007`, `BGA-008` and `BGA-016` be marked contract-closed.
+Final clean production qualification:
+
+```text
+SHA: 3c7b171c1123a33ec05e2ca6f4c92e6882727b4c
+Flutter Production Adapters run: 41197400808
+format                         PASS
+Drift v7 reproducibility       PASS
+flutter analyze                PASS
+full flutter test              PASS
+```
+
+C2 is therefore **ACCEPTED** at the contract + Flutter production lifecycle boundary.
+
+This does not imply backend implementation is complete. Backend persistence/controllers/publication remain future implementation work derived from accepted C1/C2 plus C3/C4 contracts.
+
+## 8. Next stage
+
+```text
+C3 Assessment
+```
+
+C3 must freeze production `PracticeTest / PracticeTestRevision / Question / QuestionRevision / exact ordered refs` semantics, deterministic scoring and offline/restart reproducibility before assessment persistence/schema is frozen on the backend.
