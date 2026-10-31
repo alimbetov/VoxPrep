@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: CareerSpeak Learner API
-  version: 1.3.0
+  version: 1.4.0
   description: >-
     Wire contract consumed by the Flutter installation runtime. Backend persistence
     entities are explicitly not part of this contract.
@@ -74,7 +74,8 @@ paths:
       operationId: getRootContentManifest
       description: >-
         Returns one locale-independent immutable publication root. Locale selection
-        must not change root identity, checksum, ETag or contentVersion.
+        must not change root identity, checksum, ETag or contentVersion. Exact pack,
+        practice-test and catalogue revision membership is frozen in this root.
       security:
         - installationBearer: []
       parameters:
@@ -300,6 +301,18 @@ components:
       type: string
       pattern: '^(?:canonical|locale:[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*)$'
 
+    CatalogueKind:
+      type: string
+      enum:
+        - learning-goals
+        - learning-tracks
+        - learning-collections
+        - categories
+        - levels
+        - skills
+        - supported-locales
+        - tts-voices
+
     InstallationRegistrationRequest:
       type: object
       additionalProperties: false
@@ -408,6 +421,36 @@ components:
         checksum:
           $ref: '#/components/schemas/Sha256'
 
+    PracticeTestRevisionRef:
+      type: object
+      additionalProperties: false
+      required:
+        - practiceTestCode
+        - revision
+        - checksum
+      properties:
+        practiceTestCode:
+          $ref: '#/components/schemas/BusinessCode'
+        revision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+
+    CatalogueRevisionRef:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - revision
+        - checksum
+      properties:
+        kind:
+          $ref: '#/components/schemas/CatalogueKind'
+        revision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+
     LocaleFallbackRule:
       type: object
       additionalProperties: false
@@ -459,6 +502,8 @@ components:
         - publishedAt
         - checksum
         - packs
+        - practiceTests
+        - catalogues
         - localeFallbacks
         - tombstones
       properties:
@@ -480,6 +525,16 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PackRevisionRef'
+        practiceTests:
+          type: array
+          description: Exact immutable assessment revisions belonging to this snapshot.
+          items:
+            $ref: '#/components/schemas/PracticeTestRevisionRef'
+        catalogues:
+          type: array
+          description: Exact immutable small-catalogue revisions belonging to this snapshot.
+          items:
+            $ref: '#/components/schemas/CatalogueRevisionRef'
         localeFallbacks:
           type: array
           description: >-
