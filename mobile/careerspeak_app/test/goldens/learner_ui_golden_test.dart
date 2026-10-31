@@ -129,6 +129,11 @@ void main() {
     await tester.tap(find.textContaining('It provides concurrency-oriented'));
     await tester.pump();
     final submit = find.text('Submit');
+    await tester.scrollUntilVisible(
+      submit,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.ensureVisible(submit);
     await tester.pumpAndSettle();
     await tester.tap(submit);
