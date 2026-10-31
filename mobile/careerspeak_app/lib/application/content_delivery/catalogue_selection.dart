@@ -9,11 +9,7 @@ final class CatalogueChoice {
       throw ArgumentError.value(code, 'code', 'must not be blank');
     }
     if (sortOrder < 0) {
-      throw ArgumentError.value(
-        sortOrder,
-        'sortOrder',
-        'must be non-negative',
-      );
+      throw ArgumentError.value(sortOrder, 'sortOrder', 'must be non-negative');
     }
     return CatalogueChoice._(
       code: normalizedCode,
@@ -67,15 +63,14 @@ final class CatalogueSelectionPolicy {
       }
     }
 
-    final active =
-        snapshot.where((choice) => choice.active).toList()
-          ..sort((left, right) {
-            final order = left.sortOrder.compareTo(right.sortOrder);
-            if (order != 0) {
-              return order;
-            }
-            return left.code.compareTo(right.code);
-          });
+    final active = snapshot.where((choice) => choice.active).toList()
+      ..sort((left, right) {
+        final order = left.sortOrder.compareTo(right.sortOrder);
+        if (order != 0) {
+          return order;
+        }
+        return left.code.compareTo(right.code);
+      });
     return active.firstOrNull?.code;
   }
 }
