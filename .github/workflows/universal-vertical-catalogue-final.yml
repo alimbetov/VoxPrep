@@ -79,6 +79,7 @@ jobs:
           flutter test test/core/adaptive/careerspeak_adaptive_scaffold_test.dart
           flutter test test/features/content/content_detail_panel_adversarial_test.dart
           flutter test test/features/content/interview_audio_role_source_of_truth_test.dart
+          flutter test test/features/content/content_detail_learner_state_interaction_test.dart
 
       - name: V10 full demo graph
         run: flutter test test/data/mock/demo_full_learning_graph_test.dart
