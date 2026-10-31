@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/catalogue_payload_providers.dart';
 import '../../app/content_locations.dart';
+import '../../application/content_delivery/learning_vertical.dart';
 import '../../application/content_delivery/product_catalog.dart';
 import '../../application/content_delivery/universal_catalogue_graph.dart';
 import '../../application/ports/universal_catalogue_repository.dart';
