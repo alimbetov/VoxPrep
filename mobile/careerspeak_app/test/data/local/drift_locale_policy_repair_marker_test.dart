@@ -1,3 +1,4 @@
+import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_sync_journal.dart';
 import 'package:drift/drift.dart';
