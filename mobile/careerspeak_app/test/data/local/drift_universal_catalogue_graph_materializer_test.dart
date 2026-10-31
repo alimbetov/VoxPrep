@@ -31,6 +31,7 @@ void main() {
               updatedAt: now,
             ),
           );
+      await _seedIconAsset(database, mediaType: 'image/png');
 
       final root = _root(101);
       final result = await DriftUniversalCatalogueGraphMaterializer(
@@ -203,7 +204,7 @@ void main() {
         minimumAppContractVersion: 2,
         publishedAt: DateTime.utc(2026, 10, 31, 19),
         checksum: _hash,
-        packs: const <PackRevisionRef>[],
+        packs: _packRefs(),
         practiceTests: <PracticeTestRevisionRef>[
           PracticeTestRevisionRef(
             practiceTestCode: 'TEST_ALPHA',
@@ -225,6 +226,47 @@ void main() {
         'UNIVERSAL_CATALOGUE_GRAPH_INVALID',
       );
     });
+
+    test('rejects catalogue icon outside exact pack membership', () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      await database.customSelect('SELECT 1').getSingle();
+
+      final result = await DriftUniversalCatalogueGraphMaterializer(
+        database,
+      ).materialize(root: _root(105), payloads: _payloads());
+
+      expect(result, isA<FailureResult<void>>());
+      expect(
+        (result as FailureResult<void>).failure.code,
+        'UNIVERSAL_CATALOGUE_GRAPH_INVALID',
+      );
+      expect(
+        await database
+            .customSelect(
+              'SELECT * FROM publication_snapshots WHERE content_version = 105',
+            )
+            .get(),
+        isEmpty,
+      );
+    });
+
+    test('rejects catalogue icon whose exact asset is not image media', () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      await database.customSelect('SELECT 1').getSingle();
+      await _seedIconAsset(database, mediaType: 'audio/mpeg');
+
+      final result = await DriftUniversalCatalogueGraphMaterializer(
+        database,
+      ).materialize(root: _root(106), payloads: _payloads());
+
+      expect(result, isA<FailureResult<void>>());
+      expect(
+        (result as FailureResult<void>).failure.code,
+        'UNIVERSAL_CATALOGUE_GRAPH_INVALID',
+      );
+    });
   });
 }
 
@@ -235,7 +277,7 @@ RootContentManifest _root(int contentVersion) {
     minimumAppContractVersion: 2,
     publishedAt: DateTime.utc(2026, 10, 31, 19),
     checksum: _hash,
-    packs: const <PackRevisionRef>[],
+    packs: _packRefs(),
     practiceTests: <PracticeTestRevisionRef>[
       PracticeTestRevisionRef(
         practiceTestCode: 'TEST_ALPHA',
@@ -247,6 +289,14 @@ RootContentManifest _root(int contentVersion) {
     tombstones: const <ContentTombstone>[],
   );
 }
+
+List<PackRevisionRef> _packRefs() => <PackRevisionRef>[
+  PackRevisionRef(
+    identity: PackIdentity(code: 'PACK_ALPHA', variant: 'canonical'),
+    revision: 1,
+    checksum: _hash,
+  ),
+];
 
 List<CatalogueRevisionRef> _catalogueRefs() {
   return <CatalogueRevisionRef>[
@@ -362,5 +412,37 @@ CataloguePayload _payload(CatalogueKind kind, List<Object> items) {
       'checksum': _hash,
       'items': items,
     },
+  );
+}
+
+Future<void> _seedIconAsset(
+  CareerSpeakDatabase database, {
+  required String mediaType,
+}) async {
+  final now = DateTime.utc(2026, 10, 31, 19).millisecondsSinceEpoch;
+  await database.customStatement(
+    '''
+    INSERT INTO asset_catalog (
+      asset_id, checksum_sha256, asset_kind, mime_type,
+      size_bytes, duration_ms, delivery_key, created_at
+    ) VALUES (?, ?, ?, ?, ?, NULL, ?, ?)
+    ''',
+    <Object?>[
+      'asset-vertical',
+      _hash,
+      'IMAGE',
+      mediaType,
+      128,
+      'icons/vertical-alpha.png',
+      now,
+    ],
+  );
+  await database.customStatement(
+    '''
+    INSERT INTO pack_asset_refs (
+      pack_code, variant_key, pack_revision, asset_id, required_offline
+    ) VALUES (?, ?, ?, ?, ?)
+    ''',
+    <Object?>['PACK_ALPHA', 'canonical', 1, 'asset-vertical', 0],
   );
 }
