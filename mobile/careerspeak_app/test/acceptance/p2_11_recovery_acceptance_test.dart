@@ -19,6 +19,7 @@ import 'package:careerspeak_app/data/remote/http_content_manifest_gateway.dart';
 import 'package:careerspeak_app/data/remote/http_content_payload_gateway.dart';
 import 'package:careerspeak_app/data/remote/http_installation_registration_gateway.dart';
 import 'package:careerspeak_app/domain/installation_credentials.dart';
+import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
