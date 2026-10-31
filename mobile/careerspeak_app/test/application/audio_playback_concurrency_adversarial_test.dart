@@ -22,15 +22,24 @@ void main() {
     );
     addTearDown(controller.dispose);
 
-    final first = controller.play(_first, learnerState: const ContentMarkerState());
+    final first = controller.play(
+      _first,
+      learnerState: const ContentMarkerState(),
+    );
     await _waitUntil(() => resolver.pending.length == 1);
-    final second = controller.play(_first, learnerState: const ContentMarkerState());
+    final second = controller.play(
+      _first,
+      learnerState: const ContentMarkerState(),
+    );
     await _waitUntil(() => resolver.pending.length == 2);
 
     resolver.complete(0, _asset('first-request'));
     final firstResult = await first;
     expect(firstResult, isA<FailureResult<void>>());
-    expect((firstResult as FailureResult<void>).failure.code, 'PLAYBACK_SUPERSEDED');
+    expect(
+      (firstResult as FailureResult<void>).failure.code,
+      'PLAYBACK_SUPERSEDED',
+    );
     expect(engine.sessions, isEmpty);
 
     resolver.complete(1, _asset('second-request'));
@@ -39,88 +48,114 @@ void main() {
     expect(controller.state.phase, AudioPlaybackPhase.playing);
   });
 
-  test('switching content during resolve cannot resurrect the old item', () async {
-    final resolver = _ControlledResolver();
-    final engine = _Engine();
-    final learner = _LearnerState();
-    final controller = AudioPlaybackController(
-      resolveAudioAsset: resolver.resolve,
-      engine: engine,
-      learnerState: learner,
-    );
-    addTearDown(controller.dispose);
+  test(
+    'switching content during resolve cannot resurrect the old item',
+    () async {
+      final resolver = _ControlledResolver();
+      final engine = _Engine();
+      final learner = _LearnerState();
+      final controller = AudioPlaybackController(
+        resolveAudioAsset: resolver.resolve,
+        engine: engine,
+        learnerState: learner,
+      );
+      addTearDown(controller.dispose);
 
-    final first = controller.play(_first, learnerState: const ContentMarkerState());
-    await _waitUntil(() => resolver.pending.length == 1);
-    final second = controller.play(_second, learnerState: const ContentMarkerState());
-    await _waitUntil(() => resolver.pending.length == 2);
+      final first = controller.play(
+        _first,
+        learnerState: const ContentMarkerState(),
+      );
+      await _waitUntil(() => resolver.pending.length == 1);
+      final second = controller.play(
+        _second,
+        learnerState: const ContentMarkerState(),
+      );
+      await _waitUntil(() => resolver.pending.length == 2);
 
-    resolver.complete(1, _asset('second'));
-    expect(await second, isA<Success<void>>());
-    resolver.complete(0, _asset('first'));
-    final firstResult = await first;
+      resolver.complete(1, _asset('second'));
+      expect(await second, isA<Success<void>>());
+      resolver.complete(0, _asset('first'));
+      final firstResult = await first;
 
-    expect(firstResult, isA<FailureResult<void>>());
-    expect(controller.state.content, ContentIdentity.fromItem(_second));
-    expect(controller.state.revision, _second.revision);
-    expect(engine.sessions, hasLength(1));
-  });
+      expect(firstResult, isA<FailureResult<void>>());
+      expect(controller.state.content, ContentIdentity.fromItem(_second));
+      expect(controller.state.revision, _second.revision);
+      expect(engine.sessions, hasLength(1));
+    },
+  );
 
-  test('Stop during resolve cancels the pending request before engine open', () async {
-    final resolver = _ControlledResolver();
-    final engine = _Engine();
-    final learner = _LearnerState();
-    final controller = AudioPlaybackController(
-      resolveAudioAsset: resolver.resolve,
-      engine: engine,
-      learnerState: learner,
-    );
-    addTearDown(controller.dispose);
+  test(
+    'Stop during resolve cancels the pending request before engine open',
+    () async {
+      final resolver = _ControlledResolver();
+      final engine = _Engine();
+      final learner = _LearnerState();
+      final controller = AudioPlaybackController(
+        resolveAudioAsset: resolver.resolve,
+        engine: engine,
+        learnerState: learner,
+      );
+      addTearDown(controller.dispose);
 
-    final play = controller.play(_first, learnerState: const ContentMarkerState());
-    await _waitUntil(() => resolver.pending.length == 1);
-    expect(controller.state.phase, AudioPlaybackPhase.resolving);
+      final play = controller.play(
+        _first,
+        learnerState: const ContentMarkerState(),
+      );
+      await _waitUntil(() => resolver.pending.length == 1);
+      expect(controller.state.phase, AudioPlaybackPhase.resolving);
 
-    expect(await controller.stop(), isA<Success<void>>());
-    expect(controller.state.phase, AudioPlaybackPhase.stopped);
+      expect(await controller.stop(), isA<Success<void>>());
+      expect(controller.state.phase, AudioPlaybackPhase.stopped);
 
-    resolver.complete(0, _asset('late'));
-    final playResult = await play;
-    expect(playResult, isA<FailureResult<void>>());
-    expect((playResult as FailureResult<void>).failure.code, 'PLAYBACK_SUPERSEDED');
-    expect(engine.sessions, isEmpty);
-    expect(controller.state.phase, AudioPlaybackPhase.stopped);
-  });
+      resolver.complete(0, _asset('late'));
+      final playResult = await play;
+      expect(playResult, isA<FailureResult<void>>());
+      expect(
+        (playResult as FailureResult<void>).failure.code,
+        'PLAYBACK_SUPERSEDED',
+      );
+      expect(engine.sessions, isEmpty);
+      expect(controller.state.phase, AudioPlaybackPhase.stopped);
+    },
+  );
 
-  test('completion from a superseded session cannot mark old content listened', () async {
-    final engine = _Engine();
-    final learner = _LearnerState();
-    final controller = AudioPlaybackController(
-      resolveAudioAsset: (content, revision) async => Success<ResolvedAsset>(
-        _asset('${content.code}-$revision'),
-      ),
-      engine: engine,
-      learnerState: learner,
-    );
-    addTearDown(controller.dispose);
+  test(
+    'completion from a superseded session cannot mark old content listened',
+    () async {
+      final engine = _Engine();
+      final learner = _LearnerState();
+      final controller = AudioPlaybackController(
+        resolveAudioAsset: (content, revision) async =>
+            Success<ResolvedAsset>(_asset('${content.code}-$revision')),
+        engine: engine,
+        learnerState: learner,
+      );
+      addTearDown(controller.dispose);
 
-    expect(
-      await controller.play(_first, learnerState: const ContentMarkerState()),
-      isA<Success<void>>(),
-    );
-    final oldSession = engine.sessions.single;
+      expect(
+        await controller.play(_first, learnerState: const ContentMarkerState()),
+        isA<Success<void>>(),
+      );
+      final oldSession = engine.sessions.single;
 
-    expect(
-      await controller.play(_second, learnerState: const ContentMarkerState()),
-      isA<Success<void>>(),
-    );
-    oldSession.emit(const AudioPlaybackCompleted());
-    await pumpEventQueue();
+      expect(
+        await controller.play(
+          _second,
+          learnerState: const ContentMarkerState(),
+        ),
+        isA<Success<void>>(),
+      );
+      oldSession.emit(const AudioPlaybackCompleted());
+      await pumpEventQueue();
 
-    expect(learner.listened.map((item) => item.code), isNot(contains(_first.code)));
-    expect(controller.state.content, ContentIdentity.fromItem(_second));
-    expect(controller.state.phase, AudioPlaybackPhase.playing);
-  });
+      expect(
+        learner.listened.map((item) => item.code),
+        isNot(contains(_first.code)),
+      );
+      expect(controller.state.content, ContentIdentity.fromItem(_second));
+      expect(controller.state.phase, AudioPlaybackPhase.playing);
+    },
+  );
 }
 
 ResolvedAsset _asset(String id) => ResolvedAsset(
@@ -166,10 +201,7 @@ final class _ControlledResolver {
   final List<Completer<Result<ResolvedAsset>>> pending =
       <Completer<Result<ResolvedAsset>>>[];
 
-  Future<Result<ResolvedAsset>> resolve(
-    ContentIdentity content,
-    int revision,
-  ) {
+  Future<Result<ResolvedAsset>> resolve(ContentIdentity content, int revision) {
     final completer = Completer<Result<ResolvedAsset>>();
     pending.add(completer);
     return completer.future;

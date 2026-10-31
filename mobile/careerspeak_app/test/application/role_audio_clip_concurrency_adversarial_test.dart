@@ -67,31 +67,34 @@ void main() {
     expect(controller.state.phase, AudioPlaybackPhase.stopped);
   });
 
-  test('late completion from superseded role cannot replace active role state', () async {
-    final engine = _Engine();
-    final controller = RoleAudioClipController(
-      resolveAudioAsset: (content, revision, role) async =>
-          Success<ResolvedAsset>(_asset(role.wireName)),
-      engine: engine,
-    );
-    addTearDown(controller.dispose);
+  test(
+    'late completion from superseded role cannot replace active role state',
+    () async {
+      final engine = _Engine();
+      final controller = RoleAudioClipController(
+        resolveAudioAsset: (content, revision, role) async =>
+            Success<ResolvedAsset>(_asset(role.wireName)),
+        engine: engine,
+      );
+      addTearDown(controller.dispose);
 
-    expect(
-      await controller.play(_interview, ContentAudioRole.question),
-      isA<Success<void>>(),
-    );
-    final oldSession = engine.sessions.single;
+      expect(
+        await controller.play(_interview, ContentAudioRole.question),
+        isA<Success<void>>(),
+      );
+      final oldSession = engine.sessions.single;
 
-    expect(
-      await controller.play(_interview, ContentAudioRole.sampleAnswer),
-      isA<Success<void>>(),
-    );
-    oldSession.emit(const AudioPlaybackCompleted());
-    await pumpEventQueue();
+      expect(
+        await controller.play(_interview, ContentAudioRole.sampleAnswer),
+        isA<Success<void>>(),
+      );
+      oldSession.emit(const AudioPlaybackCompleted());
+      await pumpEventQueue();
 
-    expect(controller.state.role, ContentAudioRole.sampleAnswer);
-    expect(controller.state.phase, AudioPlaybackPhase.playing);
-  });
+      expect(controller.state.role, ContentAudioRole.sampleAnswer);
+      expect(controller.state.phase, AudioPlaybackPhase.playing);
+    },
+  );
 }
 
 ResolvedAsset _asset(String id) => ResolvedAsset(

@@ -93,7 +93,10 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Replay'), findsOneWidget);
-      expect(learnerState.current[ContentIdentity.fromItem(_topic)]?.listened, isTrue);
+      expect(
+        learnerState.current[ContentIdentity.fromItem(_topic)]?.listened,
+        isTrue,
+      );
 
       final cachedPath = engine.lastOpenedPath!;
       expect(await File(cachedPath).exists(), isTrue);
@@ -247,7 +250,10 @@ final class _ReactiveLearnerStateRepository implements LearnerStateRepository {
   final Map<ContentIdentity, ContentMarkerState> current =
       <ContentIdentity, ContentMarkerState>{};
   final StreamController<Result<Map<ContentIdentity, ContentMarkerState>>>
-  _changes = StreamController<Result<Map<ContentIdentity, ContentMarkerState>>>.broadcast();
+  _changes =
+      StreamController<
+        Result<Map<ContentIdentity, ContentMarkerState>>
+      >.broadcast();
 
   void _emit() {
     _changes.add(
@@ -258,7 +264,8 @@ final class _ReactiveLearnerStateRepository implements LearnerStateRepository {
   }
 
   @override
-  Stream<Result<Map<ContentIdentity, ContentMarkerState>>> watchMarkers() async* {
+  Stream<Result<Map<ContentIdentity, ContentMarkerState>>>
+  watchMarkers() async* {
     yield Success<Map<ContentIdentity, ContentMarkerState>>(
       Map<ContentIdentity, ContentMarkerState>.unmodifiable(current),
     );
@@ -359,7 +366,9 @@ final class _MemoryRetentionRepository
         !currentEntry.lastAccessedAt.isBefore(accessedBefore)) {
       return const Success<List<AssetRetentionEntry>>(<AssetRetentionEntry>[]);
     }
-    return Success<List<AssetRetentionEntry>>(<AssetRetentionEntry>[currentEntry]);
+    return Success<List<AssetRetentionEntry>>(<AssetRetentionEntry>[
+      currentEntry,
+    ]);
   }
 
   @override

@@ -30,70 +30,76 @@ const _goodBytes = <int>[1, 2, 3, 4];
 const _badBytes = <int>[4, 3, 2, 1];
 
 void main() {
-  testWidgets('corrupted local audio is discarded and exact asset is redownloaded', (
-    tester,
-  ) async {
-    final scenario = await _Scenario.create();
-    addTearDown(scenario.dispose);
-    await scenario.pump(tester);
+  testWidgets(
+    'corrupted local audio is discarded and exact asset is redownloaded',
+    (tester) async {
+      final scenario = await _Scenario.create();
+      addTearDown(scenario.dispose);
+      await scenario.pump(tester);
 
-    await scenario.play(tester);
-    expect(scenario.source.openCount, 1);
-    final path = scenario.engine.lastOpenedPath!;
+      await scenario.play(tester);
+      expect(scenario.source.openCount, 1);
+      final path = scenario.engine.lastOpenedPath!;
 
-    await scenario.stop(tester);
-    await File(path).writeAsBytes(_badBytes, flush: true);
-    expect(await File(path).readAsBytes(), _badBytes);
+      await scenario.stop(tester);
+      await File(path).writeAsBytes(_badBytes, flush: true);
+      expect(await File(path).readAsBytes(), _badBytes);
 
-    await scenario.play(tester);
+      await scenario.play(tester);
 
-    expect(scenario.source.openCount, 2);
-    expect(scenario.engine.openCount, 2);
-    expect(await File(path).readAsBytes(), _goodBytes);
-    expect(find.text('Pause'), findsOneWidget);
-  });
+      expect(scenario.source.openCount, 2);
+      expect(scenario.engine.openCount, 2);
+      expect(await File(path).readAsBytes(), _goodBytes);
+      expect(find.text('Pause'), findsOneWidget);
+    },
+  );
 
-  testWidgets('bad checksum download fails closed and is never opened by player', (
-    tester,
-  ) async {
-    final scenario = await _Scenario.create(sourceBytes: _badBytes);
-    addTearDown(scenario.dispose);
-    await scenario.pump(tester);
+  testWidgets(
+    'bad checksum download fails closed and is never opened by player',
+    (tester) async {
+      final scenario = await _Scenario.create(sourceBytes: _badBytes);
+      addTearDown(scenario.dispose);
+      await scenario.pump(tester);
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Play'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Play'));
+      await tester.pumpAndSettle();
 
-    expect(scenario.source.openCount, 1);
-    expect(scenario.engine.openCount, 0);
-    expect(find.textContaining('checksum'), findsWidgets);
-    expect(find.text('Play'), findsOneWidget);
-  });
+      expect(scenario.source.openCount, 1);
+      expect(scenario.engine.openCount, 0);
+      expect(find.textContaining('checksum'), findsWidgets);
+      expect(find.text('Play'), findsOneWidget);
+    },
+  );
 
-  testWidgets('offline after eviction exhausts retries without inventing local audio', (
-    tester,
-  ) async {
-    final scenario = await _Scenario.create();
-    addTearDown(scenario.dispose);
-    await scenario.pump(tester);
+  testWidgets(
+    'offline after eviction exhausts retries without inventing local audio',
+    (tester) async {
+      final scenario = await _Scenario.create();
+      addTearDown(scenario.dispose);
+      await scenario.pump(tester);
 
-    await scenario.play(tester);
-    scenario.engine.latestSession.complete();
-    await tester.pumpAndSettle();
-    final path = scenario.engine.lastOpenedPath!;
+      await scenario.play(tester);
+      scenario.engine.latestSession.complete();
+      await tester.pumpAndSettle();
+      final path = scenario.engine.lastOpenedPath!;
 
-    await scenario.expireAndEvict();
-    expect(await File(path).exists(), isFalse);
+      await scenario.expireAndEvict();
+      expect(await File(path).exists(), isFalse);
 
-    scenario.source.online = false;
-    await tester.tap(find.widgetWithText(FilledButton, 'Replay'));
-    await tester.pumpAndSettle();
+      scenario.source.online = false;
+      await tester.tap(find.widgetWithText(FilledButton, 'Replay'));
+      await tester.pumpAndSettle();
 
-    expect(scenario.source.openCount, 4); // first success + three offline attempts
-    expect(scenario.engine.openCount, 1);
-    expect(await File(path).exists(), isFalse);
-    expect(find.textContaining('offline'), findsWidgets);
-    expect(find.text('Play'), findsOneWidget);
-  });
+      expect(
+        scenario.source.openCount,
+        4,
+      ); // first success + three offline attempts
+      expect(scenario.engine.openCount, 1);
+      expect(await File(path).exists(), isFalse);
+      expect(find.textContaining('offline'), findsWidgets);
+      expect(find.text('Play'), findsOneWidget);
+    },
+  );
 
   testWidgets('next Play redownloads exact audio after network recovery', (
     tester,
@@ -237,10 +243,7 @@ final class _Scenario {
       now: readNow,
     ).cleanupExpiredAudio();
     expect(result, isA<Success<AssetRetentionCleanupReport>>());
-    expect(
-      (result as Success<AssetRetentionCleanupReport>).value.evicted,
-      1,
-    );
+    expect((result as Success<AssetRetentionCleanupReport>).value.evicted, 1);
   }
 
   Future<void> dispose() async {
@@ -369,7 +372,10 @@ final class _ReactiveLearnerStateRepository implements LearnerStateRepository {
   final Map<ContentIdentity, ContentMarkerState> current =
       <ContentIdentity, ContentMarkerState>{};
   final StreamController<Result<Map<ContentIdentity, ContentMarkerState>>>
-  _changes = StreamController<Result<Map<ContentIdentity, ContentMarkerState>>>.broadcast();
+  _changes =
+      StreamController<
+        Result<Map<ContentIdentity, ContentMarkerState>>
+      >.broadcast();
 
   void _emit() {
     _changes.add(
@@ -380,7 +386,8 @@ final class _ReactiveLearnerStateRepository implements LearnerStateRepository {
   }
 
   @override
-  Stream<Result<Map<ContentIdentity, ContentMarkerState>>> watchMarkers() async* {
+  Stream<Result<Map<ContentIdentity, ContentMarkerState>>>
+  watchMarkers() async* {
     yield Success<Map<ContentIdentity, ContentMarkerState>>(
       Map<ContentIdentity, ContentMarkerState>.unmodifiable(current),
     );
@@ -481,7 +488,9 @@ final class _MemoryRetentionRepository
         !currentEntry.lastAccessedAt.isBefore(accessedBefore)) {
       return const Success<List<AssetRetentionEntry>>(<AssetRetentionEntry>[]);
     }
-    return Success<List<AssetRetentionEntry>>(<AssetRetentionEntry>[currentEntry]);
+    return Success<List<AssetRetentionEntry>>(<AssetRetentionEntry>[
+      currentEntry,
+    ]);
   }
 
   @override

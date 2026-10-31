@@ -31,9 +31,8 @@ void main() {
               const _QuestionRoleCatalog(),
             ),
             interviewAudioClipStateProvider.overrideWith(
-              (ref) => Stream<RoleAudioClipState>.value(
-                const RoleAudioClipState(),
-              ),
+              (ref) =>
+                  Stream<RoleAudioClipState>.value(const RoleAudioClipState()),
             ),
           ],
           child: const MaterialApp(

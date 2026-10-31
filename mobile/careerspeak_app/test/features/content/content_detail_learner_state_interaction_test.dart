@@ -12,26 +12,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('favorite is repository-driven and toggles through stream state', (
-    tester,
-  ) async {
-    final repository = _ReactiveLearnerStateRepository();
-    addTearDown(repository.dispose);
-    await _pump(tester, repository);
+  testWidgets(
+    'favorite is repository-driven and toggles through stream state',
+    (tester) async {
+      final repository = _ReactiveLearnerStateRepository();
+      addTearDown(repository.dispose);
+      await _pump(tester, repository);
 
-    expect(find.byTooltip('Add favorite'), findsOneWidget);
-    await tester.tap(find.byTooltip('Add favorite'));
-    await tester.pumpAndSettle();
+      expect(find.byTooltip('Add favorite'), findsOneWidget);
+      await tester.tap(find.byTooltip('Add favorite'));
+      await tester.pumpAndSettle();
 
-    expect(find.byTooltip('Remove favorite'), findsOneWidget);
-    expect(repository.favoriteWrites, 1);
+      expect(find.byTooltip('Remove favorite'), findsOneWidget);
+      expect(repository.favoriteWrites, 1);
 
-    await tester.tap(find.byTooltip('Remove favorite'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Remove favorite'));
+      await tester.pumpAndSettle();
 
-    expect(find.byTooltip('Add favorite'), findsOneWidget);
-    expect(repository.favoriteWrites, 2);
-  });
+      expect(find.byTooltip('Add favorite'), findsOneWidget);
+      expect(repository.favoriteWrites, 2);
+    },
+  );
 
   testWidgets('completed state changes only after repository stream update', (
     tester,
@@ -66,7 +67,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Unable to load learner state.'), findsOneWidget);
+    expect(
+      find.textContaining('Unable to load learner state.'),
+      findsOneWidget,
+    );
     expect(find.text('Mark completed'), findsNothing);
     expect(find.byTooltip('Add favorite'), findsNothing);
   });
@@ -102,7 +106,9 @@ const _item = ContentItem(
 
 final class _ReactiveLearnerStateRepository implements LearnerStateRepository {
   final _controller =
-      StreamController<Result<Map<ContentIdentity, ContentMarkerState>>>.broadcast();
+      StreamController<
+        Result<Map<ContentIdentity, ContentMarkerState>>
+      >.broadcast();
   final Map<ContentIdentity, ContentMarkerState> _markers =
       <ContentIdentity, ContentMarkerState>{};
 
@@ -124,7 +130,8 @@ final class _ReactiveLearnerStateRepository implements LearnerStateRepository {
       _markers[identity] ?? const ContentMarkerState();
 
   @override
-  Stream<Result<Map<ContentIdentity, ContentMarkerState>>> watchMarkers() async* {
+  Stream<Result<Map<ContentIdentity, ContentMarkerState>>>
+  watchMarkers() async* {
     yield Success<Map<ContentIdentity, ContentMarkerState>>(
       Map<ContentIdentity, ContentMarkerState>.unmodifiable(_markers),
     );
@@ -151,10 +158,9 @@ final class _ReactiveLearnerStateRepository implements LearnerStateRepository {
   }) async {
     completedWrites++;
     lastCompletedRevision = lastRevisionSeen;
-    _markers[identity] = _state(identity).copyWith(
-      completed: completed,
-      lastRevisionSeen: lastRevisionSeen,
-    );
+    _markers[identity] = _state(
+      identity,
+    ).copyWith(completed: completed, lastRevisionSeen: lastRevisionSeen);
     _emit();
     return const Success<void>(null);
   }
@@ -165,10 +171,9 @@ final class _ReactiveLearnerStateRepository implements LearnerStateRepository {
     required bool listened,
     int? lastRevisionSeen,
   }) async {
-    _markers[identity] = _state(identity).copyWith(
-      listened: listened,
-      lastRevisionSeen: lastRevisionSeen,
-    );
+    _markers[identity] = _state(
+      identity,
+    ).copyWith(listened: listened, lastRevisionSeen: lastRevisionSeen);
     _emit();
     return const Success<void>(null);
   }
@@ -179,10 +184,9 @@ final class _ReactiveLearnerStateRepository implements LearnerStateRepository {
     required int positionMs,
     int? lastRevisionSeen,
   }) async {
-    _markers[identity] = _state(identity).copyWith(
-      lastPositionMs: positionMs,
-      lastRevisionSeen: lastRevisionSeen,
-    );
+    _markers[identity] = _state(
+      identity,
+    ).copyWith(lastPositionMs: positionMs, lastRevisionSeen: lastRevisionSeen);
     _emit();
     return const Success<void>(null);
   }

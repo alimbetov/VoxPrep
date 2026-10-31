@@ -62,44 +62,49 @@ void main() {
     expect(await File(firstPath).readAsBytes(), _bytes);
   });
 
-  test('cleanup during in-flight resolve cannot evict incomplete download', () async {
-    final directory = await Directory.systemTemp.createTemp('resolver-evict-race-');
-    addTearDown(() => directory.delete(recursive: true));
+  test(
+    'cleanup during in-flight resolve cannot evict incomplete download',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'resolver-evict-race-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
 
-    var now = DateTime.utc(2026, 1, 1);
-    final source = _BlockingSource();
-    final store = FileSystemAssetStore(directory, now: () => now);
-    final retention = _Retention(now: () => now);
-    final resolver = _resolver(source, store, retention);
+      var now = DateTime.utc(2026, 1, 1);
+      final source = _BlockingSource();
+      final store = FileSystemAssetStore(directory, now: () => now);
+      final retention = _Retention(now: () => now);
+      final resolver = _resolver(source, store, retention);
 
-    final pending = resolver.resolve(
-      _asset.assetId,
-      policy: AssetResolutionPolicy.downloadIfMissing,
-    );
-    await _waitUntil(() => source.openCount == 1);
+      final pending = resolver.resolve(
+        _asset.assetId,
+        policy: AssetResolutionPolicy.downloadIfMissing,
+      );
+      await _waitUntil(() => source.openCount == 1);
 
-    now = now.add(const Duration(days: 100));
-    final duringDownload = await AssetCacheRetentionManager(
-      retention: retention,
-      evictionStore: store,
-      audioTtl: const Duration(days: 90),
-      now: () => now,
-    ).cleanupExpiredAudio();
+      now = now.add(const Duration(days: 100));
+      final duringDownload = await AssetCacheRetentionManager(
+        retention: retention,
+        evictionStore: store,
+        audioTtl: const Duration(days: 90),
+        now: () => now,
+      ).cleanupExpiredAudio();
 
-    expect(duringDownload, isA<Success<AssetRetentionCleanupReport>>());
-    expect(
-      (duringDownload as Success<AssetRetentionCleanupReport>).value.evicted,
-      0,
-    );
+      expect(duringDownload, isA<Success<AssetRetentionCleanupReport>>());
+      expect(
+        (duringDownload as Success<AssetRetentionCleanupReport>).value.evicted,
+        0,
+      );
 
-    source.release();
-    final result = await pending;
-    expect(result, isA<Success<ResolvedAsset>>());
-    final path = (result as Success<ResolvedAsset>).value.localPath;
-    expect(await File(path).readAsBytes(), _bytes);
-    expect(retention.entry, isNotNull);
-    expect(retention.entry!.lastAccessedAt, now);
-  });
+      source.release();
+      final result = await pending;
+      expect(result, isA<Success<ResolvedAsset>>());
+      final path = (result as Success<ResolvedAsset>).value.localPath;
+      expect(await File(path).readAsBytes(), _bytes);
+      expect(retention.entry, isNotNull);
+      expect(retention.entry!.lastAccessedAt, now);
+    },
+  );
 }
 
 AssetResolver _resolver(
