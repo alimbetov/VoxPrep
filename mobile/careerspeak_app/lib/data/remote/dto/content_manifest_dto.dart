@@ -12,6 +12,30 @@ final class PackRevisionDto {
   final String checksum;
 }
 
+final class PracticeTestRevisionDto {
+  const PracticeTestRevisionDto({
+    required this.practiceTestCode,
+    required this.revision,
+    required this.checksum,
+  });
+
+  final String practiceTestCode;
+  final int revision;
+  final String checksum;
+}
+
+final class CatalogueRevisionDto {
+  const CatalogueRevisionDto({
+    required this.kind,
+    required this.revision,
+    required this.checksum,
+  });
+
+  final String kind;
+  final int revision;
+  final String checksum;
+}
+
 final class LocaleFallbackRuleDto {
   const LocaleFallbackRuleDto({
     required this.locale,
@@ -44,6 +68,8 @@ final class RootContentManifestDto {
     required this.publishedAt,
     required this.checksum,
     required this.packs,
+    required this.practiceTests,
+    required this.catalogues,
     required this.localeFallbacks,
     required this.tombstones,
   });
@@ -54,6 +80,8 @@ final class RootContentManifestDto {
   final DateTime publishedAt;
   final String checksum;
   final List<PackRevisionDto> packs;
+  final List<PracticeTestRevisionDto> practiceTests;
+  final List<CatalogueRevisionDto> catalogues;
   final List<LocaleFallbackRuleDto> localeFallbacks;
   final List<ContentTombstoneDto> tombstones;
 }
