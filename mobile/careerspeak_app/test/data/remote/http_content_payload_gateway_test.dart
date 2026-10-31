@@ -1,4 +1,5 @@
 import 'package:careerspeak_app/application/content_delivery/content_payload.dart';
+import 'package:careerspeak_app/application/content_delivery/typed_content_body.dart';
 import 'package:careerspeak_app/application/ports/api_client.dart';
 import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/remote/http_content_payload_gateway.dart';
@@ -13,7 +14,7 @@ const _otherHash =
 
 void main() {
   group('HttpContentPayloadGateway', () {
-    test('fetches the exact authenticated content revision', () async {
+    test('fetches the exact authenticated typed content revision', () async {
       final apiClient = _RecordingApiClient(<Result<ApiResponse>>[
         Success<ApiResponse>(
           ApiResponse(
@@ -31,6 +32,7 @@ void main() {
       final payload = (result as Success<ContentPayload>).value;
       expect(payload.categoryCode, 'JAVA_BACKEND');
       expect(payload.levelCode, 'SENIOR');
+      expect(payload.body, isA<InterviewBody>());
       final request = apiClient.requests.single;
       expect(request.method, ApiMethod.get);
       expect(request.path, '/api/v1/content/interview/JAVA_Q_001/revisions/3');
@@ -56,6 +58,27 @@ void main() {
       final failure = (result as FailureResult<ContentPayload>).failure;
       expect(failure.code, 'CONTENT_PAYLOAD_MISMATCH');
       expect(failure.traceId, 'trace-payload');
+    });
+
+    test('rejects legacy untyped response fail closed', () async {
+      final apiClient = _RecordingApiClient(<Result<ApiResponse>>[
+        Success<ApiResponse>(
+          ApiResponse(
+            statusCode: 200,
+            headers: const <String, String>{},
+            jsonBody: _payloadJson()..remove('body'),
+          ),
+        ),
+      ]);
+      final gateway = HttpContentPayloadGateway(apiClient: apiClient);
+
+      final result = await gateway.fetch(_target());
+
+      expect(result, isA<FailureResult<ContentPayload>>());
+      expect(
+        (result as FailureResult<ContentPayload>).failure.code,
+        'CONTENT_PAYLOAD_INVALID',
+      );
     });
 
     test('rejects non-success endpoint status', () async {
@@ -122,6 +145,13 @@ Map<String, Object?> _payloadJson() {
     'levelLabel': 'Senior',
     'minutes': 6,
     'hasAudio': true,
+    'skillCodes': <String>['COMMUNICATION'],
+    'body': <String, Object?>{
+      'kind': 'interview',
+      'prompt': 'What is dependency injection?',
+      'modelAnswer': 'Dependencies are supplied externally.',
+      'keyPoints': <String>['loose coupling'],
+    },
   };
 }
 

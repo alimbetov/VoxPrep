@@ -1,41 +1,39 @@
 # CareerSpeak — P0 Domain & Contract Design Plan
 
-**Document version:** 2.1  
-**Status:** Final P0 design roadmap  
-**Applies to:** CareerSpeak v0.9+
+**Document version:** 2.3  
+**Status:** Final MVP domain/contract roadmap  
+**Applies to:** CareerSpeak v1
+
+Normative parent:
+
+- [`../specification/CAREERSPEAK_PRODUCT_REQUIREMENTS.md`](../specification/CAREERSPEAK_PRODUCT_REQUIREMENTS.md)
 
 ---
 
 ## 1. Goal
 
-P0 freezes domain ownership and cross-system contracts before production implementation.
+Freeze only the domain ownership and cross-system contracts needed for MVP before production backend implementation.
 
-Every bounded context must define:
+Every backend context must define:
 
 ```text
-scope/ownership
-aggregates/entities/value objects
-invariants/state transitions
+ownership
+entities/value objects
+invariants
 persistence/schema
-constraints/indexes
-application/API contracts
-security actor
-errors/idempotency
-concurrency/recovery
-acceptance/failure tests
+API/application contract
+security/errors
+failure/recovery
+acceptance tests
 ```
+
+Do not create domain layers, tables or DTOs without a concrete MVP use case.
+
+Persistence entities are derived from backend invariants; they are not mirrors of Flutter DTOs.
 
 ---
 
-## 2. System integration standard
-
-All contexts follow:
-
-```text
-docs/architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md
-```
-
-Mandatory shared terminology:
+## 2. Shared system terminology
 
 ```text
 Backend ACTIVE
@@ -47,8 +45,6 @@ Flutter CURRENT
 Flutter offline READY
 = complete locally verified offline bundle
 ```
-
-Do not reuse the same lifecycle term for different subsystem ownership.
 
 ---
 
@@ -62,11 +58,11 @@ FLUTTER INSTALLATION
 TTS WORKER
 ```
 
-No other human/admin role hierarchy is in MVP.
+No additional human/admin role hierarchy in MVP.
 
 ---
 
-## 4. P0.0 — Common Contracts
+## 4. P0.0 — Common contracts
 
 Freeze:
 
@@ -77,28 +73,16 @@ API versioning
 DTO naming/nullability
 error envelope
 traceId
-cursor contract
 idempotency conventions
-optimistic-lock conventions
 HTTP semantics
-```
-
-Standard error:
-
-```json
-{
-  "code": "CONTENT_NOT_FOUND",
-  "message": "Content was not found",
-  "traceId": "...",
-  "details": {}
-}
+checksum canonicalization
 ```
 
 ---
 
-## 5. P0.1 — Revision / Publication / Availability
+## 5. P0.1 — Revision / publication / availability
 
-Backend lifecycle:
+Backend revision lifecycle:
 
 ```text
 DRAFT
@@ -121,25 +105,56 @@ Learner delivery:
 PUBLISHED + ACTIVE
 ```
 
-Freeze publication qualification, immutability, deactivation/reactivation and tombstone effects.
+Publication exposes one atomic learner snapshot. Failed publication must not expose a partial root.
 
 ---
 
-## 6. P0.2 — Profession / Catalog
+## 6. P0.2 — Career taxonomy + learning navigation
 
-Define:
+Keep the model small.
+
+### Career taxonomy
 
 ```text
 Profession
 CareerTrack
-Specialization where needed
 Seniority
 Category
-Tag
-Skill taxonomy
+Level
+Skill
 ```
 
-Use stable business codes and cursor pagination.
+### Learning navigation
+
+```text
+LearningGoal
+LearningTrack
+LearningCollection
+```
+
+Hierarchy:
+
+```text
+LearningGoal
+    ↓
+LearningTrack
+    ↓
+LearningCollection
+    ↓
+Content / PracticeTest
+```
+
+Rules:
+
+```text
+CareerTrack != LearningTrack
+stable code is identity
+sort order is explicit
+active/inactive is backend-owned
+Flutter does not invent mutable catalogues
+```
+
+No backend `LearningActivity`, workflow engine or curriculum graph is required in MVP.
 
 ---
 
@@ -148,17 +163,19 @@ Use stable business codes and cursor pagination.
 Freeze:
 
 ```text
-English canonical learning language
-uiLocale / translationLocale / preferredAccent
+learningLanguage = en
+uiLocale
+translationLocale
+preferredAccent / preferredVoiceCode where applicable
 BCP-47 identifiers
-typed localization tables
-locale readiness
+SupportedLocale catalog
 fallback
-RTL/mixed-direction rules
 locale pack variants
+immutable localized payloads
+RTL/mixed-direction rules
 ```
 
-UI strings are Flutter-owned ARB resources; learner content translations come from Backend.
+Root manifest identity is locale-independent.
 
 ---
 
@@ -171,11 +188,10 @@ FileAsset
 assetId/checksum/deliveryKey
 ObjectStorage port
 RustFS adapter
-private/public rules
-presigned GET/PUT
 immutable object keys
 media QC metadata
 garbage collection
+published media delivery policy
 ```
 
 ---
@@ -187,18 +203,9 @@ Define:
 ```text
 TtsVoice
 TtsVoiceModel
-PronunciationRule
+PronunciationRule where needed
 TtsJob
 TtsWorker
-```
-
-Worker:
-
-```text
-server-managed Python process/container
-Piper + FFmpeg
-machine token
-local model cache
 ```
 
 Queue:
@@ -213,6 +220,8 @@ bounded retry
 stale-result rejection
 ```
 
+Flutter sees only learner-facing voice capability, not Worker/model-storage internals.
+
 ---
 
 ## 10. P0.6 — Interview
@@ -222,8 +231,8 @@ Define revisioned:
 ```text
 InterviewQuestion
 ModelAnswer
-Category
-Profession/CareerTrack/Seniority/Skill mappings
+Category/Level/Skill mappings
+Profession/CareerTrack/Seniority mappings where useful
 Localization
 Audio roles
 ```
@@ -239,9 +248,8 @@ VocabularyWord identity
 VocabularyRevision
 Definition
 Example
-Collocation
-WordFamily if in MVP
-Category
+Collocation where needed
+Category/Level/Skill mappings
 Localization
 Audio roles
 ```
@@ -252,14 +260,14 @@ Published learner-visible vocabulary never mutates in place.
 
 ## 12. P0.8 — Topic / Phrase / Shadowing
 
-Define:
+Define only fields needed by the learner experience:
 
 ```text
 Topic / TopicRevision
 TopicSection
 Phrase / PhraseCategory
 display_text / tts_text
-stable segment/order metadata
+stable order/segment metadata
 audio association
 ```
 
@@ -282,13 +290,15 @@ PracticeTestQuestion
 ScoringRule
 ```
 
-Published test revision references exact question revisions.
+Published tests reference exact question revisions.
+
+Assessment payload exposes deterministic score inputs and explanations. Complex recommendation logic is not required.
 
 ---
 
-## 14. P0.10 — Manifest / Content Delivery
+## 14. P0.10 — Manifest / content delivery
 
-Freeze one root:
+One locale-independent root:
 
 ```text
 contentVersion
@@ -303,107 +313,91 @@ revision
 checksum
 ```
 
-Variants include:
+Variants:
 
 ```text
 canonical
-locale:<locale>
+locale:<BCP-47>
 ```
 
-Define tombstones, schema compatibility and asset descriptors.
+Freeze:
+
+```text
+tombstones
+schema compatibility
+asset descriptors
+localized payload transport
+Goal/Track/Collection catalogue delivery
+```
+
+MVP synchronization truth is manifest + exact immutable payloads/catalogues. Flutter browses local Drift data after sync.
 
 ---
 
 ## 15. P0.11 — Pagination
 
-Learner API:
+For MVP learner browsing:
 
 ```text
-cursor/keyset
+local deterministic pagination/query over Drift
 ```
 
-Admin:
+Add remote cursor APIs only if a real server-side learner-browsing use case appears.
 
-```text
-page/size
-```
-
-Cursor sort must be deterministic and filter/sort-bound.
+Admin may use page/size.
 
 ---
 
-## 16. P0.12 — Flutter Application Contract
+## 16. P0.12 — Flutter application contract
 
-Normative parent:
+Normative parents:
 
 ```text
+docs/specification/CAREERSPEAK_PRODUCT_REQUIREMENTS.md
 docs/specification/CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md
 ```
 
-Sub-slices:
+Required slices include:
 
 ```text
-P0.12.1  Feature/module map
-P0.12.2  Riverpod/state ownership
-P0.12.3  Navigation
-P0.12.4  Drift ERD
-P0.12.5  Installation/API client
-P0.12.6  Localization/RTL
-P0.12.7  ContentSyncCoordinator
-P0.12.8  DownloadManager
-P0.12.9  AssetResolver
-P0.12.10 Audio/Shadowing
-P0.12.11 Assessment
-P0.12.12 Review Scheduler
-P0.12.13 Storage/Retention
-P0.12.14 Startup/Error/Recovery
-P0.12.15 Adaptive/Responsive UI
-P0.12.16 Material Design 3 system
-P0.12.17 Learner Content State / Markers
+state ownership
+navigation
+Drift ERD
+installation/API client
+localization/RTL
+sync/download/asset resolution
+real audio
+assessment
+review scheduler
+storage retention
+startup/recovery
+adaptive UI
+Material 3
+learner markers
+3-step onboarding
+Home current-action/current-goal hierarchy
+Goal/Track/Collection discovery
+learner-facing copy policy
 ```
 
-Accepted/working detailed specs:
+Review rule:
 
 ```text
-docs/mobile/CAREERSPEAK_DRIFT_ERD.md
-docs/mobile/CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md
-docs/mobile/CAREERSPEAK_ADAPTIVE_UI.md
-docs/mobile/CAREERSPEAK_MATERIAL_DESIGN_3.md
-docs/mobile/CAREERSPEAK_LEARNER_CONTENT_STATE.md
+Due = nextReviewAt <= now
+Due != !Completed
 ```
-
-Material 3 rule:
-
-```text
-ONE PRODUCT
-ONE MATERIAL 3 DESIGN SYSTEM
-ONE TOKEN LAYER
-ONE REUSABLE COMPONENT LAYER
-MANY ADAPTIVE PRESENTATIONS
-```
-
-Learner marker rule:
-
-```text
-FAVORITE  = explicit user curation
-LISTENED  = qualified audio consumption
-COMPLETED = pedagogical completion
-```
-
-The three markers are independent durable local state and do not imply offline pinning.
 
 ---
 
-## 17. P0.13 — Security / Installation
+## 17. P0.13 — Security / installation
 
 ```text
 /admin/** → ADMIN session
 /api/v1/** → installation token
 /internal/v1/tts/** → worker token
-private RustFS → presigned URL
 ```
 
-Installation token is backend-issued and stored in Secure Storage, not Drift.
+Freeze installation-token longevity, re-registration/revocation and bounded credential-specific 401 recovery.
 
 ---
 
@@ -412,10 +406,10 @@ Installation token is backend-issued and stored in Secure Storage, not Drift.
 One ADMIN performs:
 
 ```text
-create/edit
-bulk import
-validate/localize
-manage models/voices
+create/edit/import content
+manage Goal/Track/Collection
+manage taxonomy/localization
+manage voices/models
 prepare/review audio
 publish
 activate/deactivate
@@ -427,40 +421,42 @@ No workflow/RBAC platform required.
 
 ## 19. P0.15 — Integrated contracts
 
-Before freeze:
+Before backend schema freeze:
 
 ```text
-complete PostgreSQL ERD
-Flutter Drift ERD
-root/pack manifest DTOs
-learner OpenAPI
-worker OpenAPI/internal contracts
-error-code catalog
-cross-system acceptance scenarios
-Material component/token contract
-learner marker repository/filter contract
+Product Requirements accepted
+Goal/Track/Collection ownership accepted
+PostgreSQL ERD accepted
+Flutter Drift ERD accepted
+root/pack manifest DTOs accepted
+localized payload DTO accepted
+typed content DTOs accepted
+assessment DTOs accepted
+catalog/capability DTOs accepted
+learner OpenAPI accepted
+worker OpenAPI accepted
+failure/recovery scenarios accepted
 ```
-
-Cross-module calls inside monolith use application/domain ports rather than internal HTTP.
 
 ---
 
-## 20. P0.16 — Architecture Freeze
+## 20. P0.16 — Architecture freeze
 
 P0 closes when:
 
 ```text
+product hierarchy accepted
+CareerTrack != LearningTrack accepted
 all context ownership accepted
-system integration vocabulary accepted
 PostgreSQL ERD accepted
 Flutter ERD accepted
 OpenAPI contracts accepted
+publication snapshot semantics accepted
+locale-independent root accepted
+real review Due semantics accepted
+Material 3/adaptive UI accepted
+learner-facing copy policy accepted
 TTS lease/recovery accepted
-manifest/current/offline semantics accepted
-adaptive UI contract accepted
-Material Design 3 single-system contract accepted
-LISTENED/COMPLETED/FAVORITE semantics accepted
-failure/recovery matrices accepted
 implementation backlog generated
 ```
 
@@ -469,49 +465,51 @@ implementation backlog generated
 ## 21. Definition of Ready
 
 ```text
+[ ] concrete MVP use case
 [ ] ownership
 [ ] entities/value objects
-[ ] invariants/state machine
-[ ] persistence/schema
-[ ] PK/FK/unique/check/indexes
+[ ] invariants
+[ ] persistence constraints
 [ ] API/application contract
-[ ] security actor
-[ ] errors
-[ ] idempotency
-[ ] concurrency
+[ ] security/errors
 [ ] failure/recovery
 [ ] acceptance tests
 ```
 
-For Flutter additionally:
+If a proposed entity/service cannot satisfy the first item, defer it.
+
+---
+
+## 22. Explicit anti-overengineering rule
+
+Do not introduce for MVP:
 
 ```text
-[ ] CURRENT/offline READY semantics
-[ ] Drift migration rules
-[ ] sync/download state machines
-[ ] adaptive layout qualification
-[ ] Material 3 theme/token/component qualification
-[ ] light/dark/system qualification
-[ ] LISTENED/COMPLETED/FAVORITE persistence/filter qualification
-[ ] text scale/RTL qualification
+LearningActivity aggregate
+curriculum workflow engine
+recommendation service
+AI personalization
+server learner profile
+remote UI schema
+generic EAV content model
+microservices for domain separation
+Kafka/RabbitMQ/Redis/Keycloak without measured need
 ```
 
 ---
 
-## 22. Definition of Done for later implementation
+## 23. Definition of Done
 
 ```text
-accepted spec
+accepted product requirement
+→ accepted minimal domain contract
 → migration/schema
 → domain/application code
 → adapters
-→ Material UI components
-→ unit tests
-→ integration tests
-→ architecture tests
+→ UI
+→ tests
 → OpenAPI/contract qualification
-→ adaptive/accessibility qualification
 → CI green
 ```
 
-This is the final P0 domain/contract roadmap for CareerSpeak v0.9.
+This roadmap intentionally prefers a smaller correct model over a theoretically complete platform.

@@ -370,6 +370,8 @@ Map<String, Object?> _rootManifest(int revision) => <String, Object?>{
       'checksum': revision == 1 ? _packChecksumV1 : _packChecksumV2,
     },
   ],
+  'practiceTests': <Object?>[],
+  'catalogues': <Object?>[],
   'tombstones': <Object?>[],
 };
 
@@ -389,6 +391,7 @@ Map<String, Object?> _packManifest(int revision) => <String, Object?>{
       'publishedAt': '2026-10-31T00:00:00Z',
     },
   ],
+  'localizations': <Object?>[],
   'assets': <Object?>[],
   'contentAssets': <Object?>[],
 };
@@ -407,6 +410,14 @@ Map<String, Object?> _contentPayload(int revision) => <String, Object?>{
   'levelLabel': 'Senior',
   'minutes': 8,
   'hasAudio': false,
+  'skillCodes': <String>['COMMUNICATION', 'SYSTEM_DESIGN'],
+  'body': <String, Object?>{
+    'kind': 'interview',
+    'prompt': 'What is dependency injection?',
+    'modelAnswer':
+        'Dependencies are supplied externally rather than created internally.',
+    'keyPoints': <String>['loose coupling', 'testability'],
+  },
 };
 
 http.Response _jsonResponse(Object body, {int statusCode = 200}) {

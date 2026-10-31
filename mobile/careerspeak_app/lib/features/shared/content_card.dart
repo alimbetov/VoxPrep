@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../app/content_locations.dart';
 import '../../app/learner_state_providers.dart';
+import '../../core/localization/careerspeak_learning_text.dart';
+import '../../core/motion/careerspeak_motion.dart';
 import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
 import '../../domain/content_marker_state.dart';
@@ -31,10 +33,20 @@ class ContentCard extends ConsumerWidget {
       error: (error, stackTrace) => const ContentMarkerState(),
     );
     final scheme = Theme.of(context).colorScheme;
+    final duration = CareerSpeakMotion.duration(
+      context,
+      CareerSpeakMotion.standard,
+    );
 
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      color: selected ? scheme.secondaryContainer : null,
+    return TweenAnimationBuilder<Color?>(
+      tween: ColorTween(
+        end: selected ? scheme.secondaryContainer : scheme.surfaceContainerLow,
+      ),
+      duration: duration,
+      curve: CareerSpeakMotion.standardCurve,
+      builder: (context, color, child) {
+        return Card(color: color, clipBehavior: Clip.antiAlias, child: child);
+      },
       child: InkWell(
         onTap: onTap ?? () => context.push(contentDetailLocation(identity)),
         child: Padding(
@@ -48,12 +60,12 @@ class ContentCard extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    CareerSpeakLearningText(
                       item.title,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 4),
-                    Text(item.subtitle),
+                    CareerSpeakLearningText(item.subtitle),
                     const SizedBox(height: 10),
                     ContentMarkerChips(state: markerState),
                   ],
@@ -78,8 +90,19 @@ class ContentCard extends ConsumerWidget {
                     );
                   }
                 },
-                icon: Icon(
-                  markerState.favorite ? Icons.favorite : Icons.favorite_border,
+                icon: AnimatedSwitcher(
+                  duration: CareerSpeakMotion.duration(
+                    context,
+                    CareerSpeakMotion.fast,
+                  ),
+                  switchInCurve: CareerSpeakMotion.standardCurve,
+                  switchOutCurve: CareerSpeakMotion.standardCurve,
+                  child: Icon(
+                    markerState.favorite
+                        ? Icons.favorite
+                        : Icons.favorite_border,
+                    key: ValueKey<bool>(markerState.favorite),
+                  ),
                 ),
               ),
             ],

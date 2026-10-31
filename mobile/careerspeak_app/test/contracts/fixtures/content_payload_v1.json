@@ -11,5 +11,12 @@
   "levelCode": "SENIOR",
   "levelLabel": "Senior",
   "minutes": 6,
-  "hasAudio": true
+  "hasAudio": true,
+  "skillCodes": ["COMMUNICATION", "SYSTEM_DESIGN"],
+  "body": {
+    "kind": "interview",
+    "prompt": "What is dependency injection?",
+    "modelAnswer": "Dependencies are supplied externally rather than created internally.",
+    "keyPoints": ["loose coupling", "testability"]
+  }
 }

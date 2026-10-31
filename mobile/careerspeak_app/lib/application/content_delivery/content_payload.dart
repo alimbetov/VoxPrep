@@ -1,5 +1,6 @@
 import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
+import 'typed_content_body.dart';
 
 const unspecifiedTaxonomyCode = 'UNSPECIFIED';
 
@@ -50,9 +51,18 @@ final class ContentPayload {
     required String level,
     required int minutes,
     required bool hasAudio,
+    List<String> skillCodes = const <String>[],
+    TypedContentBody? body,
   }) {
     if (minutes <= 0) {
       throw ArgumentError.value(minutes, 'minutes', 'must be positive');
+    }
+    if (body != null && body.contentType != ref.identity.type) {
+      throw ArgumentError.value(
+        body.contentType.name,
+        'body',
+        'must match the content identity type ${ref.identity.type.name}',
+      );
     }
     return ContentPayload._(
       ref: ref,
@@ -65,6 +75,38 @@ final class ContentPayload {
       level: _requireNonBlank(level, 'level'),
       minutes: minutes,
       hasAudio: hasAudio,
+      skillCodes: _requireUniqueStableCodes(skillCodes, 'skillCodes'),
+      body: body,
+    );
+  }
+
+  factory ContentPayload.typed({
+    required ContentPayloadRef ref,
+    required String title,
+    required String subtitle,
+    required String description,
+    required String categoryCode,
+    required String category,
+    required String levelCode,
+    required String level,
+    required int minutes,
+    required bool hasAudio,
+    required List<String> skillCodes,
+    required TypedContentBody body,
+  }) {
+    return ContentPayload(
+      ref: ref,
+      title: title,
+      subtitle: subtitle,
+      description: description,
+      categoryCode: categoryCode,
+      category: category,
+      levelCode: levelCode,
+      level: level,
+      minutes: minutes,
+      hasAudio: hasAudio,
+      skillCodes: skillCodes,
+      body: body,
     );
   }
 
@@ -79,6 +121,8 @@ final class ContentPayload {
     required this.level,
     required this.minutes,
     required this.hasAudio,
+    required this.skillCodes,
+    required this.body,
   });
 
   final ContentPayloadRef ref;
@@ -91,6 +135,10 @@ final class ContentPayload {
   final String level;
   final int minutes;
   final bool hasAudio;
+  final List<String> skillCodes;
+  final TypedContentBody? body;
+
+  bool get isTyped => body != null;
 
   ContentItem toContentItem() {
     return ContentItem(
@@ -126,6 +174,19 @@ String _requireStableCode(String value, String fieldName) {
     );
   }
   return normalized;
+}
+
+List<String> _requireUniqueStableCodes(List<String> values, String fieldName) {
+  final normalized = <String>[];
+  final seen = <String>{};
+  for (var index = 0; index < values.length; index++) {
+    final code = _requireStableCode(values[index], '$fieldName[$index]');
+    if (!seen.add(code)) {
+      throw ArgumentError.value(code, fieldName, 'must not contain duplicates');
+    }
+    normalized.add(code);
+  }
+  return List<String>.unmodifiable(normalized);
 }
 
 final _sha256Pattern = RegExp(r'^[0-9a-f]{64}$');

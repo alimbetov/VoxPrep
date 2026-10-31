@@ -61,6 +61,74 @@ final class ContentManifestDecoder {
         );
       }
 
+      final practiceTests = <PracticeTestRevisionDto>[];
+      final practiceTestValues = _list(
+        object,
+        'practiceTests',
+        r'$.practiceTests',
+      );
+      for (var index = 0; index < practiceTestValues.length; index += 1) {
+        final path = '\$.practiceTests[$index]';
+        final test = _object(practiceTestValues[index], path);
+        practiceTests.add(
+          PracticeTestRevisionDto(
+            practiceTestCode: _businessCode(
+              test,
+              'practiceTestCode',
+              '$path.practiceTestCode',
+            ),
+            revision: _integer(test, 'revision', '$path.revision'),
+            checksum: _string(test, 'checksum', '$path.checksum'),
+          ),
+        );
+      }
+
+      final catalogues = <CatalogueRevisionDto>[];
+      final catalogueValues = _list(object, 'catalogues', r'$.catalogues');
+      for (var index = 0; index < catalogueValues.length; index += 1) {
+        final path = '\$.catalogues[$index]';
+        final catalogue = _object(catalogueValues[index], path);
+        catalogues.add(
+          CatalogueRevisionDto(
+            kind: _string(catalogue, 'kind', '$path.kind'),
+            revision: _integer(catalogue, 'revision', '$path.revision'),
+            checksum: _string(catalogue, 'checksum', '$path.checksum'),
+          ),
+        );
+      }
+
+      final localeFallbacks = <LocaleFallbackRuleDto>[];
+      final fallbackValues = object.containsKey('localeFallbacks')
+          ? _list(object, 'localeFallbacks', r'$.localeFallbacks')
+          : const <Object?>[];
+      for (var index = 0; index < fallbackValues.length; index += 1) {
+        final path = '\$.localeFallbacks[$index]';
+        final rule = _object(fallbackValues[index], path);
+        final values = _list(rule, 'fallbackLocales', '$path.fallbackLocales');
+        final fallbacks = <String>[];
+        for (
+          var fallbackIndex = 0;
+          fallbackIndex < values.length;
+          fallbackIndex += 1
+        ) {
+          final fallbackPath = '$path.fallbackLocales[$fallbackIndex]';
+          final value = values[fallbackIndex];
+          if (value is! String || !_localePattern.hasMatch(value.trim())) {
+            throw _ContractViolation(
+              fallbackPath,
+              'must be a BCP-47-compatible locale',
+            );
+          }
+          fallbacks.add(value.trim());
+        }
+        localeFallbacks.add(
+          LocaleFallbackRuleDto(
+            locale: _locale(rule, 'locale', '$path.locale'),
+            fallbackLocales: List<String>.unmodifiable(fallbacks),
+          ),
+        );
+      }
+
       final tombstones = <ContentTombstoneDto>[];
       final tombstoneValues = _list(object, 'tombstones', r'$.tombstones');
       for (var index = 0; index < tombstoneValues.length; index += 1) {
@@ -84,6 +152,9 @@ final class ContentManifestDecoder {
         publishedAt: _utcDateTime(object, 'publishedAt', r'$.publishedAt'),
         checksum: _string(object, 'checksum', r'$.checksum'),
         packs: packs,
+        practiceTests: practiceTests,
+        catalogues: catalogues,
+        localeFallbacks: localeFallbacks,
         tombstones: tombstones,
       );
       return Success<RootContentManifest>(_mapper.mapRoot(dto));
@@ -136,6 +207,35 @@ final class ContentManifestDecoder {
               'publishedAt',
               '$path.publishedAt',
             ),
+          ),
+        );
+      }
+
+      final localizations = <LocalizedContentRefDto>[];
+      final localizationValues = _list(
+        object,
+        'localizations',
+        r'$.localizations',
+      );
+      for (var index = 0; index < localizationValues.length; index += 1) {
+        final path = '\$.localizations[$index]';
+        final localization = _object(localizationValues[index], path);
+        localizations.add(
+          LocalizedContentRefDto(
+            contentCode: _contentCode(localization, path),
+            contentType: _contentType(localization, path),
+            contentRevision: _integer(
+              localization,
+              'contentRevision',
+              '$path.contentRevision',
+            ),
+            locale: _locale(localization, 'locale', '$path.locale'),
+            localizationRevision: _integer(
+              localization,
+              'localizationRevision',
+              '$path.localizationRevision',
+            ),
+            checksum: _string(localization, 'checksum', '$path.checksum'),
           ),
         );
       }
@@ -197,6 +297,7 @@ final class ContentManifestDecoder {
         revision: _integer(object, 'revision', r'$.revision'),
         checksum: _string(object, 'checksum', r'$.checksum'),
         contents: contents,
+        localizations: localizations,
         assets: assets,
         contentAssets: contentAssets,
       );
@@ -255,15 +356,16 @@ final class ContentManifestDecoder {
     );
   }
 
-  String _contentCode(Map<String, Object?> object, String path) {
-    final code = _string(object, 'contentCode', '$path.contentCode');
+  String _businessCode(Map<String, Object?> object, String key, String path) {
+    final code = _string(object, key, path);
     if (!_contentCodePattern.hasMatch(code)) {
-      throw _ContractViolation(
-        '$path.contentCode',
-        'must be a stable business code',
-      );
+      throw _ContractViolation(path, 'must be a stable business code');
     }
     return code;
+  }
+
+  String _contentCode(Map<String, Object?> object, String path) {
+    return _businessCode(object, 'contentCode', '$path.contentCode');
   }
 
   String _contentType(Map<String, Object?> object, String path) {
@@ -275,6 +377,14 @@ final class ContentManifestDecoder {
       );
     }
     return typeName;
+  }
+
+  String _locale(Map<String, Object?> object, String key, String path) {
+    final locale = _string(object, key, path);
+    if (!_localePattern.hasMatch(locale)) {
+      throw _ContractViolation(path, 'must be a BCP-47-compatible locale');
+    }
+    return locale;
   }
 
   Map<String, Object?> _object(Object? value, String path) {
@@ -377,6 +487,7 @@ final class ContentManifestDecoder {
 }
 
 final _contentCodePattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._-]*$');
+final _localePattern = RegExp(r'^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$');
 final _utcTimestampPattern = RegExp(
   r'^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?Z$',
 );

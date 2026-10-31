@@ -1,0 +1,115 @@
+# C3 qualification revision 7
+name: C3 Drift v8 Qualification
+
+on:
+  push:
+    branches:
+      - feat/backend-contract-gap-audit
+    paths:
+      - '.github/workflows/c3-drift-v8-qualify.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: c3-drift-v8-feat-backend-contract-gap-audit
+  cancel-in-progress: true
+
+jobs:
+  qualify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/backend-contract-gap-audit
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - name: Dependencies
+        working-directory: mobile/careerspeak_app
+        run: flutter pub get
+      - name: Format C3 production and tests
+        working-directory: mobile/careerspeak_app
+        run: dart format lib test
+      - name: Generate Drift v8 baseline
+        working-directory: mobile/careerspeak_app
+        run: |
+          dart run build_runner build
+          dart run drift_dev schema dump \
+            lib/data/local/database/careerspeak_database.dart \
+            drift_schemas/drift_schema_v8.json
+          rm -rf test/generated_migrations
+          dart run drift_dev schema generate \
+            --data-classes \
+            --companions \
+            drift_schemas/ \
+            test/generated_migrations/
+      - name: Update v8 schema assertions
+        working-directory: mobile/careerspeak_app
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          database_test = Path('test/data/local/database/careerspeak_database_test.dart')
+          source = database_test.read_text()
+          source = source.replace(
+              "schema version 7 creates the production content foundation",
+              "schema version 8 creates the production assessment foundation",
+          )
+          source = source.replace(
+              'expect(database.schemaVersion, 7);',
+              'expect(database.schemaVersion, 8);',
+          )
+          source = source.replace(
+              "expect(userVersion.read<int>('user_version'), 7);",
+              "expect(userVersion.read<int>('user_version'), 8);",
+          )
+          database_test.write_text(source)
+
+          asset_test = Path('test/acceptance/p2_8_asset_resolution_test.dart')
+          asset_source = asset_test.read_text()
+          asset_source = asset_source.replace(
+              'expect(database.schemaVersion, 7);',
+              'expect(database.schemaVersion, 8);',
+          )
+          asset_test.write_text(asset_source)
+          PY
+          dart format \
+            test/data/local/database/careerspeak_database_test.dart \
+            test/data/local/database/careerspeak_database_migration_test.dart \
+            test/acceptance/p2_8_asset_resolution_test.dart
+      - name: Analyze
+        working-directory: mobile/careerspeak_app
+        run: flutter analyze
+      - name: Targeted C3 lifecycle qualification
+        working-directory: mobile/careerspeak_app
+        run: |
+          flutter test test/domain/assessment_contract_test.dart
+          flutter test test/contracts/c3_assessment_contract_test.dart
+          flutter test test/data/remote/assessment_payload_decoder_test.dart
+          flutter test test/data/remote/http_assessment_payload_gateway_test.dart
+          flutter test test/data/local/drift_assessment_revision_repository_test.dart
+          flutter test test/data/local/database/careerspeak_database_test.dart
+          flutter test test/data/local/database/careerspeak_database_migration_test.dart
+          flutter test test/app/assessment_providers_test.dart
+          flutter test test/acceptance/c3_assessment_offline_restart_acceptance_test.dart
+          flutter test test/acceptance/c3_assessment_revision_history_acceptance_test.dart
+          flutter test test/acceptance/c3_assessment_adversarial_acceptance_test.dart
+          flutter test test/acceptance/p2_8_asset_resolution_test.dart
+      - name: Full regression
+        working-directory: mobile/careerspeak_app
+        run: flutter test
+      - name: Commit qualified Drift v8 implementation
+        run: |
+          git add mobile/careerspeak_app
+          if git diff --cached --quiet; then
+            echo 'No generated or formatter changes to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mobile/careerspeak_app
+          git commit -m 'chore(c3): generate qualified Drift v8 baseline'
+          git push origin HEAD:feat/backend-contract-gap-audit

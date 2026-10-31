@@ -1,0 +1,47 @@
+name: C4 Snapshot Qualification
+
+on:
+  push:
+    branches:
+      - feat/backend-contract-gap-audit
+    paths:
+      - 'mobile/careerspeak_app/**'
+      - 'contracts/c4-*'
+      - 'docs/backend/C4_*'
+      - '.github/workflows/c4-snapshot-qualification.yml'
+  workflow_dispatch:
+
+jobs:
+  snapshot-consistency:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - name: Dependencies
+        working-directory: mobile/careerspeak_app
+        run: flutter pub get
+      - name: Format
+        working-directory: mobile/careerspeak_app
+        run: dart format --output=none --set-exit-if-changed lib test
+      - name: Analyze
+        working-directory: mobile/careerspeak_app
+        run: flutter analyze
+      - name: C4 snapshot consumption restart and adversarial qualification
+        working-directory: mobile/careerspeak_app
+        run: |
+          flutter test test/architecture/c4_snapshot_consumption_boundary_test.dart
+          flutter test test/data/local/drift_atomic_snapshot_visibility_test.dart
+          flutter test test/data/local/drift_practice_test_snapshot_repository_test.dart
+          flutter test test/data/local/drift_catalogue_snapshot_repository_test.dart
+          flutter test test/data/local/drift_snapshot_auxiliary_repair_visibility_test.dart
+          flutter test test/data/local/drift_tombstone_publication_interaction_test.dart
+          flutter test test/acceptance/c4_offline_restart_consistency_acceptance_test.dart
+          flutter test test/acceptance/c4_interrupted_sync_restart_acceptance_test.dart
+          flutter test test/acceptance/c4_adversarial_atomicity_acceptance_test.dart
+      - name: Full regression
+        working-directory: mobile/careerspeak_app
+        run: flutter test

@@ -1,4 +1,5 @@
 import '../content_delivery/content_manifest.dart';
+import '../content_delivery/publication_snapshot_identity.dart';
 import '../result/result.dart';
 import 'sync_models.dart';
 
@@ -8,6 +9,8 @@ final class ContentSyncPlanner {
   Result<SyncPlan> plan({
     required SyncLocalSnapshot local,
     required RootContentManifest remote,
+    String? remoteEtag,
+    Iterable<PackIdentity>? immutableRootPackIdentities,
   }) {
     final currentVersion = local.currentContentVersion;
 
@@ -25,29 +28,49 @@ final class ContentSyncPlanner {
       );
     }
 
-    if (currentVersion == remote.contentVersion &&
-        local.currentManifestChecksum != remote.checksum) {
-      return FailureResult(
-        ApplicationFailure(
-          code: 'CONTENT_VERSION_CHECKSUM_CONFLICT',
-          message:
-              'The same content version was observed with a different manifest checksum.',
-          details: <String, Object?>{'contentVersion': remote.contentVersion},
-        ),
+    if (currentVersion == remote.contentVersion && currentVersion != null) {
+      final localIdentity = PublicationSnapshotIdentity(
+        schemaVersion: supportedContentManifestSchemaVersion,
+        contentVersion: currentVersion,
+        checksum: local.currentManifestChecksum!,
+        etag: local.etag,
       );
+      final remoteIdentity = PublicationSnapshotIdentity.fromRootManifest(
+        remote,
+        etag: remoteEtag,
+      );
+
+      try {
+        localIdentity.requireCompatibleWith(remoteIdentity);
+      } on PublicationSnapshotIdentityConflict {
+        return FailureResult(
+          ApplicationFailure(
+            code: 'PUBLICATION_SNAPSHOT_IDENTITY_CONFLICT',
+            message:
+                'The same content version was observed with a different immutable publication identity.',
+            details: <String, Object?>{
+              'contentVersion': remote.contentVersion,
+              'localChecksum': local.currentManifestChecksum,
+              'remoteChecksum': remote.checksum,
+              'localEtag': local.etag,
+              'remoteEtag': remoteEtag,
+            },
+          ),
+        );
+      }
     }
 
     final currentByIdentity = <PackIdentity, PackRevisionRef>{
       for (final pack in local.currentPacks) pack.identity: pack,
     };
+    final immutableIdentities = Set<PackIdentity>.unmodifiable(
+      immutableRootPackIdentities ?? remote.packs.map((pack) => pack.identity),
+    );
 
     if (currentVersion == remote.contentVersion) {
-      final remoteIdentities = remote.packs
-          .map((pack) => pack.identity)
-          .toSet();
       PackRevisionRef? unexpectedCurrentPack;
       for (final pack in local.currentPacks) {
-        if (!remoteIdentities.contains(pack.identity)) {
+        if (!immutableIdentities.contains(pack.identity)) {
           unexpectedCurrentPack = pack;
           break;
         }
@@ -81,16 +104,77 @@ final class ContentSyncPlanner {
       }
     }
 
-    final rootChanged = currentVersion != remote.contentVersion;
+    final publicationRootChanged = currentVersion != remote.contentVersion;
+    final projectionChanged =
+        currentVersion == remote.contentVersion &&
+        !_samePackProjection(local.currentPacks, remote.packs);
+    final localePolicyChanged =
+        currentVersion == remote.contentVersion &&
+        !_sameLocaleFallbackPolicy(
+          local.currentLocaleFallbacks,
+          remote.localeFallbacks,
+        );
     return Success(
       SyncPlan(
         target: remote,
-        rootChanged: rootChanged,
+        rootChanged:
+            publicationRootChanged ||
+            projectionChanged ||
+            localePolicyChanged ||
+            local.localePolicyRepairRequired,
         changedPacks: changedPacks,
-        tombstones: rootChanged
+        tombstones: publicationRootChanged
             ? remote.tombstones
             : const <ContentTombstone>[],
       ),
     );
   }
+}
+
+bool _sameLocaleFallbackPolicy(
+  Iterable<LocaleFallbackRule> current,
+  Iterable<LocaleFallbackRule> target,
+) {
+  Map<String, List<String>> normalize(
+    Iterable<LocaleFallbackRule> rules,
+  ) => <String, List<String>>{
+    for (final rule in rules)
+      if (rule.fallbackLocales.isNotEmpty) rule.locale: rule.fallbackLocales,
+  };
+
+  final currentByLocale = normalize(current);
+  final targetByLocale = normalize(target);
+  if (currentByLocale.length != targetByLocale.length) return false;
+
+  for (final entry in targetByLocale.entries) {
+    final installed = currentByLocale[entry.key];
+    if (installed == null || installed.length != entry.value.length) {
+      return false;
+    }
+    for (var index = 0; index < installed.length; index += 1) {
+      if (installed[index] != entry.value[index]) return false;
+    }
+  }
+  return true;
+}
+
+bool _samePackProjection(
+  Iterable<PackRevisionRef> current,
+  Iterable<PackRevisionRef> target,
+) {
+  final currentByIdentity = <PackIdentity, PackRevisionRef>{
+    for (final pack in current) pack.identity: pack,
+  };
+  final targetList = target.toList(growable: false);
+  if (currentByIdentity.length != targetList.length) return false;
+
+  for (final pack in targetList) {
+    final installed = currentByIdentity[pack.identity];
+    if (installed == null ||
+        installed.revision != pack.revision ||
+        installed.checksum != pack.checksum) {
+      return false;
+    }
+  }
+  return true;
 }

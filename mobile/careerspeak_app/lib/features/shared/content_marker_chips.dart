@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/motion/careerspeak_motion.dart';
 import '../../domain/content_marker_state.dart';
 
 class ContentMarkerChips extends StatelessWidget {
@@ -36,7 +37,33 @@ class ContentMarkerChips extends StatelessWidget {
       );
     }
 
-    if (chips.isEmpty) return const SizedBox.shrink();
-    return Wrap(spacing: 8, runSpacing: 4, children: chips);
+    final markerKey = Object.hash(
+      state.favorite,
+      state.listened,
+      state.completed,
+    );
+    final duration = CareerSpeakMotion.duration(
+      context,
+      CareerSpeakMotion.standard,
+    );
+
+    return AnimatedSize(
+      duration: duration,
+      curve: CareerSpeakMotion.standardCurve,
+      alignment: AlignmentDirectional.topStart,
+      child: AnimatedSwitcher(
+        duration: duration,
+        switchInCurve: CareerSpeakMotion.standardCurve,
+        switchOutCurve: CareerSpeakMotion.standardCurve,
+        child: chips.isEmpty
+            ? SizedBox.shrink(key: ValueKey<int>(markerKey))
+            : Wrap(
+                key: ValueKey<int>(markerKey),
+                spacing: 8,
+                runSpacing: 4,
+                children: chips,
+              ),
+      ),
+    );
   }
 }

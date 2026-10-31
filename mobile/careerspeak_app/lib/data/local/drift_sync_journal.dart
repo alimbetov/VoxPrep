@@ -5,7 +5,7 @@ import '../../application/content_sync/sync_models.dart';
 import '../../application/ports/sync_journal.dart';
 import '../../application/result/result.dart';
 import '../../domain/content_item.dart';
-import 'database/careerspeak_database.dart';
+import 'database/careerspeak_database.dart' hide LocaleFallbackRule;
 
 final class DriftSyncJournal implements SyncJournal {
   DriftSyncJournal(this._database, {DateTime Function()? now})
@@ -53,7 +53,35 @@ final class DriftSyncJournal implements SyncJournal {
             checksum: row.checksum,
           ),
         );
-        if (row.variantKey != 'canonical') continue;
+        if (row.variantKey != 'canonical') {
+          final localizationRefs =
+              await (_database.select(_database.packLocalizationRefs)..where(
+                    (ref) =>
+                        ref.packCode.equals(row.packCode) &
+                        ref.variantKey.equals(row.variantKey) &
+                        ref.packRevision.equals(row.revision),
+                  ))
+                  .get();
+          for (final ref in localizationRefs) {
+            final payload =
+                await (_database.select(_database.localizedContentReads)..where(
+                      (content) =>
+                          content.contentCode.equals(ref.contentCode) &
+                          content.contentType.equals(ref.contentType) &
+                          content.contentRevision.equals(ref.contentRevision) &
+                          content.locale.equals(ref.locale) &
+                          content.localizationRevision.equals(
+                            ref.localizationRevision,
+                          ),
+                    ))
+                    .getSingleOrNull();
+            if (payload == null || payload.checksum != ref.checksum) {
+              contentPayloadRepairPacks.add(identity);
+              break;
+            }
+          }
+          continue;
+        }
 
         final refs =
             await (_database.select(_database.packContentRefs)..where(
@@ -90,6 +118,46 @@ final class DriftSyncJournal implements SyncJournal {
         }
       }
 
+      var localePolicyRepairRequired =
+          currentVersion != null &&
+          manifest!.localePolicyContentVersion != currentVersion;
+      final currentLocaleFallbacks = <LocaleFallbackRule>[];
+      if (currentVersion != null) {
+        final policyRows =
+            await (_database.select(_database.localeFallbackRules)..orderBy([
+                  (row) => OrderingTerm.asc(row.locale),
+                  (row) => OrderingTerm.asc(row.fallbackOrder),
+                ]))
+                .get();
+        final fallbackByLocale = <String, List<String>>{};
+        final expectedOrderByLocale = <String, int>{};
+        for (final row in policyRows) {
+          if (row.sourceContentVersion != currentVersion) {
+            localePolicyRepairRequired = true;
+          }
+          final expectedOrder = expectedOrderByLocale[row.locale] ?? 0;
+          if (row.fallbackOrder != expectedOrder) {
+            localePolicyRepairRequired = true;
+          }
+          expectedOrderByLocale[row.locale] = expectedOrder + 1;
+          fallbackByLocale
+              .putIfAbsent(row.locale, () => <String>[])
+              .add(row.fallbackLocale);
+        }
+        for (final entry in fallbackByLocale.entries) {
+          try {
+            currentLocaleFallbacks.add(
+              LocaleFallbackRule(
+                locale: entry.key,
+                fallbackLocales: entry.value,
+              ),
+            );
+          } on ArgumentError {
+            localePolicyRepairRequired = true;
+          }
+        }
+      }
+
       return Success(
         SyncLocalSnapshot(
           currentContentVersion: currentVersion,
@@ -99,6 +167,8 @@ final class DriftSyncJournal implements SyncJournal {
           etag: currentVersion == null ? null : manifest!.etag,
           currentPacks: packs,
           contentPayloadRepairPacks: contentPayloadRepairPacks,
+          currentLocaleFallbacks: currentLocaleFallbacks,
+          localePolicyRepairRequired: localePolicyRepairRequired,
         ),
       );
     } on ArgumentError catch (error) {

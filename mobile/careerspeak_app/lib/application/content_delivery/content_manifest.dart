@@ -1,5 +1,7 @@
 import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
+import 'catalogue_revision_ref.dart';
+import 'product_catalog.dart';
 
 const supportedContentManifestSchemaVersion = 1;
 const careerSpeakAppContractVersion = 1;
@@ -78,6 +80,50 @@ final class ContentTombstone {
   final String reason;
 }
 
+final class LocaleFallbackRule {
+  factory LocaleFallbackRule({
+    required String locale,
+    required Iterable<String> fallbackLocales,
+  }) {
+    final normalizedLocale = _canonicalizeLocale(locale, 'locale');
+    final fallbacks = fallbackLocales
+        .map((value) => _canonicalizeLocale(value, 'fallbackLocales'))
+        .toList(growable: false);
+
+    final seen = <String>{normalizedLocale};
+    for (final fallback in fallbacks) {
+      if (!seen.add(fallback)) {
+        throw ArgumentError.value(
+          fallback,
+          'fallbackLocales',
+          'contains a duplicate or the requested locale',
+        );
+      }
+    }
+    final englishIndex = fallbacks.indexOf('en');
+    if (englishIndex >= 0 && englishIndex != fallbacks.length - 1) {
+      throw ArgumentError.value(
+        fallbacks,
+        'fallbackLocales',
+        'canonical English must be terminal',
+      );
+    }
+
+    return LocaleFallbackRule._(
+      locale: normalizedLocale,
+      fallbackLocales: List<String>.unmodifiable(fallbacks),
+    );
+  }
+
+  const LocaleFallbackRule._({
+    required this.locale,
+    required this.fallbackLocales,
+  });
+
+  final String locale;
+  final List<String> fallbackLocales;
+}
+
 final class RootContentManifest {
   factory RootContentManifest({
     required int schemaVersion,
@@ -86,11 +132,23 @@ final class RootContentManifest {
     required DateTime publishedAt,
     required String checksum,
     required Iterable<PackRevisionRef> packs,
+    Iterable<PracticeTestRevisionRef> practiceTests =
+        const <PracticeTestRevisionRef>[],
+    Iterable<CatalogueRevisionRef> catalogues = const <CatalogueRevisionRef>[],
+    Iterable<LocaleFallbackRule> localeFallbacks = const <LocaleFallbackRule>[],
     required Iterable<ContentTombstone> tombstones,
   }) {
     final packList = List<PackRevisionRef>.unmodifiable(packs);
+    final practiceTestList = List<PracticeTestRevisionRef>.unmodifiable(
+      practiceTests,
+    );
+    final catalogueList = List<CatalogueRevisionRef>.unmodifiable(catalogues);
+    final fallbackList = List<LocaleFallbackRule>.unmodifiable(localeFallbacks);
     final tombstoneList = List<ContentTombstone>.unmodifiable(tombstones);
     _requireUniquePackIdentities(packList);
+    _requireUniquePracticeTestRefs(practiceTestList);
+    _requireUniqueCatalogueRefs(catalogueList);
+    _requireUniqueLocaleFallbacks(fallbackList);
     _requireUniqueTombstoneIdentities(tombstoneList);
 
     return RootContentManifest._(
@@ -103,6 +161,9 @@ final class RootContentManifest {
       publishedAt: _requireUtc(publishedAt, 'publishedAt'),
       checksum: normalizeSha256(checksum, 'checksum'),
       packs: packList,
+      practiceTests: practiceTestList,
+      catalogues: catalogueList,
+      localeFallbacks: fallbackList,
       tombstones: tombstoneList,
     );
   }
@@ -114,6 +175,9 @@ final class RootContentManifest {
     required this.publishedAt,
     required this.checksum,
     required this.packs,
+    required this.practiceTests,
+    required this.catalogues,
+    required this.localeFallbacks,
     required this.tombstones,
   });
 
@@ -123,6 +187,9 @@ final class RootContentManifest {
   final DateTime publishedAt;
   final String checksum;
   final List<PackRevisionRef> packs;
+  final List<PracticeTestRevisionRef> practiceTests;
+  final List<CatalogueRevisionRef> catalogues;
+  final List<LocaleFallbackRule> localeFallbacks;
   final List<ContentTombstone> tombstones;
 }
 
@@ -162,6 +229,41 @@ final class PackContentRef {
   final String checksum;
   final int? sortOrder;
   final DateTime? publishedAt;
+}
+
+final class LocalizedContentRef {
+  factory LocalizedContentRef({
+    required ContentIdentity identity,
+    required int contentRevision,
+    required String locale,
+    required int localizationRevision,
+    required String checksum,
+  }) {
+    return LocalizedContentRef._(
+      identity: identity,
+      contentRevision: _requirePositive(contentRevision, 'contentRevision'),
+      locale: _canonicalizeLocale(locale, 'locale'),
+      localizationRevision: _requirePositive(
+        localizationRevision,
+        'localizationRevision',
+      ),
+      checksum: normalizeSha256(checksum, 'checksum'),
+    );
+  }
+
+  const LocalizedContentRef._({
+    required this.identity,
+    required this.contentRevision,
+    required this.locale,
+    required this.localizationRevision,
+    required this.checksum,
+  });
+
+  final ContentIdentity identity;
+  final int contentRevision;
+  final String locale;
+  final int localizationRevision;
+  final String checksum;
 }
 
 final class ManifestAssetDescriptor {
@@ -239,14 +341,19 @@ final class PackContentManifest {
     required int revision,
     required String checksum,
     required Iterable<PackContentRef> contents,
+    Iterable<LocalizedContentRef> localizations = const <LocalizedContentRef>[],
     required Iterable<ManifestAssetDescriptor> assets,
     required Iterable<ContentAssetRef> contentAssets,
   }) {
     final contentList = List<PackContentRef>.unmodifiable(contents);
+    final localizationList = List<LocalizedContentRef>.unmodifiable(
+      localizations,
+    );
     final assetList = List<ManifestAssetDescriptor>.unmodifiable(assets);
     final contentAssetList = List<ContentAssetRef>.unmodifiable(contentAssets);
 
     _requireUniqueContentIdentities(contentList);
+    _requireValidLocalizedRefs(identity, contentList, localizationList);
     _requireUniqueAssets(assetList);
     _requireValidContentAssetRefs(contentList, assetList, contentAssetList);
 
@@ -256,6 +363,7 @@ final class PackContentManifest {
       revision: _requirePositive(revision, 'revision'),
       checksum: normalizeSha256(checksum, 'checksum'),
       contents: contentList,
+      localizations: localizationList,
       assets: assetList,
       contentAssets: contentAssetList,
     );
@@ -267,6 +375,7 @@ final class PackContentManifest {
     required this.revision,
     required this.checksum,
     required this.contents,
+    required this.localizations,
     required this.assets,
     required this.contentAssets,
   });
@@ -276,6 +385,7 @@ final class PackContentManifest {
   final int revision;
   final String checksum;
   final List<PackContentRef> contents;
+  final List<LocalizedContentRef> localizations;
   final List<ManifestAssetDescriptor> assets;
   final List<ContentAssetRef> contentAssets;
 }
@@ -302,6 +412,7 @@ final _businessCodePattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._-]*$');
 final _localePattern = RegExp(r'^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$');
 final _opaqueIdPattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._:-]*$');
 final _deliverySegmentPattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._-]*$');
+final _alphaPattern = RegExp(r'^[A-Za-z]+$');
 
 String _requireBusinessCode(String value, String fieldName) {
   final normalized = _requireNonBlank(value, fieldName);
@@ -330,10 +441,37 @@ String _requireVariant(String value) {
   }
 
   final locale = normalized.substring('locale:'.length);
-  if (!_localePattern.hasMatch(locale)) {
-    throw ArgumentError.value(value, 'variant', 'contains an invalid locale');
+  return 'locale:${_canonicalizeLocale(locale, 'variant')}';
+}
+
+String _requireLocale(String value, String fieldName) {
+  final normalized = _requireNonBlank(value, fieldName);
+  if (!_localePattern.hasMatch(normalized)) {
+    throw ArgumentError.value(
+      value,
+      fieldName,
+      'must be a BCP-47-compatible locale identifier',
+    );
   }
   return normalized;
+}
+
+String _canonicalizeLocale(String value, String fieldName) {
+  final normalized = _requireLocale(value, fieldName);
+  final parts = normalized.split('-');
+  final result = <String>[parts.first.toLowerCase()];
+  for (final part in parts.skip(1)) {
+    if (part.length == 2 && _alphaPattern.hasMatch(part)) {
+      result.add(part.toUpperCase());
+    } else if (part.length == 4 && _alphaPattern.hasMatch(part)) {
+      result.add(
+        '${part.substring(0, 1).toUpperCase()}${part.substring(1).toLowerCase()}',
+      );
+    } else {
+      result.add(part.toLowerCase());
+    }
+  }
+  return result.join('-');
 }
 
 String _requireOpaqueId(String value, String fieldName) {
@@ -411,6 +549,45 @@ void _requireUniquePackIdentities(List<PackRevisionRef> packs) {
   }
 }
 
+void _requireUniquePracticeTestRefs(List<PracticeTestRevisionRef> refs) {
+  final identities = <String>{};
+  for (final ref in refs) {
+    if (!identities.add(ref.practiceTestCode)) {
+      throw ArgumentError.value(
+        ref.practiceTestCode,
+        'practiceTests',
+        'contains duplicate practice test identity',
+      );
+    }
+  }
+}
+
+void _requireUniqueCatalogueRefs(List<CatalogueRevisionRef> refs) {
+  final identities = <CatalogueKind>{};
+  for (final ref in refs) {
+    if (!identities.add(ref.kind)) {
+      throw ArgumentError.value(
+        ref.kind.wireName,
+        'catalogues',
+        'contains duplicate catalogue kind',
+      );
+    }
+  }
+}
+
+void _requireUniqueLocaleFallbacks(List<LocaleFallbackRule> rules) {
+  final locales = <String>{};
+  for (final rule in rules) {
+    if (!locales.add(rule.locale)) {
+      throw ArgumentError.value(
+        rule.locale,
+        'localeFallbacks',
+        'contains duplicate locale fallback rule',
+      );
+    }
+  }
+}
+
 void _requireUniqueTombstoneIdentities(List<ContentTombstone> tombstones) {
   final identities = <ContentIdentity>{};
   for (final tombstone in tombstones) {
@@ -432,6 +609,59 @@ void _requireUniqueContentIdentities(List<PackContentRef> contents) {
         content.identity.code,
         'contents',
         'contains duplicate content identity',
+      );
+    }
+  }
+}
+
+void _requireValidLocalizedRefs(
+  PackIdentity packIdentity,
+  List<PackContentRef> contents,
+  List<LocalizedContentRef> localizations,
+) {
+  if (packIdentity.variant == 'canonical') {
+    if (localizations.isNotEmpty) {
+      throw ArgumentError.value(
+        localizations.length,
+        'localizations',
+        'canonical packs must not contain localized payload refs',
+      );
+    }
+    return;
+  }
+
+  final expectedLocale = packIdentity.variant.substring('locale:'.length);
+  final contentByIdentity = <ContentIdentity, PackContentRef>{
+    for (final content in contents) content.identity: content,
+  };
+  final keys = <String>{};
+
+  for (final localization in localizations) {
+    if (localization.locale != expectedLocale) {
+      throw ArgumentError.value(
+        localization.locale,
+        'localizations',
+        'must match the locale pack variant $expectedLocale',
+      );
+    }
+
+    final content = contentByIdentity[localization.identity];
+    if (content == null || content.revision != localization.contentRevision) {
+      throw ArgumentError.value(
+        localization.identity.code,
+        'localizations',
+        'references missing canonical content revision',
+      );
+    }
+
+    final key =
+        '${localization.identity.code}|${localization.identity.type.name}|'
+        '${localization.contentRevision}|${localization.locale}';
+    if (!keys.add(key)) {
+      throw ArgumentError.value(
+        key,
+        'localizations',
+        'contains duplicate localized content identity',
       );
     }
   }

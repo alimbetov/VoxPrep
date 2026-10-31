@@ -80,6 +80,9 @@ final class SyncLocalSnapshot {
     required String? etag,
     required Iterable<PackRevisionRef> currentPacks,
     Iterable<PackIdentity> contentPayloadRepairPacks = const <PackIdentity>[],
+    Iterable<LocaleFallbackRule> currentLocaleFallbacks =
+        const <LocaleFallbackRule>[],
+    bool localePolicyRepairRequired = false,
   }) {
     final packs = List<PackRevisionRef>.unmodifiable(currentPacks);
     final identities = <PackIdentity>{};
@@ -96,12 +99,25 @@ final class SyncLocalSnapshot {
     final repairPacks = Set<PackIdentity>.unmodifiable(
       contentPayloadRepairPacks,
     );
+    final fallbackRules = List<LocaleFallbackRule>.unmodifiable(
+      currentLocaleFallbacks,
+    );
+    final fallbackRuleLocales = <String>{};
+    for (final rule in fallbackRules) {
+      if (!fallbackRuleLocales.add(rule.locale)) {
+        throw ArgumentError.value(
+          rule.locale,
+          'currentLocaleFallbacks',
+          'contains duplicate requested locale policy',
+        );
+      }
+    }
     for (final identity in repairPacks) {
-      if (!identities.contains(identity) || identity.variant != 'canonical') {
+      if (!identities.contains(identity)) {
         throw ArgumentError.value(
           identity,
           'contentPayloadRepairPacks',
-          'must reference a CURRENT canonical pack',
+          'must reference a CURRENT pack',
         );
       }
     }
@@ -110,9 +126,11 @@ final class SyncLocalSnapshot {
       if (currentManifestChecksum != null ||
           etag != null ||
           packs.isNotEmpty ||
-          repairPacks.isNotEmpty) {
+          repairPacks.isNotEmpty ||
+          fallbackRules.isNotEmpty ||
+          localePolicyRepairRequired) {
         throw ArgumentError(
-          'A missing CURRENT root cannot carry checksum, ETag, CURRENT packs, or repair work.',
+          'A missing CURRENT root cannot carry checksum, ETag, CURRENT packs, fallback policy, or repair work.',
         );
       }
     } else {
@@ -134,6 +152,8 @@ final class SyncLocalSnapshot {
       etag: etag,
       currentPacks: packs,
       contentPayloadRepairPacks: repairPacks,
+      currentLocaleFallbacks: fallbackRules,
+      localePolicyRepairRequired: localePolicyRepairRequired,
     );
   }
 
@@ -143,13 +163,30 @@ final class SyncLocalSnapshot {
     required this.etag,
     required this.currentPacks,
     required this.contentPayloadRepairPacks,
+    required this.currentLocaleFallbacks,
+    required this.localePolicyRepairRequired,
   });
 
   final int? currentContentVersion;
   final String? currentManifestChecksum;
   final String? etag;
   final List<PackRevisionRef> currentPacks;
+
+  /// CURRENT pack identities whose immutable learner payload graph is missing
+  /// or inconsistent and therefore must be re-fetched even when the root and
+  /// pack revision/checksum are unchanged. Applies to canonical and locale
+  /// packs alike.
   final Set<PackIdentity> contentPayloadRepairPacks;
+
+  /// Persisted Backend-owned policy for the CURRENT immutable root. This is
+  /// compared with the freshly fetched root so deleted/tampered rows trigger a
+  /// same-root repair instead of silently changing fallback behavior.
+  final List<LocaleFallbackRule> currentLocaleFallbacks;
+
+  /// True when the CURRENT root predates persisted Backend-owned fallback
+  /// policy, the policy marker belongs to another contentVersion, or the local
+  /// row ordering/version metadata is internally inconsistent.
+  final bool localePolicyRepairRequired;
 }
 
 final class SyncPlan {
@@ -162,6 +199,9 @@ final class SyncPlan {
        tombstones = List<ContentTombstone>.unmodifiable(tombstones);
 
   final RootContentManifest target;
+
+  /// True when committing is required because either the immutable publication
+  /// changed or the device-local pack projection changed for the same root.
   final bool rootChanged;
   final List<PackRevisionRef> changedPacks;
   final List<ContentTombstone> tombstones;

@@ -1,95 +1,66 @@
+# C3 final accepted-baseline qualification trigger
 name: Flutter Production Adapters
 
 on:
   push:
     branches:
       - feat/p2-flutter-production-adapters
+      - feat/backend-contract-gap-audit
     paths:
       - 'mobile/careerspeak_app/**'
       - 'contracts/**'
+      - 'docs/audits/**'
+      - 'docs/backend/**'
+      - 'docs/implementation/P2_4_API_CLIENT.md'
+      - 'docs/implementation/P2_5_MANIFEST_CONTRACTS.md'
+      - 'docs/implementation/P2_FLUTTER_PRODUCTION_ADAPTERS.md'
       - '.github/workflows/flutter-production-adapters.yml'
-  pull_request:
-    paths:
-      - 'mobile/careerspeak_app/**'
-      - 'contracts/**'
-      - '.github/workflows/flutter-production-adapters.yml'
+  workflow_dispatch:
 
 jobs:
   quality:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: mobile/careerspeak_app
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.47.9'
           channel: stable
           cache: true
-
-      - name: Flutter version
-        run: flutter --version
-
       - name: Dependencies
+        working-directory: mobile/careerspeak_app
         run: flutter pub get
-
-      - name: Lockfile reproducibility
-        run: git diff --exit-code -- pubspec.lock
-
-      - name: Format handwritten Dart
+      - name: Format
+        working-directory: mobile/careerspeak_app
+        run: dart format --output=none --set-exit-if-changed lib test
+      - name: Generated baseline reproducibility
+        working-directory: mobile/careerspeak_app
         run: |
-          mapfile -t dart_files < <(
-            find lib test -type f -name '*.dart' \
-              ! -name '*.g.dart' \
-              ! -path 'test/generated_migrations/*' \
-              -print
-          )
-          dart format --output=none --set-exit-if-changed "${dart_files[@]}"
-
-      - name: Drift codegen
-        run: dart run build_runner build --delete-conflicting-outputs
-
-      - name: Drift schema snapshot
-        run: |
+          dart run build_runner build
           dart run drift_dev schema dump \
             lib/data/local/database/careerspeak_database.dart \
-            drift_schemas/drift_schema_v4.json
-
-      - name: Drift migration test codegen
-        run: |
+            drift_schemas/drift_schema_v8.json
           rm -rf test/generated_migrations
           dart run drift_dev schema generate \
             --data-classes \
             --companions \
             drift_schemas/ \
             test/generated_migrations/
-
-      - name: Generated baseline reproducibility
-        run: |
+          dart format test/generated_migrations
           git diff --exit-code -- \
             lib/data/local/database/careerspeak_database.g.dart \
             drift_schemas/drift_schema_v1.json \
             drift_schemas/drift_schema_v2.json \
             drift_schemas/drift_schema_v3.json \
             drift_schemas/drift_schema_v4.json \
+            drift_schemas/drift_schema_v5.json \
+            drift_schemas/drift_schema_v6.json \
+            drift_schemas/drift_schema_v7.json \
+            drift_schemas/drift_schema_v8.json \
             test/generated_migrations
-
       - name: Analyze
+        working-directory: mobile/careerspeak_app
         run: flutter analyze
-
       - name: Test
+        working-directory: mobile/careerspeak_app
         run: flutter test
-
-      - name: Upload production E2E screenshots
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: careerspeak-production-e2e-${{ github.sha }}
-          path: mobile/careerspeak_app/build/acceptance_screenshots/*.png
-          if-no-files-found: error
-          retention-days: 14

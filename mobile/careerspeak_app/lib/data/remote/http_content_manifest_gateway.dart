@@ -1,36 +1,42 @@
 import '../../application/content_delivery/content_manifest.dart';
+import '../../application/content_delivery/publication_manifest_canonicalizer.dart';
 import '../../application/ports/api_client.dart';
 import '../../application/ports/content_manifest_gateway.dart';
 import '../../application/result/result.dart';
 import 'content_manifest_decoder.dart';
+import 'publication_manifest_wire_guard.dart';
 
 final class HttpContentManifestGateway implements ContentManifestGateway {
   factory HttpContentManifestGateway({
     required ApiClient apiClient,
     ContentManifestDecoder decoder = const ContentManifestDecoder(),
+    PublicationManifestWireGuard wireGuard =
+        const PublicationManifestWireGuard(),
+    PublicationManifestCanonicalizer canonicalizer =
+        const PublicationManifestCanonicalizer(),
   }) {
-    return HttpContentManifestGateway._(apiClient, decoder);
+    return HttpContentManifestGateway._(
+      apiClient,
+      decoder,
+      wireGuard,
+      canonicalizer,
+    );
   }
 
-  const HttpContentManifestGateway._(this._apiClient, this._decoder);
+  const HttpContentManifestGateway._(
+    this._apiClient,
+    this._decoder,
+    this._wireGuard,
+    this._canonicalizer,
+  );
 
   final ApiClient _apiClient;
   final ContentManifestDecoder _decoder;
+  final PublicationManifestWireGuard _wireGuard;
+  final PublicationManifestCanonicalizer _canonicalizer;
 
   @override
-  Future<Result<RootManifestFetch>> fetchRootManifest({
-    required String translationLocale,
-    String? etag,
-  }) async {
-    final locale = _normalizeLocale(translationLocale);
-    if (locale == null) {
-      return const FailureResult<RootManifestFetch>(
-        ApplicationFailure(
-          code: 'LOCALE_INVALID',
-          message: 'Translation locale is invalid.',
-        ),
-      );
-    }
+  Future<Result<RootManifestFetch>> fetchRootManifest({String? etag}) async {
     if (_containsUnsafeHeaderCharacter(etag)) {
       return const FailureResult<RootManifestFetch>(
         ApplicationFailure(
@@ -48,7 +54,6 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
       ApiRequest(
         method: ApiMethod.get,
         path: '/api/v1/content/manifest',
-        queryParameters: <String, String>{'locale': locale},
         headers: headers,
       ),
     );
@@ -90,16 +95,35 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
       );
     }
 
+    final shape = _wireGuard.validateRoot(apiResponse.jsonBody);
+    if (shape case FailureResult<void>(:final failure)) {
+      return FailureResult<RootManifestFetch>(failure);
+    }
+
     final decoded = _decoder.decodeRoot(apiResponse.jsonBody);
     if (decoded case FailureResult<RootContentManifest>(:final failure)) {
       return FailureResult<RootManifestFetch>(failure);
     }
 
+    final manifest = (decoded as Success<RootContentManifest>).value;
+    final calculatedChecksum = _canonicalizer.rootDigest(manifest);
+    if (calculatedChecksum != manifest.checksum) {
+      return FailureResult<RootManifestFetch>(
+        ApplicationFailure(
+          code: 'ROOT_MANIFEST_CHECKSUM_MISMATCH',
+          message:
+              'The root manifest checksum does not match its canonical immutable body.',
+          traceId: apiResponse.traceId,
+          details: <String, Object?>{
+            'declaredChecksum': manifest.checksum,
+            'calculatedChecksum': calculatedChecksum,
+          },
+        ),
+      );
+    }
+
     return Success<RootManifestFetch>(
-      RootManifestChanged(
-        manifest: (decoded as Success<RootContentManifest>).value,
-        etag: responseEtag,
-      ),
+      RootManifestChanged(manifest: manifest, etag: responseEtag),
     );
   }
 
@@ -135,12 +159,33 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
       );
     }
 
+    final shape = _wireGuard.validatePack(apiResponse.jsonBody);
+    if (shape case FailureResult<void>(:final failure)) {
+      return FailureResult<PackContentManifest>(failure);
+    }
+
     final decoded = _decoder.decodePack(apiResponse.jsonBody);
     if (decoded case FailureResult<PackContentManifest>(:final failure)) {
       return FailureResult<PackContentManifest>(failure);
     }
 
     final manifest = (decoded as Success<PackContentManifest>).value;
+    final calculatedChecksum = _canonicalizer.packDigest(manifest);
+    if (calculatedChecksum != manifest.checksum) {
+      return FailureResult<PackContentManifest>(
+        ApplicationFailure(
+          code: 'PACK_MANIFEST_CHECKSUM_MISMATCH',
+          message:
+              'The pack manifest checksum does not match its canonical immutable body.',
+          traceId: apiResponse.traceId,
+          details: <String, Object?>{
+            'declaredChecksum': manifest.checksum,
+            'calculatedChecksum': calculatedChecksum,
+          },
+        ),
+      );
+    }
+
     if (manifest.identity != target.identity ||
         manifest.revision != target.revision ||
         manifest.checksum != target.checksum) {
@@ -162,14 +207,6 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
     return Success<PackContentManifest>(manifest);
   }
 
-  static String? _normalizeLocale(String value) {
-    final normalized = value.trim();
-    if (!_localePattern.hasMatch(normalized)) {
-      return null;
-    }
-    return normalized;
-  }
-
   static String? _normalizeOptionalHeaderValue(String? value) {
     if (_containsUnsafeHeaderCharacter(value)) {
       return null;
@@ -182,5 +219,3 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
     return value != null && (value.contains('\r') || value.contains('\n'));
   }
 }
-
-final _localePattern = RegExp(r'^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$');

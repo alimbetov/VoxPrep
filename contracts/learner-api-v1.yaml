@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: CareerSpeak Learner API
-  version: 1.0.0
+  version: 1.4.0
   description: >-
     Wire contract consumed by the Flutter installation runtime. Backend persistence
     entities are explicitly not part of this contract.
@@ -31,18 +31,54 @@ paths:
         '500':
           $ref: '#/components/responses/ApiError'
 
+  /api/v1/media/access:
+    post:
+      operationId: createMediaAccessGrant
+      description: >-
+        Resolves one stable published asset identity into a short-lived media access
+        grant. The client supplies only assetId; Backend resolves deliveryKey from
+        authoritative publication/FileAsset state and never signs an arbitrary
+        client-provided storage path.
+      security:
+        - installationBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MediaAccessRequest'
+      responses:
+        '200':
+          description: Short-lived access grant for the exact published asset.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaAccessGrant'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '409':
+          $ref: '#/components/responses/ApiError'
+        '429':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
   /api/v1/content/manifest:
     get:
       operationId: getRootContentManifest
+      description: >-
+        Returns one locale-independent immutable publication root. Locale selection
+        must not change root identity, checksum, ETag or contentVersion. Exact pack,
+        practice-test and catalogue revision membership is frozen in this root.
       security:
         - installationBearer: []
       parameters:
-        - name: locale
-          in: query
-          required: true
-          schema:
-            type: string
-            pattern: '^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$'
         - name: If-None-Match
           in: header
           required: false
@@ -50,7 +86,7 @@ paths:
             type: string
       responses:
         '200':
-          description: Current root content snapshot.
+          description: Current locale-independent root content snapshot.
           headers:
             ETag:
               schema:
@@ -118,7 +154,8 @@ paths:
       operationId: getCanonicalContentPayload
       description: >-
         Returns canonical English learner content for one exact immutable content
-        revision. Locale packs do not duplicate this payload.
+        revision. Locale payloads do not duplicate this canonical payload or its
+        shared media.
       security:
         - installationBearer: []
       parameters:
@@ -155,12 +192,65 @@ paths:
         '500':
           $ref: '#/components/responses/ApiError'
 
+  /api/v1/content/{contentType}/{contentCode}/revisions/{contentRevision}/localizations/{locale}/revisions/{localizationRevision}:
+    get:
+      operationId: getLocalizedContentPayload
+      description: >-
+        Returns one exact immutable localized projection for one exact canonical
+        content revision. Canonical English content and shared media are not
+        duplicated in this payload.
+      security:
+        - installationBearer: []
+      parameters:
+        - name: contentType
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ContentType'
+        - name: contentCode
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/BusinessCode'
+        - name: contentRevision
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/PositiveRevision'
+        - name: locale
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/LocaleCode'
+        - name: localizationRevision
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/PositiveRevision'
+      responses:
+        '200':
+          description: Exact localized learner payload revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LocalizedContentPayload'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
 components:
   securitySchemes:
     installationBearer:
       type: http
       scheme: bearer
-      description: Opaque backend-issued installation token stored in platform Secure Storage.
+      description: Temporary backend-issued installation token stored in platform Secure Storage and re-issued on application bootstrap.
 
   responses:
     ApiError:
@@ -180,6 +270,10 @@ components:
       type: string
       minLength: 1
       pattern: '^[A-Z0-9][A-Z0-9._-]*$'
+
+    LocaleCode:
+      type: string
+      pattern: '^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$'
 
     Sha256:
       type: string
@@ -207,6 +301,18 @@ components:
       type: string
       pattern: '^(?:canonical|locale:[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*)$'
 
+    CatalogueKind:
+      type: string
+      enum:
+        - learning-goals
+        - learning-tracks
+        - learning-collections
+        - categories
+        - levels
+        - skills
+        - supported-locales
+        - tts-voices
+
     InstallationRegistrationRequest:
       type: object
       additionalProperties: false
@@ -226,6 +332,54 @@ components:
         installationToken:
           type: string
           minLength: 1
+
+    MediaAccessRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - assetId
+      properties:
+        assetId:
+          type: string
+          minLength: 1
+      description: >-
+        Requests access by stable asset identity only. deliveryKey, object key,
+        bucket, signed URL and storage path are intentionally not accepted from
+        the client.
+
+    MediaAccessGrant:
+      type: object
+      additionalProperties: false
+      required:
+        - assetId
+        - url
+        - expiresAt
+        - checksumSha256
+        - sizeBytes
+        - mediaType
+      properties:
+        assetId:
+          type: string
+          minLength: 1
+        url:
+          type: string
+          format: uri
+          minLength: 1
+          description: Short-lived signed/presigned URL outside publication identity.
+        expiresAt:
+          $ref: '#/components/schemas/CanonicalUtcInstant'
+        checksumSha256:
+          $ref: '#/components/schemas/Sha256'
+        sizeBytes:
+          type: integer
+          minimum: 1
+        mediaType:
+          type: string
+          minLength: 1
+      description: >-
+        Short-lived access material for one exact published READY asset. The grant
+        may be regenerated without changing assetId, deliveryKey, checksum or any
+        C4 PublicationSnapshot identity.
 
     ApiError:
       type: object
@@ -267,9 +421,61 @@ components:
         checksum:
           $ref: '#/components/schemas/Sha256'
 
+    PracticeTestRevisionRef:
+      type: object
+      additionalProperties: false
+      required:
+        - practiceTestCode
+        - revision
+        - checksum
+      properties:
+        practiceTestCode:
+          $ref: '#/components/schemas/BusinessCode'
+        revision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+
+    CatalogueRevisionRef:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - revision
+        - checksum
+      properties:
+        kind:
+          $ref: '#/components/schemas/CatalogueKind'
+        revision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+
+    LocaleFallbackRule:
+      type: object
+      additionalProperties: false
+      required:
+        - locale
+        - fallbackLocales
+      properties:
+        locale:
+          $ref: '#/components/schemas/LocaleCode'
+        fallbackLocales:
+          type: array
+          uniqueItems: true
+          description: >-
+            Ordered Backend-owned fallbacks. Canonical English, when present,
+            must be terminal.
+          items:
+            $ref: '#/components/schemas/LocaleCode'
+
     ContentTombstone:
       type: object
       additionalProperties: false
+      description: >-
+        Retires the whole stable content business identity from this publication
+        snapshot onward. revision is the highest canonical revision that had been
+        published before retirement and is audit/integrity metadata only.
       required:
         - contentCode
         - contentType
@@ -296,6 +502,9 @@ components:
         - publishedAt
         - checksum
         - packs
+        - practiceTests
+        - catalogues
+        - localeFallbacks
         - tombstones
       properties:
         schemaVersion:
@@ -316,6 +525,23 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PackRevisionRef'
+        practiceTests:
+          type: array
+          description: Exact immutable assessment revisions belonging to this snapshot.
+          items:
+            $ref: '#/components/schemas/PracticeTestRevisionRef'
+        catalogues:
+          type: array
+          description: Exact immutable small-catalogue revisions belonging to this snapshot.
+          items:
+            $ref: '#/components/schemas/CatalogueRevisionRef'
+        localeFallbacks:
+          type: array
+          description: >-
+            Backend-owned deterministic fallback chains. Flutter applies this
+            order and must not derive fallback locales from BCP-47 tags.
+          items:
+            $ref: '#/components/schemas/LocaleFallbackRule'
         tombstones:
           type: array
           items:
@@ -347,6 +573,30 @@ components:
           oneOf:
             - $ref: '#/components/schemas/CanonicalUtcInstant'
             - type: 'null'
+
+    LocalizedContentRef:
+      type: object
+      additionalProperties: false
+      required:
+        - contentCode
+        - contentType
+        - contentRevision
+        - locale
+        - localizationRevision
+        - checksum
+      properties:
+        contentCode:
+          $ref: '#/components/schemas/BusinessCode'
+        contentType:
+          $ref: '#/components/schemas/ContentType'
+        contentRevision:
+          $ref: '#/components/schemas/PositiveRevision'
+        locale:
+          $ref: '#/components/schemas/LocaleCode'
+        localizationRevision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
 
     ManifestAssetDescriptor:
       type: object
@@ -409,6 +659,7 @@ components:
         - revision
         - checksum
         - contents
+        - localizations
         - assets
         - contentAssets
       properties:
@@ -428,6 +679,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PackContentRef'
+        localizations:
+          type: array
+          items:
+            $ref: '#/components/schemas/LocalizedContentRef'
         assets:
           type: array
           items:
@@ -487,3 +742,60 @@ components:
           minimum: 1
         hasAudio:
           type: boolean
+
+    LocalizedContentPayload:
+      type: object
+      additionalProperties: false
+      description: >-
+        Immutable locale-owned learner copy for one exact canonical content
+        revision. At least one localized text field must be non-null.
+      required:
+        - contentCode
+        - contentType
+        - contentRevision
+        - locale
+        - localizationRevision
+        - checksum
+      properties:
+        contentCode:
+          $ref: '#/components/schemas/BusinessCode'
+        contentType:
+          $ref: '#/components/schemas/ContentType'
+        contentRevision:
+          $ref: '#/components/schemas/PositiveRevision'
+        locale:
+          $ref: '#/components/schemas/LocaleCode'
+        localizationRevision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+        title:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+        subtitle:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+        description:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+        translation:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+        hint:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+        explanation:
+          type:
+            - string
+            - 'null'
+          minLength: 1

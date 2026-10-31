@@ -1,6 +1,9 @@
+import 'package:careerspeak_app/application/content_delivery/catalogue_revision_ref.dart';
 import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
+import 'package:careerspeak_app/application/content_delivery/product_catalog.dart';
 import 'package:careerspeak_app/application/content_sync/sync_models.dart';
 import 'package:careerspeak_app/application/ports/content_manifest_gateway.dart';
+import 'package:careerspeak_app/application/ports/publication_snapshot_stager.dart';
 import 'package:careerspeak_app/application/ports/sync_journal.dart';
 import 'package:careerspeak_app/application/ports/sync_plan_executor.dart';
 import 'package:careerspeak_app/application/result/result.dart';
@@ -22,6 +25,10 @@ SyncLocalSnapshot emptySnapshot() => SyncLocalSnapshot(
 RootContentManifest manifest(
   int version, {
   Iterable<PackRevisionRef> packs = const <PackRevisionRef>[],
+  Iterable<PracticeTestRevisionRef> practiceTests =
+      const <PracticeTestRevisionRef>[],
+  Iterable<CatalogueRevisionRef> catalogues = const <CatalogueRevisionRef>[],
+  Iterable<LocaleFallbackRule> localeFallbacks = const <LocaleFallbackRule>[],
 }) {
   return RootContentManifest(
     schemaVersion: 1,
@@ -30,6 +37,9 @@ RootContentManifest manifest(
     publishedAt: DateTime.utc(2026, 10, 30, 10),
     checksum: version == 108 ? rootA : rootB,
     packs: packs,
+    practiceTests: practiceTests,
+    catalogues: catalogues,
+    localeFallbacks: localeFallbacks,
     tombstones: const <ContentTombstone>[],
   );
 }
@@ -46,6 +56,7 @@ final class FakeJournal implements SyncJournal {
   final Result<SyncLocalSnapshot> snapshot;
   final states = <SyncRunState>[];
   final plans = <SyncPlan>[];
+  final translationLocales = <String>[];
   String? coalescedRunId;
   ApplicationFailure? transitionFailure;
 
@@ -57,11 +68,14 @@ final class FakeJournal implements SyncJournal {
     required String runId,
     required SyncTrigger trigger,
     required String translationLocale,
-  }) async => Success(
-    coalescedRunId == null
-        ? SyncRunStarted(runId)
-        : SyncRunCoalesced(coalescedRunId!),
-  );
+  }) async {
+    translationLocales.add(translationLocale);
+    return Success(
+      coalescedRunId == null
+          ? SyncRunStarted(runId)
+          : SyncRunCoalesced(coalescedRunId!),
+    );
+  }
 
   @override
   Future<Result<void>> persistPlan({
@@ -90,16 +104,11 @@ final class FakeGateway implements ContentManifestGateway {
   final Result<RootManifestFetch> result;
   int calls = 0;
   final etags = <String?>[];
-  final translationLocales = <String>[];
 
   @override
-  Future<Result<RootManifestFetch>> fetchRootManifest({
-    required String translationLocale,
-    String? etag,
-  }) async {
+  Future<Result<RootManifestFetch>> fetchRootManifest({String? etag}) async {
     calls += 1;
     etags.add(etag);
-    translationLocales.add(translationLocale);
     return result;
   }
 
@@ -128,6 +137,20 @@ final class FakeExecutor implements SyncPlanExecutor {
     required SyncPlan plan,
   }) async {
     calls += 1;
+    return result;
+  }
+}
+
+final class FakeSnapshotStager implements PublicationSnapshotStager {
+  FakeSnapshotStager([Result<void>? result])
+    : result = result ?? const Success(null);
+
+  final Result<void> result;
+  final List<RootContentManifest> targets = <RootContentManifest>[];
+
+  @override
+  Future<Result<void>> stage(RootContentManifest target) async {
+    targets.add(target);
     return result;
   }
 }

@@ -18,6 +18,12 @@ void main() {
     expect(manifest.contentVersion, 108);
     expect(manifest.minimumAppContractVersion, 1);
     expect(manifest.packs.single.identity.toString(), 'JAVA_SENIOR/canonical');
+    expect(manifest.localeFallbacks, hasLength(2));
+    expect(manifest.localeFallbacks.first.locale, 'ru-KZ');
+    expect(manifest.localeFallbacks.first.fallbackLocales, <String>[
+      'ru',
+      'en',
+    ]);
     expect(manifest.tombstones.single.identity.type, ContentType.interview);
   });
 

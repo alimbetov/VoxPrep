@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('HttpContentManifestGateway', () {
-    test('sends locale and ETag when checking the root manifest', () async {
+    test('sends ETag without locale when checking the root manifest', () async {
       final apiClient = _RecordingApiClient(<Result<ApiResponse>>[
         Success<ApiResponse>(
           ApiResponse(
@@ -19,10 +19,7 @@ void main() {
       ]);
       final gateway = HttpContentManifestGateway(apiClient: apiClient);
 
-      final result = await gateway.fetchRootManifest(
-        translationLocale: 'kk',
-        etag: 'etag-107',
-      );
+      final result = await gateway.fetchRootManifest(etag: 'etag-107');
 
       expect(result, isA<Success<RootManifestFetch>>());
       final fetch = (result as Success<RootManifestFetch>).value;
@@ -32,7 +29,7 @@ void main() {
       final request = apiClient.requests.single;
       expect(request.method, ApiMethod.get);
       expect(request.path, '/api/v1/content/manifest');
-      expect(request.queryParameters, const <String, String>{'locale': 'kk'});
+      expect(request.queryParameters, isEmpty);
       expect(request.headers['if-none-match'], 'etag-107');
       expect(request.authentication, ApiAuthentication.installation);
     });
@@ -50,7 +47,7 @@ void main() {
       ]);
       final gateway = HttpContentManifestGateway(apiClient: apiClient);
 
-      final result = await gateway.fetchRootManifest(translationLocale: 'en');
+      final result = await gateway.fetchRootManifest();
 
       expect(result, isA<FailureResult<RootManifestFetch>>());
       final failure = (result as FailureResult<RootManifestFetch>).failure;
@@ -66,7 +63,6 @@ void main() {
       final gateway = HttpContentManifestGateway(apiClient: apiClient);
 
       final result = await gateway.fetchRootManifest(
-        translationLocale: 'en',
         etag: 'etag-107\r\nx-injected: true',
       );
 
@@ -78,49 +74,84 @@ void main() {
       expect(apiClient.requests, isEmpty);
     });
 
-    test('decodes changed root manifest through the typed boundary', () async {
+    test(
+      'decodes changed locale-independent root through typed boundary',
+      () async {
+        final apiClient = _RecordingApiClient(<Result<ApiResponse>>[
+          Success<ApiResponse>(
+            ApiResponse(
+              statusCode: 200,
+              headers: const <String, String>{'etag': 'etag-108'},
+              jsonBody: _rootManifest(),
+            ),
+          ),
+        ]);
+        final gateway = HttpContentManifestGateway(apiClient: apiClient);
+
+        final result = await gateway.fetchRootManifest();
+
+        expect(result, isA<Success<RootManifestFetch>>());
+        final fetch = (result as Success<RootManifestFetch>).value;
+        expect(fetch, isA<RootManifestChanged>());
+        final changed = fetch as RootManifestChanged;
+        expect(changed.manifest.contentVersion, 108);
+        expect(changed.manifest.checksum, _rootChecksum);
+        expect(changed.manifest.practiceTests, isEmpty);
+        expect(changed.manifest.catalogues, isEmpty);
+        expect(changed.etag, 'etag-108');
+        expect(apiClient.requests.single.queryParameters, isEmpty);
+      },
+    );
+
+    test('rejects root whose canonical body does not match checksum', () async {
+      final manifest = _rootManifest()..['checksum'] = _shaA;
       final apiClient = _RecordingApiClient(<Result<ApiResponse>>[
         Success<ApiResponse>(
           ApiResponse(
             statusCode: 200,
-            headers: const <String, String>{'etag': 'etag-108'},
-            jsonBody: _rootManifest(),
+            headers: const <String, String>{},
+            jsonBody: manifest,
           ),
         ),
       ]);
       final gateway = HttpContentManifestGateway(apiClient: apiClient);
 
-      final result = await gateway.fetchRootManifest(translationLocale: 'ru');
-
-      expect(result, isA<Success<RootManifestFetch>>());
-      final fetch = (result as Success<RootManifestFetch>).value;
-      expect(fetch, isA<RootManifestChanged>());
-      final changed = fetch as RootManifestChanged;
-      expect(changed.manifest.contentVersion, 108);
-      expect(changed.etag, 'etag-108');
-    });
-
-    test('invalid locale fails before transport', () async {
-      final apiClient = _RecordingApiClient(const <Result<ApiResponse>>[]);
-      final gateway = HttpContentManifestGateway(apiClient: apiClient);
-
-      final result = await gateway.fetchRootManifest(
-        translationLocale: '../kk',
-      );
+      final result = await gateway.fetchRootManifest();
 
       expect(result, isA<FailureResult<RootManifestFetch>>());
       expect(
         (result as FailureResult<RootManifestFetch>).failure.code,
-        'LOCALE_INVALID',
+        'ROOT_MANIFEST_CHECKSUM_MISMATCH',
       );
-      expect(apiClient.requests, isEmpty);
+    });
+
+    test('rejects runtime field embedded in root publication body', () async {
+      final manifest = _rootManifest()..['accessToken'] = 'runtime-secret';
+      final apiClient = _RecordingApiClient(<Result<ApiResponse>>[
+        Success<ApiResponse>(
+          ApiResponse(
+            statusCode: 200,
+            headers: const <String, String>{},
+            jsonBody: manifest,
+          ),
+        ),
+      ]);
+      final gateway = HttpContentManifestGateway(apiClient: apiClient);
+
+      final result = await gateway.fetchRootManifest();
+
+      expect(result, isA<FailureResult<RootManifestFetch>>());
+      expect(
+        (result as FailureResult<RootManifestFetch>).failure.code,
+        'MANIFEST_NON_PUBLICATION_FIELD',
+      );
     });
 
     test('fetches exact pack target from root manifest identity', () async {
       final target = PackRevisionRef(
         identity: PackIdentity(code: 'JAVA_SENIOR', variant: 'canonical'),
         revision: 8,
-        checksum: _shaB,
+        checksum: _packChecksum,
       );
       final apiClient = _RecordingApiClient(<Result<ApiResponse>>[
         Success<ApiResponse>(
@@ -142,6 +173,33 @@ void main() {
         'variant': 'canonical',
         'revision': '8',
       });
+    });
+
+    test('rejects pack whose canonical body does not match checksum', () async {
+      final target = PackRevisionRef(
+        identity: PackIdentity(code: 'JAVA_SENIOR', variant: 'canonical'),
+        revision: 8,
+        checksum: _packChecksum,
+      );
+      final manifest = _packManifest()..['checksum'] = _shaA;
+      final apiClient = _RecordingApiClient(<Result<ApiResponse>>[
+        Success<ApiResponse>(
+          ApiResponse(
+            statusCode: 200,
+            headers: const <String, String>{},
+            jsonBody: manifest,
+          ),
+        ),
+      ]);
+      final gateway = HttpContentManifestGateway(apiClient: apiClient);
+
+      final result = await gateway.fetchPackManifest(target);
+
+      expect(result, isA<FailureResult<PackContentManifest>>());
+      expect(
+        (result as FailureResult<PackContentManifest>).failure.code,
+        'PACK_MANIFEST_CHECKSUM_MISMATCH',
+      );
     });
 
     test('rejects pack response that does not match root target', () async {
@@ -181,7 +239,7 @@ void main() {
       ]);
       final gateway = HttpContentManifestGateway(apiClient: apiClient);
 
-      final result = await gateway.fetchRootManifest(translationLocale: 'en');
+      final result = await gateway.fetchRootManifest();
 
       expect(result, isA<FailureResult<RootManifestFetch>>());
       expect(
@@ -217,15 +275,18 @@ Map<String, Object?> _rootManifest() {
     'contentVersion': 108,
     'minimumAppContractVersion': 1,
     'publishedAt': '2026-10-30T09:30:00Z',
-    'checksum': _shaA,
+    'checksum': _rootChecksum,
     'packs': <Object?>[
       <String, Object?>{
         'code': 'JAVA_SENIOR',
         'variant': 'canonical',
         'revision': 8,
-        'checksum': _shaB,
+        'checksum': _packChecksum,
       },
     ],
+    'practiceTests': const <Object?>[],
+    'catalogues': const <Object?>[],
+    'localeFallbacks': const <Object?>[],
     'tombstones': const <Object?>[],
   };
 }
@@ -236,14 +297,17 @@ Map<String, Object?> _packManifest() {
     'code': 'JAVA_SENIOR',
     'variant': 'canonical',
     'revision': 8,
-    'checksum': _shaB,
+    'checksum': _packChecksum,
     'contents': const <Object?>[],
+    'localizations': const <Object?>[],
     'assets': const <Object?>[],
     'contentAssets': const <Object?>[],
   };
 }
 
+const _rootChecksum =
+    'b80e68e4f13ef9640ba3a6d117b594b85d06eaa3be34f129dc6b0d325095b8e0';
+const _packChecksum =
+    '351db1c227d622346fa614872f2c161add35cdded045f8725894cb1e1026321d';
 const _shaA =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-const _shaB =
-    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
