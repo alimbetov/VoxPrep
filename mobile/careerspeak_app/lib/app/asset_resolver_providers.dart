@@ -27,7 +27,7 @@ final assetResolverProvider = FutureProvider<AssetResolver>((ref) async {
 final catalogueIconAssetProvider =
     FutureProvider.family<ResolvedAsset?, String>((ref, assetId) async {
       final resolver = await ref.watch(assetResolverProvider.future);
-      final resolved = await resolver.resolve(
+      final resolved = await resolver.resolveImage(
         assetId,
         policy: AssetResolutionPolicy.downloadIfMissing,
       );
