@@ -28,10 +28,7 @@ void main() {
     );
 
     expect(find.byTooltip('Hint'), findsOneWidget);
-    expect(
-      find.text('Подумайте о жизненном цикле Spring Bean.'),
-      findsNothing,
-    );
+    expect(find.text('Подумайте о жизненном цикле Spring Bean.'), findsNothing);
 
     await tester.tap(find.byTooltip('Hint'));
     await tester.pumpAndSettle();
@@ -52,10 +49,7 @@ Future<void> _pump(WidgetTester tester, {String? localizedHint}) async {
       ],
       child: MaterialApp(
         home: Scaffold(
-          body: ContentDetailPanel(
-            item: _topic,
-            localizedHint: localizedHint,
-          ),
+          body: ContentDetailPanel(item: _topic, localizedHint: localizedHint),
         ),
       ),
     ),

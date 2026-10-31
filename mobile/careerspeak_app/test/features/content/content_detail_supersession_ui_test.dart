@@ -16,51 +16,52 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('rapid double Play supersession is silent and latest request wins', (
-    tester,
-  ) async {
-    final resolver = _ControlledResolver();
-    final engine = _Engine();
-    final learnerState = _LearnerState();
-    final controller = AudioPlaybackController(
-      resolveAudioAsset: resolver.resolve,
-      engine: engine,
-      learnerState: learnerState,
-    );
-    addTearDown(controller.dispose);
+  testWidgets(
+    'rapid double Play supersession is silent and latest request wins',
+    (tester) async {
+      final resolver = _ControlledResolver();
+      final engine = _Engine();
+      final learnerState = _LearnerState();
+      final controller = AudioPlaybackController(
+        resolveAudioAsset: resolver.resolve,
+        engine: engine,
+        learnerState: learnerState,
+      );
+      addTearDown(controller.dispose);
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          learnerStateRepositoryProvider.overrideWithValue(learnerState),
-          audioPlaybackControllerProvider.overrideWithValue(controller),
-        ],
-        child: const MaterialApp(
-          home: Scaffold(body: ContentDetailPanel(item: _topic)),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            learnerStateRepositoryProvider.overrideWithValue(learnerState),
+            audioPlaybackControllerProvider.overrideWithValue(controller),
+          ],
+          child: const MaterialApp(
+            home: Scaffold(body: ContentDetailPanel(item: _topic)),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    final play = tester.widget<FilledButton>(
-      find.widgetWithText(FilledButton, 'Play'),
-    );
-    play.onPressed!();
-    play.onPressed!();
+      final play = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Play'),
+      );
+      play.onPressed!();
+      play.onPressed!();
 
-    await _waitUntil(() => resolver.pending.length == 2);
-    resolver.complete(0, _asset('superseded'));
-    await tester.pump();
+      await _waitUntil(() => resolver.pending.length == 2);
+      resolver.complete(0, _asset('superseded'));
+      await tester.pump();
 
-    expect(find.textContaining('Audio playback failed:'), findsNothing);
+      expect(find.textContaining('Audio playback failed:'), findsNothing);
 
-    resolver.complete(1, _asset('winner'));
-    await tester.pumpAndSettle();
+      resolver.complete(1, _asset('winner'));
+      await tester.pumpAndSettle();
 
-    expect(find.textContaining('Audio playback failed:'), findsNothing);
-    expect(find.text('Pause'), findsOneWidget);
-    expect(engine.openedAssetIds, <String>['winner']);
-  });
+      expect(find.textContaining('Audio playback failed:'), findsNothing);
+      expect(find.text('Pause'), findsOneWidget);
+      expect(engine.openedAssetIds, <String>['winner']);
+    },
+  );
 }
 
 const _topic = ContentItem(
@@ -93,10 +94,7 @@ final class _ControlledResolver {
   final List<Completer<Result<ResolvedAsset>>> pending =
       <Completer<Result<ResolvedAsset>>>[];
 
-  Future<Result<ResolvedAsset>> resolve(
-    ContentIdentity content,
-    int revision,
-  ) {
+  Future<Result<ResolvedAsset>> resolve(ContentIdentity content, int revision) {
     final completer = Completer<Result<ResolvedAsset>>();
     pending.add(completer);
     return completer.future;
@@ -125,7 +123,8 @@ final class _Session implements AudioPlaybackSession {
   Duration? get initialDuration => const Duration(seconds: 10);
 
   @override
-  Stream<AudioPlaybackEvent> get events => const Stream<AudioPlaybackEvent>.empty();
+  Stream<AudioPlaybackEvent> get events =>
+      const Stream<AudioPlaybackEvent>.empty();
 
   @override
   Future<Result<void>> play() async => const Success<void>(null);

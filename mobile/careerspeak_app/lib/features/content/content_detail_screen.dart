@@ -37,10 +37,7 @@ class ContentDetailScreen extends ConsumerWidget {
         );
         final localizedHint = localized.asData?.value?.hint;
 
-        return ContentDetailPanel(
-          item: value,
-          localizedHint: localizedHint,
-        );
+        return ContentDetailPanel(item: value, localizedHint: localizedHint);
       },
     );
   }
