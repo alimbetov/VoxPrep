@@ -124,7 +124,9 @@ void main() {
 
       final database = CareerSpeakDatabase(NativeDatabase.memory());
       final credentialStore = _MemoryCredentialStore();
-      await credentialStore.writeInstallationId(InstallationId(_installationId));
+      await credentialStore.writeInstallationId(
+        InstallationId(_installationId),
+      );
       final manifestGate = Completer<void>();
       final backend = _LearnerApiFixture(rootManifestGate: manifestGate);
       final client = MockClient(backend.handle);
@@ -173,11 +175,7 @@ void main() {
       await _pumpUntil(tester, find.text('Dependency Injection'));
       expect(backend.packManifestCalls, 1);
       expect(backend.contentPayloadCalls, 1);
-      await _captureScreenshot(
-        tester,
-        screenshotKey,
-        '02-home-after-sync.png',
-      );
+      await _captureScreenshot(tester, screenshotKey, '02-home-after-sync.png');
 
       final learnDestination = find.descendant(
         of: find.byType(NavigationBar),
@@ -315,11 +313,7 @@ Future<void> _pumpUntilCondition(
     );
   }
 
-  expect(
-    condition(),
-    isTrue,
-    reason: 'Timed out waiting for $description.',
-  );
+  expect(condition(), isTrue, reason: 'Timed out waiting for $description.');
 }
 
 Future<void> _captureScreenshot(
@@ -328,9 +322,7 @@ Future<void> _captureScreenshot(
   String fileName,
 ) async {
   await tester.pump();
-  final boundary = tester.renderObject<RenderRepaintBoundary>(
-    find.byKey(key),
-  );
+  final boundary = tester.renderObject<RenderRepaintBoundary>(find.byKey(key));
   final image = await boundary.toImage(pixelRatio: 1);
   final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
   if (byteData == null) {
