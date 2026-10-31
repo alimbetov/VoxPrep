@@ -109,7 +109,10 @@ void main() {
           .getSingle();
       expect(root.currentContentVersion, 108);
       expect(root.currentManifestChecksum, _root);
-      expect(root.updatedAt, now.add(const Duration(minutes: 1)));
+      expect(
+        root.updatedAt.millisecondsSinceEpoch,
+        now.add(const Duration(minutes: 1)).millisecondsSinceEpoch,
+      );
     },
   );
 }
