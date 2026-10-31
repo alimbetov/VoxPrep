@@ -51,7 +51,7 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
       await _createPublicationMembershipTables();
       await _createCatalogueRevisionCache();
     },
-    onUpgrade: (migrator, from, _) async {
+    onUpgrade: (migrator, from, to) async {
       if (from < 2) {
         await migrator.createTable(syncRuns);
         await migrator.createTable(syncPackUpdates);
@@ -169,10 +169,10 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
         await migrator.createTable(practiceTestRevisionReads);
         await migrator.createTable(practiceTestQuestionRefs);
       }
-      if (from < 9) {
+      if (from < 9 && to >= 9) {
         await _createPublicationMembershipTables();
       }
-      if (from < 10) {
+      if (from < 10 && to >= 10) {
         await _createCatalogueRevisionCache();
       }
     },
