@@ -57,31 +57,34 @@ void main() {
     expect(resolved.explanation, 'Точное объяснение');
   });
 
-  test('superseded exact locale is ignored and language fallback wins', () async {
-    await _seedLocalization(
-      database,
-      locale: 'ru',
-      title: 'Текущий русский заголовок',
-    );
-    await _seedLocalization(
-      database,
-      locale: 'ru-KZ',
-      state: 'SUPERSEDED',
-      title: 'Устаревший точный заголовок',
-    );
+  test(
+    'superseded exact locale is ignored and language fallback wins',
+    () async {
+      await _seedLocalization(
+        database,
+        locale: 'ru',
+        title: 'Текущий русский заголовок',
+      );
+      await _seedLocalization(
+        database,
+        locale: 'ru-KZ',
+        state: 'SUPERSEDED',
+        title: 'Устаревший точный заголовок',
+      );
 
-    final resolved = (await repository.resolve(
-      identity: _identity,
-      contentRevision: 1,
-      requestedLocale: 'ru-KZ',
-    )).getOrThrow();
+      final resolved = (await repository.resolve(
+        identity: _identity,
+        contentRevision: 1,
+        requestedLocale: 'ru-KZ',
+      )).getOrThrow();
 
-    expect(resolved, isNotNull);
-    expect(resolved!.resolvedLocale, 'ru');
-    expect(resolved.fallbackKind, LocaleFallbackKind.language);
-    expect(resolved.matchedLocalizationLocales, <String>['ru']);
-    expect(resolved.title, 'Текущий русский заголовок');
-  });
+      expect(resolved, isNotNull);
+      expect(resolved!.resolvedLocale, 'ru');
+      expect(resolved.fallbackKind, LocaleFallbackKind.language);
+      expect(resolved.matchedLocalizationLocales, <String>['ru']);
+      expect(resolved.title, 'Текущий русский заголовок');
+    },
+  );
 
   test('missing locale packs fall back to canonical English offline', () async {
     final resolved = (await repository.resolve(
@@ -174,16 +177,19 @@ void main() {
     );
   });
 
-  test('invalid requested locale fails before reading localization rows', () async {
-    final result = await repository.resolve(
-      identity: _identity,
-      contentRevision: 1,
-      requestedLocale: 'ru_KZ',
-    );
+  test(
+    'invalid requested locale fails before reading localization rows',
+    () async {
+      final result = await repository.resolve(
+        identity: _identity,
+        contentRevision: 1,
+        requestedLocale: 'ru_KZ',
+      );
 
-    expect(result, isA<FailureResult>());
-    expect((result as FailureResult).failure.code, 'LOCALE_INVALID');
-  });
+      expect(result, isA<FailureResult>());
+      expect((result as FailureResult).failure.code, 'LOCALE_INVALID');
+    },
+  );
 }
 
 Future<void> _seedCanonical(CareerSpeakDatabase database) async {
