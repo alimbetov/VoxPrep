@@ -82,30 +82,33 @@ void main() {
     expect(access.assetIds.length, 2);
   });
 
-  test('rejects redirects instead of leaving the signed HTTPS origin', () async {
-    final source = HttpAssetByteSource(
-      client: MockClient(
-        (request) async => http.Response(
-          '',
-          302,
-          headers: <String, String>{
-            'location': 'http://untrusted.example.test/asset-a',
-          },
+  test(
+    'rejects redirects instead of leaving the signed HTTPS origin',
+    () async {
+      final source = HttpAssetByteSource(
+        client: MockClient(
+          (request) async => http.Response(
+            '',
+            302,
+            headers: <String, String>{
+              'location': 'http://untrusted.example.test/asset-a',
+            },
+          ),
         ),
-      ),
-      accessGateway: _AccessGateway([
-        Uri.parse('https://media.example.test/signed/a?signature=one'),
-      ]),
-    );
+        accessGateway: _AccessGateway([
+          Uri.parse('https://media.example.test/signed/a?signature=one'),
+        ]),
+      );
 
-    final result = await source.open(_asset(size: 3));
+      final result = await source.open(_asset(size: 3));
 
-    expect(result, isA<FailureResult<AssetByteStream>>());
-    expect(
-      (result as FailureResult<AssetByteStream>).failure.code,
-      'ASSET_DOWNLOAD_REJECTED',
-    );
-  });
+      expect(result, isA<FailureResult<AssetByteStream>>());
+      expect(
+        (result as FailureResult<AssetByteStream>).failure.code,
+        'ASSET_DOWNLOAD_REJECTED',
+      );
+    },
+  );
 
   test('maps temporary media-origin failure to retryable failure', () async {
     final source = HttpAssetByteSource(
