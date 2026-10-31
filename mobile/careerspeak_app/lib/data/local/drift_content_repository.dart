@@ -9,6 +9,7 @@ import '../../application/query/page.dart';
 import '../../application/result/result.dart';
 import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
+import 'content_type_storage.dart';
 import 'database/careerspeak_database.dart';
 
 final class DriftContentRepository implements ContentRepository {
@@ -67,7 +68,7 @@ final class DriftContentRepository implements ContentRepository {
             _identitySql,
             variables: <Variable<Object>>[
               Variable<String>(identity.code),
-              Variable<String>(identity.type.name),
+              Variable<String>(contentTypeToStorage(identity.type)),
             ],
             readsFrom: <ResultSetImplementation>{
               _database.localContentRecords,
@@ -131,7 +132,7 @@ final class DriftContentRepository implements ContentRepository {
       );
       variables.addAll(
         orderedTypes.map<Variable<Object>>(
-          (type) => Variable<String>(type.name),
+          (type) => Variable<String>(contentTypeToStorage(type)),
         ),
       );
     }
@@ -283,12 +284,11 @@ final class DriftContentRepository implements ContentRepository {
   }
 
   ContentType _contentType(String value) {
-    for (final type in ContentType.values) {
-      if (type.name == value) {
-        return type;
-      }
+    try {
+      return contentTypeFromStorage(value);
+    } on FormatException {
+      throw _ContentReadInvariant('unsupported stored content type: $value');
     }
-    throw _ContentReadInvariant('unsupported stored content type: $value');
   }
 
   ApplicationFailure _invalidReadModel(_ContentReadInvariant error) {
