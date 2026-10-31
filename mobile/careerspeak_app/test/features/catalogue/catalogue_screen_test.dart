@@ -6,6 +6,7 @@ import 'package:careerspeak_app/application/content_delivery/vertical_catalogue_
 import 'package:careerspeak_app/application/ports/universal_catalogue_repository.dart';
 import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
+import 'package:careerspeak_app/features/catalogue/catalogue_home_screen.dart';
 import 'package:careerspeak_app/features/catalogue/catalogue_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,7 +18,7 @@ const _hash =
 void main() {
   for (final mode in VerticalCataloguePresentationMode.values) {
     testWidgets(
-      'renders backend-owned ${mode.wireName} without vertical branching',
+      'production catalogue home renders backend-owned ${mode.wireName}',
       (tester) async {
         final snapshot = _snapshot(mode);
         await tester.pumpWidget(
@@ -27,7 +28,9 @@ void main() {
                 _FakeRepository(snapshot),
               ),
             ],
-            child: const MaterialApp(home: Scaffold(body: CatalogueScreen())),
+            child: const MaterialApp(
+              home: Scaffold(body: CatalogueHomeScreen()),
+            ),
           ),
         );
         await tester.pumpAndSettle();
@@ -68,6 +71,153 @@ void main() {
     expect(find.text('Future Goal'), findsOneWidget);
     expect(find.text('JAVA_INTERVIEW'), findsNothing);
     expect(find.text('MEDICAL_ENGLISH'), findsNothing);
+  });
+
+  testWidgets('goal drill-down renders only owned active tracks', (tester) async {
+    final snapshot = _snapshot(VerticalCataloguePresentationMode.shelves);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          universalCatalogueRepositoryProvider.overrideWithValue(
+            _FakeRepository(snapshot),
+          ),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: CatalogueGoalScreen(
+              verticalCode: 'FUTURE_VERTICAL_2030',
+              goalCode: 'GOAL_ALPHA',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Future Goal'), findsOneWidget);
+    expect(find.text('Future Track'), findsOneWidget);
+    expect(find.text('B2'), findsOneWidget);
+  });
+
+  testWidgets('track drill-down renders collection summary', (tester) async {
+    final snapshot = _snapshot(VerticalCataloguePresentationMode.shelves);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          universalCatalogueRepositoryProvider.overrideWithValue(
+            _FakeRepository(snapshot),
+          ),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: CatalogueTrackScreen(
+              verticalCode: 'FUTURE_VERTICAL_2030',
+              goalCode: 'GOAL_ALPHA',
+              trackCode: 'TRACK_ALPHA',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Future Track'), findsOneWidget);
+    expect(find.text('Future Collection'), findsOneWidget);
+    expect(find.text('1 items'), findsOneWidget);
+  });
+
+  testWidgets('collection preserves ordered learning sequence', (tester) async {
+    final snapshot = _snapshot(VerticalCataloguePresentationMode.shelves);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          universalCatalogueRepositoryProvider.overrideWithValue(
+            _FakeRepository(snapshot),
+          ),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: CatalogueCollectionScreen(
+              verticalCode: 'FUTURE_VERTICAL_2030',
+              trackCode: 'TRACK_ALPHA',
+              collectionCode: 'COLLECTION_ALPHA',
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Future Collection'), findsOneWidget);
+    expect(find.text('Learning sequence'), findsOneWidget);
+    expect(find.text('CONTENT_ALPHA'), findsOneWidget);
+    expect(find.text('Step 1'), findsOneWidget);
+  });
+
+  testWidgets('unknown hierarchy route fails closed as unavailable', (
+    tester,
+  ) async {
+    final snapshot = _snapshot(VerticalCataloguePresentationMode.shelves);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          universalCatalogueRepositoryProvider.overrideWithValue(
+            _FakeRepository(snapshot),
+          ),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(
+            body: CatalogueVerticalScreen(verticalCode: 'UNKNOWN_VERTICAL'),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Learning vertical is unavailable.'), findsOneWidget);
+  });
+
+  testWidgets('missing CURRENT catalogue renders an explicit empty state', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          universalCatalogueRepositoryProvider.overrideWithValue(
+            const _EmptyRepository(),
+          ),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: CatalogueHomeScreen()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('No published learning catalogue is available yet.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('repository failure renders an explicit catalogue error', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          universalCatalogueRepositoryProvider.overrideWithValue(
+            const _FailureRepository(),
+          ),
+        ],
+        child: const MaterialApp(
+          home: Scaffold(body: CatalogueHomeScreen()),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Unable to load catalogue.'), findsOneWidget);
   });
 
   test('route helpers preserve arbitrary backend codes', () {
@@ -168,4 +318,25 @@ final class _FakeRepository implements UniversalCatalogueRepository {
   @override
   Future<Result<CurrentUniversalCatalogueSnapshot?>> readCurrent() async =>
       Success<CurrentUniversalCatalogueSnapshot?>(snapshot);
+}
+
+final class _EmptyRepository implements UniversalCatalogueRepository {
+  const _EmptyRepository();
+
+  @override
+  Future<Result<CurrentUniversalCatalogueSnapshot?>> readCurrent() async =>
+      const Success<CurrentUniversalCatalogueSnapshot?>(null);
+}
+
+final class _FailureRepository implements UniversalCatalogueRepository {
+  const _FailureRepository();
+
+  @override
+  Future<Result<CurrentUniversalCatalogueSnapshot?>> readCurrent() async =>
+      const FailureResult<CurrentUniversalCatalogueSnapshot?>(
+        ApplicationFailure(
+          code: 'CATALOGUE_TEST_FAILURE',
+          message: 'synthetic catalogue failure',
+        ),
+      );
 }
