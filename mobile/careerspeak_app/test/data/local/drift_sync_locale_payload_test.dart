@@ -118,10 +118,7 @@ final class _ManifestGateway implements ContentManifestGateway {
   ) async => Success(pack);
 
   @override
-  Future<Result<RootManifestFetch>> fetchRootManifest({
-    required String translationLocale,
-    String? etag,
-  }) async {
+  Future<Result<RootManifestFetch>> fetchRootManifest({String? etag}) async {
     return const FailureResult(
       ApplicationFailure(code: 'NOT_USED', message: 'Not used.'),
     );
