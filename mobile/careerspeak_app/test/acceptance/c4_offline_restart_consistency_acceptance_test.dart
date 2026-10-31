@@ -109,7 +109,8 @@ void main() {
         expect(
           reopenedPage.items.where((item) => item.revision == 2),
           isEmpty,
-          reason: 'staged v109 must not become visible merely because the app restarted',
+          reason:
+              'staged v109 must not become visible merely because the app restarted',
         );
 
         final catalogueRepository = DriftCatalogueSnapshotRepository(reopened);
@@ -179,9 +180,8 @@ void main() {
         final reopened = CareerSpeakDatabase(NativeDatabase(file));
         database = reopened;
         final repository = DriftContentRepository(reopened);
-        final page =
-            (await repository.watchContent(const ContentQuery()).first)
-                .getOrThrow();
+        final page = (await repository.watchContent(const ContentQuery()).first)
+            .getOrThrow();
 
         expect(page.items, hasLength(1));
         expect(page.items.single.revision, 1);

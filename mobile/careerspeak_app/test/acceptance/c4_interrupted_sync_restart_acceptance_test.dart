@@ -21,7 +21,9 @@ void main() {
   test(
     'C4.8 interrupted durable sync reopens on the same immutable target without changing CURRENT',
     () async {
-      final directory = await Directory.systemTemp.createTemp('c4_sync_restart_');
+      final directory = await Directory.systemTemp.createTemp(
+        'c4_sync_restart_',
+      );
       final file = File('${directory.path}/careerspeak.sqlite');
       final now = DateTime.utc(2026, 10, 31, 18);
 
@@ -114,9 +116,9 @@ void main() {
         expect(run.state, SyncRunState.planning.storageCode);
         expect(run.resyncRequested, isTrue);
 
-        final current = await reopened.select(
-          reopened.contentManifestStates,
-        ).getSingle();
+        final current = await reopened
+            .select(reopened.contentManifestStates)
+            .getSingle();
         expect(current.currentContentVersion, 108);
         expect(current.currentManifestChecksum, _root108);
       } finally {

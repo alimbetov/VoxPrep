@@ -107,22 +107,29 @@ void main() {
     final executor = FakeExecutor();
     final stager = FakeSnapshotStager();
 
-    final result = await _coordinator(
-      journal,
-      gateway,
-      executor,
-      snapshotStager: stager,
-    ).synchronize(
-      runId: 'run-repair',
-      trigger: SyncTrigger.startup,
-      translationLocale: 'kk',
-    );
+    final result =
+        await _coordinator(
+          journal,
+          gateway,
+          executor,
+          snapshotStager: stager,
+        ).synchronize(
+          runId: 'run-repair',
+          trigger: SyncTrigger.startup,
+          translationLocale: 'kk',
+        );
 
     expect(result, isA<Success<ContentSyncOutcome>>());
-    expect((result as Success<ContentSyncOutcome>).value, isA<ContentSyncNoOp>());
+    expect(
+      (result as Success<ContentSyncOutcome>).value,
+      isA<ContentSyncNoOp>(),
+    );
     expect(executor.calls, 0);
     expect(stager.targets, hasLength(1));
-    expect(stager.targets.single.practiceTests.single.identityKey, exactTest.identityKey);
+    expect(
+      stager.targets.single.practiceTests.single.identityKey,
+      exactTest.identityKey,
+    );
     expect(journal.states, <SyncRunState>[
       SyncRunState.checkingLocal,
       SyncRunState.checkingRemote,
@@ -163,11 +170,12 @@ void main() {
       ),
     );
 
-    final result = await _coordinator(journal, gateway, FakeExecutor()).synchronize(
-      runId: 'run-missing-stager',
-      trigger: SyncTrigger.startup,
-      translationLocale: 'kk',
-    );
+    final result = await _coordinator(journal, gateway, FakeExecutor())
+        .synchronize(
+          runId: 'run-missing-stager',
+          trigger: SyncTrigger.startup,
+          translationLocale: 'kk',
+        );
 
     expect(result, isA<FailureResult<ContentSyncOutcome>>());
     expect(

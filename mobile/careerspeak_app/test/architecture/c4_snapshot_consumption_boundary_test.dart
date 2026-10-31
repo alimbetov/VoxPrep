@@ -13,7 +13,9 @@ void main() {
   });
 
   test('production sync stages exact tests and catalogues before commit', () {
-    final source = File('lib/app/content_sync_providers.dart').readAsStringSync();
+    final source = File(
+      'lib/app/content_sync_providers.dart',
+    ).readAsStringSync();
 
     expect(source, contains('DriftPublicationSnapshotStager'));
     expect(source, contains('assessmentRevisionLoaderProvider'));
@@ -22,8 +24,9 @@ void main() {
   });
 
   test('production catalogue reads are CURRENT snapshot fenced', () {
-    final source = File('lib/app/catalogue_payload_providers.dart')
-        .readAsStringSync();
+    final source = File(
+      'lib/app/catalogue_payload_providers.dart',
+    ).readAsStringSync();
 
     expect(source, contains('HttpCataloguePayloadGateway'));
     expect(source, contains('DriftCatalogueSnapshotRepository'));
