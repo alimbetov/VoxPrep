@@ -77,6 +77,17 @@ jobs:
       - name: Enforce 90 percent line coverage
         run: dart run tool/coverage_gate.dart 90
 
+      - name: Publish coverage evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-coverage-${{ github.sha }}
+          path: |
+            mobile/careerspeak_app/coverage/lcov.info
+            mobile/careerspeak_app/coverage/coverage-ledger.md
+          if-no-files-found: warn
+          retention-days: 14
+
   verification:
     name: verification
     needs: quality
