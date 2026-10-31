@@ -72,10 +72,16 @@ const goldenPracticeTest = PracticeTest(
 );
 
 CurrentUniversalCatalogueSnapshot goldenCatalogueSnapshot() {
+  final contentRef = ContentRevisionRef(
+    contentCode: 'JAVA_CONCURRENCY_GOLDEN',
+    contentType: ContentType.topic,
+    revision: 3,
+    checksum: goldenHash,
+  );
   return CurrentUniversalCatalogueSnapshot(
     contentVersion: 42,
     graph: UniversalCatalogueGraph(
-      sections: const [
+      sections: [
         VerticalSectionProjection(
           code: 'ENGINEERING',
           title: 'Software Engineering',
@@ -84,7 +90,7 @@ CurrentUniversalCatalogueSnapshot goldenCatalogueSnapshot() {
           active: true,
         ),
       ],
-      verticals: const [
+      verticals: [
         LearningVerticalProjection(
           code: 'JAVA_INTERVIEW',
           sectionCode: 'ENGINEERING',
@@ -116,7 +122,7 @@ CurrentUniversalCatalogueSnapshot goldenCatalogueSnapshot() {
           active: true,
         ),
       ],
-      goals: const [
+      goals: [
         LearningGoalProjection(
           code: 'GOAL_JAVA',
           verticalCode: 'JAVA_INTERVIEW',
@@ -126,7 +132,7 @@ CurrentUniversalCatalogueSnapshot goldenCatalogueSnapshot() {
           active: true,
         ),
       ],
-      tracks: const [
+      tracks: [
         LearningTrackProjection(
           code: 'TRACK_JAVA_B2',
           verticalCode: 'JAVA_INTERVIEW',
@@ -138,7 +144,7 @@ CurrentUniversalCatalogueSnapshot goldenCatalogueSnapshot() {
           active: true,
         ),
       ],
-      collections: const [
+      collections: [
         LearningCollectionProjection(
           code: 'COLLECTION_JAVA_CORE',
           verticalCode: 'JAVA_INTERVIEW',
@@ -150,17 +156,12 @@ CurrentUniversalCatalogueSnapshot goldenCatalogueSnapshot() {
           members: [
             LearningCollectionMember.content(
               position: 0,
-              content: ContentRevisionRef(
-                contentCode: 'JAVA_CONCURRENCY_GOLDEN',
-                contentType: ContentType.topic,
-                revision: 3,
-                checksum: goldenHash,
-              ),
+              content: contentRef,
             ),
           ],
         ),
       ],
-      presentation: const VerticalCataloguePresentation(
+      presentation: VerticalCataloguePresentation(
         mode: VerticalCataloguePresentationMode.grid,
         showFeatured: false,
         showSeeAll: true,
