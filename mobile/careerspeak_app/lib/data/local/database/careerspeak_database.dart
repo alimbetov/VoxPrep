@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'asset_cache_retention_schema_v10.dart';
 import 'careerspeak_assessment_tables.dart';
 import 'careerspeak_content_read_tables.dart';
 import 'careerspeak_locale_tables.dart';
@@ -43,13 +44,14 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
     : super(executor ?? driftDatabase(name: 'careerspeak'));
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) async {
       await migrator.createAll();
       await _createUniversalCatalogueSchemaV9();
+      await _createAssetCacheRetentionSchemaV10();
     },
     onUpgrade: (migrator, from, to) async {
       if (from < 2) {
@@ -172,6 +174,9 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
       if (from < 9 && to >= 9) {
         await _createUniversalCatalogueSchemaV9();
       }
+      if (from < 10 && to >= 10) {
+        await _createAssetCacheRetentionSchemaV10();
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -180,6 +185,12 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
 
   Future<void> _createUniversalCatalogueSchemaV9() async {
     for (final statement in universalCatalogueSchemaV9Statements) {
+      await customStatement(statement);
+    }
+  }
+
+  Future<void> _createAssetCacheRetentionSchemaV10() async {
+    for (final statement in assetCacheRetentionSchemaV10Statements) {
       await customStatement(statement);
     }
   }
