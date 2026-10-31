@@ -2,6 +2,7 @@
 
 **Status:** ACTIVE CONTRACT IMPLEMENTATION  
 **Baseline:** C1 accepted at `4620142f28de20bc0bf84b686d879fd082df7e95`  
+**C2 contract source baseline:** `f9d51defbdf7e1ff7027b32a72d0f2834d8a617c`  
 **Normative component contract:** `contracts/c2-content-catalog-v1.yaml`
 
 ## 1. Scope
