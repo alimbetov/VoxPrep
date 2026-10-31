@@ -30,7 +30,7 @@ jobs:
       - name: Analyze
         working-directory: mobile/careerspeak_app
         run: flutter analyze
-      - name: C4 snapshot consumption and restart qualification
+      - name: C4 snapshot consumption restart and adversarial qualification
         working-directory: mobile/careerspeak_app
         run: |
           flutter test test/architecture/c4_snapshot_consumption_boundary_test.dart
@@ -41,6 +41,7 @@ jobs:
           flutter test test/data/local/drift_tombstone_publication_interaction_test.dart
           flutter test test/acceptance/c4_offline_restart_consistency_acceptance_test.dart
           flutter test test/acceptance/c4_interrupted_sync_restart_acceptance_test.dart
+          flutter test test/acceptance/c4_adversarial_atomicity_acceptance_test.dart
       - name: Full regression
         working-directory: mobile/careerspeak_app
         run: flutter test
