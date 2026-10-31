@@ -11,6 +11,7 @@ import '../data/local/drift_sync_journal.dart';
 import '../data/local/drift_sync_plan_executor.dart';
 import 'app_preferences_providers.dart';
 import 'assessment_providers.dart';
+import 'catalogue_payload_providers.dart';
 import 'content_manifest_providers.dart';
 import 'content_payload_providers.dart';
 import 'learner_state_providers.dart';
@@ -39,6 +40,7 @@ final publicationSnapshotStagerProvider = Provider<PublicationSnapshotStager>((
   return DriftPublicationSnapshotStager(
     ref.watch(careerSpeakDatabaseProvider),
     ref.watch(assessmentRevisionLoaderProvider),
+    ref.watch(cataloguePayloadGatewayProvider),
   );
 });
 
