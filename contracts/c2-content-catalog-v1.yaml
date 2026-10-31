@@ -1,0 +1,473 @@
+openapi: 3.1.0
+info:
+  title: CareerSpeak C2 Content and Catalogue Components
+  version: 0.1.0
+  description: >-
+    Normative C2 component contract. It freezes typed immutable learner-content
+    bodies and the small backend-owned product catalogue projections before C4
+    wires them into learner endpoints and publication snapshots.
+paths: {}
+components:
+  schemas:
+    BusinessCode:
+      type: string
+      minLength: 1
+      pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$'
+
+    StableCode:
+      type: string
+      minLength: 1
+      pattern: '^[A-Z0-9][A-Z0-9._-]*$'
+
+    LocaleCode:
+      type: string
+      pattern: '^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$'
+
+    Sha256:
+      type: string
+      pattern: '^[0-9a-f]{64}$'
+
+    PositiveRevision:
+      type: integer
+      minimum: 1
+
+    ContentType:
+      type: string
+      enum:
+        - vocabulary
+        - interview
+        - topic
+        - phrase
+        - shadowing
+
+    ContentBody:
+      oneOf:
+        - $ref: '#/components/schemas/VocabularyBody'
+        - $ref: '#/components/schemas/InterviewBody'
+        - $ref: '#/components/schemas/TopicBody'
+        - $ref: '#/components/schemas/PhraseBody'
+        - $ref: '#/components/schemas/ShadowingBody'
+      discriminator:
+        propertyName: kind
+        mapping:
+          vocabulary: '#/components/schemas/VocabularyBody'
+          interview: '#/components/schemas/InterviewBody'
+          topic: '#/components/schemas/TopicBody'
+          phrase: '#/components/schemas/PhraseBody'
+          shadowing: '#/components/schemas/ShadowingBody'
+
+    VocabularyBody:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - term
+        - definition
+        - examples
+      properties:
+        kind:
+          const: vocabulary
+        term:
+          type: string
+          minLength: 1
+        definition:
+          type: string
+          minLength: 1
+        partOfSpeech:
+          type:
+            - string
+            - 'null'
+          minLength: 1
+        examples:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            minLength: 1
+
+    InterviewBody:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - prompt
+        - modelAnswer
+        - keyPoints
+      properties:
+        kind:
+          const: interview
+        prompt:
+          type: string
+          minLength: 1
+        modelAnswer:
+          type: string
+          minLength: 1
+        keyPoints:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            minLength: 1
+
+    TopicSection:
+      type: object
+      additionalProperties: false
+      required:
+        - heading
+        - text
+      properties:
+        heading:
+          type: string
+          minLength: 1
+        text:
+          type: string
+          minLength: 1
+
+    TopicBody:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - sections
+      properties:
+        kind:
+          const: topic
+        sections:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/TopicSection'
+
+    PhraseBody:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - phrase
+        - usage
+        - examples
+      properties:
+        kind:
+          const: phrase
+        phrase:
+          type: string
+          minLength: 1
+        usage:
+          type: string
+          minLength: 1
+        examples:
+          type: array
+          minItems: 1
+          items:
+            type: string
+            minLength: 1
+
+    ShadowingSegment:
+      type: object
+      additionalProperties: false
+      required:
+        - order
+        - text
+      properties:
+        order:
+          type: integer
+          minimum: 0
+        text:
+          type: string
+          minLength: 1
+        startMs:
+          type:
+            - integer
+            - 'null'
+          minimum: 0
+        endMs:
+          type:
+            - integer
+            - 'null'
+          minimum: 1
+
+    ShadowingBody:
+      type: object
+      additionalProperties: false
+      required:
+        - kind
+        - transcript
+        - segments
+      properties:
+        kind:
+          const: shadowing
+        transcript:
+          type: string
+          minLength: 1
+        segments:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ShadowingSegment'
+
+    TypedContentPayload:
+      type: object
+      additionalProperties: false
+      required:
+        - contentCode
+        - contentType
+        - revision
+        - checksum
+        - title
+        - subtitle
+        - description
+        - categoryCode
+        - categoryLabel
+        - levelCode
+        - levelLabel
+        - minutes
+        - hasAudio
+        - skillCodes
+        - body
+      properties:
+        contentCode:
+          $ref: '#/components/schemas/BusinessCode'
+        contentType:
+          $ref: '#/components/schemas/ContentType'
+        revision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+        title:
+          type: string
+          minLength: 1
+        subtitle:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        categoryCode:
+          $ref: '#/components/schemas/StableCode'
+        categoryLabel:
+          type: string
+          minLength: 1
+        levelCode:
+          $ref: '#/components/schemas/StableCode'
+        levelLabel:
+          type: string
+          minLength: 1
+        minutes:
+          type: integer
+          minimum: 1
+        hasAudio:
+          type: boolean
+        skillCodes:
+          type: array
+          uniqueItems: true
+          items:
+            $ref: '#/components/schemas/StableCode'
+        body:
+          $ref: '#/components/schemas/ContentBody'
+
+    ContentRevisionRef:
+      type: object
+      additionalProperties: false
+      required:
+        - contentCode
+        - contentType
+        - revision
+        - checksum
+      properties:
+        contentCode:
+          $ref: '#/components/schemas/BusinessCode'
+        contentType:
+          $ref: '#/components/schemas/ContentType'
+        revision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+
+    PracticeTestRevisionRef:
+      type: object
+      additionalProperties: false
+      description: >-
+        C2 freezes only exact collection membership identity. Assessment body and
+        scoring semantics remain owned by C3.
+      required:
+        - practiceTestCode
+        - revision
+        - checksum
+      properties:
+        practiceTestCode:
+          $ref: '#/components/schemas/BusinessCode'
+        revision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+
+    LearningGoal:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - title
+        - description
+        - sortOrder
+        - active
+      properties:
+        code:
+          $ref: '#/components/schemas/StableCode'
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+          minimum: 0
+        active:
+          type: boolean
+
+    LearningTrack:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - goalCode
+        - title
+        - description
+        - levelCode
+        - sortOrder
+        - active
+      properties:
+        code:
+          $ref: '#/components/schemas/StableCode'
+        goalCode:
+          $ref: '#/components/schemas/StableCode'
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        levelCode:
+          $ref: '#/components/schemas/StableCode'
+        careerTrackCode:
+          oneOf:
+            - $ref: '#/components/schemas/StableCode'
+            - type: 'null'
+        sortOrder:
+          type: integer
+          minimum: 0
+        active:
+          type: boolean
+
+    LearningCollection:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - trackCode
+        - title
+        - description
+        - sortOrder
+        - active
+        - contentRefs
+        - practiceTestRefs
+      properties:
+        code:
+          $ref: '#/components/schemas/StableCode'
+        trackCode:
+          $ref: '#/components/schemas/StableCode'
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+          minimum: 0
+        active:
+          type: boolean
+        contentRefs:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContentRevisionRef'
+        practiceTestRefs:
+          type: array
+          items:
+            $ref: '#/components/schemas/PracticeTestRevisionRef'
+
+    Category:
+      $ref: '#/components/schemas/TaxonomyEntry'
+
+    Level:
+      $ref: '#/components/schemas/TaxonomyEntry'
+
+    Skill:
+      $ref: '#/components/schemas/TaxonomyEntry'
+
+    TaxonomyEntry:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - label
+        - sortOrder
+        - active
+      properties:
+        code:
+          $ref: '#/components/schemas/StableCode'
+        label:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+          minimum: 0
+        active:
+          type: boolean
+
+    SupportedLocale:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - label
+        - sortOrder
+        - active
+      properties:
+        code:
+          $ref: '#/components/schemas/LocaleCode'
+        label:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+          minimum: 0
+        active:
+          type: boolean
+
+    TtsVoice:
+      type: object
+      additionalProperties: false
+      description: Learner-facing voice capability only; Worker model internals are excluded.
+      required:
+        - code
+        - locale
+        - accentCode
+        - label
+        - sortOrder
+        - active
+      properties:
+        code:
+          $ref: '#/components/schemas/StableCode'
+        locale:
+          $ref: '#/components/schemas/LocaleCode'
+        accentCode:
+          $ref: '#/components/schemas/StableCode'
+        label:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+          minimum: 0
+        active:
+          type: boolean
