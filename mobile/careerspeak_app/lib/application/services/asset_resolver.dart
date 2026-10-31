@@ -45,6 +45,19 @@ final class AssetResolver {
     return _resolve(await _catalog.findCurrentById(assetId), policy);
   }
 
+  /// Resolves a published image asset and rejects a bad publication binding
+  /// before any network transfer is attempted.
+  Future<Result<ResolvedAsset>> resolveImage(
+    String assetId, {
+    AssetResolutionPolicy policy = AssetResolutionPolicy.localOnly,
+  }) async {
+    return _resolve(
+      await _catalog.findCurrentById(assetId),
+      policy,
+      expectedMediaPrefix: 'image/',
+    );
+  }
+
   Future<Result<ResolvedAsset>> resolveContent({
     required ContentIdentity content,
     required int revision,
@@ -61,10 +74,33 @@ final class AssetResolver {
     return _resolve(descriptor, policy);
   }
 
+  /// Resolves a published content audio binding and rejects non-audio media
+  /// before opening the remote byte source.
+  Future<Result<ResolvedAsset>> resolveAudioContent({
+    required ContentIdentity content,
+    required int revision,
+    required String role,
+    String variant = 'canonical',
+    AssetResolutionPolicy policy = AssetResolutionPolicy.localOnly,
+  }) async {
+    final descriptor = await _catalog.findCurrentForContent(
+      content: content,
+      revision: revision,
+      role: role,
+      variant: variant,
+    );
+    return _resolve(
+      descriptor,
+      policy,
+      expectedMediaPrefix: 'audio/',
+    );
+  }
+
   Future<Result<ResolvedAsset>> _resolve(
     Result<ManifestAssetDescriptor?> descriptor,
-    AssetResolutionPolicy policy,
-  ) async {
+    AssetResolutionPolicy policy, {
+    String? expectedMediaPrefix,
+  }) async {
     if (descriptor case FailureResult<ManifestAssetDescriptor?>(
       :final failure,
     )) {
@@ -76,6 +112,22 @@ final class AssetResolver {
         ApplicationFailure(
           code: 'ASSET_NOT_CURRENT',
           message: 'The asset binding is not available in current metadata.',
+        ),
+      );
+    }
+
+    final expected = expectedMediaPrefix?.toLowerCase();
+    if (expected != null &&
+        !asset.mediaType.toLowerCase().startsWith(expected)) {
+      return FailureResult(
+        ApplicationFailure(
+          code: 'ASSET_MEDIA_TYPE_MISMATCH',
+          message: 'The published asset has an unexpected media type.',
+          details: <String, Object?>{
+            'assetId': asset.assetId,
+            'expectedMediaPrefix': expected,
+            'actualMediaType': asset.mediaType,
+          },
         ),
       );
     }
