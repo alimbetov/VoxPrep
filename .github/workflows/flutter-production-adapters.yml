@@ -84,3 +84,12 @@ jobs:
 
       - name: Test
         run: flutter test
+
+      - name: Upload production E2E screenshots
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: careerspeak-production-e2e-${{ github.sha }}
+          path: mobile/careerspeak_app/build/acceptance_screenshots/*.png
+          if-no-files-found: error
+          retention-days: 14
