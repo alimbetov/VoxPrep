@@ -1,4 +1,6 @@
+import 'package:careerspeak_app/application/content_delivery/catalogue_payload.dart';
 import 'package:careerspeak_app/application/content_delivery/catalogue_revision_ref.dart';
+import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
 import 'package:careerspeak_app/application/content_delivery/content_payload.dart';
 import 'package:careerspeak_app/application/content_delivery/learning_vertical.dart';
 import 'package:careerspeak_app/application/content_delivery/product_catalog.dart';
@@ -13,6 +15,7 @@ import 'package:careerspeak_app/data/mock/demo_content_payload_gateway.dart';
 import 'package:careerspeak_app/data/mock/demo_learning_fixture.dart';
 import 'package:careerspeak_app/data/mock/demo_vertical_catalogue_fixture.dart';
 import 'package:careerspeak_app/data/remote/universal_catalogue_decoder_registry.dart';
+import 'package:careerspeak_app/domain/assessment.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -84,18 +87,20 @@ void main() {
     expect(root.practiceTests, hasLength(2));
     expect(root.catalogues, hasLength(6));
 
-    final pack = await manifestGateway.fetchPackManifest(root.packs.single);
-    expect(pack, isA<Success>());
+    final packResult = await manifestGateway.fetchPackManifest(root.packs.single);
+    expect(packResult, isA<Success<PackContentManifest>>());
+    final pack = (packResult as Success<PackContentManifest>).value;
 
     final contentGateway = DemoContentPayloadGateway(latency: Duration.zero);
+    final firstContent = pack.contents.first;
     final contentResult = await contentGateway.fetch(
       ContentPayloadRef(
-        identity: buildDemoPackManifest().contents.first.identity,
-        revision: buildDemoPackManifest().contents.first.revision,
-        checksum: buildDemoPackManifest().contents.first.checksum,
+        identity: firstContent.identity,
+        revision: firstContent.revision,
+        checksum: firstContent.checksum,
       ),
     );
-    expect(contentResult, isA<Success>());
+    expect(contentResult, isA<Success<ContentPayload>>());
 
     final assessmentGateway = DemoAssessmentPayloadGateway(latency: Duration.zero);
     final testRef = root.practiceTests.first;
@@ -104,13 +109,13 @@ void main() {
       revision: testRef.revision,
       checksum: testRef.checksum,
     );
-    expect(testResult, isA<Success>());
+    expect(testResult, isA<Success<PracticeTestRevision>>());
 
-    final testRevision = (testResult as Success).value as dynamic;
+    final testRevision = (testResult as Success<PracticeTestRevision>).value;
     final questionResult = await assessmentGateway.fetchQuestionRevision(
       testRevision.questionRefs.first.question,
     );
-    expect(questionResult, isA<Success>());
+    expect(questionResult, isA<Success<AssessmentQuestionRevision>>());
   });
 
   test('demo catalogue gateway serves all exact six-core revisions', () async {
@@ -121,7 +126,7 @@ void main() {
     );
     for (final payload in payloads.values) {
       final result = await gateway.fetch(payload.ref);
-      expect(result, isA<Success>());
+      expect(result, isA<Success<CataloguePayload>>());
     }
   });
 }
