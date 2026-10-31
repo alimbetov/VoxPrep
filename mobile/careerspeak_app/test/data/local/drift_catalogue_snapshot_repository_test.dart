@@ -28,7 +28,9 @@ void main() {
     repository = DriftCatalogueSnapshotRepository(database);
     final now = DateTime.utc(2026, 10, 31, 16);
 
-    await database.into(database.contentManifestStates).insert(
+    await database
+        .into(database.contentManifestStates)
+        .insert(
           ContentManifestStatesCompanion.insert(
             id: const Value(1),
             schemaVersion: 1,
@@ -64,33 +66,33 @@ void main() {
 
     expect(payload, isNotNull);
     expect(payload!.ref.revision, 1);
-    expect(
-      (payload.items.single as Map<String, dynamic>)['label'],
-      'Java v1',
-    );
+    expect((payload.items.single as Map<String, dynamic>)['label'], 'Java v1');
   });
 
-  test('root pointer switch exposes the next exact catalogue revision', () async {
-    await (database.update(database.contentManifestStates)
-          ..where((row) => row.id.equals(1)))
-        .write(
-          ContentManifestStatesCompanion(
-            currentContentVersion: const Value(109),
-            currentManifestChecksum: const Value(_root109),
-            updatedAt: Value(DateTime.utc(2026, 10, 31, 16, 1)),
-          ),
-        );
+  test(
+    'root pointer switch exposes the next exact catalogue revision',
+    () async {
+      await (database.update(
+        database.contentManifestStates,
+      )..where((row) => row.id.equals(1))).write(
+        ContentManifestStatesCompanion(
+          currentContentVersion: const Value(109),
+          currentManifestChecksum: const Value(_root109),
+          updatedAt: Value(DateTime.utc(2026, 10, 31, 16, 1)),
+        ),
+      );
 
-    final payload = (await repository.readCurrent(CatalogueKind.categories))
-        .getOrThrow();
+      final payload = (await repository.readCurrent(CatalogueKind.categories))
+          .getOrThrow();
 
-    expect(payload, isNotNull);
-    expect(payload!.ref.revision, 2);
-    expect(
-      (payload.items.single as Map<String, dynamic>)['label'],
-      'Java v2',
-    );
-  });
+      expect(payload, isNotNull);
+      expect(payload!.ref.revision, 2);
+      expect(
+        (payload.items.single as Map<String, dynamic>)['label'],
+        'Java v2',
+      );
+    },
+  );
 }
 
 Future<void> _seedCatalogue(

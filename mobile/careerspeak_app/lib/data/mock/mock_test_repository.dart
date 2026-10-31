@@ -20,8 +20,7 @@ class MockTestRepository implements PracticeTestRepository {
           options: ['ArrayList', 'HashSet', 'LinkedList', 'ArrayDeque'],
           correctIndex: 1,
           skill: 'Java Collections',
-          explanation:
-              'HashSet stores unique elements according to equals/hashCode semantics.',
+          explanation: 'HashSet stores unique elements according to equals/hashCode semantics.',
         ),
         PracticeQuestion(
           code: 'JAVA_Q_002',
@@ -34,8 +33,7 @@ class MockTestRepository implements PracticeTestRepository {
           ],
           correctIndex: 1,
           skill: 'Spring Core',
-          explanation:
-              'Dependency injection separates dependency construction from the object that consumes it.',
+          explanation: 'Dependency injection separates dependency construction from the object that consumes it.',
         ),
         PracticeQuestion(
           code: 'JAVA_Q_003',
@@ -43,8 +41,7 @@ class MockTestRepository implements PracticeTestRepository {
           options: ['HashMap', 'TreeMap', 'ConcurrentHashMap', 'WeakHashMap'],
           correctIndex: 2,
           skill: 'Concurrency',
-          explanation:
-              'ConcurrentHashMap provides thread-safe concurrent access without globally locking the map.',
+          explanation: 'ConcurrentHashMap provides thread-safe concurrent access without globally locking the map.',
         ),
         PracticeQuestion(
           code: 'JAVA_Q_004',
@@ -70,8 +67,7 @@ class MockTestRepository implements PracticeTestRepository {
           ],
           correctIndex: 2,
           skill: 'Spring MVC',
-          explanation:
-              '@RestController combines @Controller semantics with response-body handling.',
+          explanation: '@RestController combines @Controller semantics with response-body handling.',
         ),
       ],
     ),
@@ -106,8 +102,7 @@ class MockTestRepository implements PracticeTestRepository {
           ],
           correctIndex: 0,
           skill: 'Environment vocabulary',
-          explanation:
-              'Sustainable transport aims to meet mobility needs while reducing long-term environmental and social costs.',
+          explanation: 'Sustainable transport aims to meet mobility needs while reducing long-term environmental and social costs.',
         ),
         PracticeQuestion(
           code: 'IELTS_Q_003',
@@ -120,8 +115,7 @@ class MockTestRepository implements PracticeTestRepository {
           ],
           correctIndex: 2,
           skill: 'Speaking development',
-          explanation:
-              'Part 3 rewards developed, relevant answers supported by explanation and examples.',
+          explanation: 'Part 3 rewards developed, relevant answers supported by explanation and examples.',
         ),
         PracticeQuestion(
           code: 'IELTS_Q_004',
@@ -130,8 +124,7 @@ class MockTestRepository implements PracticeTestRepository {
           options: ['trivial', 'substantial', 'tiny', 'irrelevant'],
           correctIndex: 1,
           skill: 'Academic vocabulary',
-          explanation:
-              'Substantial can mean considerable or significant in amount or importance.',
+          explanation: 'Substantial can mean considerable or significant in amount or importance.',
         ),
       ],
     ),

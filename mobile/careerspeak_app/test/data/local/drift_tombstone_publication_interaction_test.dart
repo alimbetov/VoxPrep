@@ -38,23 +38,27 @@ void main() {
     await database.close();
   });
 
-  test('planned tombstone is not learner-visible before publication commit', () async {
-    await _seedCurrentSnapshot(database, now);
-    final plan = _retirementPlan();
-    final journal = DriftSyncJournal(database, now: () => now);
+  test(
+    'planned tombstone is not learner-visible before publication commit',
+    () async {
+      await _seedCurrentSnapshot(database, now);
+      final plan = _retirementPlan();
+      final journal = DriftSyncJournal(database, now: () => now);
 
-    await _prepareRun(journal, plan);
+      await _prepareRun(journal, plan);
 
-    final tombstone = await database.select(database.syncTombstones).getSingle();
-    expect(tombstone.state, SyncTombstoneState.planned.storageCode);
-    expect(await database.select(database.contentRetirements).get(), isEmpty);
+      final tombstone = await database
+          .select(database.syncTombstones)
+          .getSingle();
+      expect(tombstone.state, SyncTombstoneState.planned.storageCode);
+      expect(await database.select(database.contentRetirements).get(), isEmpty);
 
-    final visible = (await DriftContentRepository(database)
-            .watchContent(const ContentQuery())
-            .first)
-        .getOrThrow();
-    expect(visible.items.map((item) => item.code), <String>['OLD_Q_001']);
-  });
+      final visible = (await DriftContentRepository(
+        database,
+      ).watchContent(const ContentQuery()).first).getOrThrow();
+      expect(visible.items.map((item) => item.code), <String>['OLD_Q_001']);
+    },
+  );
 
   test('repository recreation does not activate a staged tombstone', () async {
     await _seedCurrentSnapshot(database, now);
@@ -63,10 +67,9 @@ void main() {
     await _prepareRun(journal, plan);
 
     final recreatedRepository = DriftContentRepository(database);
-    final visible = (await recreatedRepository
-            .watchContent(const ContentQuery())
-            .first)
-        .getOrThrow();
+    final visible =
+        (await recreatedRepository.watchContent(const ContentQuery()).first)
+            .getOrThrow();
 
     expect(visible.items, hasLength(1));
     expect(visible.items.single.code, 'OLD_Q_001');
@@ -89,100 +92,118 @@ void main() {
 
     expect(result, isA<Success<void>>());
 
-    final root = await database.select(database.contentManifestStates).getSingle();
+    final root = await database
+        .select(database.contentManifestStates)
+        .getSingle();
     expect(root.currentContentVersion, 109);
     expect(root.currentManifestChecksum, _root109);
 
-    final retirement = await database.select(database.contentRetirements).getSingle();
+    final retirement = await database
+        .select(database.contentRetirements)
+        .getSingle();
     expect(retirement.contentCode, 'OLD_Q_001');
     expect(retirement.sourceContentVersion, 109);
     expect(retirement.retiredRevision, 1);
 
-    final tombstone = await database.select(database.syncTombstones).getSingle();
+    final tombstone = await database
+        .select(database.syncTombstones)
+        .getSingle();
     expect(tombstone.state, SyncTombstoneState.applied.storageCode);
     expect(tombstone.appliedAt, isNotNull);
 
-    final content = await database.select(database.localContentRecords).getSingle();
+    final content = await database
+        .select(database.localContentRecords)
+        .getSingle();
     expect(content.snapshotState, 'TOMBSTONED');
 
-    final visible = (await DriftContentRepository(database)
-            .watchContent(const ContentQuery())
-            .first)
-        .getOrThrow();
+    final visible = (await DriftContentRepository(
+      database,
+    ).watchContent(const ContentQuery()).first).getOrThrow();
     expect(visible.items, isEmpty);
   });
 
-  test('failed publication keeps tombstone staged and CURRENT content intact', () async {
-    await _seedCurrentSnapshot(database, now);
+  test(
+    'failed publication keeps tombstone staged and CURRENT content intact',
+    () async {
+      await _seedCurrentSnapshot(database, now);
 
-    final conflictingTarget = PackRevisionRef(
-      identity: PackIdentity(code: 'NEW_PACK', variant: 'canonical'),
-      revision: 1,
-      checksum: _pack108,
-    );
-    final tombstone = ContentTombstone(
-      identity: const ContentIdentity(
-        code: 'OLD_Q_001',
-        type: ContentType.interview,
-      ),
-      revision: 1,
-      reason: 'INACTIVE',
-    );
-    final root = RootContentManifest(
-      schemaVersion: 1,
-      contentVersion: 109,
-      minimumAppContractVersion: 1,
-      publishedAt: now,
-      checksum: _root109,
-      packs: <PackRevisionRef>[conflictingTarget],
-      tombstones: <ContentTombstone>[tombstone],
-    );
-    final plan = const ContentSyncPlanner()
-        .plan(
-          local: SyncLocalSnapshot(
-            currentContentVersion: 108,
-            currentManifestChecksum: _root108,
-            etag: null,
-            currentPacks: <PackRevisionRef>[
-              PackRevisionRef(
-                identity: PackIdentity(code: 'OLD_PACK', variant: 'canonical'),
-                revision: 1,
-                checksum: _pack108,
-              ),
-            ],
-          ),
-          remote: root,
-        )
-        .getOrThrow();
-    final journal = DriftSyncJournal(database, now: () => now);
-    await _prepareRun(journal, plan);
+      final conflictingTarget = PackRevisionRef(
+        identity: PackIdentity(code: 'NEW_PACK', variant: 'canonical'),
+        revision: 1,
+        checksum: _pack108,
+      );
+      final tombstone = ContentTombstone(
+        identity: const ContentIdentity(
+          code: 'OLD_Q_001',
+          type: ContentType.interview,
+        ),
+        revision: 1,
+        reason: 'INACTIVE',
+      );
+      final root = RootContentManifest(
+        schemaVersion: 1,
+        contentVersion: 109,
+        minimumAppContractVersion: 1,
+        publishedAt: now,
+        checksum: _root109,
+        packs: <PackRevisionRef>[conflictingTarget],
+        tombstones: <ContentTombstone>[tombstone],
+      );
+      final plan = const ContentSyncPlanner()
+          .plan(
+            local: SyncLocalSnapshot(
+              currentContentVersion: 108,
+              currentManifestChecksum: _root108,
+              etag: null,
+              currentPacks: <PackRevisionRef>[
+                PackRevisionRef(
+                  identity: PackIdentity(
+                    code: 'OLD_PACK',
+                    variant: 'canonical',
+                  ),
+                  revision: 1,
+                  checksum: _pack108,
+                ),
+              ],
+            ),
+            remote: root,
+          )
+          .getOrThrow();
+      final journal = DriftSyncJournal(database, now: () => now);
+      await _prepareRun(journal, plan);
 
-    final executor = DriftSyncPlanExecutor(
-      database,
-      _ConflictingManifestGateway(conflictingTarget, tombstone),
-      const _UnusedPayloadGateway(),
-      now: () => now,
-    );
-    final result = await executor.execute(runId: 'run-c4-6', plan: plan);
+      final executor = DriftSyncPlanExecutor(
+        database,
+        _ConflictingManifestGateway(conflictingTarget, tombstone),
+        const _UnusedPayloadGateway(),
+        now: () => now,
+      );
+      final result = await executor.execute(runId: 'run-c4-6', plan: plan);
 
-    expect(result, isA<FailureResult<void>>());
-    expect(await database.select(database.contentRetirements).get(), isEmpty);
+      expect(result, isA<FailureResult<void>>());
+      expect(await database.select(database.contentRetirements).get(), isEmpty);
 
-    final rootState = await database.select(database.contentManifestStates).getSingle();
-    expect(rootState.currentContentVersion, 108);
+      final rootState = await database
+          .select(database.contentManifestStates)
+          .getSingle();
+      expect(rootState.currentContentVersion, 108);
 
-    final oldContent = await database.select(database.localContentRecords).getSingle();
-    expect(oldContent.snapshotState, 'CURRENT');
+      final oldContent = await database
+          .select(database.localContentRecords)
+          .getSingle();
+      expect(oldContent.snapshotState, 'CURRENT');
 
-    final stagedTombstone = await database.select(database.syncTombstones).getSingle();
-    expect(stagedTombstone.state, SyncTombstoneState.planned.storageCode);
+      final stagedTombstone = await database
+          .select(database.syncTombstones)
+          .getSingle();
+      expect(stagedTombstone.state, SyncTombstoneState.planned.storageCode);
 
-    final visible = (await DriftContentRepository(database)
-            .watchContent(const ContentQuery())
-            .first)
-        .getOrThrow();
-    expect(visible.items.map((item) => item.code), <String>['OLD_Q_001']);
-  });
+      final visible = (await DriftContentRepository(
+        database,
+      ).watchContent(const ContentQuery()).first).getOrThrow();
+      expect(visible.items.map((item) => item.code), <String>['OLD_Q_001']);
+    },
+  );
 }
 
 SyncPlan _retirementPlan() {
@@ -239,7 +260,9 @@ Future<void> _seedCurrentSnapshot(
   CareerSpeakDatabase database,
   DateTime now,
 ) async {
-  await database.into(database.contentManifestStates).insert(
+  await database
+      .into(database.contentManifestStates)
+      .insert(
         ContentManifestStatesCompanion.insert(
           id: const Value(1),
           schemaVersion: 1,
@@ -248,7 +271,9 @@ Future<void> _seedCurrentSnapshot(
           updatedAt: now,
         ),
       );
-  await database.into(database.contentPackRevisions).insert(
+  await database
+      .into(database.contentPackRevisions)
+      .insert(
         ContentPackRevisionsCompanion.insert(
           packCode: 'OLD_PACK',
           variantKey: 'canonical',
@@ -261,7 +286,9 @@ Future<void> _seedCurrentSnapshot(
           currentAt: Value(now),
         ),
       );
-  await database.into(database.packContentRefs).insert(
+  await database
+      .into(database.packContentRefs)
+      .insert(
         PackContentRefsCompanion.insert(
           packCode: 'OLD_PACK',
           variantKey: 'canonical',
@@ -271,7 +298,9 @@ Future<void> _seedCurrentSnapshot(
           contentRevision: 1,
         ),
       );
-  await database.into(database.localContentRecords).insert(
+  await database
+      .into(database.localContentRecords)
+      .insert(
         LocalContentRecordsCompanion.insert(
           contentCode: 'OLD_Q_001',
           contentType: 'INTERVIEW',
@@ -282,7 +311,9 @@ Future<void> _seedCurrentSnapshot(
           createdAt: now,
         ),
       );
-  await database.into(database.contentCatalogReads).insert(
+  await database
+      .into(database.contentCatalogReads)
+      .insert(
         ContentCatalogReadsCompanion.insert(
           contentCode: 'OLD_Q_001',
           contentType: 'INTERVIEW',
@@ -313,8 +344,8 @@ final class _UnusedManifestGateway implements ContentManifestGateway {
   Future<Result<PackContentManifest>> fetchPackManifest(
     PackRevisionRef target,
   ) async => const FailureResult(
-        ApplicationFailure(code: 'NOT_USED', message: 'not used'),
-      );
+    ApplicationFailure(code: 'NOT_USED', message: 'not used'),
+  );
 }
 
 final class _ConflictingManifestGateway implements ContentManifestGateway {

@@ -10,7 +10,8 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
   factory HttpContentManifestGateway({
     required ApiClient apiClient,
     ContentManifestDecoder decoder = const ContentManifestDecoder(),
-    PublicationManifestWireGuard wireGuard = const PublicationManifestWireGuard(),
+    PublicationManifestWireGuard wireGuard =
+        const PublicationManifestWireGuard(),
     PublicationManifestCanonicalizer canonicalizer =
         const PublicationManifestCanonicalizer(),
   }) {
@@ -121,10 +122,7 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
     }
 
     return Success<RootManifestFetch>(
-      RootManifestChanged(
-        manifest: manifest,
-        etag: responseEtag,
-      ),
+      RootManifestChanged(manifest: manifest, etag: responseEtag),
     );
   }
 

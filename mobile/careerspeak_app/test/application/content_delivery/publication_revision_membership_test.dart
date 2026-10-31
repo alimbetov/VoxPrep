@@ -18,35 +18,38 @@ const _catalogueChecksum =
     'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 
 void main() {
-  test('materializes exact immutable membership across resource categories', () {
-    final pack = _packRef();
-    final manifest = _packManifest();
+  test(
+    'materializes exact immutable membership across resource categories',
+    () {
+      final pack = _packRef();
+      final manifest = _packManifest();
 
-    final membership = PublicationRevisionMembership(
-      packs: <PackRevisionRef>[pack],
-      packManifests: <PackContentManifest>[manifest],
-      practiceTests: <PracticeTestRevisionRef>[
-        PracticeTestRevisionRef(
-          practiceTestCode: 'JAVA_INTERVIEW_TEST_01',
-          revision: 3,
-          checksum: _testChecksum,
-        ),
-      ],
-      catalogues: <CatalogueRevisionRef>[
-        CatalogueRevisionRef(
-          kind: CatalogueKind.learningCollections,
-          revision: 7,
-          checksum: _catalogueChecksum,
-        ),
-      ],
-    );
+      final membership = PublicationRevisionMembership(
+        packs: <PackRevisionRef>[pack],
+        packManifests: <PackContentManifest>[manifest],
+        practiceTests: <PracticeTestRevisionRef>[
+          PracticeTestRevisionRef(
+            practiceTestCode: 'JAVA_INTERVIEW_TEST_01',
+            revision: 3,
+            checksum: _testChecksum,
+          ),
+        ],
+        catalogues: <CatalogueRevisionRef>[
+          CatalogueRevisionRef(
+            kind: CatalogueKind.learningCollections,
+            revision: 7,
+            checksum: _catalogueChecksum,
+          ),
+        ],
+      );
 
-    expect(membership.packs, hasLength(1));
-    expect(membership.canonicalContents, hasLength(1));
-    expect(membership.assets, hasLength(1));
-    expect(membership.practiceTests.single.revision, 3);
-    expect(membership.catalogues.single.revision, 7);
-  });
+      expect(membership.packs, hasLength(1));
+      expect(membership.canonicalContents, hasLength(1));
+      expect(membership.assets, hasLength(1));
+      expect(membership.practiceTests.single.revision, 3);
+      expect(membership.catalogues.single.revision, 7);
+    },
+  );
 
   test('rejects dangling pack revision membership', () {
     final pack = _packRef(revision: 8);
@@ -72,7 +75,10 @@ void main() {
       revision: 8,
       checksum: _packChecksum,
     );
-    final secondIdentity = PackIdentity(code: 'JAVA_CORE', variant: 'canonical');
+    final secondIdentity = PackIdentity(
+      code: 'JAVA_CORE',
+      variant: 'canonical',
+    );
     final packB = PackRevisionRef(
       identity: secondIdentity,
       revision: 2,

@@ -286,9 +286,8 @@ class _AudioPlaybackControls extends ConsumerWidget {
                   tooltip: 'Back 10 seconds',
                   onPressed: canControl
                       ? () => run((controller) async {
-                          (await controller.seek(
-                            position - 10000,
-                          )).getOrThrow();
+                          (await controller.seek(position - 10000))
+                              .getOrThrow();
                         })
                       : null,
                   icon: const Icon(Icons.replay_10),
@@ -297,9 +296,8 @@ class _AudioPlaybackControls extends ConsumerWidget {
                   tooltip: 'Forward 10 seconds',
                   onPressed: canControl
                       ? () => run((controller) async {
-                          (await controller.seek(
-                            position + 10000,
-                          )).getOrThrow();
+                          (await controller.seek(position + 10000))
+                              .getOrThrow();
                         })
                       : null,
                   icon: const Icon(Icons.forward_10),

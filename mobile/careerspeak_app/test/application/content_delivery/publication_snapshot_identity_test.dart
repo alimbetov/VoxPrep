@@ -68,41 +68,47 @@ void main() {
     );
   });
 
-  test('same contentVersion with different ETag fails closed when both known', () {
-    final existing = PublicationSnapshotIdentity(
-      schemaVersion: 1,
-      contentVersion: 42,
-      checksum: checksumA,
-      etag: 'etag-42-a',
-    );
-    final incoming = PublicationSnapshotIdentity(
-      schemaVersion: 1,
-      contentVersion: 42,
-      checksum: checksumA,
-      etag: 'etag-42-b',
-    );
+  test(
+    'same contentVersion with different ETag fails closed when both known',
+    () {
+      final existing = PublicationSnapshotIdentity(
+        schemaVersion: 1,
+        contentVersion: 42,
+        checksum: checksumA,
+        etag: 'etag-42-a',
+      );
+      final incoming = PublicationSnapshotIdentity(
+        schemaVersion: 1,
+        contentVersion: 42,
+        checksum: checksumA,
+        etag: 'etag-42-b',
+      );
 
-    expect(
-      () => existing.requireCompatibleWith(incoming),
-      throwsA(isA<PublicationSnapshotIdentityConflict>()),
-    );
-  });
+      expect(
+        () => existing.requireCompatibleWith(incoming),
+        throwsA(isA<PublicationSnapshotIdentityConflict>()),
+      );
+    },
+  );
 
-  test('different contentVersion is a different publication, not a conflict', () {
-    final v42 = PublicationSnapshotIdentity(
-      schemaVersion: 1,
-      contentVersion: 42,
-      checksum: checksumA,
-    );
-    final v43 = PublicationSnapshotIdentity(
-      schemaVersion: 1,
-      contentVersion: 43,
-      checksum: checksumB,
-    );
+  test(
+    'different contentVersion is a different publication, not a conflict',
+    () {
+      final v42 = PublicationSnapshotIdentity(
+        schemaVersion: 1,
+        contentVersion: 42,
+        checksum: checksumA,
+      );
+      final v43 = PublicationSnapshotIdentity(
+        schemaVersion: 1,
+        contentVersion: 43,
+        checksum: checksumB,
+      );
 
-    expect(() => v42.requireCompatibleWith(v43), returnsNormally);
-    expect(v42, isNot(v43));
-  });
+      expect(() => v42.requireCompatibleWith(v43), returnsNormally);
+      expect(v42, isNot(v43));
+    },
+  );
 
   test('security/session material cannot participate in snapshot identity', () {
     final beforeTokenRotation = PublicationSnapshotIdentity(

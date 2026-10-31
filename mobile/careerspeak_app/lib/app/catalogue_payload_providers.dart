@@ -7,14 +7,15 @@ import '../data/remote/http_catalogue_payload_gateway.dart';
 import 'api_client_providers.dart';
 import 'learner_state_providers.dart';
 
-final cataloguePayloadGatewayProvider = Provider<CataloguePayloadGateway>((ref) {
+final cataloguePayloadGatewayProvider = Provider<CataloguePayloadGateway>((
+  ref,
+) {
   return HttpCataloguePayloadGateway(apiClient: ref.watch(apiClientProvider));
 });
 
-final catalogueSnapshotRepositoryProvider = Provider<CatalogueSnapshotRepository>(
-  (ref) {
-    return DriftCatalogueSnapshotRepository(
-      ref.watch(careerSpeakDatabaseProvider),
-    );
-  },
-);
+final catalogueSnapshotRepositoryProvider =
+    Provider<CatalogueSnapshotRepository>((ref) {
+      return DriftCatalogueSnapshotRepository(
+        ref.watch(careerSpeakDatabaseProvider),
+      );
+    });

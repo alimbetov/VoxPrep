@@ -356,11 +356,7 @@ final class ContentManifestDecoder {
     );
   }
 
-  String _businessCode(
-    Map<String, Object?> object,
-    String key,
-    String path,
-  ) {
+  String _businessCode(Map<String, Object?> object, String key, String path) {
     final code = _string(object, key, path);
     if (!_contentCodePattern.hasMatch(code)) {
       throw _ContractViolation(path, 'must be a stable business code');

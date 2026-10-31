@@ -12,10 +12,18 @@ final class PublicationSnapshotIdentity {
     String? etag,
   }) {
     if (schemaVersion < 1) {
-      throw ArgumentError.value(schemaVersion, 'schemaVersion', 'must be positive');
+      throw ArgumentError.value(
+        schemaVersion,
+        'schemaVersion',
+        'must be positive',
+      );
     }
     if (contentVersion < 1) {
-      throw ArgumentError.value(contentVersion, 'contentVersion', 'must be positive');
+      throw ArgumentError.value(
+        contentVersion,
+        'contentVersion',
+        'must be positive',
+      );
     }
 
     return PublicationSnapshotIdentity._(
@@ -83,7 +91,8 @@ final class PublicationSnapshotIdentity {
   }
 
   @override
-  int get hashCode => Object.hash(schemaVersion, contentVersion, checksum, etag);
+  int get hashCode =>
+      Object.hash(schemaVersion, contentVersion, checksum, etag);
 
   @override
   String toString() {

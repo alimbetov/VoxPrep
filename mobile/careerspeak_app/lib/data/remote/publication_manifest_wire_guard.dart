@@ -10,7 +10,12 @@ final class PublicationManifestWireGuard {
       _objects(root, 'packs', r'$.packs', _packRefKeys);
       _objects(root, 'practiceTests', r'$.practiceTests', _practiceTestRefKeys);
       _objects(root, 'catalogues', r'$.catalogues', _catalogueRefKeys);
-      _objects(root, 'localeFallbacks', r'$.localeFallbacks', _localeFallbackKeys);
+      _objects(
+        root,
+        'localeFallbacks',
+        r'$.localeFallbacks',
+        _localeFallbackKeys,
+      );
       _objects(root, 'tombstones', r'$.tombstones', _tombstoneKeys);
       return const Success<void>(null);
     } on _WireShapeViolation catch (error) {
@@ -67,7 +72,10 @@ final class PublicationManifestWireGuard {
   void _only(Map<String, Object?> object, Set<String> allowed, String path) {
     for (final key in object.keys) {
       if (!allowed.contains(key)) {
-        throw _WireShapeViolation('$path.$key', 'is not part of publication identity');
+        throw _WireShapeViolation(
+          '$path.$key',
+          'is not part of publication identity',
+        );
       }
     }
   }
@@ -110,10 +118,19 @@ const _rootKeys = <String>{
   'tombstones',
 };
 const _packRefKeys = <String>{'code', 'variant', 'revision', 'checksum'};
-const _practiceTestRefKeys = <String>{'practiceTestCode', 'revision', 'checksum'};
+const _practiceTestRefKeys = <String>{
+  'practiceTestCode',
+  'revision',
+  'checksum',
+};
 const _catalogueRefKeys = <String>{'kind', 'revision', 'checksum'};
 const _localeFallbackKeys = <String>{'locale', 'fallbackLocales'};
-const _tombstoneKeys = <String>{'contentCode', 'contentType', 'revision', 'reason'};
+const _tombstoneKeys = <String>{
+  'contentCode',
+  'contentType',
+  'revision',
+  'reason',
+};
 const _packKeys = <String>{
   'schemaVersion',
   'code',

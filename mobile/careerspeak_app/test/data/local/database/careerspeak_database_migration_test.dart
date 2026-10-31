@@ -257,8 +257,7 @@ void main() {
               contentCode: 'JAVA_DI_001',
               contentType: 'INTERVIEW',
               revision: 3,
-              checksum:
-                  'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+              checksum: 'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
               title: 'Dependency Injection',
               subtitle: 'Java Backend',
               description: 'Explain constructor injection and its tradeoffs.',
@@ -310,8 +309,7 @@ void main() {
               contentCode: 'JAVA_DI_001',
               contentType: 'interview',
               revision: 3,
-              checksum:
-                  'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+              checksum: 'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
               categoryCode: 'JAVA',
               levelCode: 'SENIOR',
               skillCodesJson: '["DEPENDENCY_INJECTION"]',

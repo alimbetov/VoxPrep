@@ -23,7 +23,10 @@ void main() {
       );
       expect(manifest.practiceTests.single.practiceTestCode, 'JAVA_TEST_001');
       expect(manifest.practiceTests.single.revision, 3);
-      expect(manifest.catalogues.single.kind, CatalogueKind.learningCollections);
+      expect(
+        manifest.catalogues.single.kind,
+        CatalogueKind.learningCollections,
+      );
       expect(manifest.catalogues.single.revision, 7);
       expect(manifest.tombstones.single.identity.type, ContentType.interview);
     });

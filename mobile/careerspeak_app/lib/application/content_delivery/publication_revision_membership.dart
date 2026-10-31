@@ -24,17 +24,13 @@ final class PublicationRevisionMembership {
       'packs',
     );
     _requireUnique(
-      manifestList.map((manifest) => '${manifest.identity}|${manifest.revision}'),
+      manifestList.map(
+        (manifest) => '${manifest.identity}|${manifest.revision}',
+      ),
       'packManifests',
     );
-    _requireUnique(
-      testList.map((ref) => ref.identityKey),
-      'practiceTests',
-    );
-    _requireUnique(
-      catalogueList.map((ref) => ref.identityKey),
-      'catalogues',
-    );
+    _requireUnique(testList.map((ref) => ref.identityKey), 'practiceTests');
+    _requireUnique(catalogueList.map((ref) => ref.identityKey), 'catalogues');
 
     final manifestByPack = <String, PackContentManifest>{
       for (final manifest in manifestList)
@@ -112,8 +108,12 @@ final class PublicationRevisionMembership {
     return PublicationRevisionMembership._(
       packs: packList,
       packManifests: manifestList,
-      canonicalContents: List<PackContentRef>.unmodifiable(canonicalRefs.values),
-      localizations: List<LocalizedContentRef>.unmodifiable(localizedRefs.values),
+      canonicalContents: List<PackContentRef>.unmodifiable(
+        canonicalRefs.values,
+      ),
+      localizations: List<LocalizedContentRef>.unmodifiable(
+        localizedRefs.values,
+      ),
       practiceTests: testList,
       catalogues: catalogueList,
       assets: List<ManifestAssetDescriptor>.unmodifiable(assetRefs.values),
@@ -143,7 +143,11 @@ void _requireUnique(Iterable<String> keys, String fieldName) {
   final seen = <String>{};
   for (final key in keys) {
     if (!seen.add(key)) {
-      throw ArgumentError.value(key, fieldName, 'contains duplicate exact membership');
+      throw ArgumentError.value(
+        key,
+        fieldName,
+        'contains duplicate exact membership',
+      );
     }
   }
 }

@@ -421,7 +421,8 @@ const _snapshotVisibilityPredicate = '''
     )
   )''';
 
-const _catalogSelectPrefix = '''
+const _catalogSelectPrefix =
+    '''
 WITH current_content AS (
   SELECT
     l.*,
@@ -456,7 +457,8 @@ LEFT JOIN content_catalog_reads c
  AND c.revision = r.revision
 WHERE 1 = 1''';
 
-const _identitySql = '''
+const _identitySql =
+    '''
 WITH current_content AS (
   SELECT
     l.*,

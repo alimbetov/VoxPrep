@@ -20,10 +20,7 @@ import 'publication_snapshot_storage.dart';
 /// CURRENT root contentVersion, then resolves through the immutable assessment
 /// cache.
 final class DriftPracticeTestRepository implements PracticeTestRepository {
-  const DriftPracticeTestRepository(
-    this._database,
-    this._assessmentRepository,
-  );
+  const DriftPracticeTestRepository(this._database, this._assessmentRepository);
 
   final CareerSpeakDatabase _database;
   final AssessmentRevisionRepository _assessmentRepository;
@@ -125,8 +122,9 @@ final class DriftPracticeTestRepository implements PracticeTestRepository {
 
     try {
       await PublicationSnapshotStorage(_database).ensureReady();
-      final refs = await _database.customSelect(
-        '''
+      final refs = await _database
+          .customSelect(
+            '''
         SELECT p.practice_test_code, p.revision, p.checksum
         FROM content_manifest_states s
         INNER JOIN publication_practice_test_refs p
@@ -134,9 +132,12 @@ final class DriftPracticeTestRepository implements PracticeTestRepository {
         WHERE s.id = 1
           AND p.practice_test_code = ?
         ''',
-        variables: <Variable<Object>>[Variable<String>(normalizedCode)],
-        readsFrom: <ResultSetImplementation>{_database.contentManifestStates},
-      ).get();
+            variables: <Variable<Object>>[Variable<String>(normalizedCode)],
+            readsFrom: <ResultSetImplementation>{
+              _database.contentManifestStates,
+            },
+          )
+          .get();
       if (refs.isEmpty) return const Success<PracticeTest?>(null);
       if (refs.length != 1) {
         return FailureResult<PracticeTest?>(
@@ -154,18 +155,17 @@ final class DriftPracticeTestRepository implements PracticeTestRepository {
         revision: revision,
         checksum: checksum,
       );
-      if (bundleResult
-          case FailureResult<AssessmentRevisionBundle?>(:final failure)) {
+      if (bundleResult case FailureResult<AssessmentRevisionBundle?>(
+        :final failure,
+      )) {
         return FailureResult<PracticeTest?>(failure);
       }
-      final bundle =
-          (bundleResult as Success<AssessmentRevisionBundle?>).value;
+      final bundle = (bundleResult as Success<AssessmentRevisionBundle?>).value;
       if (bundle == null) {
         return FailureResult<PracticeTest?>(
           ApplicationFailure(
             code: 'CURRENT_PRACTICE_TEST_MISSING',
-            message:
-                'The CURRENT publication references a practice-test payload that is not staged locally.',
+            message: 'The CURRENT publication references a practice-test payload that is not staged locally.',
             details: <String, Object?>{
               'practiceTestCode': normalizedCode,
               'revision': revision,

@@ -11,7 +11,8 @@ import '../../application/result/result.dart';
 import 'database/careerspeak_database.dart';
 import 'publication_snapshot_storage.dart';
 
-final class DriftPublicationSnapshotStager implements PublicationSnapshotStager {
+final class DriftPublicationSnapshotStager
+    implements PublicationSnapshotStager {
   const DriftPublicationSnapshotStager(
     this._database,
     this._assessmentLoader,
@@ -60,17 +61,19 @@ final class DriftPublicationSnapshotStager implements PublicationSnapshotStager 
     try {
       await _database.transaction(() async {
         for (final payload in cataloguePayloads) {
-          final existing = await _database.customSelect(
-            '''
+          final existing = await _database
+              .customSelect(
+                '''
             SELECT checksum, payload_json
             FROM catalogue_revision_reads
             WHERE catalogue_kind = ? AND revision = ?
             ''',
-            variables: <Variable<Object>>[
-              Variable<String>(payload.ref.kind.wireName),
-              Variable<int>(payload.ref.revision),
-            ],
-          ).getSingleOrNull();
+                variables: <Variable<Object>>[
+                  Variable<String>(payload.ref.kind.wireName),
+                  Variable<int>(payload.ref.revision),
+                ],
+              )
+              .getSingleOrNull();
           final payloadJson = jsonEncode(payload.wireJson);
           if (existing != null &&
               (existing.read<String>('checksum') != payload.ref.checksum ||

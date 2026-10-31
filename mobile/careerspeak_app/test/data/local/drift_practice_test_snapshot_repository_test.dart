@@ -56,7 +56,9 @@ void main() {
     );
 
     final now = DateTime.utc(2026, 10, 31, 16);
-    await database.into(database.contentManifestStates).insert(
+    await database
+        .into(database.contentManifestStates)
+        .insert(
           ContentManifestStatesCompanion.insert(
             id: const Value(1),
             schemaVersion: 1,
@@ -71,16 +73,7 @@ void main() {
         (content_version, practice_test_code, revision, checksum)
       VALUES (?, ?, ?, ?), (?, ?, ?, ?)
       ''',
-      <Object?>[
-        108,
-        'JAVA_TEST',
-        1,
-        _testV1,
-        109,
-        'JAVA_TEST',
-        2,
-        _testV2,
-      ],
+      <Object?>[108, 'JAVA_TEST', 1, _testV1, 109, 'JAVA_TEST', 2, _testV2],
     );
   });
 
@@ -88,38 +81,43 @@ void main() {
     await database.close();
   });
 
-  test('does not select a newer cached revision outside CURRENT snapshot', () async {
-    final current = (await repository.getByCode('JAVA_TEST')).getOrThrow();
+  test(
+    'does not select a newer cached revision outside CURRENT snapshot',
+    () async {
+      final current = (await repository.getByCode('JAVA_TEST')).getOrThrow();
 
-    expect(current, isNotNull);
-    expect(current!.title, 'Snapshot 108 test');
-    expect(current.questions.single.prompt, contains('revision 1'));
+      expect(current, isNotNull);
+      expect(current!.title, 'Snapshot 108 test');
+      expect(current.questions.single.prompt, contains('revision 1'));
 
-    final page = (await repository
-            .watchTests(const PracticeTestQuery())
-            .first)
-        .getOrThrow();
-    expect(page.items, hasLength(1));
-    expect(page.items.single.title, 'Snapshot 108 test');
-  });
+      final page =
+          (await repository.watchTests(const PracticeTestQuery()).first)
+              .getOrThrow();
+      expect(page.items, hasLength(1));
+      expect(page.items.single.title, 'Snapshot 108 test');
+    },
+  );
 
-  test('one root pointer switch exposes the next exact test revision', () async {
-    await (database.update(database.contentManifestStates)
-          ..where((row) => row.id.equals(1)))
-        .write(
-          ContentManifestStatesCompanion(
-            currentContentVersion: const Value(109),
-            currentManifestChecksum: const Value(_root109),
-            updatedAt: Value(DateTime.utc(2026, 10, 31, 16, 1)),
-          ),
-        );
+  test(
+    'one root pointer switch exposes the next exact test revision',
+    () async {
+      await (database.update(
+        database.contentManifestStates,
+      )..where((row) => row.id.equals(1))).write(
+        ContentManifestStatesCompanion(
+          currentContentVersion: const Value(109),
+          currentManifestChecksum: const Value(_root109),
+          updatedAt: Value(DateTime.utc(2026, 10, 31, 16, 1)),
+        ),
+      );
 
-    final current = (await repository.getByCode('JAVA_TEST')).getOrThrow();
+      final current = (await repository.getByCode('JAVA_TEST')).getOrThrow();
 
-    expect(current, isNotNull);
-    expect(current!.title, 'Snapshot 109 test');
-    expect(current.questions.single.prompt, contains('revision 2'));
-  });
+      expect(current, isNotNull);
+      expect(current!.title, 'Snapshot 109 test');
+      expect(current.questions.single.prompt, contains('revision 2'));
+    },
+  );
 }
 
 AssessmentRevisionBundle _bundle({

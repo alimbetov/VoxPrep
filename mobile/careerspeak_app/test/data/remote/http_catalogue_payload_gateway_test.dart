@@ -9,46 +9,55 @@ const _checksum =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 void main() {
-  test('fetches the exact catalogue revision from publication membership', () async {
-    final client = _RecordingApiClient(
-      Success<ApiResponse>(
-        ApiResponse(
-          statusCode: 200,
-          headers: const <String, String>{},
-          jsonBody: <String, Object?>{
-            'kind': 'categories',
-            'revision': 7,
-            'checksum': _checksum,
-            'items': <Object?>[
-              <String, Object?>{
-                'code': 'JAVA_BACKEND',
-                'label': 'Java Backend',
-                'sortOrder': 0,
-                'active': true,
-              },
-            ],
-          },
+  test(
+    'fetches the exact catalogue revision from publication membership',
+    () async {
+      final client = _RecordingApiClient(
+        Success<ApiResponse>(
+          ApiResponse(
+            statusCode: 200,
+            headers: const <String, String>{},
+            jsonBody: <String, Object?>{
+              'kind': 'categories',
+              'revision': 7,
+              'checksum': _checksum,
+              'items': <Object?>[
+                <String, Object?>{
+                  'code': 'JAVA_BACKEND',
+                  'label': 'Java Backend',
+                  'sortOrder': 0,
+                  'active': true,
+                },
+              ],
+            },
+          ),
         ),
-      ),
-    );
-    final gateway = HttpCataloguePayloadGateway(apiClient: client);
-    final target = CatalogueRevisionRef(
-      kind: CatalogueKind.categories,
-      revision: 7,
-      checksum: _checksum,
-    );
+      );
+      final gateway = HttpCataloguePayloadGateway(apiClient: client);
+      final target = CatalogueRevisionRef(
+        kind: CatalogueKind.categories,
+        revision: 7,
+        checksum: _checksum,
+      );
 
-    final result = await gateway.fetch(target);
+      final result = await gateway.fetch(target);
 
-    expect(result, isA<Success<CataloguePayload>>());
-    expect((result as Success<CataloguePayload>).value.ref.identityKey, target.identityKey);
-    expect(client.requests, hasLength(1));
-    expect(
-      client.requests.single.path,
-      '/api/v1/catalogues/categories/revisions/7',
-    );
-    expect(client.requests.single.authentication, ApiAuthentication.installation);
-  });
+      expect(result, isA<Success<CataloguePayload>>());
+      expect(
+        (result as Success<CataloguePayload>).value.ref.identityKey,
+        target.identityKey,
+      );
+      expect(client.requests, hasLength(1));
+      expect(
+        client.requests.single.path,
+        '/api/v1/catalogues/categories/revisions/7',
+      );
+      expect(
+        client.requests.single.authentication,
+        ApiAuthentication.installation,
+      );
+    },
+  );
 
   test('rejects runtime fields inside immutable catalogue payload', () async {
     final client = _RecordingApiClient(
@@ -83,37 +92,40 @@ void main() {
     );
   });
 
-  test('rejects a different revision even when the endpoint returns 200', () async {
-    final client = _RecordingApiClient(
-      Success<ApiResponse>(
-        ApiResponse(
-          statusCode: 200,
-          headers: const <String, String>{},
-          jsonBody: <String, Object?>{
-            'kind': 'categories',
-            'revision': 8,
-            'checksum': _checksum,
-            'items': const <Object?>[],
-          },
+  test(
+    'rejects a different revision even when the endpoint returns 200',
+    () async {
+      final client = _RecordingApiClient(
+        Success<ApiResponse>(
+          ApiResponse(
+            statusCode: 200,
+            headers: const <String, String>{},
+            jsonBody: <String, Object?>{
+              'kind': 'categories',
+              'revision': 8,
+              'checksum': _checksum,
+              'items': const <Object?>[],
+            },
+          ),
         ),
-      ),
-    );
-    final gateway = HttpCataloguePayloadGateway(apiClient: client);
+      );
+      final gateway = HttpCataloguePayloadGateway(apiClient: client);
 
-    final result = await gateway.fetch(
-      CatalogueRevisionRef(
-        kind: CatalogueKind.categories,
-        revision: 7,
-        checksum: _checksum,
-      ),
-    );
+      final result = await gateway.fetch(
+        CatalogueRevisionRef(
+          kind: CatalogueKind.categories,
+          revision: 7,
+          checksum: _checksum,
+        ),
+      );
 
-    expect(result, isA<FailureResult<CataloguePayload>>());
-    expect(
-      (result as FailureResult<CataloguePayload>).failure.code,
-      'CATALOGUE_REVISION_MISMATCH',
-    );
-  });
+      expect(result, isA<FailureResult<CataloguePayload>>());
+      expect(
+        (result as FailureResult<CataloguePayload>).failure.code,
+        'CATALOGUE_REVISION_MISMATCH',
+      );
+    },
+  );
 }
 
 final class _RecordingApiClient implements ApiClient {

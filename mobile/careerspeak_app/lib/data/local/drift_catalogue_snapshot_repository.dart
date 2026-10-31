@@ -19,8 +19,9 @@ final class DriftCatalogueSnapshotRepository
   Future<Result<CataloguePayload?>> readCurrent(CatalogueKind kind) async {
     try {
       await PublicationSnapshotStorage(_database).ensureReady();
-      final rows = await _database.customSelect(
-        '''
+      final rows = await _database
+          .customSelect(
+            '''
         SELECT
           p.catalogue_kind,
           p.revision,
@@ -36,9 +37,12 @@ final class DriftCatalogueSnapshotRepository
         WHERE s.id = 1
           AND p.catalogue_kind = ?
         ''',
-        variables: <Variable<Object>>[Variable<String>(kind.wireName)],
-        readsFrom: <ResultSetImplementation>{_database.contentManifestStates},
-      ).get();
+            variables: <Variable<Object>>[Variable<String>(kind.wireName)],
+            readsFrom: <ResultSetImplementation>{
+              _database.contentManifestStates,
+            },
+          )
+          .get();
       if (rows.isEmpty) return const Success<CataloguePayload?>(null);
       if (rows.length != 1) {
         return const FailureResult<CataloguePayload?>(
@@ -70,8 +74,7 @@ final class DriftCatalogueSnapshotRepository
         return const FailureResult<CataloguePayload?>(
           ApplicationFailure(
             code: 'CATALOGUE_READ_MODEL_INVALID',
-            message:
-                'Cached catalogue payload conflicts with CURRENT exact membership.',
+            message: 'Cached catalogue payload conflicts with CURRENT exact membership.',
           ),
         );
       }

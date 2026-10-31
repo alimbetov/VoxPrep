@@ -50,10 +50,7 @@ void main() {
   });
 }
 
-RootContentManifest _root({
-  required String checksum,
-  int packRevision = 8,
-}) {
+RootContentManifest _root({required String checksum, int packRevision = 8}) {
   return RootContentManifest(
     schemaVersion: 1,
     contentVersion: 109,

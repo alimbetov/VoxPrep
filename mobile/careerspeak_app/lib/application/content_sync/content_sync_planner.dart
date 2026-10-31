@@ -18,8 +18,7 @@ final class ContentSyncPlanner {
       return FailureResult(
         ApplicationFailure(
           code: 'REMOTE_CONTENT_VERSION_ROLLBACK',
-          message:
-              'Remote content version is older than the installed CURRENT snapshot.',
+          message: 'Remote content version is older than the installed CURRENT snapshot.',
           details: <String, Object?>{
             'currentContentVersion': currentVersion,
             'remoteContentVersion': remote.contentVersion,
@@ -46,8 +45,7 @@ final class ContentSyncPlanner {
         return FailureResult(
           ApplicationFailure(
             code: 'PUBLICATION_SNAPSHOT_IDENTITY_CONFLICT',
-            message:
-                'The same content version was observed with a different immutable publication identity.',
+            message: 'The same content version was observed with a different immutable publication identity.',
             details: <String, Object?>{
               'contentVersion': remote.contentVersion,
               'localChecksum': local.currentManifestChecksum,
@@ -79,8 +77,7 @@ final class ContentSyncPlanner {
         return FailureResult(
           ApplicationFailure(
             code: 'LOCAL_ROOT_PACK_SET_MISMATCH',
-            message:
-                'The local CURRENT pack set contains a pack outside the immutable root snapshot.',
+            message: 'The local CURRENT pack set contains a pack outside the immutable root snapshot.',
             details: <String, Object?>{
               'packCode': unexpectedCurrentPack.identity.code,
               'variant': unexpectedCurrentPack.identity.variant,

@@ -74,7 +74,10 @@ void main() {
         <String>['canonical', 'locale:ru'],
       );
       expect(projected.practiceTests, hasLength(1));
-      expect(projected.practiceTests.single.identityKey, practiceTest.identityKey);
+      expect(
+        projected.practiceTests.single.identityKey,
+        practiceTest.identityKey,
+      );
       expect(projected.practiceTests.single.revision, practiceTest.revision);
       expect(projected.practiceTests.single.checksum, practiceTest.checksum);
       expect(projected.catalogues, hasLength(1));

@@ -116,16 +116,16 @@ final class LearningCollectionMembership {
 
   List<ContentRevisionRef> get contentRefs =>
       List<ContentRevisionRef>.unmodifiable(
-        members
-            .whereType<LearningCollectionContentMemberRef>()
-            .map((member) => member.ref),
+        members.whereType<LearningCollectionContentMemberRef>().map(
+          (member) => member.ref,
+        ),
       );
 
   List<PracticeTestRevisionRef> get practiceTestRefs =>
       List<PracticeTestRevisionRef>.unmodifiable(
-        members
-            .whereType<LearningCollectionPracticeTestMemberRef>()
-            .map((member) => member.ref),
+        members.whereType<LearningCollectionPracticeTestMemberRef>().map(
+          (member) => member.ref,
+        ),
       );
 }
 
@@ -141,9 +141,7 @@ extension LearningCollectionPublicationBinding on LearningCollectionProjection {
     );
 
     _requireSameExactRefs(
-      expected: contentRefs.map(
-        (ref) => '${ref.identityKey}|${ref.checksum}',
-      ),
+      expected: contentRefs.map((ref) => '${ref.identityKey}|${ref.checksum}'),
       actual: membership.contentRefs.map(
         (ref) => '${ref.identityKey}|${ref.checksum}',
       ),
