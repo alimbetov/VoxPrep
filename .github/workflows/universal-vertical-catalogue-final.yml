@@ -228,6 +228,9 @@ jobs:
           flutter test test/application/asset_cache_retention_manager_test.dart
           flutter test test/data/local/drift_asset_cache_retention_repository_test.dart
 
+      - name: Audio deletion token recovery qualification
+        run: flutter test test/acceptance/audio_asset_token_recovery_acceptance_test.dart
+
       - name: Audio eviction redownload acceptance
         run: flutter test test/acceptance/audio_cache_eviction_redownload_acceptance_test.dart
 
