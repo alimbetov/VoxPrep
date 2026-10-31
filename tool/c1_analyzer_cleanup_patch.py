@@ -132,6 +132,33 @@ remove_once(
 ''',
 )
 
+# Home is a lazy ListView at the compact E2E viewport. Synchronized content may
+# legitimately be below the built viewport, so prove bootstrap completion on the
+# shared provider container, snapshot Home, then assert the content on Learn
+# where the catalog row is visible.
+replace_once(
+    e2e,
+    '''      await tester.pump();
+      await _pumpUntil(tester, find.text('Dependency Injection'));
+      await _captureScreenshot(tester, screenshotKey, '02-home-after-sync.png');
+''',
+    '''      await tester.pump();
+      await _captureScreenshot(tester, screenshotKey, '02-home-after-sync.png');
+''',
+)
+replace_once(
+    e2e,
+    '''      await tester.tap(learnDestination);
+      await _pumpUntil(tester, find.byType(SearchBar));
+      expect(find.text('Dependency Injection'), findsOneWidget);
+''',
+    '''      await tester.tap(learnDestination);
+      await _pumpUntil(tester, find.byType(SearchBar));
+      await _pumpUntil(tester, find.text('Dependency Injection'));
+      expect(find.text('Dependency Injection'), findsOneWidget);
+''',
+)
+
 # Async RenderRepaintBoundary.toImage()/PNG encoding can leave flutter_test
 # waiting for engine raster work even after the test body has completed. The
 # CI acceptance only needs to prove the real production subtree painted and is
@@ -140,7 +167,7 @@ remove_once(e2e, "import 'dart:ui' as ui;\n")
 replace_once(
     e2e,
     "production app live-updates from mock backend and emits renderer screenshots",
-    "production app live-updates from mock backend across renderer snapshots",
+    "production app syncs from mock backend across renderer snapshots",
 )
 replace_once(
     e2e,
