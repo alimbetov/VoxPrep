@@ -5,8 +5,7 @@ import '../result/result.dart';
 
 /// Builds the device-local pack projection from one locale-independent backend
 /// root snapshot. The global contentVersion/checksum remain the identity of the
-/// full published root; only canonical + the deterministic locale fallback
-/// chain are materialized locally.
+/// full published root; Flutter only applies Backend-owned fallback metadata.
 final class RootManifestMaterializer {
   const RootManifestMaterializer();
 
@@ -24,7 +23,30 @@ final class RootManifestMaterializer {
       );
     }
 
-    final fallback = LocaleFallbackPlan(locale.code);
+    Iterable<String> configuredFallbacks = const <String>[];
+    for (final rule in root.localeFallbacks) {
+      if (rule.locale == locale.code) {
+        configuredFallbacks = rule.fallbackLocales;
+        break;
+      }
+    }
+
+    final LocaleFallbackPlan fallback;
+    try {
+      fallback = LocaleFallbackPlan(
+        requestedLocale: locale.code,
+        configuredFallbackLocales: configuredFallbacks,
+      );
+    } on FormatException catch (error) {
+      return FailureResult<RootContentManifest>(
+        ApplicationFailure(
+          code: 'LOCALE_FALLBACK_INVALID',
+          message: 'Backend locale fallback metadata is invalid.',
+          details: <String, Object?>{'reason': error.message},
+        ),
+      );
+    }
+
     final selectedVariants = <String>{
       'canonical',
       for (final candidate in fallback.localizedCandidates)
@@ -42,6 +64,7 @@ final class RootManifestMaterializer {
         publishedAt: root.publishedAt,
         checksum: root.checksum,
         packs: packs,
+        localeFallbacks: root.localeFallbacks,
         tombstones: root.tombstones,
       ),
     );
