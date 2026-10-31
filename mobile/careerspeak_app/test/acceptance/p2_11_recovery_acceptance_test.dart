@@ -142,12 +142,19 @@ void main() {
 
       final packCallsBeforeRepair = backend.packManifestCalls;
       final payloadCallsBeforeRepair = backend.contentPayloadCalls;
-      await _bootstrapSuccess(
+      final repairResult = await _bootstrapResult(
         database: database,
         credentialStore: credentialStore,
         client: client,
         runId: 'repair-same-root',
       );
+      if (repairResult case FailureResult<ApplicationBootstrapOutcome>(
+        :final failure,
+      )) {
+        fail(
+          'Same-root repair failed: ${failure.code}; details=${failure.details}',
+        );
+      }
 
       expect(backend.registrationCalls, 1);
       expect(backend.packManifestCalls, packCallsBeforeRepair + 1);
