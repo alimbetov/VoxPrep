@@ -50,8 +50,9 @@ final class RoleAudioClipController {
   RoleAudioClipController({
     required ResolveRoleAudioAsset resolveAudioAsset,
     required AudioPlaybackEngine engine,
-  }) : _resolveAudioAsset = resolveAudioAsset,
-       _engine = engine;
+  }) : this._(resolveAudioAsset, engine);
+
+  RoleAudioClipController._(this._resolveAudioAsset, this._engine);
 
   final ResolveRoleAudioAsset _resolveAudioAsset;
   final AudioPlaybackEngine _engine;
