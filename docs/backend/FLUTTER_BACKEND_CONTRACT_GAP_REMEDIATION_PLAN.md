@@ -145,6 +145,8 @@ Add batch/bundle delivery only if measured pack size makes single-payload reques
 
 # C5 — Installation + external security
 
+**Learner security model is frozen in:** `docs/backend/C5_INSTALLATION_EXTERNAL_SECURITY_CONTRACT.md`.
+
 Close:
 
 ```text
@@ -155,15 +157,42 @@ BGA-018 rate limiting
 BGA-022 entitlement risk decision
 ```
 
-Freeze:
+Frozen learner-token model:
 
 ```text
-token longevity
-re-registration/revocation
+installationId = stable installation identity
+token          = temporary backend-issued credential
+
+cold bootstrap
+→ preserve/get installationId
+→ POST /api/v1/installations
+→ issue fresh token
+→ atomically replace TokenStore token
+→ centralized HTTP client uses current Bearer token
+```
+
+Rules:
+
+```text
+fresh token on every application bootstrap
+stored token never skips cold-start issuance
+no learner login/password
+no refresh token
+no identity platform
+business code never owns Authorization
 one bounded 401 recovery
+401 → single-flight re-issue → retry once
+second 401 → fail closed
+revoked installation → renewal fails closed
+```
+
+Also freeze:
+
+```text
 429/Retry-After
 ADMIN cookie/CSRF/rate-limit/rotation basics
 public-vs-signed media decision
+entitlement risk acceptance/rejection
 ```
 
 Do not add user accounts or an identity platform for these MVP concerns.
@@ -205,7 +234,7 @@ No distributed transaction or new platform component is required.
 
 ```text
 B1  project/security/Liquibase/RustFS foundation
-B2  installation token domain
+B2  installation identity + bootstrap token issuance/rotation
 B3  taxonomy + locale + voice catalogues
 B4  Goal + Track + Collection
 B5  typed content revisions
@@ -217,84 +246,3 @@ B10 TTS backend domain
 B11 simple Admin Content Studio
 B12 cross-system acceptance
 ```
-
----
-
-# Acceptance gates
-
-## G0 Product
-
-```text
-Goal → Track → Collection → Content/Test accepted
-CareerTrack != LearningTrack
-no unnecessary LearningActivity/workflow/recommendation layer
-```
-
-## G1 Contract
-
-```text
-G0 PASS
-BGA-001..006 closed
-BGA-007/008 shapes agreed
-```
-
-## G2 Backend domain
-
-```text
-ownership documented
-schema derived from domain, not Flutter DTOs
-immutable revision constraints documented
-publication transaction documented
-```
-
-## G3 Learner API
-
-Prove:
-
-```text
-installation
-root/304
-locale switch/localized payload
-Goal/Track/Collection delivery
-typed content
-assessment
-tombstone
-offline/restart
-401 recovery
-429 bounded retry
-```
-
-## G4 Publication
-
-Prove atomic root switch and never-reused `contentVersion`.
-
-## G5 TTS
-
-Use existing real Backend ↔ Worker acceptance plus current-audio uniqueness.
-
-## G6 Recovery
-
-Restore PostgreSQL + RustFS into a clean environment and prove learner root/assets remain valid or fail closed.
-
----
-
-# Explicit anti-overengineering rule
-
-Do not solve these gaps with:
-
-```text
-microservices
-Kafka/RabbitMQ
-Redis
-Keycloak
-API Gateway
-server learner profiles
-LearningActivity aggregate
-workflow/rules engine
-recommendation service
-remote UI schema
-generic EAV content table
-one giant Content entity mirroring Flutter DTOs
-```
-
-The modular monolith remains the correct MVP architecture.
