@@ -8,11 +8,9 @@ import 'package:drift/drift.dart';
 class ContentRetirements extends Table {
   TextColumn get contentCode => text()();
   TextColumn get contentType => text()();
-  IntColumn get retiredRevision =>
-      integer().check(retiredRevision.isBiggerThanValue(0))();
+  IntColumn get retiredRevision => integer()();
   TextColumn get reason => text()();
-  IntColumn get sourceContentVersion =>
-      integer().check(sourceContentVersion.isBiggerThanValue(0))();
+  IntColumn get sourceContentVersion => integer()();
   DateTimeColumn get retiredAt => dateTime()();
 
   @override
@@ -22,6 +20,8 @@ class ContentRetirements extends Table {
   List<String> get customConstraints => const [
     'CHECK (length(trim(content_code)) > 0)',
     'CHECK (length(trim(content_type)) > 0)',
+    'CHECK (retired_revision > 0)',
     'CHECK (length(trim(reason)) > 0)',
+    'CHECK (source_content_version > 0)',
   ];
 }
