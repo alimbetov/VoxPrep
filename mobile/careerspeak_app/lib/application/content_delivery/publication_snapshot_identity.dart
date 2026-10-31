@@ -120,12 +120,5 @@ String? _normalizeOptionalEtag(String? value) {
   if (normalized.isEmpty) {
     throw ArgumentError.value(value, 'etag', 'must not be blank');
   }
-
-  final strong = RegExp(r'^"[^"\r\n]+"$');
-  final weak = RegExp(r'^W/"[^"\r\n]+"$');
-  if (!strong.hasMatch(normalized) && !weak.hasMatch(normalized)) {
-    throw ArgumentError.value(value, 'etag', 'must be a valid HTTP entity tag');
-  }
-
   return normalized;
 }
