@@ -9,11 +9,12 @@ import '../application/query/page.dart';
 import '../application/query/practice_test_query.dart';
 import '../data/local/drift_content_repository.dart';
 import '../data/local/drift_localized_content_repository.dart';
-import '../data/production/unavailable_practice_test_repository.dart';
+import '../data/local/drift_practice_test_repository.dart';
 import '../domain/content_identity.dart';
 import '../domain/content_item.dart';
 import '../domain/practice_test.dart';
 import 'app_preferences_providers.dart';
+import 'assessment_providers.dart';
 import 'learner_state_providers.dart';
 
 final contentRepositoryProvider = Provider<ContentRepository>((ref) {
@@ -29,7 +30,10 @@ final localizedContentRepositoryProvider = Provider<LocalizedContentRepository>(
 );
 
 final practiceTestRepositoryProvider = Provider<PracticeTestRepository>((ref) {
-  return const UnavailablePracticeTestRepository();
+  return DriftPracticeTestRepository(
+    ref.watch(careerSpeakDatabaseProvider),
+    ref.watch(assessmentRevisionRepositoryProvider),
+  );
 });
 
 final contentPageProvider = StreamProvider<Page<ContentItem>>((ref) {
