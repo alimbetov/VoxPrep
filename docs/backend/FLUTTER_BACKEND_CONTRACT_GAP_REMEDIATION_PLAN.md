@@ -122,6 +122,8 @@ No recommendation engine is required.
 
 # C4 — Atomic publication
 
+**Atomic publication model is frozen in:** `docs/backend/C4_ATOMIC_PUBLICATION_CONTRACT.md`.
+
 Close:
 
 ```text
@@ -138,6 +140,57 @@ MVP truth path:
 Backend: manifest + exact immutable payloads/catalogues
 Flutter: Drift browsing/search/pagination
 ```
+
+Security alignment is normative:
+
+```text
+PublicationSnapshot identity
+        !=
+Installation identity
+        !=
+installation token/session
+```
+
+Therefore `contentVersion`, revision/checksum identity, ETag semantics and asset identity MUST NOT depend on:
+
+```text
+installationId
+Authorization token
+token issuance/expiry/rotation
+request session
+signed-media URL expiration
+```
+
+Stable media identity belongs to C4:
+
+```text
+assetId
+checksumSha256
+deliveryKey
+```
+
+Ephemeral media authorization belongs to C5:
+
+```text
+authorized delivery resolution
+short-lived signed URL/access grant if used
+rate limiting / abuse controls
+```
+
+A C5 token replacement during synchronization is a transport/security recovery event, not a publication transition:
+
+```text
+sync Publication v42 with T1
+→ exact resource returns 401
+→ C5 reissues T2
+→ retry same exact idempotent resource once
+→ revision/checksum unchanged
+→ continue v42 atomic projection
+```
+
+Repeated `401`, missing exact revisions, checksum conflicts or failed projection MUST fail closed and MUST NOT partially replace the currently committed local projection.
+
+A newer backend publication becoming `CURRENT` while a client synchronizes an older exact snapshot MUST NOT mutate the older exact resources or cause mixed-version local commit.
 
 Add batch/bundle delivery only if measured pack size makes single-payload requests a real problem.
 
