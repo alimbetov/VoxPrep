@@ -80,6 +80,7 @@ jobs:
           flutter test test/data/local/database/careerspeak_database_migration_test.dart
           flutter test test/data/local/drift_root_fallback_persistence_test.dart
           flutter test test/data/local/drift_localized_content_repository_test.dart
+          flutter test test/data/local/drift_locale_fallback_policy_test.dart
           flutter test test/data/local/drift_sync_locale_repair_test.dart
           flutter test test/acceptance/c1_localization_recovery_acceptance_test.dart
           flutter test test/acceptance/c1_online_sync_offline_reopen_acceptance_test.dart
