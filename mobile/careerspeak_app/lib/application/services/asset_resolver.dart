@@ -89,11 +89,7 @@ final class AssetResolver {
       role: role,
       variant: variant,
     );
-    return _resolve(
-      descriptor,
-      policy,
-      expectedMediaPrefix: 'audio/',
-    );
+    return _resolve(descriptor, policy, expectedMediaPrefix: 'audio/');
   }
 
   Future<Result<ResolvedAsset>> _resolve(
