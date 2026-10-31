@@ -29,33 +29,7 @@ class CatalogueHomeScreen extends ConsumerWidget {
         return ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Learning catalogue',
-                        style: Theme.of(context).textTheme.headlineMedium,
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Choose a learning path.',
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
-                    ],
-                  ),
-                ),
-                if (graph.presentation.showSeeAll)
-                  TextButton.icon(
-                    onPressed: () => context.push('/catalogue/all'),
-                    icon: const Icon(Icons.apps_outlined),
-                    label: const Text('See all'),
-                  ),
-              ],
-            ),
+            _CatalogueHeader(showSeeAll: graph.presentation.showSeeAll),
             const SizedBox(height: 24),
             if (visibleVerticals.isEmpty)
               const _Message('No active learning paths.')
@@ -71,6 +45,67 @@ class CatalogueHomeScreen extends ConsumerWidget {
                   verticals: visibleVerticals,
                 ),
               },
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _CatalogueHeader extends StatelessWidget {
+  const _CatalogueHeader({required this.showSeeAll});
+
+  final bool showSeeAll;
+
+  @override
+  Widget build(BuildContext context) {
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
+    final copy = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Learning catalogue',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'Choose a learning path.',
+          style: Theme.of(context).textTheme.bodyLarge,
+        ),
+      ],
+    );
+    final seeAll = Tooltip(
+      message: 'See all learning paths',
+      child: TextButton.icon(
+        onPressed: () => context.push('/catalogue/all'),
+        icon: const Icon(Icons.apps_outlined),
+        label: const Text('See all'),
+      ),
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final stacked = constraints.maxWidth < 440 || textScale >= 1.6;
+        if (stacked) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              copy,
+              if (showSeeAll) ...[
+                const SizedBox(height: 8),
+                Align(alignment: Alignment.centerLeft, child: seeAll),
+              ],
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(child: copy),
+            if (showSeeAll) ...[
+              const SizedBox(width: 12),
+              seeAll,
+            ],
           ],
         );
       },
@@ -175,6 +210,7 @@ class _Shelf extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (verticals.isEmpty) return const SizedBox.shrink();
+    final cardHeight = _adaptiveCardHeight(context, base: 190, extraAt2x: 120);
     return Padding(
       padding: const EdgeInsets.only(bottom: 28),
       child: Column(
@@ -187,7 +223,7 @@ class _Shelf extends StatelessWidget {
           ],
           const SizedBox(height: 10),
           SizedBox(
-            height: 190,
+            height: cardHeight,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: verticals.length,
@@ -212,7 +248,7 @@ class _Carousel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 250,
+      height: _adaptiveCardHeight(context, base: 250, extraAt2x: 120),
       child: PageView.builder(
         controller: PageController(viewportFraction: 0.88),
         itemCount: verticals.length,
@@ -233,6 +269,7 @@ class _Grid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (verticals.isEmpty) return const _Message('No active learning paths.');
+    final textScale = MediaQuery.textScalerOf(context).scale(1);
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = constraints.maxWidth >= 1000
@@ -242,6 +279,11 @@ class _Grid extends StatelessWidget {
             : constraints.maxWidth >= 440
             ? 2
             : 1;
+        final aspectRatio = textScale >= 1.8
+            ? 0.9
+            : textScale >= 1.3
+            ? 1.1
+            : 1.45;
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -249,7 +291,7 @@ class _Grid extends StatelessWidget {
             crossAxisCount: columns,
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
-            childAspectRatio: 1.45,
+            childAspectRatio: aspectRatio,
           ),
           itemCount: verticals.length,
           itemBuilder: (context, index) =>
@@ -277,16 +319,28 @@ class _VerticalCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               CatalogueAssetIcon(assetId: vertical.iconAssetId, size: 32),
-              const Spacer(),
-              Text(
-                vertical.title,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                vertical.description,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
+              const SizedBox(height: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    Text(
+                      vertical.title,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 6),
+                    Flexible(
+                      child: Text(
+                        vertical.description,
+                        maxLines: 4,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -307,4 +361,13 @@ class _Message extends StatelessWidget {
       child: Padding(padding: const EdgeInsets.all(24), child: Text(message)),
     );
   }
+}
+
+double _adaptiveCardHeight(
+  BuildContext context, {
+  required double base,
+  required double extraAt2x,
+}) {
+  final scale = MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 2.0);
+  return base + ((scale - 1) * extraAt2x);
 }
