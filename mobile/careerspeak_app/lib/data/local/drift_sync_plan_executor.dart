@@ -803,6 +803,11 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
               updatedAt: now,
             ),
           );
+
+      for (final target in plan.changedPacks) {
+        await _setPackState(runId, target, SyncPackUpdateState.committed);
+      }
+      await _setRunState(runId, SyncRunState.cleaning);
     });
   }
 

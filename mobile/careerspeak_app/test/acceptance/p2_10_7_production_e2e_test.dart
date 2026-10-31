@@ -153,10 +153,8 @@ void main() {
         ),
       );
 
-      await _pumpUntil(
-        tester,
-        find.text('No learning content is available yet.'),
-      );
+      await _pumpUntil(tester, find.byType(NavigationBar));
+      expect(find.text('Dependency Injection'), findsNothing);
       await _pumpUntilCondition(
         tester,
         () => backend.rootManifestCalls == 1,
