@@ -42,12 +42,13 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
     : super(executor ?? driftDatabase(name: 'careerspeak'));
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) async {
       await migrator.createAll();
+      await _createPublicationMembershipTables();
     },
     onUpgrade: (migrator, from, _) async {
       if (from < 2) {
@@ -167,9 +168,41 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
         await migrator.createTable(practiceTestRevisionReads);
         await migrator.createTable(practiceTestQuestionRefs);
       }
+      if (from < 9) {
+        await _createPublicationMembershipTables();
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },
   );
+
+  Future<void> _createPublicationMembershipTables() async {
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS publication_practice_test_refs (
+        content_version INTEGER NOT NULL,
+        practice_test_code TEXT NOT NULL,
+        revision INTEGER NOT NULL,
+        checksum TEXT NOT NULL,
+        PRIMARY KEY (content_version, practice_test_code),
+        CHECK (content_version > 0),
+        CHECK (revision > 0),
+        CHECK (length(trim(practice_test_code)) > 0),
+        CHECK (length(trim(checksum)) = 64)
+      )
+    ''');
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS publication_catalogue_refs (
+        content_version INTEGER NOT NULL,
+        catalogue_kind TEXT NOT NULL,
+        revision INTEGER NOT NULL,
+        checksum TEXT NOT NULL,
+        PRIMARY KEY (content_version, catalogue_kind),
+        CHECK (content_version > 0),
+        CHECK (revision > 0),
+        CHECK (length(trim(catalogue_kind)) > 0),
+        CHECK (length(trim(checksum)) = 64)
+      )
+    ''');
+  }
 }
