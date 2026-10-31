@@ -47,32 +47,34 @@ final publicationSnapshotStagerProvider = Provider<PublicationSnapshotStager>((
 });
 
 final requiredOfflineAssetPrefetcherProvider =
-    FutureProvider<RequiredOfflineAssetPrefetcher>((ref) async {
+    Provider<RequiredOfflineAssetPrefetcher>((ref) {
       return RequiredOfflineAssetPrefetcher(
         manifestGateway: ref.watch(contentManifestGatewayProvider),
-        downloads: await ref.watch(assetDownloadManagerProvider.future),
+        ensureLocal: (asset) async {
+          final downloads = await ref.read(assetDownloadManagerProvider.future);
+          return downloads.ensureLocal(asset);
+        },
       );
     });
 
-final contentSyncCoordinatorProvider = FutureProvider<ContentSyncCoordinator>((
-  ref,
-) async {
+final contentSyncCoordinatorProvider = Provider<ContentSyncCoordinator>((ref) {
   return ContentSyncCoordinator(
     journal: ref.watch(syncJournalProvider),
     manifestGateway: ref.watch(contentManifestGatewayProvider),
     planner: ref.watch(contentSyncPlannerProvider),
     executor: ref.watch(syncPlanExecutorProvider),
     snapshotStager: ref.watch(publicationSnapshotStagerProvider),
-    requiredOfflinePrefetcher: await ref.watch(
-      requiredOfflineAssetPrefetcherProvider.future,
+    requiredOfflinePrefetcher: ref.watch(
+      requiredOfflineAssetPrefetcherProvider,
     ),
   );
 });
 
-final preferenceAwareContentSyncProvider =
-    FutureProvider<PreferenceAwareContentSync>((ref) async {
-      return PreferenceAwareContentSync(
-        preferencesRepository: ref.watch(appPreferencesRepositoryProvider),
-        coordinator: await ref.watch(contentSyncCoordinatorProvider.future),
-      );
-    });
+final preferenceAwareContentSyncProvider = Provider<PreferenceAwareContentSync>(
+  (ref) {
+    return PreferenceAwareContentSync(
+      preferencesRepository: ref.watch(appPreferencesRepositoryProvider),
+      coordinator: ref.watch(contentSyncCoordinatorProvider),
+    );
+  },
+);
