@@ -1,0 +1,73 @@
+openapi: 3.1.0
+info:
+  title: CareerSpeak Content Audio Role Contract
+  version: 1.0.0
+components:
+  schemas:
+    ContentAudioRole:
+      type: string
+      enum:
+        - pronunciation
+        - question
+        - sampleAnswer
+        - narration
+        - shadowing
+
+    AudioRequirement:
+      type: string
+      enum:
+        - OPTIONAL
+        - RECOMMENDED
+        - REQUIRED
+
+    ContentAudioBinding:
+      type: object
+      additionalProperties: false
+      required:
+        - contentCode
+        - contentType
+        - contentRevision
+        - role
+        - assetId
+      properties:
+        contentCode:
+          type: string
+        contentType:
+          type: string
+          enum:
+            - vocabulary
+            - interview
+            - topic
+            - shadowing
+            - phrase
+        contentRevision:
+          type: integer
+          minimum: 1
+        role:
+          $ref: '#/components/schemas/ContentAudioRole'
+        assetId:
+          type: string
+
+x-content-audio-policy:
+  vocabulary:
+    pronunciation: OPTIONAL
+  phrase:
+    pronunciation: RECOMMENDED
+  interview:
+    question: RECOMMENDED
+    sampleAnswer: RECOMMENDED
+  topic:
+    narration: OPTIONAL
+  shadowing:
+    shadowing: REQUIRED
+
+x-publication-invariants:
+  - Audio is bound to an exact immutable ContentRevision, never to Vertical, Goal, Track or Collection.
+  - One exact ContentRevision MUST have at most one asset for a given audio role.
+  - An audio role MUST be valid for the ContentType according to x-content-audio-policy.
+  - REQUIRED audio MUST reference a READY audio asset before publication can become CURRENT.
+  - RECOMMENDED audio MAY be absent but MUST produce an ADMIN validation warning.
+  - OPTIONAL audio MAY be absent without warning.
+  - A published audio binding MUST resolve to an asset whose mediaType starts with audio/.
+  - Publication manifests contain stable asset identity only; signed URLs and access grants are runtime C5 data.
+  - INTERVIEW question and sampleAnswer are independent audio bindings and MAY use different assets or voices.
