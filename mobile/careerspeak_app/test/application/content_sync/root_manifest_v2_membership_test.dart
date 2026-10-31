@@ -17,16 +17,7 @@ void main() {
       _ref(CatalogueKind.learningTracks, 5),
       _ref(CatalogueKind.learningCollections, 6),
     ];
-    final root = RootContentManifest(
-      schemaVersion: 2,
-      contentVersion: 200,
-      minimumAppContractVersion: 2,
-      publishedAt: DateTime.utc(2026, 10, 31, 16),
-      checksum: _hash,
-      packs: const <PackRevisionRef>[],
-      catalogues: catalogues,
-      tombstones: const <ContentTombstone>[],
-    );
+    final root = _root(catalogues);
 
     final result = const RootManifestMaterializer().materialize(
       root: root,
@@ -43,6 +34,39 @@ void main() {
       expect(projected.catalogues[index].checksum, catalogues[index].checksum);
     }
   });
+
+  test('schema v2 incomplete graph is rejected before locale materialization', () {
+    final root = _root(<CatalogueRevisionRef>[
+      _ref(CatalogueKind.verticalSections, 1),
+      _ref(CatalogueKind.verticals, 2),
+      _ref(CatalogueKind.verticalPresentation, 3),
+      _ref(CatalogueKind.learningGoals, 4),
+      _ref(CatalogueKind.learningTracks, 5),
+    ]);
+
+    final result = const RootManifestMaterializer().materialize(
+      root: root,
+      translationLocale: 'en',
+    );
+
+    expect(result, isA<FailureResult<RootContentManifest>>());
+    final failure = (result as FailureResult<RootContentManifest>).failure;
+    expect(failure.code, 'MANIFEST_INVALID');
+    expect(failure.details['field'], 'catalogues');
+  });
+}
+
+RootContentManifest _root(List<CatalogueRevisionRef> catalogues) {
+  return RootContentManifest(
+    schemaVersion: 2,
+    contentVersion: 200,
+    minimumAppContractVersion: 2,
+    publishedAt: DateTime.utc(2026, 10, 31, 16),
+    checksum: _hash,
+    packs: const <PackRevisionRef>[],
+    catalogues: catalogues,
+    tombstones: const <ContentTombstone>[],
+  );
 }
 
 CatalogueRevisionRef _ref(CatalogueKind kind, int revision) {
