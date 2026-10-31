@@ -36,7 +36,8 @@ const goldenInterview = ContentItem(
   code: 'JAVA_HASHMAP_INTERVIEW_GOLDEN',
   type: ContentType.interview,
   title: 'HashMap vs ConcurrentHashMap',
-  subtitle: 'Interview question with independent question and sample-answer audio',
+  subtitle:
+      'Interview question with independent question and sample-answer audio',
   description:
       'Practice answering a realistic Java interview question, then compare your response with a concise sample answer.',
   category: 'JAVA',
@@ -222,7 +223,9 @@ final class GoldenPracticeTestRepository implements PracticeTestRepository {
 
   @override
   Future<Result<PracticeTest?>> getByCode(String code) async =>
-      Success<PracticeTest?>(code == goldenPracticeTest.code ? goldenPracticeTest : null);
+      Success<PracticeTest?>(
+        code == goldenPracticeTest.code ? goldenPracticeTest : null,
+      );
 
   @override
   Stream<Result<Page<PracticeTestSummary>>> watchTests(
