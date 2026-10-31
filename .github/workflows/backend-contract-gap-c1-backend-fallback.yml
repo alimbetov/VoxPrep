@@ -72,12 +72,15 @@ jobs:
           flutter test test/application/content_delivery/locale_fallback_test.dart
           flutter test test/application/content_sync/content_sync_locale_projection_test.dart
           flutter test test/contracts/backend_owned_locale_fallback_contract_test.dart
+          flutter test test/contracts/manifest_contract_fixture_test.dart
+          flutter test test/contracts/openapi_contract_baseline_test.dart
           flutter test test/data/local/database/careerspeak_database_test.dart
+          flutter test test/data/local/database/careerspeak_database_migration_test.dart
+          flutter test test/data/local/drift_root_fallback_persistence_test.dart
           flutter test test/data/local/drift_localized_content_repository_test.dart
           flutter test test/data/local/drift_sync_locale_repair_test.dart
           flutter test test/acceptance/c1_localization_recovery_acceptance_test.dart
           flutter test test/acceptance/c1_tombstone_retirement_acceptance_test.dart
-          flutter test test/contracts/openapi_contract_baseline_test.dart
 
       - name: Full regression suite
         working-directory: mobile/careerspeak_app
