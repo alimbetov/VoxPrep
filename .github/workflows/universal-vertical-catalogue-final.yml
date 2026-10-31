@@ -166,6 +166,7 @@ jobs:
 
       - name: T4 repository and storage qualification
         run: |
+          flutter test test/architecture/asset_download_boundary_test.dart
           flutter test test/application/typed_asset_resolution_test.dart
           flutter test test/data/remote/http_asset_byte_source_test.dart
           flutter test test/data/remote/http_media_access_gateway_test.dart
