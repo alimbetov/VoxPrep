@@ -37,6 +37,7 @@ See:
 - `docs/backend/C1_ROOT_LOCALIZATION_ACCEPTANCE.md`
 - `docs/backend/C2_TYPED_CONTENT_CATALOG_CONTRACT.md`
 - `docs/backend/C2_QUALIFICATION_LEDGER.md`
+- `docs/backend/C3_ASSESSMENT_CONTRACT.md`
 
 ### Contract-closed findings
 
@@ -57,12 +58,17 @@ BGA-008 locale / learner voice capability    CONTRACT CLOSED / C2 ACCEPTED
 BGA-016 checksum canonicalization             CONTRACT CLOSED / C2 ACCEPTED
 ```
 
+C3 closes this finding at the **assessment domain/wire-contract + Flutter production lifecycle** boundary:
+
+```text
+BGA-004 production assessment contract       CONTRACT CLOSED / C3 ACCEPTED
+```
+
 This does **not** mean the backend service is implemented. Backend persistence/controllers/publication code still belongs to the later backend implementation stream.
 
 ### Open P0 blockers before backend learner-domain/schema freeze
 
 ```text
-BGA-004 production assessment contract
 BGA-005 atomic backend publication snapshot
 BGA-006 installation-token lifecycle / 401 recovery
 ```
@@ -90,8 +96,18 @@ C2 typed content + small catalogues          ACCEPTED
 ├─ C2.5 adversarial + catalogue fallback     ACCEPTED
 └─ C2.6 exact-SHA production qualification   ACCEPTED
 
-C3 assessment                                NEXT
-C4 atomic publication                        PENDING
+C3 assessment                                ACCEPTED
+├─ C3.1 assessment revision contract         ACCEPTED
+├─ C3.2 question revision contract           ACCEPTED
+├─ C3.3 ordered exact question refs          ACCEPTED
+├─ C3.4 deterministic scoring                ACCEPTED
+├─ C3.5 production exact payload transport   ACCEPTED
+├─ C3.6 Drift persistence / schema v8        ACCEPTED
+├─ C3.7 offline/restart reproducibility      ACCEPTED
+├─ C3.8 adversarial qualification            ACCEPTED
+└─ C3.9 exact-SHA production qualification   ACCEPTED
+
+C4 atomic publication                        NEXT
 C5 installation/security                     PENDING
 ```
 
@@ -132,7 +148,25 @@ flutter analyze                PASS
 full flutter test              PASS
 ```
 
-The C2 contract now freezes:
+C3 final clean qualification baseline:
+
+```text
+49937959a1ce71322abec159dd36a41e72137bd0
+ci(c3): qualify Drift v8 production baseline
+```
+
+`Flutter Production Adapters` run `41207314641` completed successfully with:
+
+```text
+format                         PASS
+Drift v8 reproducibility       PASS
+flutter analyze                PASS
+full flutter test              PASS
+```
+
+`C3 Drift v8 Qualification` run `41207305741` completed successfully on the same exact SHA with targeted C3 lifecycle and full regression green.
+
+The C2 contract freezes:
 
 ```text
 VOCABULARY / INTERVIEW / TOPIC / PHRASE / SHADOWING typed bodies
@@ -143,14 +177,29 @@ RFC 8785 + SHA-256 checksum canonicalization
 safe deterministic fallback for inactive catalogue selections
 ```
 
-Drift schema v7 keeps C1 and C2 responsibilities separate:
+The C3 contract additionally freezes:
 
 ```text
-ContentCatalogReads   = C1 presentation projection
-TypedContentReads     = C2 exact-revision typed projection
+PracticeTest / PracticeTestRevision
+Question / QuestionRevision
+ordered exact TestQuestionRef
+singleChoice MVP question body
+deterministic integer scoring in basis points
+exact immutable assessment payload transport
+Drift v8 offline/restart revision reproducibility
 ```
 
-The backend shall not mirror these Flutter tables directly. Backend aggregate/schema design remains deferred until assessment/publication contracts are closed.
+Drift projections keep responsibilities separate:
+
+```text
+ContentCatalogReads            = C1 presentation projection
+TypedContentReads              = C2 exact-revision typed projection
+AssessmentQuestionReads        = C3 exact question revision projection
+PracticeTestRevisionReads      = C3 exact test revision projection
+PracticeTestQuestionRefs       = C3 ordered exact question references
+```
+
+The backend shall not mirror these Flutter tables directly. Backend aggregate/schema design remains deferred until C4 publication and C5 installation/security contracts are closed.
 
 ## Localization
 
@@ -183,9 +232,9 @@ C1 root + localization            ACCEPTED
  ↓
 C2 typed content + catalogues     ACCEPTED
  ↓
-C3 assessment                     NEXT
+C3 assessment                     ACCEPTED
  ↓
-C4 atomic publication
+C4 atomic publication             NEXT
  ↓
 C5 installation/security
  ↓
@@ -218,7 +267,7 @@ Taxonomy
 SupportedLocale / learner-facing voice catalogue
 ```
 
-C1 and C2 contract semantics are now accepted, but final persistence design should still be derived together with C3 assessment and C4 publication decisions rather than prematurely mirroring Flutter projections.
+C1, C2 and C3 contract semantics are accepted. Final persistence design should now be derived together with C4 atomic publication and C5 installation/security decisions rather than prematurely mirroring Flutter projections.
 
 ## Anti-overengineering position
 

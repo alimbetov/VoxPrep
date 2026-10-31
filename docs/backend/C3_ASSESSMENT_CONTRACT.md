@@ -1,7 +1,7 @@
 # C3 Assessment Contract
 
-**Status:** IMPLEMENTING  
-**Baseline:** C2 accepted at `92a8a2e01575869b8f94ec874a6d77b0cc7fee16`  
+**Status:** ACCEPTED  
+**Accepted exact-SHA baseline:** `49937959a1ce71322abec159dd36a41e72137bd0`  
 **Normative contract:** `contracts/c3-assessment-v1.yaml`
 
 ## Scope
@@ -85,7 +85,7 @@ GET /api/v1/assessment/questions/{questionCode}/revisions/{revision}
 
 The expected checksum comes from the exact immutable ref and is verified against the response. A same-code/same-revision payload with another checksum is an integrity mismatch and fails closed.
 
-C4 still owns **publication membership**: which exact `PracticeTestRevision` is current/referenced by a published collection/root. C3 does not add a competing mutable assessment-list endpoint.
+C4 owns **publication membership**: which exact `PracticeTestRevision` is current/referenced by a published collection/root. C3 does not add a competing mutable assessment-list endpoint.
 
 ## Deterministic scoring
 
@@ -119,20 +119,46 @@ C3 immutable projections use the C2 RFC 8785 / SHA-256 canonicalization rule. A 
 ## Implementation slices
 
 ```text
-C3.1 PracticeTest / PracticeTestRevision contract       IMPLEMENTED
-C3.2 Question / QuestionRevision typed body            IMPLEMENTED
-C3.3 exact ordered TestQuestionRef                      IMPLEMENTED
-C3.4 deterministic scoring                             IMPLEMENTED
-C3.5 production decoder/gateway                        IMPLEMENTING
-C3.6 Drift assessment persistence                      PENDING
-C3.7 offline/restart reproducibility                    PENDING
-C3.8 adversarial qualification                          PENDING
-C3.9 exact-SHA full production CI                       PENDING
+C3.1 PracticeTest / PracticeTestRevision contract       ACCEPTED
+C3.2 Question / QuestionRevision typed body            ACCEPTED
+C3.3 exact ordered TestQuestionRef                      ACCEPTED
+C3.4 deterministic scoring                             ACCEPTED
+C3.5 production decoder/gateway                        ACCEPTED
+C3.6 Drift assessment persistence / schema v8          ACCEPTED
+C3.7 offline/restart reproducibility                    ACCEPTED
+C3.8 adversarial qualification                          ACCEPTED
+C3.9 exact-SHA full production CI                       ACCEPTED
 ```
 
-## Acceptance direction
+## Acceptance evidence
 
-C3 is not accepted until exact production assessment delivery and persistence prove:
+Accepted exact-SHA baseline:
+
+```text
+49937959a1ce71322abec159dd36a41e72137bd0
+ci(c3): qualify Drift v8 production baseline
+```
+
+`Flutter Production Adapters` run `41207314641` completed successfully on that exact SHA with:
+
+```text
+format                         PASS
+Drift v8 reproducibility       PASS
+flutter analyze                PASS
+full flutter test              PASS
+```
+
+`C3 Drift v8 Qualification` run `41207305741` completed successfully on the same exact SHA with:
+
+```text
+Drift v8 generation            PASS
+schema v8 assertions           PASS
+flutter analyze                PASS
+targeted C3 lifecycle          PASS
+full regression                PASS
+```
+
+This proves:
 
 ```text
 exact test/question revisions survive restart/offline
@@ -143,4 +169,4 @@ production exact-revision reads do not depend on mock assessment objects
 full exact-SHA production CI is green
 ```
 
-The legacy `PracticeTestRepository` list/current projection is intentionally not forced into C3. Its current-membership source is publication metadata and therefore belongs to C4. C3 instead creates the production exact-revision boundary that C4 will compose into the learner-visible assessment catalogue.
+The legacy `PracticeTestRepository` list/current projection is intentionally not forced into C3. Its current-membership source is publication metadata and therefore belongs to C4. C3 creates the production exact-revision boundary that C4 will compose into the learner-visible assessment catalogue.
