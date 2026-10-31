@@ -14,9 +14,10 @@ import '../../domain/content_marker_state.dart';
 import '../shared/content_marker_chips.dart';
 
 class ContentDetailPanel extends ConsumerWidget {
-  const ContentDetailPanel({required this.item, super.key});
+  const ContentDetailPanel({required this.item, this.localizedHint, super.key});
 
   final ContentItem item;
+  final String? localizedHint;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -131,7 +132,22 @@ class ContentDetailPanel extends ConsumerWidget {
           ),
         ],
         const SizedBox(height: 32),
-        Text('Overview', style: Theme.of(context).textTheme.titleLarge),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Overview',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            if (localizedHint case final hint?)
+              IconButton.filledTonal(
+                tooltip: 'Hint',
+                onPressed: () => _showLocalizedHint(context, hint),
+                icon: const Icon(Icons.lightbulb_outline),
+              ),
+          ],
+        ),
         const SizedBox(height: 8),
         Text(item.description, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 24),
@@ -514,6 +530,22 @@ class _AudioPlaybackControls extends ConsumerWidget {
       ),
     );
   }
+}
+
+Future<void> _showLocalizedHint(BuildContext context, String hint) {
+  return showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Hint'),
+      content: SelectableText(hint),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        ),
+      ],
+    ),
+  );
 }
 
 String _formatDuration(int milliseconds) {
