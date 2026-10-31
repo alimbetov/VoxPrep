@@ -61,6 +61,7 @@ void main() {
         currentPacks: <PackRevisionRef>[canonical],
       ),
       remote: remote,
+      remoteEtag: 'etag-108',
     );
 
     final plan = (result as Success<SyncPlan>).value;
@@ -86,6 +87,7 @@ void main() {
         currentPacks: <PackRevisionRef>[canonical],
       ),
       remote: remote,
+      remoteEtag: 'etag-108',
     );
 
     final plan = (result as Success<SyncPlan>).value;
@@ -113,6 +115,7 @@ void main() {
         currentPacks: <PackRevisionRef>[canonical, unexpected],
       ),
       remote: remote,
+      remoteEtag: 'etag-108',
     );
 
     expect(result, isA<FailureResult<SyncPlan>>());
@@ -139,6 +142,7 @@ void main() {
         currentPacks: <PackRevisionRef>[canonical],
       ),
       remote: remote,
+      remoteEtag: 'etag-109',
     );
 
     final plan = (result as Success<SyncPlan>).value;
@@ -158,6 +162,7 @@ void main() {
         currentPacks: const <PackRevisionRef>[],
       ),
       remote: remote,
+      remoteEtag: 'etag-107',
     );
 
     expect(result, isA<FailureResult<SyncPlan>>());
@@ -178,12 +183,34 @@ void main() {
         currentPacks: const <PackRevisionRef>[],
       ),
       remote: remote,
+      remoteEtag: 'etag-108',
     );
 
     expect(result, isA<FailureResult<SyncPlan>>());
     expect(
       (result as FailureResult<SyncPlan>).failure.code,
-      'CONTENT_VERSION_CHECKSUM_CONFLICT',
+      'PUBLICATION_SNAPSHOT_IDENTITY_CONFLICT',
+    );
+  });
+
+  test('rejects ETag drift inside the same content version', () {
+    final remote = _manifest(contentVersion: 108, checksum: _root108);
+
+    final result = planner.plan(
+      local: SyncLocalSnapshot(
+        currentContentVersion: 108,
+        currentManifestChecksum: _root108,
+        etag: 'etag-108-a',
+        currentPacks: const <PackRevisionRef>[],
+      ),
+      remote: remote,
+      remoteEtag: 'etag-108-b',
+    );
+
+    expect(result, isA<FailureResult<SyncPlan>>());
+    expect(
+      (result as FailureResult<SyncPlan>).failure.code,
+      'PUBLICATION_SNAPSHOT_IDENTITY_CONFLICT',
     );
   });
 }
