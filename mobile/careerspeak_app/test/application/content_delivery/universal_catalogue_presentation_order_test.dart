@@ -34,7 +34,7 @@ void main() {
           _collection('COLLECTION_B', 'VERTICAL_A', 'TRACK_A', 10),
           _collection('COLLECTION_A', 'VERTICAL_A', 'TRACK_A', 10),
         ],
-        presentation: const VerticalCataloguePresentation(
+        presentation: VerticalCataloguePresentation(
           mode: VerticalCataloguePresentationMode.grid,
           showFeatured: false,
           showSeeAll: true,
