@@ -1,5 +1,3 @@
-import 'content_manifest.dart';
-
 enum CatalogueKind {
   learningGoals('learning-goals'),
   learningTracks('learning-tracks'),
@@ -31,10 +29,18 @@ final class CatalogueRevisionRef {
     if (revision < 1) {
       throw ArgumentError.value(revision, 'revision', 'must be positive');
     }
+    final normalizedChecksum = checksum.trim().toLowerCase();
+    if (!_sha256Pattern.hasMatch(normalizedChecksum)) {
+      throw ArgumentError.value(
+        checksum,
+        'checksum',
+        'must be a SHA-256 hex digest',
+      );
+    }
     return CatalogueRevisionRef._(
       kind: kind,
       revision: revision,
-      checksum: normalizeSha256(checksum, 'checksum'),
+      checksum: normalizedChecksum,
     );
   }
 
@@ -50,3 +56,5 @@ final class CatalogueRevisionRef {
 
   String get identityKey => kind.wireName;
 }
+
+final _sha256Pattern = RegExp(r'^[0-9a-f]{64}$');
