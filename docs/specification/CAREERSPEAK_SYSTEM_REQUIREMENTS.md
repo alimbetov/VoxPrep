@@ -3,7 +3,7 @@
 **Repository:** `alimbetov/VoxPrep`  
 **Product name:** CareerSpeak  
 **Codename:** VoxPrep  
-**Document version:** 0.11  
+**Document version:** 0.12  
 **Status:** Consolidated P0 architecture baseline  
 **Target platforms:** Android, iOS  
 **Primary learning model:** Read → Listen → Repeat → Test → Review
@@ -66,6 +66,7 @@ adaptive mobile UI
 Material Design 3 as the single UI design system
 privacy-first installation identity
 durable local learner markers
+multi-locale product architecture
 ```
 
 ---
@@ -400,10 +401,15 @@ Examples:
 
 ```text
 JAVA_SENIOR / canonical / rev 8
+JAVA_SENIOR / locale:ru / rev 5
 JAVA_SENIOR / locale:kk / rev 4
+JAVA_SENIOR / locale:uz / rev 2
+JAVA_SENIOR / locale:tr / rev 3
 ```
 
 Locale pack variants do not create separate root epochs.
+
+The root manifest identity is locale-independent: the same `contentVersion` must not resolve to different root checksums for different translation locales.
 
 Flutter distinguishes remote version seen from locally CURRENT version.
 
@@ -459,15 +465,41 @@ Backend typed localization tables
 → locale pack variants
 ```
 
-Initial locales:
+CareerSpeak is a multi-locale platform. Runtime locale contracts accept arbitrary supported BCP-47-compatible identifiers; they must not assume `locale ∈ {ru, kk}`.
+
+Rollout baseline:
+
+```text
+Tier 0:
+en / ru / kk
+
+Tier 1:
+uz / tr / ky / uk
+
+Tier 2:
+es / pt-BR / fr / de
+
+Tier 3:
+ar / ur / hi / bn / id / vi
+```
+
+Tier membership is product rollout policy, not protocol structure.
+
+Backend owns the mutable `SupportedLocale` capability catalog and fallback metadata. Flutter stores the learner's selected stable locale codes.
+
+The minimum recommended first expanded production set is:
 
 ```text
 en
 ru
 kk
+uz
+tr
 ```
 
-BCP-47-compatible identifiers and RTL readiness are required.
+RTL/mixed-direction architecture must be qualified using at least `ar` even if Arabic content is not enabled in the first commercial release.
+
+The authoritative detailed contract is `CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md` v1.1.
 
 ---
 
@@ -578,11 +610,14 @@ Flutter syncs via:
 root manifest
 pack manifests
 locale variants
+localized payloads
 tombstones
 checksums
 ```
 
 Tombstones explicitly retire content; absence from a paginated list never implies deletion.
+
+Changing translation locale reuses unchanged canonical English/audio/assets and downloads only the required locale delta.
 
 ---
 
@@ -633,6 +668,8 @@ RTL/mixed-direction support
 resize without route/test/audio/marker state loss
 ```
 
+RTL qualification must cover mixed RTL guidance with LTR English learning content.
+
 ---
 
 ## 22. Security zones
@@ -674,6 +711,8 @@ Worker crash
 
 Durable learner markers remain intact across recoverable sync/cache failures.
 
+A missing translation locale must fall back deterministically without making canonical English content unavailable.
+
 ---
 
 ## 24. P0 acceptance
@@ -685,12 +724,17 @@ common identifiers/time/error contracts
 Backend publication/availability lifecycle
 cross-system ACTIVE/CURRENT/READY terminology
 root manifest/pack variant version contract
+locale-independent root identity
+Backend-owned SupportedLocale catalog
+localized payload delivery contract
+arbitrary BCP-47 locale handling
+configured locale fallback contract
+RTL structural qualification
 Drift ERD
 ContentSyncCoordinator state machine
 adaptive UI contract
 Material Design 3 single-system contract
 LISTENED/COMPLETED/FAVORITE learner-state contract
-localization/RTL contract
 TTS claim/lease/recovery contract
 PostgreSQL integrated ERD
 Flutter local ERD
@@ -700,4 +744,4 @@ failure/recovery qualification matrix
 
 The TTS Worker machine-readable contract is now represented by `docs/backend/openapi/tts-worker-v1.yaml`; production acceptance still requires the real Backend A01-A11 qualification.
 
-This is the authoritative system baseline for CareerSpeak v0.11.
+This is the authoritative system baseline for CareerSpeak v0.12.
