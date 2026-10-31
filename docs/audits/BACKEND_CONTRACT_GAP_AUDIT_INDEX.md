@@ -48,6 +48,39 @@ BGA-006 installation-token lifecycle / 401 recovery
 
 P1/P2 findings remain useful hardening input, but they SHALL NOT be promoted into architecture unless needed for MVP acceptance.
 
+## Current remediation status
+
+```text
+C0P product contract freeze                  ACCEPTED
+C1.1 locale-independent root identity        IMPLEMENTED
+C1.2 locale-pack exact localization refs     IMPLEMENTED
+C1.3 exact localized payload wire transport  IMPLEMENTED / QUALIFYING
+C1.4 Drift localization persistence          NEXT
+C1.5 deterministic locale fallback           NEXT
+C1.6 offline/restart/tombstone acceptance    NEXT
+C1.7 exact-SHA green CI                      REQUIRED
+
+C2 typed content + small catalogues          PENDING
+C3 assessment                                PENDING
+C4 atomic publication                        PENDING
+C5 installation/security                     PENDING
+```
+
+The learner wire contract now uses one locale-independent root and an exact
+immutable localized payload identity:
+
+```text
+(contentCode, contentType, contentRevision,
+ locale, localizationRevision, checksum)
+```
+
+Localized payloads contain locale-owned support copy only. Canonical English
+content and shared audio/media remain owned by the canonical content revision.
+
+C1 is not accepted until localized payloads are persisted independently in
+Drift, fallback/restart behavior is qualified, and the exact branch SHA passes
+the complete production-adapters workflow.
+
 ## Localization
 
 `docs/specification/CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md` remains normative.
