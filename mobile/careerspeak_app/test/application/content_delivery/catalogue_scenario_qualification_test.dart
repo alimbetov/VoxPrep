@@ -106,7 +106,7 @@ void main() {
             ),
           ],
         ),
-        throwsFormatException,
+        throwsArgumentError,
       );
     });
 
@@ -126,7 +126,7 @@ void main() {
             LearningCollectionMember.content(position: 1, content: content),
           ],
         ),
-        throwsFormatException,
+        throwsArgumentError,
       );
     });
   });
