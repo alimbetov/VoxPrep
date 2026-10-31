@@ -8,6 +8,7 @@ import 'package:careerspeak_app/domain/content_item.dart';
 import 'package:careerspeak_app/domain/content_marker_state.dart';
 import 'package:careerspeak_app/features/home/home_screen.dart';
 import 'package:careerspeak_app/features/learn/learn_screen.dart';
+import 'package:careerspeak_app/features/review/review_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -60,6 +61,29 @@ void main() {
       expectNoLayoutExceptions(
         tester,
         reason: 'Learn content list/detail must fit $boundary',
+      );
+    });
+
+    testWidgets('Review stays visually stable for $boundary', (tester) async {
+      await _pump(tester, boundary: boundary, child: const ReviewScreen());
+
+      expectNoLayoutExceptions(
+        tester,
+        reason: 'Review initial viewport must fit $boundary',
+      );
+      expect(find.text('Review'), findsOneWidget);
+      expect(find.text(_longTitle), findsOneWidget);
+
+      await tester.scrollUntilVisible(
+        find.text(_longTitle),
+        220,
+        scrollable: find.byType(Scrollable).first,
+      );
+      await tester.pumpAndSettle();
+
+      expectNoLayoutExceptions(
+        tester,
+        reason: 'Review content card must fit $boundary',
       );
     });
   }
