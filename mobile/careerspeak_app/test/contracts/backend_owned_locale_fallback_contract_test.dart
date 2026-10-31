@@ -1,3 +1,4 @@
+import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
 import 'package:careerspeak_app/application/content_sync/root_manifest_materializer.dart';
 import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/remote/content_manifest_decoder.dart';
@@ -8,7 +9,7 @@ void main() {
 
   test('materializer follows Backend rule instead of deriving base language', () {
     final decoded = decoder.decodeRoot(_rootManifest());
-    expect(decoded, isA<Success>());
+    expect(decoded, isA<Success<RootContentManifest>>());
     final root = decoded.getOrThrow();
 
     final projected = const RootManifestMaterializer()
@@ -38,8 +39,11 @@ void main() {
 
     final result = decoder.decodeRoot(manifest);
 
-    expect(result, isA<FailureResult>());
-    expect((result as FailureResult).failure.code, 'MANIFEST_INVALID');
+    expect(result, isA<FailureResult<RootContentManifest>>());
+    expect(
+      (result as FailureResult<RootContentManifest>).failure.code,
+      'MANIFEST_INVALID',
+    );
   });
 }
 
