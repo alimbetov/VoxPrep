@@ -1,4 +1,5 @@
 import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
+import 'package:careerspeak_app/application/content_delivery/product_catalog.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_coordinator.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_planner.dart';
 import 'package:careerspeak_app/application/content_sync/sync_models.dart';
@@ -7,6 +8,9 @@ import 'package:careerspeak_app/application/result/result.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/sync_orchestration_fakes.dart';
+
+const _testHash =
+    'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
 
 void main() {
   test('coalesces without reading remote state', () async {
@@ -69,6 +73,107 @@ void main() {
       SyncRunState.planning,
       SyncRunState.succeeded,
     ]);
+  });
+
+  test('pack-level no-op still repairs exact snapshot auxiliaries', () async {
+    final p = pack();
+    final exactTest = PracticeTestRevisionRef(
+      practiceTestCode: 'JAVA_TEST_001',
+      revision: 2,
+      checksum: _testHash,
+    );
+    final journal = FakeJournal(
+      Success(
+        SyncLocalSnapshot(
+          currentContentVersion: 108,
+          currentManifestChecksum: rootA,
+          etag: 'etag-108',
+          currentPacks: <PackRevisionRef>[p],
+        ),
+      ),
+    );
+    final gateway = FakeGateway(
+      Success(
+        RootManifestChanged(
+          manifest: manifest(
+            108,
+            packs: <PackRevisionRef>[p],
+            practiceTests: <PracticeTestRevisionRef>[exactTest],
+          ),
+          etag: 'etag-108',
+        ),
+      ),
+    );
+    final executor = FakeExecutor();
+    final stager = FakeSnapshotStager();
+
+    final result = await _coordinator(
+      journal,
+      gateway,
+      executor,
+      snapshotStager: stager,
+    ).synchronize(
+      runId: 'run-repair',
+      trigger: SyncTrigger.startup,
+      translationLocale: 'kk',
+    );
+
+    expect(result, isA<Success<ContentSyncOutcome>>());
+    expect((result as Success<ContentSyncOutcome>).value, isA<ContentSyncNoOp>());
+    expect(executor.calls, 0);
+    expect(stager.targets, hasLength(1));
+    expect(stager.targets.single.practiceTests.single.identityKey, exactTest.identityKey);
+    expect(journal.states, <SyncRunState>[
+      SyncRunState.checkingLocal,
+      SyncRunState.checkingRemote,
+      SyncRunState.planning,
+      SyncRunState.staging,
+      SyncRunState.succeeded,
+    ]);
+  });
+
+  test('no-op snapshot with auxiliaries fails closed without stager', () async {
+    final p = pack();
+    final journal = FakeJournal(
+      Success(
+        SyncLocalSnapshot(
+          currentContentVersion: 108,
+          currentManifestChecksum: rootA,
+          etag: null,
+          currentPacks: <PackRevisionRef>[p],
+        ),
+      ),
+    );
+    final gateway = FakeGateway(
+      Success(
+        RootManifestChanged(
+          manifest: manifest(
+            108,
+            packs: <PackRevisionRef>[p],
+            practiceTests: <PracticeTestRevisionRef>[
+              PracticeTestRevisionRef(
+                practiceTestCode: 'JAVA_TEST_001',
+                revision: 2,
+                checksum: _testHash,
+              ),
+            ],
+          ),
+          etag: null,
+        ),
+      ),
+    );
+
+    final result = await _coordinator(journal, gateway, FakeExecutor()).synchronize(
+      runId: 'run-missing-stager',
+      trigger: SyncTrigger.startup,
+      translationLocale: 'kk',
+    );
+
+    expect(result, isA<FailureResult<ContentSyncOutcome>>());
+    expect(
+      (result as FailureResult<ContentSyncOutcome>).failure.code,
+      'PUBLICATION_SNAPSHOT_STAGER_MISSING',
+    );
   });
 
   test('changed root persists plan and executes once', () async {
@@ -158,12 +263,14 @@ void main() {
 ContentSyncCoordinator _coordinator(
   FakeJournal journal,
   FakeGateway gateway,
-  FakeExecutor executor,
-) {
+  FakeExecutor executor, {
+  FakeSnapshotStager? snapshotStager,
+}) {
   return ContentSyncCoordinator(
     journal: journal,
     manifestGateway: gateway,
     planner: const ContentSyncPlanner(),
     executor: executor,
+    snapshotStager: snapshotStager,
   );
 }
