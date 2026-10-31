@@ -28,3 +28,9 @@ final universalCatalogueRepositoryProvider =
         ref.watch(careerSpeakDatabaseProvider),
       );
     });
+
+final currentUniversalCatalogueProvider =
+    FutureProvider<CurrentUniversalCatalogueSnapshot?>((ref) async {
+      final repository = ref.watch(universalCatalogueRepositoryProvider);
+      return (await repository.readCurrent()).getOrThrow();
+    });
