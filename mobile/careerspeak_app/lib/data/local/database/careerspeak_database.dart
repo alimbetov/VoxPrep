@@ -42,16 +42,14 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
     : super(executor ?? driftDatabase(name: 'careerspeak'));
 
   @override
-  int get schemaVersion => 10;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) async {
       await migrator.createAll();
-      await _createPublicationMembershipTables();
-      await _createCatalogueRevisionCache();
     },
-    onUpgrade: (migrator, from, to) async {
+    onUpgrade: (migrator, from, _) async {
       if (from < 2) {
         await migrator.createTable(syncRuns);
         await migrator.createTable(syncPackUpdates);
@@ -169,61 +167,9 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
         await migrator.createTable(practiceTestRevisionReads);
         await migrator.createTable(practiceTestQuestionRefs);
       }
-      if (from < 9 && to >= 9) {
-        await _createPublicationMembershipTables();
-      }
-      if (from < 10 && to >= 10) {
-        await _createCatalogueRevisionCache();
-      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },
   );
-
-  Future<void> _createPublicationMembershipTables() async {
-    await customStatement('''
-      CREATE TABLE IF NOT EXISTS publication_practice_test_refs (
-        content_version INTEGER NOT NULL,
-        practice_test_code TEXT NOT NULL,
-        revision INTEGER NOT NULL,
-        checksum TEXT NOT NULL,
-        PRIMARY KEY (content_version, practice_test_code),
-        CHECK (content_version > 0),
-        CHECK (revision > 0),
-        CHECK (length(trim(practice_test_code)) > 0),
-        CHECK (length(trim(checksum)) = 64)
-      )
-    ''');
-    await customStatement('''
-      CREATE TABLE IF NOT EXISTS publication_catalogue_refs (
-        content_version INTEGER NOT NULL,
-        catalogue_kind TEXT NOT NULL,
-        revision INTEGER NOT NULL,
-        checksum TEXT NOT NULL,
-        PRIMARY KEY (content_version, catalogue_kind),
-        CHECK (content_version > 0),
-        CHECK (revision > 0),
-        CHECK (length(trim(catalogue_kind)) > 0),
-        CHECK (length(trim(checksum)) = 64)
-      )
-    ''');
-  }
-
-  Future<void> _createCatalogueRevisionCache() async {
-    await customStatement('''
-      CREATE TABLE IF NOT EXISTS catalogue_revision_reads (
-        catalogue_kind TEXT NOT NULL,
-        revision INTEGER NOT NULL,
-        checksum TEXT NOT NULL,
-        payload_json TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        PRIMARY KEY (catalogue_kind, revision),
-        CHECK (revision > 0),
-        CHECK (length(trim(catalogue_kind)) > 0),
-        CHECK (length(trim(checksum)) = 64),
-        CHECK (length(trim(payload_json)) > 0)
-      )
-    ''');
-  }
 }
