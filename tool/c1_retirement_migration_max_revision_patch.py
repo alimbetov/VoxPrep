@@ -3,7 +3,7 @@ from pathlib import Path
 path = Path('mobile/careerspeak_app/lib/data/local/database/careerspeak_database.dart')
 text = path.read_text()
 
-old_sync = '''        await customStatement('''
+old_sync = """        await customStatement('''
           INSERT OR IGNORE INTO content_retirements (
             content_code,
             content_type,
@@ -31,8 +31,8 @@ old_sync = '''        await customStatement('''
           INNER JOIN sync_runs sr ON sr.run_id = st.run_id
           WHERE st.state = 'APPLIED'
         ''');
-'''
-new_sync = '''        await customStatement('''
+"""
+new_sync = """        await customStatement('''
           INSERT OR IGNORE INTO content_retirements (
             content_code,
             content_type,
@@ -76,13 +76,13 @@ new_sync = '''        await customStatement('''
           ) ranked
           WHERE ranked.retirement_rank = 1
         ''');
-'''
+"""
 if new_sync not in text:
     if old_sync not in text:
         raise SystemExit('missing sync-tombstone migration selection')
     text = text.replace(old_sync, new_sync, 1)
 
-old_local = '''        await customStatement('''
+old_local = """        await customStatement('''
           INSERT OR IGNORE INTO content_retirements (
             content_code,
             content_type,
@@ -108,8 +108,8 @@ old_local = '''        await customStatement('''
           FROM local_content_records local
           WHERE local.snapshot_state = 'TOMBSTONED'
         ''');
-'''
-new_local = '''        await customStatement('''
+"""
+new_local = """        await customStatement('''
           INSERT OR IGNORE INTO content_retirements (
             content_code,
             content_type,
@@ -136,7 +136,7 @@ new_local = '''        await customStatement('''
           WHERE local.snapshot_state = 'TOMBSTONED'
           GROUP BY local.content_code, local.content_type
         ''');
-'''
+"""
 if new_local not in text:
     if old_local not in text:
         raise SystemExit('missing local-tombstone migration selection')
