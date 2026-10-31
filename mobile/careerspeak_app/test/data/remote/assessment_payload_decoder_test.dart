@@ -77,7 +77,8 @@ void main() {
       },
     });
 
-    final failure = (result as FailureResult<AssessmentQuestionRevision>).failure;
+    final failure =
+        (result as FailureResult<AssessmentQuestionRevision>).failure;
     expect(failure.code, 'ASSESSMENT_PAYLOAD_INVALID');
   });
 
@@ -96,7 +97,8 @@ void main() {
       },
     });
 
-    final failure = (result as FailureResult<AssessmentQuestionRevision>).failure;
+    final failure =
+        (result as FailureResult<AssessmentQuestionRevision>).failure;
     expect(failure.code, 'ASSESSMENT_PAYLOAD_INVALID');
   });
 

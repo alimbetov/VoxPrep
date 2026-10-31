@@ -19,58 +19,62 @@ const _q2Checksum =
     '2222222222222222222222222222222222222222222222222222222222222222';
 
 void main() {
-  test('online exact assessment survives restart and resolves offline', () async {
-    final directory = await Directory.systemTemp.createTemp(
-      'careerspeak-c3-assessment-',
-    );
-    addTearDown(() => directory.delete(recursive: true));
-    final file = File('${directory.path}/assessment.sqlite');
-    final source = _sourceBundle();
+  test(
+    'online exact assessment survives restart and resolves offline',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'careerspeak-c3-assessment-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final file = File('${directory.path}/assessment.sqlite');
+      final source = _sourceBundle();
 
-    var database = CareerSpeakDatabase(NativeDatabase(file));
-    var repository = DriftAssessmentRevisionRepository(database);
-    final onlineGateway = _FakeAssessmentGateway(bundle: source);
-    var loader = AssessmentRevisionLoader(
-      gateway: onlineGateway,
-      repository: repository,
-    );
+      var database = CareerSpeakDatabase(NativeDatabase(file));
+      var repository = DriftAssessmentRevisionRepository(database);
+      final onlineGateway = _FakeAssessmentGateway(bundle: source);
+      var loader = AssessmentRevisionLoader(
+        gateway: onlineGateway,
+        repository: repository,
+      );
 
-    final online = await loader.load(
-      practiceTestCode: 'INTERVIEW_CORE',
-      revision: 4,
-      checksum: _testChecksum,
-    );
-    final onlineBundle = (online as Success<AssessmentRevisionBundle>).value;
-    final onlineScore = _score(onlineBundle);
-    expect(onlineScore.scoreBasisPoints, 6666);
-    expect(onlineGateway.practiceTestCalls, 1);
-    expect(onlineGateway.questionCalls, 2);
+      final online = await loader.load(
+        practiceTestCode: 'INTERVIEW_CORE',
+        revision: 4,
+        checksum: _testChecksum,
+      );
+      final onlineBundle = (online as Success<AssessmentRevisionBundle>).value;
+      final onlineScore = _score(onlineBundle);
+      expect(onlineScore.scoreBasisPoints, 6666);
+      expect(onlineGateway.practiceTestCalls, 1);
+      expect(onlineGateway.questionCalls, 2);
 
-    await database.close();
+      await database.close();
 
-    database = CareerSpeakDatabase(NativeDatabase(file));
-    addTearDown(database.close);
-    repository = DriftAssessmentRevisionRepository(database);
-    final offlineGateway = _OfflineAssessmentGateway();
-    loader = AssessmentRevisionLoader(
-      gateway: offlineGateway,
-      repository: repository,
-    );
+      database = CareerSpeakDatabase(NativeDatabase(file));
+      addTearDown(database.close);
+      repository = DriftAssessmentRevisionRepository(database);
+      final offlineGateway = _OfflineAssessmentGateway();
+      loader = AssessmentRevisionLoader(
+        gateway: offlineGateway,
+        repository: repository,
+      );
 
-    final offline = await loader.load(
-      practiceTestCode: 'INTERVIEW_CORE',
-      revision: 4,
-      checksum: _testChecksum,
-    );
-    final offlineBundle = (offline as Success<AssessmentRevisionBundle>).value;
-    final offlineScore = _score(offlineBundle);
+      final offline = await loader.load(
+        practiceTestCode: 'INTERVIEW_CORE',
+        revision: 4,
+        checksum: _testChecksum,
+      );
+      final offlineBundle =
+          (offline as Success<AssessmentRevisionBundle>).value;
+      final offlineScore = _score(offlineBundle);
 
-    expect(offlineScore.earnedPoints, onlineScore.earnedPoints);
-    expect(offlineScore.totalPoints, onlineScore.totalPoints);
-    expect(offlineScore.scoreBasisPoints, onlineScore.scoreBasisPoints);
-    expect(offlineScore.passed, onlineScore.passed);
-    expect(offlineGateway.calls, 0);
-  });
+      expect(offlineScore.earnedPoints, onlineScore.earnedPoints);
+      expect(offlineScore.totalPoints, onlineScore.totalPoints);
+      expect(offlineScore.scoreBasisPoints, onlineScore.scoreBasisPoints);
+      expect(offlineScore.passed, onlineScore.passed);
+      expect(offlineGateway.calls, 0);
+    },
+  );
 }
 
 AssessmentScore _score(AssessmentRevisionBundle bundle) {

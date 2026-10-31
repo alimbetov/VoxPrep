@@ -15,50 +15,53 @@ void main() {
     await database.close();
   });
 
-  test('schema version 7 creates the production content foundation', () async {
-    await database.customSelect('SELECT 1').getSingle();
+  test(
+    'schema version 8 creates the production assessment foundation',
+    () async {
+      await database.customSelect('SELECT 1').getSingle();
 
-    expect(database.schemaVersion, 7);
+      expect(database.schemaVersion, 8);
 
-    final userVersion = await database
-        .customSelect('PRAGMA user_version')
-        .getSingle();
-    expect(userVersion.read<int>('user_version'), 7);
+      final userVersion = await database
+          .customSelect('PRAGMA user_version')
+          .getSingle();
+      expect(userVersion.read<int>('user_version'), 8);
 
-    final foreignKeys = await database
-        .customSelect('PRAGMA foreign_keys')
-        .getSingle();
-    expect(foreignKeys.read<int>('foreign_keys'), 1);
+      final foreignKeys = await database
+          .customSelect('PRAGMA foreign_keys')
+          .getSingle();
+      expect(foreignKeys.read<int>('foreign_keys'), 1);
 
-    final tableNames = database.allTables
-        .map((table) => table.actualTableName)
-        .toSet();
+      final tableNames = database.allTables
+          .map((table) => table.actualTableName)
+          .toSet();
 
-    expect(
-      tableNames,
-      containsAll(<String>{
-        'app_preferences',
-        'installation_runtime_states',
-        'content_manifest_states',
-        'sync_runs',
-        'sync_pack_updates',
-        'sync_tombstones',
-        'content_pack_revisions',
-        'local_content_records',
-        'pack_content_refs',
-        'pack_localization_refs',
-        'locale_fallback_rules',
-        'content_retirements',
-        'asset_catalog',
-        'content_asset_refs',
-        'pack_asset_refs',
-        'content_catalog_reads',
-        'localized_content_reads',
-        'favorites',
-        'content_learning_states',
-      }),
-    );
-  });
+      expect(
+        tableNames,
+        containsAll(<String>{
+          'app_preferences',
+          'installation_runtime_states',
+          'content_manifest_states',
+          'sync_runs',
+          'sync_pack_updates',
+          'sync_tombstones',
+          'content_pack_revisions',
+          'local_content_records',
+          'pack_content_refs',
+          'pack_localization_refs',
+          'locale_fallback_rules',
+          'content_retirements',
+          'asset_catalog',
+          'content_asset_refs',
+          'pack_asset_refs',
+          'content_catalog_reads',
+          'localized_content_reads',
+          'favorites',
+          'content_learning_states',
+        }),
+      );
+    },
+  );
 
   test('all singleton foundation tables enforce id equals one', () async {
     final now = DateTime.utc(2026, 10, 30, 10);

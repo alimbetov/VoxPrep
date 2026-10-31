@@ -110,7 +110,8 @@ void main() {
       );
       final result = await repository.saveBundle(conflictingBundle);
 
-      final failure = (result as FailureResult<AssessmentRevisionBundle>).failure;
+      final failure =
+          (result as FailureResult<AssessmentRevisionBundle>).failure;
       expect(failure.code, 'ASSESSMENT_REVISION_CHECKSUM_CONFLICT');
 
       final leaked = await repository.readBundle(

@@ -94,7 +94,7 @@ void main() {
       final local = (await production.resolve('audio-1')).getOrThrow();
       expect(local.localPath, asset.localPath);
       expect(source.calls, 1);
-      expect(database.schemaVersion, 7);
+      expect(database.schemaVersion, 8);
     },
   );
 

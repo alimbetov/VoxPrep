@@ -65,7 +65,8 @@ final class AssessmentRevisionLoader {
       return FailureResult<AssessmentRevisionBundle>(
         ApplicationFailure(
           code: 'ASSESSMENT_BUNDLE_INVALID',
-          message: 'The exact assessment payload set is internally inconsistent.',
+          message:
+              'The exact assessment payload set is internally inconsistent.',
           details: <String, Object?>{'error': error.toString()},
         ),
       );

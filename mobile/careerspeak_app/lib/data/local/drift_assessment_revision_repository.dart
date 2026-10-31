@@ -136,9 +136,7 @@ final class DriftAssessmentRevisionRepository
     } on ArgumentError catch (error) {
       return FailureResult<AssessmentRevisionBundle?>(_localCorrupt(error));
     } on FormatException catch (error) {
-      return FailureResult<AssessmentRevisionBundle?>(
-        _localCorrupt(error),
-      );
+      return FailureResult<AssessmentRevisionBundle?>(_localCorrupt(error));
     } on StateError catch (error) {
       return FailureResult<AssessmentRevisionBundle?>(_localCorrupt(error));
     }
@@ -153,7 +151,9 @@ final class DriftAssessmentRevisionRepository
         final existingTest =
             await (_database.select(_database.practiceTestRevisionReads)..where(
                   (row) =>
-                      row.practiceTestCode.equals(bundle.test.practiceTestCode) &
+                      row.practiceTestCode.equals(
+                        bundle.test.practiceTestCode,
+                      ) &
                       row.revision.equals(bundle.test.revision),
                 ))
                 .getSingleOrNull();
@@ -241,7 +241,9 @@ final class DriftAssessmentRevisionRepository
             ))
             .go();
         for (final ref in bundle.test.questionRefs) {
-          await _database.into(_database.practiceTestQuestionRefs).insert(
+          await _database
+              .into(_database.practiceTestQuestionRefs)
+              .insert(
                 db.PracticeTestQuestionRefsCompanion.insert(
                   practiceTestCode: bundle.test.practiceTestCode,
                   practiceTestRevision: bundle.test.revision,

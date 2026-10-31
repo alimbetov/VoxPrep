@@ -12,33 +12,36 @@ const _otherChecksum =
     'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
 
 void main() {
-  test('fetches one exact practice-test revision over installation API', () async {
-    final client = _RecordingApiClient(
-      response: ApiResponse(
-        statusCode: 200,
-        headers: const <String, String>{},
-        jsonBody: _practiceTestPayload(checksum: _testChecksum),
-      ),
-    );
-    final gateway = HttpAssessmentPayloadGateway(apiClient: client);
+  test(
+    'fetches one exact practice-test revision over installation API',
+    () async {
+      final client = _RecordingApiClient(
+        response: ApiResponse(
+          statusCode: 200,
+          headers: const <String, String>{},
+          jsonBody: _practiceTestPayload(checksum: _testChecksum),
+        ),
+      );
+      final gateway = HttpAssessmentPayloadGateway(apiClient: client);
 
-    final result = await gateway.fetchPracticeTestRevision(
-      practiceTestCode: 'INTERVIEW_CORE',
-      revision: 3,
-      checksum: _testChecksum,
-    );
+      final result = await gateway.fetchPracticeTestRevision(
+        practiceTestCode: 'INTERVIEW_CORE',
+        revision: 3,
+        checksum: _testChecksum,
+      );
 
-    expect(result, isA<Success<PracticeTestRevision>>());
-    expect(client.lastRequest?.method, ApiMethod.get);
-    expect(
-      client.lastRequest?.path,
-      '/api/v1/assessment/practice-tests/INTERVIEW_CORE/revisions/3',
-    );
-    expect(
-      client.lastRequest?.authentication,
-      ApiAuthentication.installation,
-    );
-  });
+      expect(result, isA<Success<PracticeTestRevision>>());
+      expect(client.lastRequest?.method, ApiMethod.get);
+      expect(
+        client.lastRequest?.path,
+        '/api/v1/assessment/practice-tests/INTERVIEW_CORE/revisions/3',
+      );
+      expect(
+        client.lastRequest?.authentication,
+        ApiAuthentication.installation,
+      );
+    },
+  );
 
   test('practice-test checksum mismatch fails closed', () async {
     final client = _RecordingApiClient(
@@ -60,31 +63,34 @@ void main() {
     expect(failure.code, 'ASSESSMENT_PAYLOAD_MISMATCH');
   });
 
-  test('fetches one exact question revision and rejects substitution', () async {
-    final target = QuestionRevisionId(
-      questionCode: 'Q1',
-      revision: 2,
-      checksum: _questionChecksum,
-    );
-    final client = _RecordingApiClient(
-      response: ApiResponse(
-        statusCode: 200,
-        headers: const <String, String>{},
-        jsonBody: _questionPayload(checksum: _otherChecksum),
-      ),
-    );
-    final gateway = HttpAssessmentPayloadGateway(apiClient: client);
+  test(
+    'fetches one exact question revision and rejects substitution',
+    () async {
+      final target = QuestionRevisionId(
+        questionCode: 'Q1',
+        revision: 2,
+        checksum: _questionChecksum,
+      );
+      final client = _RecordingApiClient(
+        response: ApiResponse(
+          statusCode: 200,
+          headers: const <String, String>{},
+          jsonBody: _questionPayload(checksum: _otherChecksum),
+        ),
+      );
+      final gateway = HttpAssessmentPayloadGateway(apiClient: client);
 
-    final result = await gateway.fetchQuestionRevision(target);
+      final result = await gateway.fetchQuestionRevision(target);
 
-    final failure =
-        (result as FailureResult<AssessmentQuestionRevision>).failure;
-    expect(failure.code, 'ASSESSMENT_PAYLOAD_MISMATCH');
-    expect(
-      client.lastRequest?.path,
-      '/api/v1/assessment/questions/Q1/revisions/2',
-    );
-  });
+      final failure =
+          (result as FailureResult<AssessmentQuestionRevision>).failure;
+      expect(failure.code, 'ASSESSMENT_PAYLOAD_MISMATCH');
+      expect(
+        client.lastRequest?.path,
+        '/api/v1/assessment/questions/Q1/revisions/2',
+      );
+    },
+  );
 
   test('non-200 assessment response is not decoded as content', () async {
     final client = _RecordingApiClient(

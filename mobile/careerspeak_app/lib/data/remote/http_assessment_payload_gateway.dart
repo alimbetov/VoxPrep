@@ -46,9 +46,7 @@ final class HttpAssessmentPayloadGateway implements AssessmentPayloadGateway {
 
     final apiResponse = (response as Success<ApiResponse>).value;
     if (apiResponse.statusCode != 200) {
-      return FailureResult<PracticeTestRevision>(
-        _invalidStatus(apiResponse),
-      );
+      return FailureResult<PracticeTestRevision>(_invalidStatus(apiResponse));
     }
 
     final decoded = _decoder.decodePracticeTestRevision(apiResponse.jsonBody);
@@ -62,7 +60,8 @@ final class HttpAssessmentPayloadGateway implements AssessmentPayloadGateway {
       return FailureResult<PracticeTestRevision>(
         ApplicationFailure(
           code: 'ASSESSMENT_PAYLOAD_MISMATCH',
-          message: 'The practice-test payload does not match the requested revision.',
+          message:
+              'The practice-test payload does not match the requested revision.',
           traceId: apiResponse.traceId,
           details: <String, Object?>{
             'expectedCode': normalizedCode,
@@ -100,7 +99,9 @@ final class HttpAssessmentPayloadGateway implements AssessmentPayloadGateway {
     }
 
     final decoded = _decoder.decodeQuestionRevision(apiResponse.jsonBody);
-    if (decoded case FailureResult<AssessmentQuestionRevision>(:final failure)) {
+    if (decoded case FailureResult<AssessmentQuestionRevision>(
+      :final failure,
+    )) {
       return FailureResult<AssessmentQuestionRevision>(failure);
     }
     final payload = (decoded as Success<AssessmentQuestionRevision>).value;
@@ -108,7 +109,8 @@ final class HttpAssessmentPayloadGateway implements AssessmentPayloadGateway {
       return FailureResult<AssessmentQuestionRevision>(
         ApplicationFailure(
           code: 'ASSESSMENT_PAYLOAD_MISMATCH',
-          message: 'The question payload does not match the requested revision.',
+          message:
+              'The question payload does not match the requested revision.',
           traceId: apiResponse.traceId,
           details: <String, Object?>{
             'expectedCode': target.questionCode,

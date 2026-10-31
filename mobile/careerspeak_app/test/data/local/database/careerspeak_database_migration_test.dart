@@ -77,7 +77,9 @@ void main() {
       isEmpty,
     );
     expect(
-      await migratedDatabase.select(migratedDatabase.assessmentQuestionReads).get(),
+      await migratedDatabase
+          .select(migratedDatabase.assessmentQuestionReads)
+          .get(),
       isEmpty,
     );
     expect(
@@ -177,7 +179,9 @@ void main() {
       isEmpty,
     );
     expect(
-      await migratedDatabase.select(migratedDatabase.assessmentQuestionReads).get(),
+      await migratedDatabase
+          .select(migratedDatabase.assessmentQuestionReads)
+          .get(),
       isEmpty,
     );
 
@@ -282,62 +286,71 @@ void main() {
         isEmpty,
       );
       expect(
-        await migratedDatabase.select(migratedDatabase.assessmentQuestionReads).get(),
+        await migratedDatabase
+            .select(migratedDatabase.assessmentQuestionReads)
+            .get(),
         isEmpty,
       );
       await migratedDatabase.close();
     },
   );
 
-  test('v7 to v8 preserves typed content and adds assessment tables empty', () async {
-    final schema = await verifier.schemaAt(7);
-    final storedNow =
-        DateTime.utc(2026, 10, 31, 12).millisecondsSinceEpoch ~/ 1000;
+  test(
+    'v7 to v8 preserves typed content and adds assessment tables empty',
+    () async {
+      final schema = await verifier.schemaAt(7);
+      final storedNow =
+          DateTime.utc(2026, 10, 31, 12).millisecondsSinceEpoch ~/ 1000;
 
-    final oldDatabase = v7.DatabaseAtV7(schema.newConnection());
-    await oldDatabase
-        .into(oldDatabase.typedContentReads)
-        .insert(
-          v7.TypedContentReadsCompanion.insert(
-            contentCode: 'JAVA_DI_001',
-            contentType: 'interview',
-            revision: 3,
-            checksum:
-                'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
-            categoryCode: 'JAVA',
-            levelCode: 'SENIOR',
-            skillCodesJson: '["DEPENDENCY_INJECTION"]',
-            bodyKind: 'interview',
-            bodyJson: '{"kind":"interview"}',
-            createdAt: storedNow,
-          ),
-        );
-    await oldDatabase.close();
+      final oldDatabase = v7.DatabaseAtV7(schema.newConnection());
+      await oldDatabase
+          .into(oldDatabase.typedContentReads)
+          .insert(
+            v7.TypedContentReadsCompanion.insert(
+              contentCode: 'JAVA_DI_001',
+              contentType: 'interview',
+              revision: 3,
+              checksum:
+                  'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee',
+              categoryCode: 'JAVA',
+              levelCode: 'SENIOR',
+              skillCodesJson: '["DEPENDENCY_INJECTION"]',
+              bodyKind: 'interview',
+              bodyJson: '{"kind":"interview"}',
+              createdAt: storedNow,
+            ),
+          );
+      await oldDatabase.close();
 
-    final database = CareerSpeakDatabase(schema.newConnection());
-    await verifier.migrateAndValidate(database, 8);
-    await database.close();
+      final database = CareerSpeakDatabase(schema.newConnection());
+      await verifier.migrateAndValidate(database, 8);
+      await database.close();
 
-    final migratedDatabase = v8.DatabaseAtV8(schema.newConnection());
-    final typed = await migratedDatabase
-        .select(migratedDatabase.typedContentReads)
-        .get();
-    expect(typed, hasLength(1));
-    expect(typed.single.contentCode, 'JAVA_DI_001');
-    expect(
-      await migratedDatabase.select(migratedDatabase.assessmentQuestionReads).get(),
-      isEmpty,
-    );
-    expect(
-      await migratedDatabase
-          .select(migratedDatabase.practiceTestRevisionReads)
-          .get(),
-      isEmpty,
-    );
-    expect(
-      await migratedDatabase.select(migratedDatabase.practiceTestQuestionRefs).get(),
-      isEmpty,
-    );
-    await migratedDatabase.close();
-  });
+      final migratedDatabase = v8.DatabaseAtV8(schema.newConnection());
+      final typed = await migratedDatabase
+          .select(migratedDatabase.typedContentReads)
+          .get();
+      expect(typed, hasLength(1));
+      expect(typed.single.contentCode, 'JAVA_DI_001');
+      expect(
+        await migratedDatabase
+            .select(migratedDatabase.assessmentQuestionReads)
+            .get(),
+        isEmpty,
+      );
+      expect(
+        await migratedDatabase
+            .select(migratedDatabase.practiceTestRevisionReads)
+            .get(),
+        isEmpty,
+      );
+      expect(
+        await migratedDatabase
+            .select(migratedDatabase.practiceTestQuestionRefs)
+            .get(),
+        isEmpty,
+      );
+      await migratedDatabase.close();
+    },
+  );
 }

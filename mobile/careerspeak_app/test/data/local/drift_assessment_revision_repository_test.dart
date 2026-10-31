@@ -17,76 +17,86 @@ const _q2Checksum =
     '2222222222222222222222222222222222222222222222222222222222222222';
 
 void main() {
-  test('persists and reconstructs one exact assessment revision bundle', () async {
-    final database = createTestDatabase();
-    addTearDown(database.close);
-    final repository = DriftAssessmentRevisionRepository(database);
-    final bundle = _bundle();
+  test(
+    'persists and reconstructs one exact assessment revision bundle',
+    () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      final repository = DriftAssessmentRevisionRepository(database);
+      final bundle = _bundle();
 
-    final saved = await repository.saveBundle(bundle);
-    expect(saved, isA<Success<AssessmentRevisionBundle>>());
+      final saved = await repository.saveBundle(bundle);
+      expect(saved, isA<Success<AssessmentRevisionBundle>>());
 
-    final result = await repository.readBundle(
-      practiceTestCode: 'INTERVIEW_CORE',
-      revision: 4,
-      checksum: _testChecksum,
-    );
-    final restored = (result as Success<AssessmentRevisionBundle?>).value!;
+      final result = await repository.readBundle(
+        practiceTestCode: 'INTERVIEW_CORE',
+        revision: 4,
+        checksum: _testChecksum,
+      );
+      final restored = (result as Success<AssessmentRevisionBundle?>).value!;
 
-    expect(restored.test.questionRefs.map((ref) => ref.order), [0, 1]);
-    expect(restored.questions.map((question) => question.id), [
-      bundle.test.questionRefs[0].question,
-      bundle.test.questionRefs[1].question,
-    ]);
+      expect(restored.test.questionRefs.map((ref) => ref.order), [0, 1]);
+      expect(restored.questions.map((question) => question.id), [
+        bundle.test.questionRefs[0].question,
+        bundle.test.questionRefs[1].question,
+      ]);
 
-    final score = const AssessmentScorer().score(
-      test: restored.test,
-      questions: restored.questions,
-      answersByOrder: const {0: 0, 1: 1},
-    );
-    expect(score.earnedPoints, 1);
-    expect(score.totalPoints, 3);
-    expect(score.scoreBasisPoints, 3333);
-  });
+      final score = const AssessmentScorer().score(
+        test: restored.test,
+        questions: restored.questions,
+        answersByOrder: const {0: 0, 1: 1},
+      );
+      expect(score.earnedPoints, 1);
+      expect(score.totalPoints, 3);
+      expect(score.scoreBasisPoints, 3333);
+    },
+  );
 
-  test('same logical test revision with another checksum fails closed', () async {
-    final database = createTestDatabase();
-    addTearDown(database.close);
-    final repository = DriftAssessmentRevisionRepository(database);
+  test(
+    'same logical test revision with another checksum fails closed',
+    () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      final repository = DriftAssessmentRevisionRepository(database);
 
-    expect(
-      await repository.saveBundle(_bundle()),
-      isA<Success<AssessmentRevisionBundle>>(),
-    );
-    final conflict = await repository.saveBundle(
-      _bundle(testChecksum: _otherTestChecksum),
-    );
+      expect(
+        await repository.saveBundle(_bundle()),
+        isA<Success<AssessmentRevisionBundle>>(),
+      );
+      final conflict = await repository.saveBundle(
+        _bundle(testChecksum: _otherTestChecksum),
+      );
 
-    final failure = (conflict as FailureResult<AssessmentRevisionBundle>).failure;
-    expect(failure.code, 'ASSESSMENT_REVISION_CHECKSUM_CONFLICT');
-  });
+      final failure =
+          (conflict as FailureResult<AssessmentRevisionBundle>).failure;
+      expect(failure.code, 'ASSESSMENT_REVISION_CHECKSUM_CONFLICT');
+    },
+  );
 
-  test('missing exact question row fails closed as incomplete local data', () async {
-    final database = createTestDatabase();
-    addTearDown(database.close);
-    final repository = DriftAssessmentRevisionRepository(database);
+  test(
+    'missing exact question row fails closed as incomplete local data',
+    () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      final repository = DriftAssessmentRevisionRepository(database);
 
-    await repository.saveBundle(_bundle());
-    await (database.delete(database.assessmentQuestionReads)..where(
-          (row) => row.questionCode.equals('Q2') & row.revision.equals(1),
-        ))
-        .go();
+      await repository.saveBundle(_bundle());
+      await (database.delete(database.assessmentQuestionReads)..where(
+            (row) => row.questionCode.equals('Q2') & row.revision.equals(1),
+          ))
+          .go();
 
-    final result = await repository.readBundle(
-      practiceTestCode: 'INTERVIEW_CORE',
-      revision: 4,
-      checksum: _testChecksum,
-    );
+      final result = await repository.readBundle(
+        practiceTestCode: 'INTERVIEW_CORE',
+        revision: 4,
+        checksum: _testChecksum,
+      );
 
-    final failure =
-        (result as FailureResult<AssessmentRevisionBundle?>).failure;
-    expect(failure.code, 'ASSESSMENT_LOCAL_INCOMPLETE');
-  });
+      final failure =
+          (result as FailureResult<AssessmentRevisionBundle?>).failure;
+      expect(failure.code, 'ASSESSMENT_LOCAL_INCOMPLETE');
+    },
+  );
 }
 
 AssessmentRevisionBundle _bundle({String testChecksum = _testChecksum}) {

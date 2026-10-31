@@ -96,11 +96,7 @@ AssessmentRevisionBundle _bundle({
       mode: AssessmentMode.exam,
       passingScoreBasisPoints: 6000,
       questionRefs: [
-        PracticeTestQuestionRef(
-          order: 0,
-          question: questionId,
-          points: 1,
-        ),
+        PracticeTestQuestionRef(order: 0, question: questionId, points: 1),
       ],
     ),
     questions: [

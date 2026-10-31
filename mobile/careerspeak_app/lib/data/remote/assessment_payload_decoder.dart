@@ -11,7 +11,9 @@ final class AssessmentPayloadDecoder {
 
       final refs = _objectList(object, 'questionRefs', r'$').indexed
           .map((entry) {
-            final path = r'$.questionRefs[' '${entry.$1}]';
+            final path =
+                r'$.questionRefs['
+                '${entry.$1}]';
             final ref = entry.$2;
             _requireExactKeys(ref, _testQuestionRefKeys, path);
             final questionPath = '$path.question';
@@ -20,11 +22,7 @@ final class AssessmentPayloadDecoder {
             return PracticeTestQuestionRef(
               order: _integer(ref, 'order', path),
               question: QuestionRevisionId(
-                questionCode: _string(
-                  question,
-                  'questionCode',
-                  questionPath,
-                ),
+                questionCode: _string(question, 'questionCode', questionPath),
                 revision: _integer(question, 'revision', questionPath),
                 checksum: _string(question, 'checksum', questionPath),
               ),
@@ -80,11 +78,7 @@ final class AssessmentPayloadDecoder {
           body: SingleChoiceQuestionBody(
             prompt: _string(body, 'prompt', r'$.body'),
             options: _nonBlankStringList(body, 'options', r'$.body'),
-            correctOptionIndex: _integer(
-              body,
-              'correctOptionIndex',
-              r'$.body',
-            ),
+            correctOptionIndex: _integer(body, 'correctOptionIndex', r'$.body'),
             skillCode: _string(body, 'skillCode', r'$.body'),
             explanation: _string(body, 'explanation', r'$.body'),
           ),
@@ -93,9 +87,7 @@ final class AssessmentPayloadDecoder {
     } on _AssessmentPayloadViolation catch (error) {
       return FailureResult<AssessmentQuestionRevision>(_failure(error));
     } on ArgumentError catch (error) {
-      return FailureResult<AssessmentQuestionRevision>(
-        _argumentFailure(error),
-      );
+      return FailureResult<AssessmentQuestionRevision>(_argumentFailure(error));
     }
   }
 
@@ -146,16 +138,18 @@ final class AssessmentPayloadDecoder {
     if (value is! List) {
       throw _AssessmentPayloadViolation('$path.$key', 'must be a JSON array');
     }
-    return value.indexed.map((entry) {
-      final item = entry.$2;
-      if (item is! String || item.trim().isEmpty) {
-        throw _AssessmentPayloadViolation(
-          '$path.$key[${entry.$1}]',
-          'must be a non-blank string',
-        );
-      }
-      return item;
-    }).toList(growable: false);
+    return value.indexed
+        .map((entry) {
+          final item = entry.$2;
+          if (item is! String || item.trim().isEmpty) {
+            throw _AssessmentPayloadViolation(
+              '$path.$key[${entry.$1}]',
+              'must be a non-blank string',
+            );
+          }
+          return item;
+        })
+        .toList(growable: false);
   }
 
   String _string(Map<String, Object?> object, String key, String path) {
@@ -199,10 +193,7 @@ ApplicationFailure _failure(_AssessmentPayloadViolation error) {
   return ApplicationFailure(
     code: 'ASSESSMENT_PAYLOAD_INVALID',
     message: 'The server returned an invalid assessment payload.',
-    details: <String, Object?>{
-      'field': error.path,
-      'reason': error.reason,
-    },
+    details: <String, Object?>{'field': error.path, 'reason': error.reason},
   );
 }
 
@@ -236,12 +227,7 @@ const _practiceTestKeys = <String>{
 };
 const _testQuestionRefKeys = <String>{'order', 'question', 'points'};
 const _questionRefKeys = <String>{'questionCode', 'revision', 'checksum'};
-const _questionKeys = <String>{
-  'questionCode',
-  'revision',
-  'checksum',
-  'body',
-};
+const _questionKeys = <String>{'questionCode', 'revision', 'checksum', 'body'};
 const _singleChoiceKeys = <String>{
   'kind',
   'prompt',
