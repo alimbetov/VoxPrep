@@ -5,52 +5,57 @@ import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/application/services/asset_download_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const _sha =
-    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+const _sha = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 void main() {
-  test('downloads only requiredOffline assets before commit readiness', () async {
-    final requested = <String>[];
-    final target = _target();
-    final prefetcher = RequiredOfflineAssetPrefetcher(
-      manifestGateway: _Gateway(_manifest(target)),
-      ensureLocal: (asset) async {
-        requested.add(asset.assetId);
-        return Success(
-          AssetDownloadOutcome(
-            localPath: '/verified/${asset.assetId}',
-            reused: false,
+  test(
+    'downloads only requiredOffline assets before commit readiness',
+    () async {
+      final requested = <String>[];
+      final target = _target();
+      final prefetcher = RequiredOfflineAssetPrefetcher(
+        manifestGateway: _Gateway(_manifest(target)),
+        ensureLocal: (asset) async {
+          requested.add(asset.assetId);
+          return Success(
+            AssetDownloadOutcome(
+              localPath: '/verified/${asset.assetId}',
+              reused: false,
+            ),
+          );
+        },
+      );
+
+      final result = await prefetcher.prefetch(<PackRevisionRef>[target]);
+
+      expect(result, isA<Success<void>>());
+      expect(requested, <String>['required-a']);
+    },
+  );
+
+  test(
+    'required asset verification failure blocks publication barrier',
+    () async {
+      final target = _target();
+      final prefetcher = RequiredOfflineAssetPrefetcher(
+        manifestGateway: _Gateway(_manifest(target)),
+        ensureLocal: (asset) async => const FailureResult(
+          ApplicationFailure(
+            code: 'ASSET_CHECKSUM_MISMATCH',
+            message: 'bad bytes',
           ),
-        );
-      },
-    );
-
-    final result = await prefetcher.prefetch(<PackRevisionRef>[target]);
-
-    expect(result, isA<Success<void>>());
-    expect(requested, <String>['required-a']);
-  });
-
-  test('required asset verification failure blocks publication barrier', () async {
-    final target = _target();
-    final prefetcher = RequiredOfflineAssetPrefetcher(
-      manifestGateway: _Gateway(_manifest(target)),
-      ensureLocal: (asset) async => const FailureResult(
-        ApplicationFailure(
-          code: 'ASSET_CHECKSUM_MISMATCH',
-          message: 'bad bytes',
         ),
-      ),
-    );
+      );
 
-    final result = await prefetcher.prefetch(<PackRevisionRef>[target]);
+      final result = await prefetcher.prefetch(<PackRevisionRef>[target]);
 
-    expect(result, isA<FailureResult<void>>());
-    final failure = (result as FailureResult<void>).failure;
-    expect(failure.code, 'REQUIRED_OFFLINE_ASSET_UNAVAILABLE');
-    expect(failure.details['assetId'], 'required-a');
-    expect(failure.details['causeCode'], 'ASSET_CHECKSUM_MISMATCH');
-  });
+      expect(result, isA<FailureResult<void>>());
+      final failure = (result as FailureResult<void>).failure;
+      expect(failure.code, 'REQUIRED_OFFLINE_ASSET_UNAVAILABLE');
+      expect(failure.details['assetId'], 'required-a');
+      expect(failure.details['causeCode'], 'ASSET_CHECKSUM_MISMATCH');
+    },
+  );
 
   test('same required asset shared by packs is verified once', () async {
     final first = _target(code: 'PACK_A');
@@ -65,7 +70,10 @@ void main() {
       ensureLocal: (asset) async {
         calls += 1;
         return Success(
-          AssetDownloadOutcome(localPath: '/verified/shared', reused: calls > 1),
+          AssetDownloadOutcome(
+            localPath: '/verified/shared',
+            reused: calls > 1,
+          ),
         );
       },
     );
