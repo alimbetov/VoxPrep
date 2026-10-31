@@ -4,7 +4,7 @@ path = Path(
     'mobile/careerspeak_app/test/data/local/database/careerspeak_retirement_migration_test.dart'
 )
 text = path.read_text()
-marker = "test('v5 TOMBSTONED local row survives migration after journal pruning'"
+marker = "test('v5 TOMBSTONED local rows survive migration after journal pruning'"
 if marker in text:
     raise SystemExit(0)
 
@@ -15,7 +15,7 @@ if not text.endswith(closing):
 case = r'''
 
   test(
-    'v5 TOMBSTONED local row survives migration after journal pruning',
+    'v5 TOMBSTONED local rows survive migration after journal pruning',
     () async {
       final schema = await verifier.schemaAt(5);
       final storedNow =
@@ -35,19 +35,21 @@ case = r'''
               updatedAt: storedNow,
             ),
           );
-      await oldDatabase
-          .into(oldDatabase.localContentRecords)
-          .insert(
-            v5.LocalContentRecordsCompanion.insert(
-              contentCode: 'JAVA_LEGACY_001',
-              contentType: 'INTERVIEW',
-              revision: 3,
-              checksum: checksum,
-              snapshotState: 'TOMBSTONED',
-              sourceSchemaVersion: 1,
-              createdAt: storedNow,
-            ),
-          );
+      for (final revision in <int>[1, 3]) {
+        await oldDatabase
+            .into(oldDatabase.localContentRecords)
+            .insert(
+              v5.LocalContentRecordsCompanion.insert(
+                contentCode: 'JAVA_LEGACY_001',
+                contentType: 'INTERVIEW',
+                revision: revision,
+                checksum: checksum,
+                snapshotState: 'TOMBSTONED',
+                sourceSchemaVersion: 1,
+                createdAt: storedNow + revision,
+              ),
+            );
+      }
       expect(await oldDatabase.select(oldDatabase.syncTombstones).get(), isEmpty);
       await oldDatabase.close();
 
