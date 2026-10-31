@@ -2,7 +2,6 @@ import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
 import 'careerspeak_content_read_tables.dart';
-import 'careerspeak_locale_tables.dart';
 import 'careerspeak_sync_metadata_tables.dart';
 import 'careerspeak_tables.dart';
 
@@ -20,7 +19,6 @@ part 'careerspeak_database.g.dart';
     LocalContentRecords,
     PackContentRefs,
     PackLocalizationRefs,
-    LocaleFallbackRules,
     AssetCatalog,
     ContentAssetRefs,
     PackAssetRefs,
@@ -60,9 +58,6 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
       if (from < 5) {
         await migrator.createTable(packLocalizationRefs);
         await migrator.createTable(localizedContentReads);
-      }
-      if (from < 6) {
-        await migrator.createTable(localeFallbackRules);
       }
     },
     beforeOpen: (details) async {
