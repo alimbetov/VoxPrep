@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/ports/asset_catalog_repository.dart';
+import '../application/result/result.dart';
 import '../application/services/asset_resolver.dart';
 import '../data/local/drift_asset_catalog_repository.dart';
 import 'asset_download_providers.dart';
@@ -19,4 +20,19 @@ final assetResolverProvider = FutureProvider<AssetResolver>((ref) async {
     store: await store,
     downloads: await downloads,
   );
+});
+
+final catalogueIconAssetProvider = FutureProvider.family<ResolvedAsset?, String>((
+  ref,
+  assetId,
+) async {
+  final resolver = await ref.watch(assetResolverProvider.future);
+  final resolved = await resolver.resolve(
+    assetId,
+    policy: AssetResolutionPolicy.downloadIfMissing,
+  );
+  return switch (resolved) {
+    Success<ResolvedAsset>(:final value) => value,
+    FailureResult<ResolvedAsset>() => null,
+  };
 });
