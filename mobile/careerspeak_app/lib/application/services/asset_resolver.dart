@@ -30,12 +30,7 @@ final class AssetResolver {
     AssetCacheRetentionRepository? retention,
   }) => AssetResolver._(catalog, store, downloads, retention);
 
-  AssetResolver._(
-    this._catalog,
-    this._store,
-    this._downloads,
-    this._retention,
-  );
+  AssetResolver._(this._catalog, this._store, this._downloads, this._retention);
 
   final AssetCatalogRepository _catalog;
   final AssetFileStore _store;

@@ -24,17 +24,15 @@ final assetResolverProvider = FutureProvider<AssetResolver>((ref) async {
   );
 });
 
-final catalogueIconAssetProvider = FutureProvider.family<ResolvedAsset?, String>((
-  ref,
-  assetId,
-) async {
-  final resolver = await ref.watch(assetResolverProvider.future);
-  final resolved = await resolver.resolve(
-    assetId,
-    policy: AssetResolutionPolicy.downloadIfMissing,
-  );
-  return switch (resolved) {
-    Success<ResolvedAsset>(:final value) => value,
-    FailureResult<ResolvedAsset>() => null,
-  };
-});
+final catalogueIconAssetProvider =
+    FutureProvider.family<ResolvedAsset?, String>((ref, assetId) async {
+      final resolver = await ref.watch(assetResolverProvider.future);
+      final resolved = await resolver.resolve(
+        assetId,
+        policy: AssetResolutionPolicy.downloadIfMissing,
+      );
+      return switch (resolved) {
+        Success<ResolvedAsset>(:final value) => value,
+        FailureResult<ResolvedAsset>() => null,
+      };
+    });

@@ -6,13 +6,10 @@ void main() {
   test('interview exposes independent question and sample-answer roles', () {
     final policy = ContentAudioPolicy.forType(ContentType.interview);
 
-    expect(
-      policy.map((entry) => entry.role),
-      <ContentAudioRole>[
-        ContentAudioRole.question,
-        ContentAudioRole.sampleAnswer,
-      ],
-    );
+    expect(policy.map((entry) => entry.role), <ContentAudioRole>[
+      ContentAudioRole.question,
+      ContentAudioRole.sampleAnswer,
+    ]);
     expect(
       policy.map((entry) => entry.requirement),
       everyElement(AudioRequirement.recommended),

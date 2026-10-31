@@ -37,7 +37,9 @@ final catalogueSourceModeControllerProvider =
     Provider<CatalogueSourceModeController>((ref) {
       return CatalogueSourceModeController(
         repository: ref.watch(catalogueSourcePreferenceRepositoryProvider),
-        applyRuntimeMode: ref.read(catalogueSourceModeProvider.notifier).setRuntimeMode,
+        applyRuntimeMode: ref
+            .read(catalogueSourceModeProvider.notifier)
+            .setRuntimeMode,
       );
     });
 

@@ -18,69 +18,72 @@ const _checksum =
 const _bytes = <int>[1, 2, 3, 4];
 
 void main() {
-  test('expired auto-cached audio is redownloaded on the next resolve', () async {
-    final directory = await Directory.systemTemp.createTemp(
-      'careerspeak-audio-retention-',
-    );
-    addTearDown(() => directory.delete(recursive: true));
+  test(
+    'expired auto-cached audio is redownloaded on the next resolve',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'careerspeak-audio-retention-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
 
-    var now = DateTime.utc(2026, 1, 1);
-    final asset = ManifestAssetDescriptor(
-      assetId: 'audio-interview-question-r1',
-      checksumSha256: _checksum,
-      deliveryKey: 'audio/interview/question-r1.mp3',
-      sizeBytes: _bytes.length,
-      mediaType: 'audio/mpeg',
-      requiredOffline: false,
-    );
-    final source = _CountingSource();
-    final store = FileSystemAssetStore(directory, now: () => now);
-    final retention = _MemoryRetentionRepository(() => now);
-    final resolver = AssetResolver(
-      catalog: _Catalog(asset),
-      store: store,
-      downloads: AssetDownloadManager(
-        source: source,
+      var now = DateTime.utc(2026, 1, 1);
+      final asset = ManifestAssetDescriptor(
+        assetId: 'audio-interview-question-r1',
+        checksumSha256: _checksum,
+        deliveryKey: 'audio/interview/question-r1.mp3',
+        sizeBytes: _bytes.length,
+        mediaType: 'audio/mpeg',
+        requiredOffline: false,
+      );
+      final source = _CountingSource();
+      final store = FileSystemAssetStore(directory, now: () => now);
+      final retention = _MemoryRetentionRepository(() => now);
+      final resolver = AssetResolver(
+        catalog: _Catalog(asset),
         store: store,
-        delay: (_) async {},
-      ),
-      retention: retention,
-    );
+        downloads: AssetDownloadManager(
+          source: source,
+          store: store,
+          delay: (_) async {},
+        ),
+        retention: retention,
+      );
 
-    final first = await resolver.resolve(
-      asset.assetId,
-      policy: AssetResolutionPolicy.downloadIfMissing,
-    );
-    expect(first, isA<Success<ResolvedAsset>>());
-    expect(source.openCount, 1);
-    final firstPath = (first as Success<ResolvedAsset>).value.localPath;
-    expect(await File(firstPath).exists(), isTrue);
+      final first = await resolver.resolve(
+        asset.assetId,
+        policy: AssetResolutionPolicy.downloadIfMissing,
+      );
+      expect(first, isA<Success<ResolvedAsset>>());
+      expect(source.openCount, 1);
+      final firstPath = (first as Success<ResolvedAsset>).value.localPath;
+      expect(await File(firstPath).exists(), isTrue);
 
-    now = now.add(const Duration(days: 100));
-    final cleanup = await AssetCacheRetentionManager(
-      retention: retention,
-      evictionStore: store,
-      audioTtl: const Duration(days: 90),
-      now: () => now,
-    ).cleanupExpiredAudio();
+      now = now.add(const Duration(days: 100));
+      final cleanup = await AssetCacheRetentionManager(
+        retention: retention,
+        evictionStore: store,
+        audioTtl: const Duration(days: 90),
+        now: () => now,
+      ).cleanupExpiredAudio();
 
-    expect(cleanup, isA<Success<AssetRetentionCleanupReport>>());
-    expect(
-      (cleanup as Success<AssetRetentionCleanupReport>).value.evicted,
-      1,
-    );
-    expect(await File(firstPath).exists(), isFalse);
+      expect(cleanup, isA<Success<AssetRetentionCleanupReport>>());
+      expect(
+        (cleanup as Success<AssetRetentionCleanupReport>).value.evicted,
+        1,
+      );
+      expect(await File(firstPath).exists(), isFalse);
 
-    final second = await resolver.resolve(
-      asset.assetId,
-      policy: AssetResolutionPolicy.downloadIfMissing,
-    );
-    expect(second, isA<Success<ResolvedAsset>>());
-    expect(source.openCount, 2);
-    final secondPath = (second as Success<ResolvedAsset>).value.localPath;
-    expect(secondPath, firstPath);
-    expect(await File(secondPath).readAsBytes(), _bytes);
-  });
+      final second = await resolver.resolve(
+        asset.assetId,
+        policy: AssetResolutionPolicy.downloadIfMissing,
+      );
+      expect(second, isA<Success<ResolvedAsset>>());
+      expect(source.openCount, 2);
+      final secondPath = (second as Success<ResolvedAsset>).value.localPath;
+      expect(secondPath, firstPath);
+      expect(await File(secondPath).readAsBytes(), _bytes);
+    },
+  );
 }
 
 final class _CountingSource implements AssetByteSource {
@@ -104,7 +107,9 @@ final class _Catalog implements AssetCatalogRepository {
   final ManifestAssetDescriptor asset;
 
   @override
-  Future<Result<ManifestAssetDescriptor?>> findCurrentById(String assetId) async {
+  Future<Result<ManifestAssetDescriptor?>> findCurrentById(
+    String assetId,
+  ) async {
     return Success<ManifestAssetDescriptor?>(
       asset.assetId == assetId ? asset : null,
     );
@@ -133,7 +138,8 @@ final class _MemoryRetentionRepository
   }) async {
     final previous = entry;
     final effectiveClass =
-        previous != null && previous.retentionClass != AssetRetentionClass.autoCache
+        previous != null &&
+            previous.retentionClass != AssetRetentionClass.autoCache
         ? previous.retentionClass
         : retentionClass;
     entry = AssetRetentionEntry(

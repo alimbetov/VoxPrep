@@ -13,29 +13,32 @@ const _hash =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 void main() {
-  test('INTERVIEW exposes only roles present in CURRENT exact revision', () async {
-    final container = ProviderContainer(
-      overrides: [
-        assetCatalogRepositoryProvider.overrideWithValue(
-          _RoleCatalog(<String>{ContentAudioRole.question.wireName}),
-        ),
-      ],
-    );
-    addTearDown(container.dispose);
+  test(
+    'INTERVIEW exposes only roles present in CURRENT exact revision',
+    () async {
+      final container = ProviderContainer(
+        overrides: [
+          assetCatalogRepositoryProvider.overrideWithValue(
+            _RoleCatalog(<String>{ContentAudioRole.question.wireName}),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
 
-    final roles = await container.read(
-      interviewAudioAvailableRolesProvider((
-        content: const ContentIdentity(
-          code: 'JAVA_INTERVIEW_1',
-          type: ContentType.interview,
-        ),
-        revision: 3,
-      )).future,
-    );
+      final roles = await container.read(
+        interviewAudioAvailableRolesProvider((
+          content: const ContentIdentity(
+            code: 'JAVA_INTERVIEW_1',
+            type: ContentType.interview,
+          ),
+          revision: 3,
+        )).future,
+      );
 
-    expect(roles, <ContentAudioRole>{ContentAudioRole.question});
-    expect(roles, isNot(contains(ContentAudioRole.sampleAnswer)));
-  });
+      expect(roles, <ContentAudioRole>{ContentAudioRole.question});
+      expect(roles, isNot(contains(ContentAudioRole.sampleAnswer)));
+    },
+  );
 }
 
 final class _RoleCatalog implements AssetCatalogRepository {
@@ -44,7 +47,9 @@ final class _RoleCatalog implements AssetCatalogRepository {
   final Set<String> roles;
 
   @override
-  Future<Result<ManifestAssetDescriptor?>> findCurrentById(String assetId) async {
+  Future<Result<ManifestAssetDescriptor?>> findCurrentById(
+    String assetId,
+  ) async {
     return const Success<ManifestAssetDescriptor?>(null);
   }
 

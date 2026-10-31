@@ -64,27 +64,31 @@ void main() {
         translationLocale: 'en',
       );
       expect(synced, isA<Success<ContentSyncOutcome>>());
-      final rootFetch = (await manifestGateway.fetchRootManifest()).getOrThrow();
+      final rootFetch = (await manifestGateway.fetchRootManifest())
+          .getOrThrow();
       currentRoot = (rootFetch as RootManifestChanged).manifest;
       await _expectCurrent(database, version: 1, verticalCount: 8);
     });
 
     tearDown(() => database.close());
 
-    test('duplicate business codes are rejected and CURRENT survives', () async {
-      final payloads = _replaceItems(
-        demoPayloads,
-        CatalogueKind.learningGoals,
-        (items) => <Object>[...items, _copyMap(items.first)],
-      );
+    test(
+      'duplicate business codes are rejected and CURRENT survives',
+      () async {
+        final payloads = _replaceItems(
+          demoPayloads,
+          CatalogueKind.learningGoals,
+          (items) => <Object>[...items, _copyMap(items.first)],
+        );
 
-      await _expectMaterializationFailure(
-        database,
-        _rootVersion(currentRoot, 2, checksumChar: '1'),
-        payloads.values,
-      );
-      await _expectCurrent(database, version: 1, verticalCount: 8);
-    });
+        await _expectMaterializationFailure(
+          database,
+          _rootVersion(currentRoot, 2, checksumChar: '1'),
+          payloads.values,
+        );
+        await _expectCurrent(database, version: 1, verticalCount: 8);
+      },
+    );
 
     test('dangling ownership is rejected and CURRENT survives', () async {
       final payloads = _replaceItems(
@@ -107,96 +111,112 @@ void main() {
       await _expectCurrent(database, version: 1, verticalCount: 8);
     });
 
-    test('cross-vertical track ownership is rejected and CURRENT survives', () async {
-      final payloads = _replaceItems(
-        demoPayloads,
-        CatalogueKind.learningTracks,
-        (items) {
-          final result = [...items];
-          final first = _copyMap(result.first);
-          first['verticalCode'] = 'MEDICAL_ENGLISH';
-          result[0] = first;
-          return result;
-        },
-      );
+    test(
+      'cross-vertical track ownership is rejected and CURRENT survives',
+      () async {
+        final payloads = _replaceItems(
+          demoPayloads,
+          CatalogueKind.learningTracks,
+          (items) {
+            final result = [...items];
+            final first = _copyMap(result.first);
+            first['verticalCode'] = 'MEDICAL_ENGLISH';
+            result[0] = first;
+            return result;
+          },
+        );
 
-      await _expectMaterializationFailure(
-        database,
-        _rootVersion(currentRoot, 4, checksumChar: '3'),
-        payloads.values,
-      );
-      await _expectCurrent(database, version: 1, verticalCount: 8);
-    });
+        await _expectMaterializationFailure(
+          database,
+          _rootVersion(currentRoot, 4, checksumChar: '3'),
+          payloads.values,
+        );
+        await _expectCurrent(database, version: 1, verticalCount: 8);
+      },
+    );
 
-    test('broken collection member order is rejected and CURRENT survives', () async {
-      final payloads = _replaceItems(
-        demoPayloads,
-        CatalogueKind.learningCollections,
-        (items) {
-          final result = [...items];
-          final first = _copyMap(result.first);
-          final members = (first['members']! as List).cast<Object>().toList();
-          final member = _copyMap(members.first);
-          member['position'] = 1;
-          members[0] = member;
-          first['members'] = members;
-          result[0] = first;
-          return result;
-        },
-      );
+    test(
+      'broken collection member order is rejected and CURRENT survives',
+      () async {
+        final payloads = _replaceItems(
+          demoPayloads,
+          CatalogueKind.learningCollections,
+          (items) {
+            final result = [...items];
+            final first = _copyMap(result.first);
+            final members = (first['members']! as List).cast<Object>().toList();
+            final member = _copyMap(members.first);
+            member['position'] = 1;
+            members[0] = member;
+            first['members'] = members;
+            result[0] = first;
+            return result;
+          },
+        );
 
-      await _expectMaterializationFailure(
-        database,
-        _rootVersion(currentRoot, 5, checksumChar: '4'),
-        payloads.values,
-      );
-      await _expectCurrent(database, version: 1, verticalCount: 8);
-    });
+        await _expectMaterializationFailure(
+          database,
+          _rootVersion(currentRoot, 5, checksumChar: '4'),
+          payloads.values,
+        );
+        await _expectCurrent(database, version: 1, verticalCount: 8);
+      },
+    );
 
-    test('wrong exact catalogue checksum is rejected and CURRENT survives', () async {
-      final payloads = Map<String, CataloguePayload>.from(demoPayloads);
-      final original = _payloadOfKind(payloads.values, CatalogueKind.verticals);
-      final wrongRef = CatalogueRevisionRef(
-        kind: original.ref.kind,
-        revision: original.ref.revision,
-        checksum:
-            'abababababababababababababababababababababababababababababababab',
-      );
-      final wrong = CataloguePayload(
-        ref: wrongRef,
-        items: original.items,
-        wireJson: <String, Object?>{
-          ...original.wireJson,
-          'checksum': wrongRef.checksum,
-        },
-      );
-      payloads.remove(DemoCataloguePayloadGateway.keyOf(original.ref));
-      payloads[DemoCataloguePayloadGateway.keyOf(wrongRef)] = wrong;
+    test(
+      'wrong exact catalogue checksum is rejected and CURRENT survives',
+      () async {
+        final payloads = Map<String, CataloguePayload>.from(demoPayloads);
+        final original = _payloadOfKind(
+          payloads.values,
+          CatalogueKind.verticals,
+        );
+        final wrongRef = CatalogueRevisionRef(
+          kind: original.ref.kind,
+          revision: original.ref.revision,
+          checksum:
+              'abababababababababababababababababababababababababababababababab',
+        );
+        final wrong = CataloguePayload(
+          ref: wrongRef,
+          items: original.items,
+          wireJson: <String, Object?>{
+            ...original.wireJson,
+            'checksum': wrongRef.checksum,
+          },
+        );
+        payloads.remove(DemoCataloguePayloadGateway.keyOf(original.ref));
+        payloads[DemoCataloguePayloadGateway.keyOf(wrongRef)] = wrong;
 
-      await _expectMaterializationFailure(
-        database,
-        _rootVersion(currentRoot, 6, checksumChar: '5'),
-        payloads.values,
-      );
-      await _expectCurrent(database, version: 1, verticalCount: 8);
-    });
+        await _expectMaterializationFailure(
+          database,
+          _rootVersion(currentRoot, 6, checksumChar: '5'),
+          payloads.values,
+        );
+        await _expectCurrent(database, version: 1, verticalCount: 8);
+      },
+    );
 
-    test('partial six-core manifest is rejected and CURRENT survives', () async {
-      final partial = _rootVersion(
-        currentRoot,
-        7,
-        checksumChar: '6',
-        catalogues: currentRoot.catalogues
-            .where((ref) => ref.kind != CatalogueKind.learningCollections),
-      );
+    test(
+      'partial six-core manifest is rejected and CURRENT survives',
+      () async {
+        final partial = _rootVersion(
+          currentRoot,
+          7,
+          checksumChar: '6',
+          catalogues: currentRoot.catalogues.where(
+            (ref) => ref.kind != CatalogueKind.learningCollections,
+          ),
+        );
 
-      await _expectMaterializationFailure(
-        database,
-        partial,
-        demoPayloads.values,
-      );
-      await _expectCurrent(database, version: 1, verticalCount: 8);
-    });
+        await _expectMaterializationFailure(
+          database,
+          partial,
+          demoPayloads.values,
+        );
+        await _expectCurrent(database, version: 1, verticalCount: 8);
+      },
+    );
 
     test('corrupted staged Drift rows never leak through CURRENT', () async {
       final staged = _rootVersion(currentRoot, 8, checksumChar: '7');
@@ -207,13 +227,11 @@ void main() {
 
       await database.customStatement('PRAGMA foreign_keys = OFF');
       try {
-        await database.customStatement(
-          '''
+        await database.customStatement('''
           UPDATE learning_track_reads
           SET goal_code = 'CORRUPTED_GOAL'
           WHERE content_version = 8
-          ''',
-        );
+          ''');
       } finally {
         await database.customStatement('PRAGMA foreign_keys = ON');
       }
@@ -221,19 +239,24 @@ void main() {
       await _expectCurrent(database, version: 1, verticalCount: 8);
     });
 
-    test('stale valid staged snapshot remains invisible until CURRENT switch', () async {
-      final staged = _rootVersion(currentRoot, 9, checksumChar: '8');
-      final materialized = await DriftUniversalCatalogueGraphMaterializer(
-        database,
-      ).materialize(root: staged, payloads: demoPayloads.values);
-      expect(materialized, isA<Success<void>>());
+    test(
+      'stale valid staged snapshot remains invisible until CURRENT switch',
+      () async {
+        final staged = _rootVersion(currentRoot, 9, checksumChar: '8');
+        final materialized = await DriftUniversalCatalogueGraphMaterializer(
+          database,
+        ).materialize(root: staged, payloads: demoPayloads.values);
+        expect(materialized, isA<Success<void>>());
 
-      final stagedRow = await database.customSelect(
-        'SELECT content_version FROM publication_snapshots WHERE content_version = 9',
-      ).getSingleOrNull();
-      expect(stagedRow, isNotNull);
-      await _expectCurrent(database, version: 1, verticalCount: 8);
-    });
+        final stagedRow = await database
+            .customSelect(
+              'SELECT content_version FROM publication_snapshots WHERE content_version = 9',
+            )
+            .getSingleOrNull();
+        expect(stagedRow, isNotNull);
+        await _expectCurrent(database, version: 1, verticalCount: 8);
+      },
+    );
 
     test('failed publication staging cannot replace old CURRENT', () async {
       final corrupted = _replaceItems(
@@ -254,7 +277,10 @@ void main() {
           gateway: DemoAssessmentPayloadGateway(latency: Duration.zero),
           repository: DriftAssessmentRevisionRepository(database),
         ),
-        DemoCataloguePayloadGateway(payloads: corrupted, latency: Duration.zero),
+        DemoCataloguePayloadGateway(
+          payloads: corrupted,
+          latency: Duration.zero,
+        ),
       );
 
       final staged = await stager.stage(target);
@@ -280,7 +306,9 @@ Future<void> _expectCurrent(
   required int version,
   required int verticalCount,
 }) async {
-  final result = await DriftUniversalCatalogueRepository(database).readCurrent();
+  final result = await DriftUniversalCatalogueRepository(
+    database,
+  ).readCurrent();
   expect(result, isA<Success<CurrentUniversalCatalogueSnapshot?>>());
   final snapshot =
       (result as Success<CurrentUniversalCatalogueSnapshot?>).value;

@@ -72,86 +72,92 @@ void main() {
     );
   });
 
-  test('collection rejects empty, non-contiguous, and duplicate membership', () {
-    expect(
-      () => LearningCollectionProjection(
-        code: 'EMPTY',
-        verticalCode: 'JAVA_INTERVIEW',
-        trackCode: 'TRACK',
-        title: 'Empty',
-        description: 'No material.',
+  test(
+    'collection rejects empty, non-contiguous, and duplicate membership',
+    () {
+      expect(
+        () => LearningCollectionProjection(
+          code: 'EMPTY',
+          verticalCode: 'JAVA_INTERVIEW',
+          trackCode: 'TRACK',
+          title: 'Empty',
+          description: 'No material.',
+          sortOrder: 0,
+          active: true,
+          members: const <LearningCollectionMember>[],
+        ),
+        throwsArgumentError,
+      );
+
+      final ref = ContentRevisionRef(
+        contentCode: 'JAVA_Q_001',
+        contentType: ContentType.interview,
+        revision: 3,
+        checksum: _contentHash,
+      );
+
+      expect(
+        () => LearningCollectionProjection(
+          code: 'GAP',
+          verticalCode: 'JAVA_INTERVIEW',
+          trackCode: 'TRACK',
+          title: 'Gap',
+          description: 'Invalid ordering.',
+          sortOrder: 0,
+          active: true,
+          members: <LearningCollectionMember>[
+            LearningCollectionMember.content(position: 1, content: ref),
+          ],
+        ),
+        throwsArgumentError,
+      );
+
+      expect(
+        () => LearningCollectionProjection(
+          code: 'DUPLICATE',
+          verticalCode: 'JAVA_INTERVIEW',
+          trackCode: 'TRACK',
+          title: 'Duplicate',
+          description: 'Invalid membership.',
+          sortOrder: 0,
+          active: true,
+          members: <LearningCollectionMember>[
+            LearningCollectionMember.content(position: 0, content: ref),
+            LearningCollectionMember.content(position: 1, content: ref),
+          ],
+        ),
+        throwsArgumentError,
+      );
+    },
+  );
+
+  test(
+    'freezes taxonomy locale and learner-facing voice capability shapes',
+    () {
+      final category = TaxonomyProjection(
+        code: 'JAVA_BACKEND',
+        label: 'Java Backend',
         sortOrder: 0,
         active: true,
-        members: const <LearningCollectionMember>[],
-      ),
-      throwsArgumentError,
-    );
-
-    final ref = ContentRevisionRef(
-      contentCode: 'JAVA_Q_001',
-      contentType: ContentType.interview,
-      revision: 3,
-      checksum: _contentHash,
-    );
-
-    expect(
-      () => LearningCollectionProjection(
-        code: 'GAP',
-        verticalCode: 'JAVA_INTERVIEW',
-        trackCode: 'TRACK',
-        title: 'Gap',
-        description: 'Invalid ordering.',
+      );
+      final locale = SupportedLocaleProjection(
+        code: 'ru-KZ',
+        label: 'Русский',
         sortOrder: 0,
         active: true,
-        members: <LearningCollectionMember>[
-          LearningCollectionMember.content(position: 1, content: ref),
-        ],
-      ),
-      throwsArgumentError,
-    );
-
-    expect(
-      () => LearningCollectionProjection(
-        code: 'DUPLICATE',
-        verticalCode: 'JAVA_INTERVIEW',
-        trackCode: 'TRACK',
-        title: 'Duplicate',
-        description: 'Invalid membership.',
+      );
+      final voice = TtsVoiceProjection(
+        code: 'EN_US_AMY',
+        locale: 'en-US',
+        accentCode: 'US',
+        label: 'Amy',
         sortOrder: 0,
         active: true,
-        members: <LearningCollectionMember>[
-          LearningCollectionMember.content(position: 0, content: ref),
-          LearningCollectionMember.content(position: 1, content: ref),
-        ],
-      ),
-      throwsArgumentError,
-    );
-  });
+      );
 
-  test('freezes taxonomy locale and learner-facing voice capability shapes', () {
-    final category = TaxonomyProjection(
-      code: 'JAVA_BACKEND',
-      label: 'Java Backend',
-      sortOrder: 0,
-      active: true,
-    );
-    final locale = SupportedLocaleProjection(
-      code: 'ru-KZ',
-      label: 'Русский',
-      sortOrder: 0,
-      active: true,
-    );
-    final voice = TtsVoiceProjection(
-      code: 'EN_US_AMY',
-      locale: 'en-US',
-      accentCode: 'US',
-      label: 'Amy',
-      sortOrder: 0,
-      active: true,
-    );
-
-    expect(category.code, 'JAVA_BACKEND');
-    expect(locale.code, 'ru-KZ');
-    expect(voice.accentCode, 'US');
-  });
+      expect(category.code, 'JAVA_BACKEND');
+      expect(locale.code, 'ru-KZ');
+      expect(voice.accentCode, 'US');
+    },
+  );
 }

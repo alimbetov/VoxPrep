@@ -6,11 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/asset_resolver_providers.dart';
 
 class CatalogueAssetIcon extends ConsumerWidget {
-  const CatalogueAssetIcon({
-    required this.assetId,
-    this.size = 32,
-    super.key,
-  });
+  const CatalogueAssetIcon({required this.assetId, this.size = 32, super.key});
 
   final String assetId;
   final double size;
@@ -33,8 +29,7 @@ class CatalogueAssetIcon extends ConsumerWidget {
             : Image.file(
                 File(asset.localPath),
                 fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.school_outlined),
+                errorBuilder: (_, __, ___) => const Icon(Icons.school_outlined),
               ),
       ),
     );

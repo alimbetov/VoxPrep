@@ -8,52 +8,64 @@ const _hash =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 void main() {
-  test('schema v2 locale materialization preserves all universal catalogues', () {
-    final catalogues = <CatalogueRevisionRef>[
-      _ref(CatalogueKind.verticalSections, 1),
-      _ref(CatalogueKind.verticals, 2),
-      _ref(CatalogueKind.verticalPresentation, 3),
-      _ref(CatalogueKind.learningGoals, 4),
-      _ref(CatalogueKind.learningTracks, 5),
-      _ref(CatalogueKind.learningCollections, 6),
-    ];
-    final root = _root(catalogues);
+  test(
+    'schema v2 locale materialization preserves all universal catalogues',
+    () {
+      final catalogues = <CatalogueRevisionRef>[
+        _ref(CatalogueKind.verticalSections, 1),
+        _ref(CatalogueKind.verticals, 2),
+        _ref(CatalogueKind.verticalPresentation, 3),
+        _ref(CatalogueKind.learningGoals, 4),
+        _ref(CatalogueKind.learningTracks, 5),
+        _ref(CatalogueKind.learningCollections, 6),
+      ];
+      final root = _root(catalogues);
 
-    final result = const RootManifestMaterializer().materialize(
-      root: root,
-      translationLocale: 'en',
-    );
+      final result = const RootManifestMaterializer().materialize(
+        root: root,
+        translationLocale: 'en',
+      );
 
-    expect(result, isA<Success<RootContentManifest>>());
-    final projected = (result as Success<RootContentManifest>).value;
-    expect(projected.schemaVersion, 2);
-    expect(projected.catalogues, hasLength(catalogues.length));
-    for (var index = 0; index < catalogues.length; index++) {
-      expect(projected.catalogues[index].kind, catalogues[index].kind);
-      expect(projected.catalogues[index].revision, catalogues[index].revision);
-      expect(projected.catalogues[index].checksum, catalogues[index].checksum);
-    }
-  });
+      expect(result, isA<Success<RootContentManifest>>());
+      final projected = (result as Success<RootContentManifest>).value;
+      expect(projected.schemaVersion, 2);
+      expect(projected.catalogues, hasLength(catalogues.length));
+      for (var index = 0; index < catalogues.length; index++) {
+        expect(projected.catalogues[index].kind, catalogues[index].kind);
+        expect(
+          projected.catalogues[index].revision,
+          catalogues[index].revision,
+        );
+        expect(
+          projected.catalogues[index].checksum,
+          catalogues[index].checksum,
+        );
+      }
+    },
+  );
 
-  test('schema v2 incomplete graph is rejected before locale materialization', () {
-    final root = _root(<CatalogueRevisionRef>[
-      _ref(CatalogueKind.verticalSections, 1),
-      _ref(CatalogueKind.verticals, 2),
-      _ref(CatalogueKind.verticalPresentation, 3),
-      _ref(CatalogueKind.learningGoals, 4),
-      _ref(CatalogueKind.learningTracks, 5),
-    ]);
+  test(
+    'schema v2 incomplete graph is rejected before locale materialization',
+    () {
+      final root = _root(<CatalogueRevisionRef>[
+        _ref(CatalogueKind.verticalSections, 1),
+        _ref(CatalogueKind.verticals, 2),
+        _ref(CatalogueKind.verticalPresentation, 3),
+        _ref(CatalogueKind.learningGoals, 4),
+        _ref(CatalogueKind.learningTracks, 5),
+      ]);
 
-    final result = const RootManifestMaterializer().materialize(
-      root: root,
-      translationLocale: 'en',
-    );
+      final result = const RootManifestMaterializer().materialize(
+        root: root,
+        translationLocale: 'en',
+      );
 
-    expect(result, isA<FailureResult<RootContentManifest>>());
-    final failure = (result as FailureResult<RootContentManifest>).failure;
-    expect(failure.code, 'MANIFEST_INVALID');
-    expect(failure.details['field'], 'catalogues');
-  });
+      expect(result, isA<FailureResult<RootContentManifest>>());
+      final failure = (result as FailureResult<RootContentManifest>).failure;
+      expect(failure.code, 'MANIFEST_INVALID');
+      expect(failure.details['field'], 'catalogues');
+    },
+  );
 }
 
 RootContentManifest _root(List<CatalogueRevisionRef> catalogues) {
@@ -70,9 +82,5 @@ RootContentManifest _root(List<CatalogueRevisionRef> catalogues) {
 }
 
 CatalogueRevisionRef _ref(CatalogueKind kind, int revision) {
-  return CatalogueRevisionRef(
-    kind: kind,
-    revision: revision,
-    checksum: _hash,
-  );
+  return CatalogueRevisionRef(kind: kind, revision: revision, checksum: _hash);
 }

@@ -8,10 +8,8 @@ import 'database/careerspeak_database.dart';
 
 final class DriftAssetCacheRetentionRepository
     implements AssetCacheRetentionRepository {
-  DriftAssetCacheRetentionRepository(
-    this._database, {
-    DateTime Function()? now,
-  }) : _now = now ?? (() => DateTime.now().toUtc());
+  DriftAssetCacheRetentionRepository(this._database, {DateTime Function()? now})
+    : _now = now ?? (() => DateTime.now().toUtc());
 
   final CareerSpeakDatabase _database;
   final DateTime Function() _now;
@@ -64,7 +62,9 @@ final class DriftAssetCacheRetentionRepository
       );
       return const Success<void>(null);
     } catch (error) {
-      return FailureResult<void>(_failure('ASSET_RETENTION_WRITE_FAILED', error));
+      return FailureResult<void>(
+        _failure('ASSET_RETENTION_WRITE_FAILED', error),
+      );
     }
   }
 
@@ -80,7 +80,9 @@ final class DriftAssetCacheRetentionRepository
       );
       return const Success<void>(null);
     } catch (error) {
-      return FailureResult<void>(_failure('ASSET_RETENTION_UPDATE_FAILED', error));
+      return FailureResult<void>(
+        _failure('ASSET_RETENTION_UPDATE_FAILED', error),
+      );
     }
   }
 
@@ -100,8 +102,9 @@ final class DriftAssetCacheRetentionRepository
     }
 
     try {
-      final rows = await _database.customSelect(
-        '''
+      final rows = await _database
+          .customSelect(
+            '''
         SELECT
           asset_id,
           checksum_sha256,
@@ -120,11 +123,12 @@ final class DriftAssetCacheRetentionRepository
         ORDER BY last_accessed_at ASC, asset_id ASC
         LIMIT ?
         ''',
-        variables: <Variable<Object>>[
-          Variable<int>(accessedBefore.toUtc().millisecondsSinceEpoch),
-          Variable<int>(limit),
-        ],
-      ).get();
+            variables: <Variable<Object>>[
+              Variable<int>(accessedBefore.toUtc().millisecondsSinceEpoch),
+              Variable<int>(limit),
+            ],
+          )
+          .get();
 
       final result = <AssetRetentionEntry>[];
       for (final row in rows) {
@@ -182,7 +186,9 @@ final class DriftAssetCacheRetentionRepository
       );
       return const Success<void>(null);
     } catch (error) {
-      return FailureResult<void>(_failure('ASSET_RETENTION_DELETE_FAILED', error));
+      return FailureResult<void>(
+        _failure('ASSET_RETENTION_DELETE_FAILED', error),
+      );
     }
   }
 

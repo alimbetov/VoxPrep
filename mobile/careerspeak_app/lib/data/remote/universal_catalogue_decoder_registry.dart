@@ -16,13 +16,26 @@ final class UniversalCatalogueDecoderRegistry {
 
   Object decode(CataloguePayload payload) {
     return switch (payload.ref.kind) {
-      CatalogueKind.verticalSections => presentationDecoder.decodeSections(payload.items),
+      CatalogueKind.verticalSections => presentationDecoder.decodeSections(
+        payload.items,
+      ),
       CatalogueKind.verticals => verticalDecoder.decodeAll(payload.items),
       CatalogueKind.verticalPresentation => _decodePresentation(payload),
-      CatalogueKind.learningGoals => _decodeAll(payload.items, _decodeGoal, 'learning goals'),
-      CatalogueKind.learningTracks => _decodeAll(payload.items, _decodeTrack, 'learning tracks'),
-      CatalogueKind.learningCollections =>
-        _decodeAll(payload.items, _decodeCollection, 'learning collections'),
+      CatalogueKind.learningGoals => _decodeAll(
+        payload.items,
+        _decodeGoal,
+        'learning goals',
+      ),
+      CatalogueKind.learningTracks => _decodeAll(
+        payload.items,
+        _decodeTrack,
+        'learning tracks',
+      ),
+      CatalogueKind.learningCollections => _decodeAll(
+        payload.items,
+        _decodeCollection,
+        'learning collections',
+      ),
       _ => payload.items,
     };
   }
@@ -59,18 +72,14 @@ final class UniversalCatalogueDecoderRegistry {
 
   LearningGoalProjection _decodeGoal(Object value) {
     final map = _object(value, 'Learning goal');
-    _rejectUnexpected(
-      map,
-      const <String>{
-        'code',
-        'verticalCode',
-        'title',
-        'description',
-        'sortOrder',
-        'active',
-      },
-      'Learning goal',
-    );
+    _rejectUnexpected(map, const <String>{
+      'code',
+      'verticalCode',
+      'title',
+      'description',
+      'sortOrder',
+      'active',
+    }, 'Learning goal');
     return LearningGoalProjection(
       code: _string(map, 'code', 'Learning goal'),
       verticalCode: _string(map, 'verticalCode', 'Learning goal'),
@@ -83,21 +92,17 @@ final class UniversalCatalogueDecoderRegistry {
 
   LearningTrackProjection _decodeTrack(Object value) {
     final map = _object(value, 'Learning track');
-    _rejectUnexpected(
-      map,
-      const <String>{
-        'code',
-        'verticalCode',
-        'goalCode',
-        'title',
-        'description',
-        'levelCode',
-        'careerTrackCode',
-        'sortOrder',
-        'active',
-      },
-      'Learning track',
-    );
+    _rejectUnexpected(map, const <String>{
+      'code',
+      'verticalCode',
+      'goalCode',
+      'title',
+      'description',
+      'levelCode',
+      'careerTrackCode',
+      'sortOrder',
+      'active',
+    }, 'Learning track');
     return LearningTrackProjection(
       code: _string(map, 'code', 'Learning track'),
       verticalCode: _string(map, 'verticalCode', 'Learning track'),
@@ -105,7 +110,11 @@ final class UniversalCatalogueDecoderRegistry {
       title: _string(map, 'title', 'Learning track'),
       description: _string(map, 'description', 'Learning track'),
       levelCode: _string(map, 'levelCode', 'Learning track'),
-      careerTrackCode: _optionalString(map, 'careerTrackCode', 'Learning track'),
+      careerTrackCode: _optionalString(
+        map,
+        'careerTrackCode',
+        'Learning track',
+      ),
       sortOrder: _int(map, 'sortOrder', 'Learning track'),
       active: _bool(map, 'active', 'Learning track'),
     );
@@ -113,23 +122,21 @@ final class UniversalCatalogueDecoderRegistry {
 
   LearningCollectionProjection _decodeCollection(Object value) {
     final map = _object(value, 'Learning collection');
-    _rejectUnexpected(
+    _rejectUnexpected(map, const <String>{
+      'code',
+      'verticalCode',
+      'trackCode',
+      'title',
+      'description',
+      'sortOrder',
+      'active',
+      'members',
+    }, 'Learning collection');
+    final members = _list(
       map,
-      const <String>{
-        'code',
-        'verticalCode',
-        'trackCode',
-        'title',
-        'description',
-        'sortOrder',
-        'active',
-        'members',
-      },
+      'members',
       'Learning collection',
-    );
-    final members = _list(map, 'members', 'Learning collection')
-        .map(_decodeCollectionMember)
-        .toList(growable: false);
+    ).map(_decodeCollectionMember).toList(growable: false);
     return LearningCollectionProjection(
       code: _string(map, 'code', 'Learning collection'),
       verticalCode: _string(map, 'verticalCode', 'Learning collection'),
@@ -144,11 +151,12 @@ final class UniversalCatalogueDecoderRegistry {
 
   LearningCollectionMember _decodeCollectionMember(Object value) {
     final map = _object(value, 'Collection member');
-    _rejectUnexpected(
-      map,
-      const <String>{'position', 'type', 'content', 'practiceTest'},
-      'Collection member',
-    );
+    _rejectUnexpected(map, const <String>{
+      'position',
+      'type',
+      'content',
+      'practiceTest',
+    }, 'Collection member');
     final position = _int(map, 'position', 'Collection member');
     final type = LearningCollectionMemberType.fromWireName(
       _string(map, 'type', 'Collection member'),
@@ -158,15 +166,15 @@ final class UniversalCatalogueDecoderRegistry {
 
     return switch (type) {
       LearningCollectionMemberType.content => _contentMember(
-          position: position,
-          content: content,
-          practiceTest: practiceTest,
-        ),
+        position: position,
+        content: content,
+        practiceTest: practiceTest,
+      ),
       LearningCollectionMemberType.practiceTest => _practiceTestMember(
-          position: position,
-          content: content,
-          practiceTest: practiceTest,
-        ),
+        position: position,
+        content: content,
+        practiceTest: practiceTest,
+      ),
     };
   }
 
@@ -204,13 +212,16 @@ final class UniversalCatalogueDecoderRegistry {
 
   ContentRevisionRef _decodeContentRef(Object value) {
     final map = _object(value, 'Content revision ref');
-    _rejectUnexpected(
-      map,
-      const <String>{'contentCode', 'contentType', 'revision', 'checksum'},
-      'Content revision ref',
-    );
+    _rejectUnexpected(map, const <String>{
+      'contentCode',
+      'contentType',
+      'revision',
+      'checksum',
+    }, 'Content revision ref');
     final typeName = _string(map, 'contentType', 'Content revision ref');
-    final type = ContentType.values.where((item) => item.name == typeName).firstOrNull;
+    final type = ContentType.values
+        .where((item) => item.name == typeName)
+        .firstOrNull;
     if (type == null) {
       throw FormatException('Unsupported contentType $typeName.');
     }
@@ -224,11 +235,11 @@ final class UniversalCatalogueDecoderRegistry {
 
   PracticeTestRevisionRef _decodePracticeTestRef(Object value) {
     final map = _object(value, 'Practice test revision ref');
-    _rejectUnexpected(
-      map,
-      const <String>{'practiceTestCode', 'revision', 'checksum'},
-      'Practice test revision ref',
-    );
+    _rejectUnexpected(map, const <String>{
+      'practiceTestCode',
+      'revision',
+      'checksum',
+    }, 'Practice test revision ref');
     return PracticeTestRevisionRef(
       practiceTestCode: _string(
         map,
@@ -269,11 +280,7 @@ String _string(Map<String, dynamic> map, String field, String entity) {
   return value;
 }
 
-String? _optionalString(
-  Map<String, dynamic> map,
-  String field,
-  String entity,
-) {
+String? _optionalString(Map<String, dynamic> map, String field, String entity) {
   final value = map[field];
   if (value == null) return null;
   if (value is! String) {

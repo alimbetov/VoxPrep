@@ -12,31 +12,25 @@ void main() {
     const decoder = VerticalCatalogueBundleDecoder();
 
     final bundle = decoder.decode(
-      sectionsPayload: _payload(
-        CatalogueKind.verticalSections,
-        <Object>[
-          <String, dynamic>{
-            'code': 'SOFTWARE_ENGINEERING',
-            'title': 'Software Engineering',
-            'sortOrder': 0,
-            'active': true,
-          },
-        ],
-      ),
-      verticalsPayload: _payload(
-        CatalogueKind.verticals,
-        <Object>[
-          <String, dynamic>{
-            'code': 'JAVA_INTERVIEW',
-            'sectionCode': 'SOFTWARE_ENGINEERING',
-            'title': 'Java Interview',
-            'description': 'Java interview communication',
-            'iconAssetId': 'asset-java',
-            'sortOrder': 0,
-            'active': true,
-          },
-        ],
-      ),
+      sectionsPayload: _payload(CatalogueKind.verticalSections, <Object>[
+        <String, dynamic>{
+          'code': 'SOFTWARE_ENGINEERING',
+          'title': 'Software Engineering',
+          'sortOrder': 0,
+          'active': true,
+        },
+      ]),
+      verticalsPayload: _payload(CatalogueKind.verticals, <Object>[
+        <String, dynamic>{
+          'code': 'JAVA_INTERVIEW',
+          'sectionCode': 'SOFTWARE_ENGINEERING',
+          'title': 'Java Interview',
+          'description': 'Java interview communication',
+          'iconAssetId': 'asset-java',
+          'sortOrder': 0,
+          'active': true,
+        },
+      ]),
       presentationPayload: _payload(
         CatalogueKind.verticalPresentation,
         <Object>[
@@ -105,11 +99,7 @@ void main() {
 }
 
 CataloguePayload _payload(CatalogueKind kind, List<Object> items) {
-  final ref = CatalogueRevisionRef(
-    kind: kind,
-    revision: 1,
-    checksum: _hash,
-  );
+  final ref = CatalogueRevisionRef(kind: kind, revision: 1, checksum: _hash);
   return CataloguePayload(
     ref: ref,
     items: items,

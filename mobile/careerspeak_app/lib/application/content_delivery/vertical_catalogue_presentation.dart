@@ -13,7 +13,9 @@ enum VerticalCataloguePresentationMode {
         return mode;
       }
     }
-    throw FormatException('Unsupported vertical catalogue presentation: $value');
+    throw FormatException(
+      'Unsupported vertical catalogue presentation: $value',
+    );
   }
 }
 
@@ -92,7 +94,11 @@ final class VerticalCataloguePresentation {
 String _stableCode(String value, String field) {
   final normalized = value.trim();
   if (!_stableCodePattern.hasMatch(normalized)) {
-    throw ArgumentError.value(value, field, 'must be a stable backend-owned code');
+    throw ArgumentError.value(
+      value,
+      field,
+      'must be a stable backend-owned code',
+    );
   }
   return normalized;
 }

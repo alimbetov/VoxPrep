@@ -87,10 +87,7 @@ void main() {
       final beforeRestart = await DriftUniversalCatalogueRepository(
         database,
       ).readCurrent();
-      expect(
-        beforeRestart,
-        isA<Success<CurrentUniversalCatalogueSnapshot?>>(),
-      );
+      expect(beforeRestart, isA<Success<CurrentUniversalCatalogueSnapshot?>>());
       final beforeSnapshot =
           (beforeRestart as Success<CurrentUniversalCatalogueSnapshot?>).value;
       expect(beforeSnapshot, isNotNull);

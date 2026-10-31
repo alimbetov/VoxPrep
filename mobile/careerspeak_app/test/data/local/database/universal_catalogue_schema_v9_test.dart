@@ -23,9 +23,9 @@ void main() {
           .getSingle();
       expect(userVersion.read<int>('user_version'), 10);
 
-      final rows = await database.customSelect(
-        "SELECT name FROM sqlite_master WHERE type = 'table'",
-      ).get();
+      final rows = await database
+          .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
+          .get();
       final names = rows.map((row) => row.read<String>('name')).toSet();
 
       expect(
@@ -44,88 +44,102 @@ void main() {
       );
     });
 
-    test('opening a v1 database migrates through the full chain to v10', () async {
-      final verifier = SchemaVerifier(GeneratedHelper());
-      final schema = await verifier.schemaAt(1);
-      final database = CareerSpeakDatabase(schema.newConnection());
-      addTearDown(database.close);
+    test(
+      'opening a v1 database migrates through the full chain to v10',
+      () async {
+        final verifier = SchemaVerifier(GeneratedHelper());
+        final schema = await verifier.schemaAt(1);
+        final database = CareerSpeakDatabase(schema.newConnection());
+        addTearDown(database.close);
 
-      await database.customSelect('SELECT 1').getSingle();
+        await database.customSelect('SELECT 1').getSingle();
 
-      final userVersion = await database
-          .customSelect('PRAGMA user_version')
-          .getSingle();
-      expect(userVersion.read<int>('user_version'), 10);
+        final userVersion = await database
+            .customSelect('PRAGMA user_version')
+            .getSingle();
+        expect(userVersion.read<int>('user_version'), 10);
 
-      final rows = await database.customSelect(
-        "SELECT name FROM sqlite_master WHERE type = 'table'",
-      ).get();
-      final names = rows.map((row) => row.read<String>('name')).toSet();
-      expect(
-        names,
-        containsAll(<String>{
-          'sync_runs',
-          'pack_content_refs',
-          'content_catalog_reads',
-          'localized_content_reads',
-          'content_retirements',
-          'typed_content_reads',
-          'assessment_question_reads',
-          'practice_test_revision_reads',
-          'publication_snapshots',
-          'learning_vertical_reads',
-          'learning_collection_member_reads',
-          'asset_cache_retention',
-        }),
-      );
-    });
+        final rows = await database
+            .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
+            .get();
+        final names = rows.map((row) => row.read<String>('name')).toSet();
+        expect(
+          names,
+          containsAll(<String>{
+            'sync_runs',
+            'pack_content_refs',
+            'content_catalog_reads',
+            'localized_content_reads',
+            'content_retirements',
+            'typed_content_reads',
+            'assessment_question_reads',
+            'practice_test_revision_reads',
+            'publication_snapshots',
+            'learning_vertical_reads',
+            'learning_collection_member_reads',
+            'asset_cache_retention',
+          }),
+        );
+      },
+    );
 
-    test('opening a v8 database migrates it to v10 without generated v9/v10 types', () async {
-      final verifier = SchemaVerifier(GeneratedHelper());
-      final schema = await verifier.schemaAt(8);
-      final database = CareerSpeakDatabase(schema.newConnection());
-      addTearDown(database.close);
+    test(
+      'opening a v8 database migrates it to v10 without generated v9/v10 types',
+      () async {
+        final verifier = SchemaVerifier(GeneratedHelper());
+        final schema = await verifier.schemaAt(8);
+        final database = CareerSpeakDatabase(schema.newConnection());
+        addTearDown(database.close);
 
-      await database.customSelect('SELECT 1').getSingle();
+        await database.customSelect('SELECT 1').getSingle();
 
-      final userVersion = await database
-          .customSelect('PRAGMA user_version')
-          .getSingle();
-      expect(userVersion.read<int>('user_version'), 10);
+        final userVersion = await database
+            .customSelect('PRAGMA user_version')
+            .getSingle();
+        expect(userVersion.read<int>('user_version'), 10);
 
-      final catalogueTable = await database.customSelect(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'publication_snapshots'",
-      ).getSingleOrNull();
-      expect(catalogueTable, isNotNull);
+        final catalogueTable = await database
+            .customSelect(
+              "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'publication_snapshots'",
+            )
+            .getSingleOrNull();
+        expect(catalogueTable, isNotNull);
 
-      final retentionTable = await database.customSelect(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'asset_cache_retention'",
-      ).getSingleOrNull();
-      expect(retentionTable, isNotNull);
-    });
+        final retentionTable = await database
+            .customSelect(
+              "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'asset_cache_retention'",
+            )
+            .getSingleOrNull();
+        expect(retentionTable, isNotNull);
+      },
+    );
 
-    test('staged snapshot rows stay invisible until CURRENT pointer switches', () async {
-      final database = createTestDatabase();
-      addTearDown(database.close);
-      final now = DateTime.utc(2026, 10, 31, 18);
+    test(
+      'staged snapshot rows stay invisible until CURRENT pointer switches',
+      () async {
+        final database = createTestDatabase();
+        addTearDown(database.close);
+        final now = DateTime.utc(2026, 10, 31, 18);
 
-      await database.into(database.contentManifestStates).insert(
-        ContentManifestStatesCompanion.insert(
-          id: const Value(1),
-          schemaVersion: 2,
-          currentContentVersion: 100,
-          currentManifestChecksum: _hash,
-          updatedAt: now,
-        ),
-      );
+        await database
+            .into(database.contentManifestStates)
+            .insert(
+              ContentManifestStatesCompanion.insert(
+                id: const Value(1),
+                schemaVersion: 2,
+                currentContentVersion: 100,
+                currentManifestChecksum: _hash,
+                updatedAt: now,
+              ),
+            );
 
-      await _insertSnapshot(database, 100);
-      await _insertSnapshot(database, 101);
-      await _insertSection(database, 100, 'CURRENT_SECTION');
-      await _insertSection(database, 101, 'STAGED_SECTION');
+        await _insertSnapshot(database, 100);
+        await _insertSnapshot(database, 101);
+        await _insertSection(database, 100, 'CURRENT_SECTION');
+        await _insertSection(database, 101, 'STAGED_SECTION');
 
-      Future<List<String>> currentSections() async {
-        final rows = await database.customSelect('''
+        Future<List<String>> currentSections() async {
+          final rows = await database.customSelect('''
           SELECT section.code
           FROM content_manifest_states state
           INNER JOIN vertical_section_reads section
@@ -133,35 +147,38 @@ void main() {
           WHERE state.id = 1
           ORDER BY section.sort_order, section.code
         ''').get();
-        return rows.map((row) => row.read<String>('code')).toList();
-      }
+          return rows.map((row) => row.read<String>('code')).toList();
+        }
 
-      expect(await currentSections(), <String>['CURRENT_SECTION']);
+        expect(await currentSections(), <String>['CURRENT_SECTION']);
 
-      await (database.update(database.contentManifestStates)
-            ..where((row) => row.id.equals(1)))
-          .write(
-        ContentManifestStatesCompanion(
-          currentContentVersion: const Value(101),
-          updatedAt: Value(now.add(const Duration(minutes: 1))),
-        ),
-      );
+        await (database.update(
+          database.contentManifestStates,
+        )..where((row) => row.id.equals(1))).write(
+          ContentManifestStatesCompanion(
+            currentContentVersion: const Value(101),
+            updatedAt: Value(now.add(const Duration(minutes: 1))),
+          ),
+        );
 
-      expect(await currentSections(), <String>['STAGED_SECTION']);
-    });
+        expect(await currentSections(), <String>['STAGED_SECTION']);
+      },
+    );
 
-    test('cross-snapshot vertical ownership fails closed at foreign key boundary', () async {
-      final database = createTestDatabase();
-      addTearDown(database.close);
+    test(
+      'cross-snapshot vertical ownership fails closed at foreign key boundary',
+      () async {
+        final database = createTestDatabase();
+        addTearDown(database.close);
 
-      await database.customSelect('SELECT 1').getSingle();
-      await _insertSnapshot(database, 200);
-      await _insertSnapshot(database, 201);
-      await _insertSection(database, 200, 'ENGINEERING');
+        await database.customSelect('SELECT 1').getSingle();
+        await _insertSnapshot(database, 200);
+        await _insertSnapshot(database, 201);
+        await _insertSection(database, 200, 'ENGINEERING');
 
-      await expectLater(
-        database.customStatement(
-          '''
+        await expectLater(
+          database.customStatement(
+            '''
           INSERT INTO learning_vertical_reads (
             content_version,
             code,
@@ -173,20 +190,21 @@ void main() {
             active
           ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
           ''',
-          <Object?>[
-            201,
-            'FUTURE_VERTICAL',
-            'ENGINEERING',
-            'Future vertical',
-            'Future vertical description',
-            'asset-future',
-            0,
-            1,
-          ],
-        ),
-        throwsA(anything),
-      );
-    });
+            <Object?>[
+              201,
+              'FUTURE_VERTICAL',
+              'ENGINEERING',
+              'Future vertical',
+              'Future vertical description',
+              'asset-future',
+              0,
+              1,
+            ],
+          ),
+          throwsA(anything),
+        );
+      },
+    );
   });
 }
 
@@ -230,14 +248,6 @@ Future<void> _insertSection(
       active
     ) VALUES (?, ?, ?, ?, ?, ?, ?)
     ''',
-    <Object?>[
-      contentVersion,
-      code,
-      code,
-      null,
-      null,
-      0,
-      1,
-    ],
+    <Object?>[contentVersion, code, code, null, null, 0, 1],
   );
 }

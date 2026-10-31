@@ -18,33 +18,42 @@ void main() {
       expect(manifest.contentVersion, 108);
       expect(manifest.minimumAppContractVersion, 1);
       expect(manifest.publishedAt, DateTime.utc(2026, 10, 30, 9, 30));
-      expect(manifest.packs.single.identity.toString(), 'JAVA_SENIOR/canonical');
+      expect(
+        manifest.packs.single.identity.toString(),
+        'JAVA_SENIOR/canonical',
+      );
       expect(manifest.practiceTests.single.practiceTestCode, 'JAVA_TEST_001');
       expect(manifest.practiceTests.single.revision, 3);
-      expect(manifest.catalogues.single.kind, CatalogueKind.learningCollections);
+      expect(
+        manifest.catalogues.single.kind,
+        CatalogueKind.learningCollections,
+      );
       expect(manifest.catalogues.single.revision, 7);
       expect(manifest.tombstones.single.identity.type, ContentType.interview);
     });
 
-    test('decodes schema v2 only with complete universal catalogue membership', () {
-      final result = decoder.decodeRoot(_rootManifestV2());
+    test(
+      'decodes schema v2 only with complete universal catalogue membership',
+      () {
+        final result = decoder.decodeRoot(_rootManifestV2());
 
-      expect(result, isA<Success<RootContentManifest>>());
-      final manifest = (result as Success<RootContentManifest>).value;
-      expect(manifest.schemaVersion, 2);
-      expect(manifest.minimumAppContractVersion, 2);
-      expect(
-        manifest.catalogues.map((ref) => ref.kind).toSet(),
-        containsAll(<CatalogueKind>{
-          CatalogueKind.verticalSections,
-          CatalogueKind.verticals,
-          CatalogueKind.verticalPresentation,
-          CatalogueKind.learningGoals,
-          CatalogueKind.learningTracks,
-          CatalogueKind.learningCollections,
-        }),
-      );
-    });
+        expect(result, isA<Success<RootContentManifest>>());
+        final manifest = (result as Success<RootContentManifest>).value;
+        expect(manifest.schemaVersion, 2);
+        expect(manifest.minimumAppContractVersion, 2);
+        expect(
+          manifest.catalogues.map((ref) => ref.kind).toSet(),
+          containsAll(<CatalogueKind>{
+            CatalogueKind.verticalSections,
+            CatalogueKind.verticals,
+            CatalogueKind.verticalPresentation,
+            CatalogueKind.learningGoals,
+            CatalogueKind.learningTracks,
+            CatalogueKind.learningCollections,
+          }),
+        );
+      },
+    );
 
     test('schema v2 rejects incomplete universal catalogue membership', () {
       final manifest = _rootManifestV2();
@@ -315,11 +324,7 @@ Map<String, Object?> _rootManifestV2() {
   return manifest;
 }
 
-Map<String, Object?> _catalogue(
-  String kind,
-  int revision,
-  String checksum,
-) {
+Map<String, Object?> _catalogue(String kind, int revision, String checksum) {
   return <String, Object?>{
     'kind': kind,
     'revision': revision,

@@ -19,7 +19,11 @@ void main() {
     final manifest = _manifest(
       type: ContentType.interview,
       bindings: <ContentAssetRef>[
-        _binding(ContentType.interview, 'audio-question', ContentAudioRole.question),
+        _binding(
+          ContentType.interview,
+          'audio-question',
+          ContentAudioRole.question,
+        ),
         _binding(
           ContentType.interview,
           'audio-answer',
@@ -79,40 +83,43 @@ void main() {
     expect(() => _membership(manifest), throwsArgumentError);
   });
 
-  test('allows legacy promptAudio to satisfy v1 required audio during migration', () {
-    final identity = const ContentIdentity(
-      code: 'CONTENT_1',
-      type: ContentType.shadowing,
-    );
-    final packIdentity = PackIdentity(code: 'PACK', variant: 'canonical');
-    final manifest = PackContentManifest(
-      schemaVersion: 1,
-      identity: packIdentity,
-      revision: 1,
-      checksum: _packChecksum,
-      contents: <PackContentRef>[
-        PackContentRef(
-          identity: identity,
-          revision: 1,
-          checksum: _contentChecksum,
-          sortOrder: 0,
-        ),
-      ],
-      assets: <ManifestAssetDescriptor>[
-        _asset('legacy-audio', _assetChecksum1),
-      ],
-      contentAssets: <ContentAssetRef>[
-        ContentAssetRef(
-          contentIdentity: identity,
-          contentRevision: 1,
-          assetId: 'legacy-audio',
-          role: 'promptAudio',
-        ),
-      ],
-    );
+  test(
+    'allows legacy promptAudio to satisfy v1 required audio during migration',
+    () {
+      final identity = const ContentIdentity(
+        code: 'CONTENT_1',
+        type: ContentType.shadowing,
+      );
+      final packIdentity = PackIdentity(code: 'PACK', variant: 'canonical');
+      final manifest = PackContentManifest(
+        schemaVersion: 1,
+        identity: packIdentity,
+        revision: 1,
+        checksum: _packChecksum,
+        contents: <PackContentRef>[
+          PackContentRef(
+            identity: identity,
+            revision: 1,
+            checksum: _contentChecksum,
+            sortOrder: 0,
+          ),
+        ],
+        assets: <ManifestAssetDescriptor>[
+          _asset('legacy-audio', _assetChecksum1),
+        ],
+        contentAssets: <ContentAssetRef>[
+          ContentAssetRef(
+            contentIdentity: identity,
+            contentRevision: 1,
+            assetId: 'legacy-audio',
+            role: 'promptAudio',
+          ),
+        ],
+      );
 
-    expect(() => _membership(manifest), returnsNormally);
-  });
+      expect(() => _membership(manifest), returnsNormally);
+    },
+  );
 }
 
 PackContentManifest _manifest({

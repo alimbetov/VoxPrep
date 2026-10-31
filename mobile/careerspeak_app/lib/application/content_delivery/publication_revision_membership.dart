@@ -199,7 +199,8 @@ void _validateAudioMembership({
       }
 
       final asset = assets[binding.assetId];
-      if (asset == null || !asset.mediaType.toLowerCase().startsWith('audio/')) {
+      if (asset == null ||
+          !asset.mediaType.toLowerCase().startsWith('audio/')) {
         throw ArgumentError.value(
           binding.assetId,
           'contentAssets',
@@ -224,8 +225,12 @@ void _validateAudioMembership({
     final contentKey = entry.key;
     final content = entry.value;
     final schemaVersion = schemaByContent[contentKey] ?? 1;
-    for (final role in ContentAudioPolicy.requiredRoles(content.identity.type)) {
-      final hasTypedRole = typedBindings.containsKey('$contentKey|${role.wireName}');
+    for (final role in ContentAudioPolicy.requiredRoles(
+      content.identity.type,
+    )) {
+      final hasTypedRole = typedBindings.containsKey(
+        '$contentKey|${role.wireName}',
+      );
       final hasLegacyV1Fallback =
           schemaVersion == 1 && legacyPromptByContent.contains(contentKey);
       if (!hasTypedRole && !hasLegacyV1Fallback) {

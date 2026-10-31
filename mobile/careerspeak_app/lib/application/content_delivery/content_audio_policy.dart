@@ -34,42 +34,43 @@ final class ContentAudioPolicyEntry {
 final class ContentAudioPolicy {
   const ContentAudioPolicy._();
 
-  static List<ContentAudioPolicyEntry> forType(ContentType type) => switch (type) {
-    ContentType.vocabulary => const <ContentAudioPolicyEntry>[
-      ContentAudioPolicyEntry(
-        role: ContentAudioRole.pronunciation,
-        requirement: AudioRequirement.optional,
-      ),
-    ],
-    ContentType.phrase => const <ContentAudioPolicyEntry>[
-      ContentAudioPolicyEntry(
-        role: ContentAudioRole.pronunciation,
-        requirement: AudioRequirement.recommended,
-      ),
-    ],
-    ContentType.interview => const <ContentAudioPolicyEntry>[
-      ContentAudioPolicyEntry(
-        role: ContentAudioRole.question,
-        requirement: AudioRequirement.recommended,
-      ),
-      ContentAudioPolicyEntry(
-        role: ContentAudioRole.sampleAnswer,
-        requirement: AudioRequirement.recommended,
-      ),
-    ],
-    ContentType.topic => const <ContentAudioPolicyEntry>[
-      ContentAudioPolicyEntry(
-        role: ContentAudioRole.narration,
-        requirement: AudioRequirement.optional,
-      ),
-    ],
-    ContentType.shadowing => const <ContentAudioPolicyEntry>[
-      ContentAudioPolicyEntry(
-        role: ContentAudioRole.shadowing,
-        requirement: AudioRequirement.required,
-      ),
-    ],
-  };
+  static List<ContentAudioPolicyEntry> forType(ContentType type) =>
+      switch (type) {
+        ContentType.vocabulary => const <ContentAudioPolicyEntry>[
+          ContentAudioPolicyEntry(
+            role: ContentAudioRole.pronunciation,
+            requirement: AudioRequirement.optional,
+          ),
+        ],
+        ContentType.phrase => const <ContentAudioPolicyEntry>[
+          ContentAudioPolicyEntry(
+            role: ContentAudioRole.pronunciation,
+            requirement: AudioRequirement.recommended,
+          ),
+        ],
+        ContentType.interview => const <ContentAudioPolicyEntry>[
+          ContentAudioPolicyEntry(
+            role: ContentAudioRole.question,
+            requirement: AudioRequirement.recommended,
+          ),
+          ContentAudioPolicyEntry(
+            role: ContentAudioRole.sampleAnswer,
+            requirement: AudioRequirement.recommended,
+          ),
+        ],
+        ContentType.topic => const <ContentAudioPolicyEntry>[
+          ContentAudioPolicyEntry(
+            role: ContentAudioRole.narration,
+            requirement: AudioRequirement.optional,
+          ),
+        ],
+        ContentType.shadowing => const <ContentAudioPolicyEntry>[
+          ContentAudioPolicyEntry(
+            role: ContentAudioRole.shadowing,
+            requirement: AudioRequirement.required,
+          ),
+        ],
+      };
 
   static bool allows(ContentType type, ContentAudioRole role) {
     return forType(type).any((entry) => entry.role == role);
@@ -92,8 +93,8 @@ final class ContentAudioPolicy {
   }
 
   static ContentAudioRole primaryRole(ContentType type) => switch (type) {
-    ContentType.vocabulary || ContentType.phrase =>
-      ContentAudioRole.pronunciation,
+    ContentType.vocabulary ||
+    ContentType.phrase => ContentAudioRole.pronunciation,
     ContentType.interview => ContentAudioRole.question,
     ContentType.topic => ContentAudioRole.narration,
     ContentType.shadowing => ContentAudioRole.shadowing,

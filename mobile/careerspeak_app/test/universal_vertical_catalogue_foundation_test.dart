@@ -22,24 +22,27 @@ void main() {
     expect(CatalogueKind.fromWireName('verticals'), CatalogueKind.verticals);
   });
 
-  test('decoder accepts previously unknown vertical code without branching', () {
-    const decoder = LearningVerticalDecoder();
+  test(
+    'decoder accepts previously unknown vertical code without branching',
+    () {
+      const decoder = LearningVerticalDecoder();
 
-    final vertical = decoder.decode(<String, dynamic>{
-      'code': 'NEW_VERTICAL_2027',
-      'sectionCode': 'SOFTWARE_ENGINEERING',
-      'title': 'New Vertical',
-      'description': 'Delivered only by backend data.',
-      'iconAssetId': 'asset-vertical-new',
-      'sortOrder': 50,
-      'active': true,
-    });
+      final vertical = decoder.decode(<String, dynamic>{
+        'code': 'NEW_VERTICAL_2027',
+        'sectionCode': 'SOFTWARE_ENGINEERING',
+        'title': 'New Vertical',
+        'description': 'Delivered only by backend data.',
+        'iconAssetId': 'asset-vertical-new',
+        'sortOrder': 50,
+        'active': true,
+      });
 
-    expect(vertical.code, 'NEW_VERTICAL_2027');
-    expect(vertical.sectionCode, 'SOFTWARE_ENGINEERING');
-    expect(vertical.title, 'New Vertical');
-    expect(vertical.active, isTrue);
-  });
+      expect(vertical.code, 'NEW_VERTICAL_2027');
+      expect(vertical.sectionCode, 'SOFTWARE_ENGINEERING');
+      expect(vertical.title, 'New Vertical');
+      expect(vertical.active, isTrue);
+    },
+  );
 
   test('decoder rejects mutable runtime fields', () {
     const decoder = LearningVerticalDecoder();

@@ -36,22 +36,25 @@ void main() {
     await engine.close();
   });
 
-  test('interview question and sample answer resolve independent roles', () async {
-    final item = _interview();
+  test(
+    'interview question and sample answer resolve independent roles',
+    () async {
+      final item = _interview();
 
-    (await controller.play(item, ContentAudioRole.question)).getOrThrow();
-    expect(controller.state.role, ContentAudioRole.question);
+      (await controller.play(item, ContentAudioRole.question)).getOrThrow();
+      expect(controller.state.role, ContentAudioRole.question);
 
-    (await controller.play(item, ContentAudioRole.sampleAnswer)).getOrThrow();
-    expect(controller.state.role, ContentAudioRole.sampleAnswer);
-    expect(resolvedRoles, <ContentAudioRole>[
-      ContentAudioRole.question,
-      ContentAudioRole.sampleAnswer,
-    ]);
-    expect(engine.sessions, hasLength(2));
-    expect(engine.sessions.first.stopCalls, 1);
-    expect(engine.sessions.first.disposed, isTrue);
-  });
+      (await controller.play(item, ContentAudioRole.sampleAnswer)).getOrThrow();
+      expect(controller.state.role, ContentAudioRole.sampleAnswer);
+      expect(resolvedRoles, <ContentAudioRole>[
+        ContentAudioRole.question,
+        ContentAudioRole.sampleAnswer,
+      ]);
+      expect(engine.sessions, hasLength(2));
+      expect(engine.sessions.first.stopCalls, 1);
+      expect(engine.sessions.first.disposed, isTrue);
+    },
+  );
 
   test('rejects a role that does not belong to the content type', () async {
     final result = await controller.play(
@@ -78,10 +81,7 @@ void main() {
     );
     addTearDown(invalid.dispose);
 
-    final result = await invalid.play(
-      _interview(),
-      ContentAudioRole.question,
-    );
+    final result = await invalid.play(_interview(), ContentAudioRole.question);
 
     expect(result, isA<FailureResult<void>>());
     expect((result as FailureResult<void>).failure.code, 'ASSET_NOT_AUDIO');

@@ -35,9 +35,7 @@ void main() {
       verticals: decoded<List<LearningVerticalProjection>>(
         CatalogueKind.verticals,
       ),
-      goals: decoded<List<LearningGoalProjection>>(
-        CatalogueKind.learningGoals,
-      ),
+      goals: decoded<List<LearningGoalProjection>>(CatalogueKind.learningGoals),
       tracks: decoded<List<LearningTrackProjection>>(
         CatalogueKind.learningTracks,
       ),
@@ -71,52 +69,59 @@ void main() {
     ]);
   });
 
-  test('demo source serves manifest, pack, content and assessment exactly', () async {
-    final cataloguePayloads = buildDemoVerticalCataloguePayloads().values;
-    final manifestGateway = DemoContentManifestGateway(
-      cataloguePayloads: cataloguePayloads,
-      latency: Duration.zero,
-    );
+  test(
+    'demo source serves manifest, pack, content and assessment exactly',
+    () async {
+      final cataloguePayloads = buildDemoVerticalCataloguePayloads().values;
+      final manifestGateway = DemoContentManifestGateway(
+        cataloguePayloads: cataloguePayloads,
+        latency: Duration.zero,
+      );
 
-    final rootResult = await manifestGateway.fetchRootManifest();
-    expect(rootResult, isA<Success<RootManifestFetch>>());
-    final rootFetch = (rootResult as Success<RootManifestFetch>).value;
-    expect(rootFetch, isA<RootManifestChanged>());
-    final root = (rootFetch as RootManifestChanged).manifest;
-    expect(root.packs, hasLength(1));
-    expect(root.practiceTests, hasLength(2));
-    expect(root.catalogues, hasLength(6));
+      final rootResult = await manifestGateway.fetchRootManifest();
+      expect(rootResult, isA<Success<RootManifestFetch>>());
+      final rootFetch = (rootResult as Success<RootManifestFetch>).value;
+      expect(rootFetch, isA<RootManifestChanged>());
+      final root = (rootFetch as RootManifestChanged).manifest;
+      expect(root.packs, hasLength(1));
+      expect(root.practiceTests, hasLength(2));
+      expect(root.catalogues, hasLength(6));
 
-    final packResult = await manifestGateway.fetchPackManifest(root.packs.single);
-    expect(packResult, isA<Success<PackContentManifest>>());
-    final pack = (packResult as Success<PackContentManifest>).value;
+      final packResult = await manifestGateway.fetchPackManifest(
+        root.packs.single,
+      );
+      expect(packResult, isA<Success<PackContentManifest>>());
+      final pack = (packResult as Success<PackContentManifest>).value;
 
-    final contentGateway = DemoContentPayloadGateway(latency: Duration.zero);
-    final firstContent = pack.contents.first;
-    final contentResult = await contentGateway.fetch(
-      ContentPayloadRef(
-        identity: firstContent.identity,
-        revision: firstContent.revision,
-        checksum: firstContent.checksum,
-      ),
-    );
-    expect(contentResult, isA<Success<ContentPayload>>());
+      final contentGateway = DemoContentPayloadGateway(latency: Duration.zero);
+      final firstContent = pack.contents.first;
+      final contentResult = await contentGateway.fetch(
+        ContentPayloadRef(
+          identity: firstContent.identity,
+          revision: firstContent.revision,
+          checksum: firstContent.checksum,
+        ),
+      );
+      expect(contentResult, isA<Success<ContentPayload>>());
 
-    final assessmentGateway = DemoAssessmentPayloadGateway(latency: Duration.zero);
-    final testRef = root.practiceTests.first;
-    final testResult = await assessmentGateway.fetchPracticeTestRevision(
-      practiceTestCode: testRef.practiceTestCode,
-      revision: testRef.revision,
-      checksum: testRef.checksum,
-    );
-    expect(testResult, isA<Success<PracticeTestRevision>>());
+      final assessmentGateway = DemoAssessmentPayloadGateway(
+        latency: Duration.zero,
+      );
+      final testRef = root.practiceTests.first;
+      final testResult = await assessmentGateway.fetchPracticeTestRevision(
+        practiceTestCode: testRef.practiceTestCode,
+        revision: testRef.revision,
+        checksum: testRef.checksum,
+      );
+      expect(testResult, isA<Success<PracticeTestRevision>>());
 
-    final testRevision = (testResult as Success<PracticeTestRevision>).value;
-    final questionResult = await assessmentGateway.fetchQuestionRevision(
-      testRevision.questionRefs.first.question,
-    );
-    expect(questionResult, isA<Success<AssessmentQuestionRevision>>());
-  });
+      final testRevision = (testResult as Success<PracticeTestRevision>).value;
+      final questionResult = await assessmentGateway.fetchQuestionRevision(
+        testRevision.questionRefs.first.question,
+      );
+      expect(questionResult, isA<Success<AssessmentQuestionRevision>>());
+    },
+  );
 
   test('demo catalogue gateway serves all exact six-core revisions', () async {
     final payloads = buildDemoVerticalCataloguePayloads();

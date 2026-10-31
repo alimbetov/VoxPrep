@@ -97,9 +97,7 @@ final class DriftUniversalCatalogueGraphMaterializer {
               FROM publication_snapshots
               WHERE content_version = ?
               ''',
-              variables: <Variable<Object>>[
-                Variable<int>(root.contentVersion),
-              ],
+              variables: <Variable<Object>>[Variable<int>(root.contentVersion)],
             )
             .getSingleOrNull();
         if (existing != null &&
@@ -167,8 +165,7 @@ final class DriftUniversalCatalogueGraphMaterializer {
       return FailureResult<void>(
         ApplicationFailure(
           code: 'UNIVERSAL_CATALOGUE_MATERIALIZATION_FAILED',
-          message:
-              'Universal catalogue graph could not be staged atomically.',
+          message: 'Universal catalogue graph could not be staged atomically.',
           retryable: true,
           details: <String, Object?>{
             'errorType': error.runtimeType.toString(),
@@ -194,7 +191,9 @@ final class DriftUniversalCatalogueGraphMaterializer {
     }
 
     CataloguePayload exact(CatalogueKind kind) {
-      final rootRefs = root.catalogues.where((ref) => ref.kind == kind).toList();
+      final rootRefs = root.catalogues
+          .where((ref) => ref.kind == kind)
+          .toList();
       if (rootRefs.length != 1) {
         throw FormatException(
           'Manifest must contain exactly one ${kind.wireName} revision.',
@@ -214,24 +213,24 @@ final class DriftUniversalCatalogueGraphMaterializer {
       return payload;
     }
 
-    final sections = decoderRegistry.decode(
-      exact(CatalogueKind.verticalSections),
-    ) as List<VerticalSectionProjection>;
-    final verticals = decoderRegistry.decode(
-      exact(CatalogueKind.verticals),
-    ) as List<LearningVerticalProjection>;
-    final presentation = decoderRegistry.decode(
-      exact(CatalogueKind.verticalPresentation),
-    ) as VerticalCataloguePresentation;
-    final goals = decoderRegistry.decode(
-      exact(CatalogueKind.learningGoals),
-    ) as List<LearningGoalProjection>;
-    final tracks = decoderRegistry.decode(
-      exact(CatalogueKind.learningTracks),
-    ) as List<LearningTrackProjection>;
-    final collections = decoderRegistry.decode(
-      exact(CatalogueKind.learningCollections),
-    ) as List<LearningCollectionProjection>;
+    final sections =
+        decoderRegistry.decode(exact(CatalogueKind.verticalSections))
+            as List<VerticalSectionProjection>;
+    final verticals =
+        decoderRegistry.decode(exact(CatalogueKind.verticals))
+            as List<LearningVerticalProjection>;
+    final presentation =
+        decoderRegistry.decode(exact(CatalogueKind.verticalPresentation))
+            as VerticalCataloguePresentation;
+    final goals =
+        decoderRegistry.decode(exact(CatalogueKind.learningGoals))
+            as List<LearningGoalProjection>;
+    final tracks =
+        decoderRegistry.decode(exact(CatalogueKind.learningTracks))
+            as List<LearningTrackProjection>;
+    final collections =
+        decoderRegistry.decode(exact(CatalogueKind.learningCollections))
+            as List<LearningCollectionProjection>;
 
     return UniversalCatalogueGraph(
       sections: sections,

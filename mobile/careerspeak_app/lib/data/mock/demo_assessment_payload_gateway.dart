@@ -30,7 +30,8 @@ final class DemoAssessmentPayloadGateway implements AssessmentPayloadGateway {
     if (latency > Duration.zero) {
       await Future<void>.delayed(latency);
     }
-    final value = _practiceTests[_testKey(practiceTestCode, revision, checksum)];
+    final value =
+        _practiceTests[_testKey(practiceTestCode, revision, checksum)];
     if (value == null) {
       return FailureResult<PracticeTestRevision>(
         ApplicationFailure(

@@ -49,23 +49,102 @@ Map<String, CataloguePayload> buildDemoVerticalCataloguePayloads() {
   );
 
   final sections = <Object>[
-    _section('SOFTWARE_ENGINEERING', 'Software Engineering',
-        'Interview and engineering communication.', 'demo-section-software', 0),
-    _section('CLOUD_PLATFORM', 'Cloud & Platform',
-        'Cloud and infrastructure English.', 'demo-section-cloud', 10),
-    _section('ENGLISH_COMMUNICATION', 'English & Communication',
-        'Professional English for domain communication.', 'demo-section-english', 20),
+    _section(
+      'SOFTWARE_ENGINEERING',
+      'Software Engineering',
+      'Interview and engineering communication.',
+      'demo-section-software',
+      0,
+    ),
+    _section(
+      'CLOUD_PLATFORM',
+      'Cloud & Platform',
+      'Cloud and infrastructure English.',
+      'demo-section-cloud',
+      10,
+    ),
+    _section(
+      'ENGLISH_COMMUNICATION',
+      'English & Communication',
+      'Professional English for domain communication.',
+      'demo-section-english',
+      20,
+    ),
   ];
 
   final specs = <_DemoVerticalSpec>[
-    const _DemoVerticalSpec('JAVA_INTERVIEW', 'SOFTWARE_ENGINEERING', 'Java Interview', 'Pass a Java backend interview', 'Java backend interview track', 'JAVA', 0),
-    const _DemoVerticalSpec('QA_INTERVIEW', 'SOFTWARE_ENGINEERING', 'QA Interview', 'Pass a QA interview', 'QA interview track', 'QA', 10),
-    const _DemoVerticalSpec('DEVOPS_INTERVIEW', 'SOFTWARE_ENGINEERING', 'DevOps Interview', 'Pass a DevOps interview', 'DevOps interview track', 'DEVOPS', 20),
-    const _DemoVerticalSpec('AWS', 'CLOUD_PLATFORM', 'AWS', 'Communicate AWS knowledge', 'AWS communication track', 'AWS', 0),
-    const _DemoVerticalSpec('KUBERNETES', 'CLOUD_PLATFORM', 'Kubernetes', 'Communicate Kubernetes knowledge', 'Kubernetes communication track', 'KUBERNETES', 10),
-    const _DemoVerticalSpec('MEDICAL_ENGLISH', 'ENGLISH_COMMUNICATION', 'Medical English', 'Communicate safely in clinical contexts', 'Medical English track', 'MEDICAL', 0),
-    const _DemoVerticalSpec('SALES_ENGLISH', 'ENGLISH_COMMUNICATION', 'Sales English', 'Communicate clearly in sales conversations', 'Sales English track', 'SALES', 10),
-    const _DemoVerticalSpec('BANKING_ENGLISH', 'ENGLISH_COMMUNICATION', 'Banking English', 'Communicate clearly in banking contexts', 'Banking English track', 'BANKING', 20),
+    const _DemoVerticalSpec(
+      'JAVA_INTERVIEW',
+      'SOFTWARE_ENGINEERING',
+      'Java Interview',
+      'Pass a Java backend interview',
+      'Java backend interview track',
+      'JAVA',
+      0,
+    ),
+    const _DemoVerticalSpec(
+      'QA_INTERVIEW',
+      'SOFTWARE_ENGINEERING',
+      'QA Interview',
+      'Pass a QA interview',
+      'QA interview track',
+      'QA',
+      10,
+    ),
+    const _DemoVerticalSpec(
+      'DEVOPS_INTERVIEW',
+      'SOFTWARE_ENGINEERING',
+      'DevOps Interview',
+      'Pass a DevOps interview',
+      'DevOps interview track',
+      'DEVOPS',
+      20,
+    ),
+    const _DemoVerticalSpec(
+      'AWS',
+      'CLOUD_PLATFORM',
+      'AWS',
+      'Communicate AWS knowledge',
+      'AWS communication track',
+      'AWS',
+      0,
+    ),
+    const _DemoVerticalSpec(
+      'KUBERNETES',
+      'CLOUD_PLATFORM',
+      'Kubernetes',
+      'Communicate Kubernetes knowledge',
+      'Kubernetes communication track',
+      'KUBERNETES',
+      10,
+    ),
+    const _DemoVerticalSpec(
+      'MEDICAL_ENGLISH',
+      'ENGLISH_COMMUNICATION',
+      'Medical English',
+      'Communicate safely in clinical contexts',
+      'Medical English track',
+      'MEDICAL',
+      0,
+    ),
+    const _DemoVerticalSpec(
+      'SALES_ENGLISH',
+      'ENGLISH_COMMUNICATION',
+      'Sales English',
+      'Communicate clearly in sales conversations',
+      'Sales English track',
+      'SALES',
+      10,
+    ),
+    const _DemoVerticalSpec(
+      'BANKING_ENGLISH',
+      'ENGLISH_COMMUNICATION',
+      'Banking English',
+      'Communicate clearly in banking contexts',
+      'Banking English track',
+      'BANKING',
+      20,
+    ),
   ];
 
   final verticals = <Object>[
@@ -161,18 +240,21 @@ List<Object> _membersFor(String verticalCode) {
   ];
 }
 
-Map<String, dynamic> _contentMember(int position, String code, String checksum) =>
-    <String, dynamic>{
-      'position': position,
-      'type': 'CONTENT',
-      'content': <String, dynamic>{
-        'contentCode': code,
-        'contentType': 'topic',
-        'revision': 1,
-        'checksum': checksum,
-      },
-      'practiceTest': null,
-    };
+Map<String, dynamic> _contentMember(
+  int position,
+  String code,
+  String checksum,
+) => <String, dynamic>{
+  'position': position,
+  'type': 'CONTENT',
+  'content': <String, dynamic>{
+    'contentCode': code,
+    'contentType': 'topic',
+    'revision': 1,
+    'checksum': checksum,
+  },
+  'practiceTest': null,
+};
 
 Map<String, dynamic> _testMember(int position, String code, String checksum) =>
     <String, dynamic>{

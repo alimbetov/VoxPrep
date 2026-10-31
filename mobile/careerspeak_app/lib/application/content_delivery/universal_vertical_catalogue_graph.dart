@@ -11,7 +11,9 @@ final class UniversalVerticalCatalogueGraph {
     required Iterable<LearningCollectionProjection> collections,
     required VerticalCataloguePresentation presentation,
   }) {
-    final frozenSections = List<VerticalSectionProjection>.unmodifiable(sections);
+    final frozenSections = List<VerticalSectionProjection>.unmodifiable(
+      sections,
+    );
     final frozenVerticals = List<LearningVerticalProjection>.unmodifiable(
       verticals,
     );
@@ -31,11 +33,7 @@ final class UniversalVerticalCatalogueGraph {
       (item) => item.code,
       'verticals',
     );
-    final goalByCode = _indexByCode(
-      frozenGoals,
-      (item) => item.code,
-      'goals',
-    );
+    final goalByCode = _indexByCode(frozenGoals, (item) => item.code, 'goals');
     final trackByCode = _indexByCode(
       frozenTracks,
       (item) => item.code,

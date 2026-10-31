@@ -5,7 +5,8 @@ import '../../app/audio_playback_providers.dart';
 import '../../app/learner_state_providers.dart';
 import '../../application/content_delivery/content_audio_policy.dart';
 import '../../application/services/audio_playback_controller.dart';
-import '../../application/services/role_audio_clip_controller.dart' as role_audio;
+import '../../application/services/role_audio_clip_controller.dart'
+    as role_audio;
 import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
 import '../../domain/content_marker_state.dart';
@@ -209,8 +210,7 @@ class _InterviewAudioControls extends ConsumerWidget {
               child: Text('Interview audio unavailable: $error'),
             ),
           ),
-          data: (state) =>
-              _buildControls(context, ref, state, availableRoles),
+          data: (state) => _buildControls(context, ref, state, availableRoles),
         );
       },
     );
@@ -303,7 +303,8 @@ class _InterviewAudioControls extends ConsumerWidget {
                     Icons.chat_bubble_outline,
                   ),
                 OutlinedButton.icon(
-                  onPressed: state.phase == role_audio.AudioPlaybackPhase.idle ||
+                  onPressed:
+                      state.phase == role_audio.AudioPlaybackPhase.idle ||
                           state.phase == role_audio.AudioPlaybackPhase.stopped
                       ? null
                       : () async {

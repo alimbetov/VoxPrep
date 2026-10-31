@@ -44,7 +44,9 @@ final applicationBootstrapProvider =
           .bootstrap();
 
       if (result is Success<ApplicationBootstrapOutcome>) {
-        final manager = await ref.watch(assetCacheRetentionManagerProvider.future);
+        final manager = await ref.watch(
+          assetCacheRetentionManagerProvider.future,
+        );
         // Cache maintenance is deliberately best-effort. Failure must never
         // prevent startup or invalidate the last committed publication.
         await manager.cleanupExpiredAudio();

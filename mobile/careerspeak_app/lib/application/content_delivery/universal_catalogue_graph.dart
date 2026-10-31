@@ -12,7 +12,9 @@ final class UniversalCatalogueGraph {
     required VerticalCataloguePresentation presentation,
   }) {
     final sectionList = List<VerticalSectionProjection>.unmodifiable(sections);
-    final verticalList = List<LearningVerticalProjection>.unmodifiable(verticals);
+    final verticalList = List<LearningVerticalProjection>.unmodifiable(
+      verticals,
+    );
     final goalList = List<LearningGoalProjection>.unmodifiable(goals);
     final trackList = List<LearningTrackProjection>.unmodifiable(tracks);
     final collectionList = List<LearningCollectionProjection>.unmodifiable(

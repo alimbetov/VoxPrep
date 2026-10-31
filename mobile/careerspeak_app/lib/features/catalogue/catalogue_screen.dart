@@ -58,36 +58,32 @@ class CatalogueVerticalScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return _withSnapshot(
-      ref,
-      (snapshot) {
-        final graph = snapshot.graph;
-        final vertical = graph.verticals.where(
-          (item) => item.code == verticalCode && item.active,
-        ).firstOrNull;
-        if (vertical == null) {
-          return const _NotFound(message: 'Learning vertical is unavailable.');
-        }
-        final goals = graph.goals
-            .where((item) => item.verticalCode == vertical.code && item.active)
-            .toList(growable: false);
-        return _HierarchyPage(
-          title: vertical.title,
-          description: vertical.description,
-          children: [
-            for (final goal in goals)
-              _HierarchyCard(
-                title: goal.title,
-                description: goal.description,
-                onTap: () => context.push(
-                  catalogueGoalLocation(vertical.code, goal.code),
-                ),
-              ),
-          ],
-          emptyMessage: 'No learning goals are published for this vertical.',
-        );
-      },
-    );
+    return _withSnapshot(ref, (snapshot) {
+      final graph = snapshot.graph;
+      final vertical = graph.verticals
+          .where((item) => item.code == verticalCode && item.active)
+          .firstOrNull;
+      if (vertical == null) {
+        return const _NotFound(message: 'Learning vertical is unavailable.');
+      }
+      final goals = graph.goals
+          .where((item) => item.verticalCode == vertical.code && item.active)
+          .toList(growable: false);
+      return _HierarchyPage(
+        title: vertical.title,
+        description: vertical.description,
+        children: [
+          for (final goal in goals)
+            _HierarchyCard(
+              title: goal.title,
+              description: goal.description,
+              onTap: () =>
+                  context.push(catalogueGoalLocation(vertical.code, goal.code)),
+            ),
+        ],
+        emptyMessage: 'No learning goals are published for this vertical.',
+      );
+    });
   }
 }
 
@@ -103,45 +99,44 @@ class CatalogueGoalScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return _withSnapshot(
-      ref,
-      (snapshot) {
-        final graph = snapshot.graph;
-        final goal = graph.goals.where(
-          (item) =>
-              item.code == goalCode &&
-              item.verticalCode == verticalCode &&
-              item.active,
-        ).firstOrNull;
-        if (goal == null) {
-          return const _NotFound(message: 'Learning goal is unavailable.');
-        }
-        final tracks = graph.tracks
-            .where(
-              (item) =>
-                  item.goalCode == goal.code &&
-                  item.verticalCode == verticalCode &&
-                  item.active,
-            )
-            .toList(growable: false);
-        return _HierarchyPage(
-          title: goal.title,
-          description: goal.description,
-          children: [
-            for (final track in tracks)
-              _HierarchyCard(
-                title: track.title,
-                description: track.description,
-                supportingText: track.levelCode,
-                onTap: () => context.push(
-                  catalogueTrackLocation(verticalCode, goal.code, track.code),
-                ),
+    return _withSnapshot(ref, (snapshot) {
+      final graph = snapshot.graph;
+      final goal = graph.goals
+          .where(
+            (item) =>
+                item.code == goalCode &&
+                item.verticalCode == verticalCode &&
+                item.active,
+          )
+          .firstOrNull;
+      if (goal == null) {
+        return const _NotFound(message: 'Learning goal is unavailable.');
+      }
+      final tracks = graph.tracks
+          .where(
+            (item) =>
+                item.goalCode == goal.code &&
+                item.verticalCode == verticalCode &&
+                item.active,
+          )
+          .toList(growable: false);
+      return _HierarchyPage(
+        title: goal.title,
+        description: goal.description,
+        children: [
+          for (final track in tracks)
+            _HierarchyCard(
+              title: track.title,
+              description: track.description,
+              supportingText: track.levelCode,
+              onTap: () => context.push(
+                catalogueTrackLocation(verticalCode, goal.code, track.code),
               ),
-          ],
-          emptyMessage: 'No learning tracks are published for this goal.',
-        );
-      },
-    );
+            ),
+        ],
+        emptyMessage: 'No learning tracks are published for this goal.',
+      );
+    });
   }
 }
 
@@ -159,51 +154,50 @@ class CatalogueTrackScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return _withSnapshot(
-      ref,
-      (snapshot) {
-        final graph = snapshot.graph;
-        final track = graph.tracks.where(
-          (item) =>
-              item.code == trackCode &&
-              item.goalCode == goalCode &&
-              item.verticalCode == verticalCode &&
-              item.active,
-        ).firstOrNull;
-        if (track == null) {
-          return const _NotFound(message: 'Learning track is unavailable.');
-        }
-        final collections = graph.collections
-            .where(
-              (item) =>
-                  item.trackCode == track.code &&
-                  item.verticalCode == verticalCode &&
-                  item.active,
-            )
-            .toList(growable: false);
-        return _HierarchyPage(
-          title: track.title,
-          description: track.description,
-          children: [
-            for (final collection in collections)
-              _HierarchyCard(
-                title: collection.title,
-                description: collection.description,
-                supportingText: '${collection.members.length} items',
-                onTap: () => context.push(
-                  catalogueCollectionLocation(
-                    verticalCode,
-                    goalCode,
-                    track.code,
-                    collection.code,
-                  ),
+    return _withSnapshot(ref, (snapshot) {
+      final graph = snapshot.graph;
+      final track = graph.tracks
+          .where(
+            (item) =>
+                item.code == trackCode &&
+                item.goalCode == goalCode &&
+                item.verticalCode == verticalCode &&
+                item.active,
+          )
+          .firstOrNull;
+      if (track == null) {
+        return const _NotFound(message: 'Learning track is unavailable.');
+      }
+      final collections = graph.collections
+          .where(
+            (item) =>
+                item.trackCode == track.code &&
+                item.verticalCode == verticalCode &&
+                item.active,
+          )
+          .toList(growable: false);
+      return _HierarchyPage(
+        title: track.title,
+        description: track.description,
+        children: [
+          for (final collection in collections)
+            _HierarchyCard(
+              title: collection.title,
+              description: collection.description,
+              supportingText: '${collection.members.length} items',
+              onTap: () => context.push(
+                catalogueCollectionLocation(
+                  verticalCode,
+                  goalCode,
+                  track.code,
+                  collection.code,
                 ),
               ),
-          ],
-          emptyMessage: 'No learning collections are published for this track.',
-        );
-      },
-    );
+            ),
+        ],
+        emptyMessage: 'No learning collections are published for this track.',
+      );
+    });
   }
 }
 
@@ -221,37 +215,39 @@ class CatalogueCollectionScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return _withSnapshot(
-      ref,
-      (snapshot) {
-        final collection = snapshot.graph.collections.where(
-          (item) =>
-              item.code == collectionCode &&
-              item.trackCode == trackCode &&
-              item.verticalCode == verticalCode &&
-              item.active,
-        ).firstOrNull;
-        if (collection == null) {
-          return const _NotFound(message: 'Learning collection is unavailable.');
-        }
-        return ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            Text(
-              collection.title,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: 8),
-            Text(collection.description),
-            const SizedBox(height: 24),
-            Text('Learning sequence', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            for (final member in collection.members)
-              _CollectionMemberCard(member: member),
-          ],
-        );
-      },
-    );
+    return _withSnapshot(ref, (snapshot) {
+      final collection = snapshot.graph.collections
+          .where(
+            (item) =>
+                item.code == collectionCode &&
+                item.trackCode == trackCode &&
+                item.verticalCode == verticalCode &&
+                item.active,
+          )
+          .firstOrNull;
+      if (collection == null) {
+        return const _NotFound(message: 'Learning collection is unavailable.');
+      }
+      return ListView(
+        padding: const EdgeInsets.all(24),
+        children: [
+          Text(
+            collection.title,
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(collection.description),
+          const SizedBox(height: 24),
+          Text(
+            'Learning sequence',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          for (final member in collection.members)
+            _CollectionMemberCard(member: member),
+        ],
+      );
+    });
   }
 }
 
@@ -263,9 +259,8 @@ Widget _withSnapshot(
   return value.when(
     loading: () => const Center(child: CircularProgressIndicator()),
     error: (error, stackTrace) => _CatalogueError(error: error),
-    data: (snapshot) => snapshot == null
-        ? const _CatalogueEmpty()
-        : builder(snapshot),
+    data: (snapshot) =>
+        snapshot == null ? const _CatalogueEmpty() : builder(snapshot),
   );
 }
 
@@ -277,12 +272,17 @@ class _CatalogueHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final graph = snapshot.graph;
-    final activeVerticals = graph.verticals.where((item) => item.active).toList();
+    final activeVerticals = graph.verticals
+        .where((item) => item.active)
+        .toList();
 
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Text('Learning catalogue', style: Theme.of(context).textTheme.headlineMedium),
+        Text(
+          'Learning catalogue',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
         const SizedBox(height: 6),
         Text(
           'Choose a learning path.',
@@ -290,12 +290,13 @@ class _CatalogueHome extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         switch (graph.presentation.mode) {
-          VerticalCataloguePresentationMode.shelves =>
-            _Shelves(graph: graph),
-          VerticalCataloguePresentationMode.carousel =>
-            _Carousel(verticals: activeVerticals),
-          VerticalCataloguePresentationMode.grid =>
-            _VerticalGrid(verticals: activeVerticals),
+          VerticalCataloguePresentationMode.shelves => _Shelves(graph: graph),
+          VerticalCataloguePresentationMode.carousel => _Carousel(
+            verticals: activeVerticals,
+          ),
+          VerticalCataloguePresentationMode.grid => _VerticalGrid(
+            verticals: activeVerticals,
+          ),
         },
       ],
     );
@@ -409,10 +410,10 @@ class _VerticalGrid extends StatelessWidget {
         final columns = constraints.maxWidth >= 1000
             ? 4
             : constraints.maxWidth >= 700
-                ? 3
-                : constraints.maxWidth >= 440
-                    ? 2
-                    : 1;
+            ? 3
+            : constraints.maxWidth >= 440
+            ? 2
+            : 1;
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -449,7 +450,10 @@ class _VerticalCard extends StatelessWidget {
             children: [
               const Icon(Icons.school_outlined, size: 30),
               const Spacer(),
-              Text(vertical.title, style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                vertical.title,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 6),
               Text(
                 vertical.description,
@@ -517,7 +521,10 @@ class _HierarchyCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Card(
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 10,
+        ),
         title: Text(title),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -546,27 +553,28 @@ class _CollectionMemberCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (member.type) {
       LearningCollectionMemberType.content => _HierarchyCard(
-          title: member.contentRef!.contentCode,
-          description:
-              '${member.contentRef!.contentType.name} · revision ${member.contentRef!.revision}',
-          supportingText: 'Step ${member.position + 1}',
-          onTap: () => context.push(
-            contentDetailLocation(
-              ContentIdentity(
-                code: member.contentRef!.contentCode,
-                type: member.contentRef!.contentType,
-              ),
+        title: member.contentRef!.contentCode,
+        description:
+            '${member.contentRef!.contentType.name} · revision ${member.contentRef!.revision}',
+        supportingText: 'Step ${member.position + 1}',
+        onTap: () => context.push(
+          contentDetailLocation(
+            ContentIdentity(
+              code: member.contentRef!.contentCode,
+              type: member.contentRef!.contentType,
             ),
           ),
         ),
+      ),
       LearningCollectionMemberType.practiceTest => _HierarchyCard(
-          title: member.practiceTestRef!.practiceTestCode,
-          description: 'Practice test · revision ${member.practiceTestRef!.revision}',
-          supportingText: 'Step ${member.position + 1}',
-          onTap: () => context.push(
-            '/tests/${Uri.encodeComponent(member.practiceTestRef!.practiceTestCode)}',
-          ),
+        title: member.practiceTestRef!.practiceTestCode,
+        description:
+            'Practice test · revision ${member.practiceTestRef!.revision}',
+        supportingText: 'Step ${member.position + 1}',
+        onTap: () => context.push(
+          '/tests/${Uri.encodeComponent(member.practiceTestRef!.practiceTestCode)}',
         ),
+      ),
     };
   }
 }
@@ -609,10 +617,7 @@ class _NotFound extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(message),
-      ),
+      child: Padding(padding: const EdgeInsets.all(24), child: Text(message)),
     );
   }
 }

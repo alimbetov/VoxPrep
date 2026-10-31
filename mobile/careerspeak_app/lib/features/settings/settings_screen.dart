@@ -24,7 +24,10 @@ class SettingsScreen extends ConsumerWidget {
       children: [
         Text('Settings', style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 24),
-        Text('Catalogue source', style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'Catalogue source',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 8),
         const CatalogueSourceSettingsTile(),
         const SizedBox(height: 28),

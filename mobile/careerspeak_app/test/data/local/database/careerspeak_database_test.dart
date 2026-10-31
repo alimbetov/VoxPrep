@@ -61,9 +61,11 @@ void main() {
         }),
       );
 
-      final retentionTable = await database.customSelect(
-        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'asset_cache_retention'",
-      ).getSingleOrNull();
+      final retentionTable = await database
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'asset_cache_retention'",
+          )
+          .getSingleOrNull();
       expect(retentionTable, isNotNull);
     },
   );
@@ -197,9 +199,9 @@ void main() {
     expect(await database.select(database.syncPackUpdates).get(), hasLength(1));
     expect(await database.select(database.syncTombstones).get(), hasLength(1));
 
-    await (database.delete(database.syncRuns)
-          ..where((row) => row.runId.equals('sync-1')))
-        .go();
+    await (database.delete(
+      database.syncRuns,
+    )..where((row) => row.runId.equals('sync-1'))).go();
 
     expect(await database.select(database.syncPackUpdates).get(), isEmpty);
     expect(await database.select(database.syncTombstones).get(), isEmpty);
@@ -276,9 +278,9 @@ void main() {
           ),
         );
 
-    await (database.delete(database.localContentRecords)
-          ..where((row) => row.contentCode.equals('JAVA_Q_001')))
-        .go();
+    await (database.delete(
+      database.localContentRecords,
+    )..where((row) => row.contentCode.equals('JAVA_Q_001'))).go();
 
     expect(await database.select(database.contentAssetRefs).get(), isEmpty);
     expect(await database.select(database.assetCatalog).get(), hasLength(1));

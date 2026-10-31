@@ -7,11 +7,12 @@ import '../ports/audio_playback_engine.dart';
 import '../result/result.dart';
 import 'asset_resolver.dart';
 
-typedef ResolveRoleAudioAsset = Future<Result<ResolvedAsset>> Function(
-  ContentIdentity content,
-  int revision,
-  ContentAudioRole role,
-);
+typedef ResolveRoleAudioAsset =
+    Future<Result<ResolvedAsset>> Function(
+      ContentIdentity content,
+      int revision,
+      ContentAudioRole role,
+    );
 
 final class RoleAudioClipState {
   const RoleAudioClipState({
@@ -72,7 +73,8 @@ final class RoleAudioClipController {
       return _fail(
         ApplicationFailure(
           code: 'AUDIO_ROLE_NOT_ALLOWED',
-          message: 'The requested audio role is not valid for this content type.',
+          message:
+              'The requested audio role is not valid for this content type.',
           details: <String, Object?>{
             'contentType': item.type.name,
             'role': role.wireName,

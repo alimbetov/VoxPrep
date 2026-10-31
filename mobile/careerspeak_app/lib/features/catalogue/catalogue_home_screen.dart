@@ -20,7 +20,9 @@ class CatalogueHomeScreen extends ConsumerWidget {
       error: (error, _) => _Message('Unable to load catalogue.\n$error'),
       data: (value) {
         if (value == null) {
-          return const _Message('No published learning catalogue is available yet.');
+          return const _Message(
+            'No published learning catalogue is available yet.',
+          );
         }
         final graph = value.graph;
         final active = graph.verticals.where((item) => item.active).toList();
@@ -56,12 +58,15 @@ class CatalogueHomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 24),
             switch (graph.presentation.mode) {
-              VerticalCataloguePresentationMode.shelves =>
-                _Shelves(graph: graph),
-              VerticalCataloguePresentationMode.carousel =>
-                _Carousel(verticals: active),
-              VerticalCataloguePresentationMode.grid =>
-                _Grid(verticals: active),
+              VerticalCataloguePresentationMode.shelves => _Shelves(
+                graph: graph,
+              ),
+              VerticalCataloguePresentationMode.carousel => _Carousel(
+                verticals: active,
+              ),
+              VerticalCataloguePresentationMode.grid => _Grid(
+                verticals: active,
+              ),
             },
           ],
         );
@@ -81,7 +86,9 @@ class CatalogueAllScreen extends ConsumerWidget {
       error: (error, _) => _Message('Unable to load catalogue.\n$error'),
       data: (value) {
         if (value == null) {
-          return const _Message('No published learning catalogue is available yet.');
+          return const _Message(
+            'No published learning catalogue is available yet.',
+          );
         }
         final verticals = value.graph.verticals
             .where((item) => item.active)
@@ -89,7 +96,10 @@ class CatalogueAllScreen extends ConsumerWidget {
         return ListView(
           padding: const EdgeInsets.all(24),
           children: [
-            Text('All learning paths', style: Theme.of(context).textTheme.headlineMedium),
+            Text(
+              'All learning paths',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
             const SizedBox(height: 20),
             _Grid(verticals: verticals),
           ],
@@ -125,7 +135,9 @@ class _Shelves extends StatelessWidget {
             title: section.title,
             description: section.description,
             verticals: graph.verticals
-                .where((item) => item.active && item.sectionCode == section.code)
+                .where(
+                  (item) => item.active && item.sectionCode == section.code,
+                )
                 .toList(growable: false),
           ),
       ],
@@ -211,10 +223,10 @@ class _Grid extends StatelessWidget {
         final columns = constraints.maxWidth >= 1000
             ? 4
             : constraints.maxWidth >= 700
-                ? 3
-                : constraints.maxWidth >= 440
-                    ? 2
-                    : 1;
+            ? 3
+            : constraints.maxWidth >= 440
+            ? 2
+            : 1;
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -225,7 +237,8 @@ class _Grid extends StatelessWidget {
             childAspectRatio: 1.45,
           ),
           itemCount: verticals.length,
-          itemBuilder: (context, index) => _VerticalCard(vertical: verticals[index]),
+          itemBuilder: (context, index) =>
+              _VerticalCard(vertical: verticals[index]),
         );
       },
     );
@@ -250,7 +263,10 @@ class _VerticalCard extends StatelessWidget {
             children: [
               CatalogueAssetIcon(assetId: vertical.iconAssetId, size: 32),
               const Spacer(),
-              Text(vertical.title, style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                vertical.title,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: 6),
               Text(
                 vertical.description,
@@ -273,10 +289,7 @@ class _Message extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text(message),
-      ),
+      child: Padding(padding: const EdgeInsets.all(24), child: Text(message)),
     );
   }
 }

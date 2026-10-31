@@ -47,7 +47,9 @@ final class AssetCacheRetentionManager {
       accessedBefore: _now().toUtc().subtract(_audioTtl),
       limit: _batchSize,
     );
-    if (candidates case FailureResult<List<AssetRetentionEntry>>(:final failure)) {
+    if (candidates case FailureResult<List<AssetRetentionEntry>>(
+      :final failure,
+    )) {
       return FailureResult<AssetRetentionCleanupReport>(failure);
     }
 

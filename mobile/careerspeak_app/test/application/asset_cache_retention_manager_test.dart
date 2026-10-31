@@ -104,7 +104,10 @@ final class _RetentionRepository implements AssetCacheRetentionRepository {
     int limit = 100,
   }) async {
     return Success<List<AssetRetentionEntry>>(
-      entries.where((entry) => entry.lastAccessedAt.isBefore(accessedBefore)).take(limit).toList(),
+      entries
+          .where((entry) => entry.lastAccessedAt.isBefore(accessedBefore))
+          .take(limit)
+          .toList(),
     );
   }
 

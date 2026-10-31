@@ -15,7 +15,9 @@ final class SecureCatalogueSourcePreferenceRepository
   @override
   Future<Result<CatalogueSourceMode>> getMode() async {
     try {
-      return Success(CatalogueSourceMode.fromCode(await _storage.read(key: _key)));
+      return Success(
+        CatalogueSourceMode.fromCode(await _storage.read(key: _key)),
+      );
     } on Object catch (error) {
       return FailureResult(
         ApplicationFailure(

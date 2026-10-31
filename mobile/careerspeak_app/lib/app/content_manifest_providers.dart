@@ -17,11 +17,11 @@ final contentManifestGatewayProvider = Provider<ContentManifestGateway>((ref) {
   final source = ref.watch(catalogueSourceModeProvider);
   return switch (source) {
     CatalogueSourceMode.production => HttpContentManifestGateway(
-        apiClient: ref.watch(apiClientProvider),
-        decoder: ref.watch(contentManifestDecoderProvider),
-      ),
+      apiClient: ref.watch(apiClientProvider),
+      decoder: ref.watch(contentManifestDecoderProvider),
+    ),
     CatalogueSourceMode.demo => DemoContentManifestGateway(
-        cataloguePayloads: ref.watch(demoCataloguePayloadsProvider).values,
-      ),
+      cataloguePayloads: ref.watch(demoCataloguePayloadsProvider).values,
+    ),
   };
 });

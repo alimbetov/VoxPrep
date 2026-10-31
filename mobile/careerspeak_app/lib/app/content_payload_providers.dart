@@ -17,8 +17,8 @@ final contentPayloadGatewayProvider = Provider<ContentPayloadGateway>((ref) {
   return switch (source) {
     CatalogueSourceMode.demo => DemoContentPayloadGateway(),
     CatalogueSourceMode.production => HttpContentPayloadGateway(
-        apiClient: ref.watch(apiClientProvider),
-        decoder: ref.watch(contentPayloadDecoderProvider),
-      ),
+      apiClient: ref.watch(apiClientProvider),
+      decoder: ref.watch(contentPayloadDecoderProvider),
+    ),
   };
 });

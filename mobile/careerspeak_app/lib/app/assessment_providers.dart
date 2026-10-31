@@ -17,8 +17,9 @@ final assessmentPayloadGatewayProvider = Provider<AssessmentPayloadGateway>((
   final source = ref.watch(catalogueSourceModeProvider);
   return switch (source) {
     CatalogueSourceMode.demo => DemoAssessmentPayloadGateway(),
-    CatalogueSourceMode.production =>
-      HttpAssessmentPayloadGateway(apiClient: ref.watch(apiClientProvider)),
+    CatalogueSourceMode.production => HttpAssessmentPayloadGateway(
+      apiClient: ref.watch(apiClientProvider),
+    ),
   };
 });
 

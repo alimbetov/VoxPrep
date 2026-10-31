@@ -116,11 +116,11 @@ final class LearningCollectionMember {
   final PracticeTestRevisionRef? practiceTestRef;
 
   String get identityKey => switch (type) {
-        LearningCollectionMemberType.content =>
-          '${type.wireName}|${contentRef!.identityKey}',
-        LearningCollectionMemberType.practiceTest =>
-          '${type.wireName}|${practiceTestRef!.identityKey}',
-      };
+    LearningCollectionMemberType.content =>
+      '${type.wireName}|${contentRef!.identityKey}',
+    LearningCollectionMemberType.practiceTest =>
+      '${type.wireName}|${practiceTestRef!.identityKey}',
+  };
 }
 
 final class LearningGoalProjection {
@@ -219,7 +219,9 @@ final class LearningCollectionProjection {
     required List<LearningCollectionMember> members,
   }) {
     if (members.isEmpty) {
-      throw ArgumentError('a learning collection must contain at least one member');
+      throw ArgumentError(
+        'a learning collection must contain at least one member',
+      );
     }
     for (var index = 0; index < members.length; index++) {
       if (members[index].position != index) {
@@ -427,7 +429,11 @@ void _requireUnique(Iterable<String> keys, String fieldName) {
   final seen = <String>{};
   for (final key in keys) {
     if (!seen.add(key)) {
-      throw ArgumentError.value(key, fieldName, 'contains a duplicate exact ref');
+      throw ArgumentError.value(
+        key,
+        fieldName,
+        'contains a duplicate exact ref',
+      );
     }
   }
 }

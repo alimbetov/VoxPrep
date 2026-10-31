@@ -16,29 +16,32 @@ const _hash =
 
 void main() {
   for (final mode in VerticalCataloguePresentationMode.values) {
-    testWidgets('renders backend-owned ${mode.wireName} without vertical branching', (
-      tester,
-    ) async {
-      final snapshot = _snapshot(mode);
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            universalCatalogueRepositoryProvider.overrideWithValue(
-              _FakeRepository(snapshot),
-            ),
-          ],
-          child: const MaterialApp(home: Scaffold(body: CatalogueScreen())),
-        ),
-      );
-      await tester.pumpAndSettle();
+    testWidgets(
+      'renders backend-owned ${mode.wireName} without vertical branching',
+      (tester) async {
+        final snapshot = _snapshot(mode);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              universalCatalogueRepositoryProvider.overrideWithValue(
+                _FakeRepository(snapshot),
+              ),
+            ],
+            child: const MaterialApp(home: Scaffold(body: CatalogueScreen())),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Learning catalogue'), findsOneWidget);
-      expect(find.text('Future Vertical 2030'), findsOneWidget);
-      expect(find.text('Future Section'),
+        expect(find.text('Learning catalogue'), findsOneWidget);
+        expect(find.text('Future Vertical 2030'), findsOneWidget);
+        expect(
+          find.text('Future Section'),
           mode == VerticalCataloguePresentationMode.shelves
               ? findsOneWidget
-              : findsNothing);
-    });
+              : findsNothing,
+        );
+      },
+    );
   }
 
   testWidgets('vertical drill-down is driven by generic graph ownership', (

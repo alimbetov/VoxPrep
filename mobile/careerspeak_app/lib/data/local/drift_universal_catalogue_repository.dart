@@ -33,19 +33,22 @@ final class DriftUniversalCatalogueRepository
         return const Success<CurrentUniversalCatalogueSnapshot?>(null);
       }
 
-      final snapshot = await _database.customSelect(
-        '''
+      final snapshot = await _database
+          .customSelect(
+            '''
         SELECT content_version
         FROM publication_snapshots
         WHERE content_version = ?
         ''',
-        variables: [Variable<int>(contentVersion)],
-      ).getSingleOrNull();
+            variables: [Variable<int>(contentVersion)],
+          )
+          .getSingleOrNull();
       if (snapshot == null) {
         return const FailureResult<CurrentUniversalCatalogueSnapshot?>(
           ApplicationFailure(
             code: 'UNIVERSAL_CATALOGUE_CURRENT_MISSING',
-            message: 'CURRENT publication snapshot is not materialized locally.',
+            message:
+                'CURRENT publication snapshot is not materialized locally.',
           ),
         );
       }
@@ -69,7 +72,8 @@ final class DriftUniversalCatalogueRepository
       return FailureResult<CurrentUniversalCatalogueSnapshot?>(
         ApplicationFailure(
           code: 'UNIVERSAL_CATALOGUE_CURRENT_INVALID',
-          message: 'CURRENT universal catalogue graph could not be reconstructed.',
+          message:
+              'CURRENT universal catalogue graph could not be reconstructed.',
           retryable: false,
           details: <String, Object?>{'errorType': error.runtimeType.toString()},
         ),
@@ -78,15 +82,17 @@ final class DriftUniversalCatalogueRepository
   }
 
   Future<List<VerticalSectionProjection>> _readSections(int version) async {
-    final rows = await _database.customSelect(
-      '''
+    final rows = await _database
+        .customSelect(
+          '''
       SELECT code, title, description, icon_asset_id, sort_order, active
       FROM vertical_section_reads
       WHERE content_version = ?
       ORDER BY sort_order, code
       ''',
-      variables: [Variable<int>(version)],
-    ).get();
+          variables: [Variable<int>(version)],
+        )
+        .get();
     return [
       for (final row in rows)
         VerticalSectionProjection(
@@ -101,15 +107,17 @@ final class DriftUniversalCatalogueRepository
   }
 
   Future<List<LearningVerticalProjection>> _readVerticals(int version) async {
-    final rows = await _database.customSelect(
-      '''
+    final rows = await _database
+        .customSelect(
+          '''
       SELECT code, section_code, title, description, icon_asset_id, sort_order, active
       FROM learning_vertical_reads
       WHERE content_version = ?
       ORDER BY sort_order, code
       ''',
-      variables: [Variable<int>(version)],
-    ).get();
+          variables: [Variable<int>(version)],
+        )
+        .get();
     return [
       for (final row in rows)
         LearningVerticalProjection(
@@ -125,15 +133,17 @@ final class DriftUniversalCatalogueRepository
   }
 
   Future<List<LearningGoalProjection>> _readGoals(int version) async {
-    final rows = await _database.customSelect(
-      '''
+    final rows = await _database
+        .customSelect(
+          '''
       SELECT code, vertical_code, title, description, sort_order, active
       FROM learning_goal_reads
       WHERE content_version = ?
       ORDER BY sort_order, code
       ''',
-      variables: [Variable<int>(version)],
-    ).get();
+          variables: [Variable<int>(version)],
+        )
+        .get();
     return [
       for (final row in rows)
         LearningGoalProjection(
@@ -148,16 +158,18 @@ final class DriftUniversalCatalogueRepository
   }
 
   Future<List<LearningTrackProjection>> _readTracks(int version) async {
-    final rows = await _database.customSelect(
-      '''
+    final rows = await _database
+        .customSelect(
+          '''
       SELECT code, vertical_code, goal_code, title, description,
              level_code, career_track_code, sort_order, active
       FROM learning_track_reads
       WHERE content_version = ?
       ORDER BY sort_order, code
       ''',
-      variables: [Variable<int>(version)],
-    ).get();
+          variables: [Variable<int>(version)],
+        )
+        .get();
     return [
       for (final row in rows)
         LearningTrackProjection(
@@ -174,16 +186,20 @@ final class DriftUniversalCatalogueRepository
     ];
   }
 
-  Future<List<LearningCollectionProjection>> _readCollections(int version) async {
-    final rows = await _database.customSelect(
-      '''
+  Future<List<LearningCollectionProjection>> _readCollections(
+    int version,
+  ) async {
+    final rows = await _database
+        .customSelect(
+          '''
       SELECT code, vertical_code, track_code, title, description, sort_order, active
       FROM learning_collection_reads
       WHERE content_version = ?
       ORDER BY sort_order, code
       ''',
-      variables: [Variable<int>(version)],
-    ).get();
+          variables: [Variable<int>(version)],
+        )
+        .get();
 
     final result = <LearningCollectionProjection>[];
     for (final row in rows) {
@@ -208,8 +224,9 @@ final class DriftUniversalCatalogueRepository
     int version,
     String collectionCode,
   ) async {
-    final rows = await _database.customSelect(
-      '''
+    final rows = await _database
+        .customSelect(
+          '''
       SELECT position, member_type,
              content_code, content_type, content_revision, content_checksum,
              practice_test_code, practice_test_revision, practice_test_checksum
@@ -217,8 +234,9 @@ final class DriftUniversalCatalogueRepository
       WHERE content_version = ? AND collection_code = ?
       ORDER BY position
       ''',
-      variables: [Variable<int>(version), Variable<String>(collectionCode)],
-    ).get();
+          variables: [Variable<int>(version), Variable<String>(collectionCode)],
+        )
+        .get();
 
     return [for (final row in rows) _member(row)];
   }
@@ -230,14 +248,14 @@ final class DriftUniversalCatalogueRepository
     final position = row.read<int>('position');
     return switch (type) {
       LearningCollectionMemberType.content => LearningCollectionMember.content(
-          position: position,
-          content: ContentRevisionRef(
-            contentCode: row.read<String>('content_code'),
-            contentType: _contentType(row.read<String>('content_type')),
-            revision: row.read<int>('content_revision'),
-            checksum: row.read<String>('content_checksum'),
-          ),
+        position: position,
+        content: ContentRevisionRef(
+          contentCode: row.read<String>('content_code'),
+          contentType: _contentType(row.read<String>('content_type')),
+          revision: row.read<int>('content_revision'),
+          checksum: row.read<String>('content_checksum'),
         ),
+      ),
       LearningCollectionMemberType.practiceTest =>
         LearningCollectionMember.practiceTest(
           position: position,
@@ -258,16 +276,20 @@ final class DriftUniversalCatalogueRepository
   }
 
   Future<VerticalCataloguePresentation> _readPresentation(int version) async {
-    final rows = await _database.customSelect(
-      '''
+    final rows = await _database
+        .customSelect(
+          '''
       SELECT mode, show_featured, show_see_all, featured_section_code
       FROM vertical_presentation_reads
       WHERE content_version = ?
       ''',
-      variables: [Variable<int>(version)],
-    ).get();
+          variables: [Variable<int>(version)],
+        )
+        .get();
     if (rows.length != 1) {
-      throw StateError('CURRENT snapshot must contain exactly one presentation.');
+      throw StateError(
+        'CURRENT snapshot must contain exactly one presentation.',
+      );
     }
     final row = rows.single;
     return VerticalCataloguePresentation(

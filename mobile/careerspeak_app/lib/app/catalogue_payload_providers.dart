@@ -17,15 +17,17 @@ final demoCataloguePayloadsProvider = Provider((ref) {
   return buildDemoVerticalCataloguePayloads();
 });
 
-final cataloguePayloadGatewayProvider = Provider<CataloguePayloadGateway>((ref) {
+final cataloguePayloadGatewayProvider = Provider<CataloguePayloadGateway>((
+  ref,
+) {
   final source = ref.watch(catalogueSourceModeProvider);
   return switch (source) {
     CatalogueSourceMode.production => HttpCataloguePayloadGateway(
-        apiClient: ref.watch(apiClientProvider),
-      ),
+      apiClient: ref.watch(apiClientProvider),
+    ),
     CatalogueSourceMode.demo => DemoCataloguePayloadGateway(
-        payloads: ref.watch(demoCataloguePayloadsProvider),
-      ),
+      payloads: ref.watch(demoCataloguePayloadsProvider),
+    ),
   };
 });
 
