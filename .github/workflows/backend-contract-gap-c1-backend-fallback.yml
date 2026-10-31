@@ -7,6 +7,7 @@ on:
       - '.github/workflows/backend-contract-gap-c1-backend-fallback.yml'
       - 'tool/c1_backend_fallback_patch.py'
       - 'tool/c1_backend_fallback_test_patch.py'
+      - 'tool/c1_locale_repair_patch.py'
 
 permissions:
   contents: write
@@ -28,11 +29,11 @@ jobs:
         working-directory: mobile/careerspeak_app
         run: flutter pub get
 
-      - name: Apply localization lifecycle hardening
+      - name: Apply Backend-owned fallback and locale repair
         run: |
-          python3 tool/c1_6_c1_7_patch.py
           python3 tool/c1_backend_fallback_patch.py
           python3 tool/c1_backend_fallback_test_patch.py
+          python3 tool/c1_locale_repair_patch.py
 
       - name: Format C1 sources
         working-directory: mobile/careerspeak_app
@@ -68,11 +69,12 @@ jobs:
         run: |
           flutter test test/application/content_delivery/locale_fallback_test.dart
           flutter test test/application/content_sync/content_sync_locale_projection_test.dart
+          flutter test test/contracts/backend_owned_locale_fallback_contract_test.dart
           flutter test test/data/local/database/careerspeak_database_test.dart
           flutter test test/data/local/drift_localized_content_repository_test.dart
           flutter test test/data/local/drift_sync_locale_repair_test.dart
-          flutter test test/data/local/drift_sync_plan_executor_test.dart
           flutter test test/acceptance/c1_localization_recovery_acceptance_test.dart
+          flutter test test/acceptance/c1_tombstone_retirement_acceptance_test.dart
           flutter test test/contracts/openapi_contract_baseline_test.dart
 
       - name: Full regression suite
