@@ -41,4 +41,11 @@ p2_10_7_production_e2e_test.dart       PASS
 p2_11_recovery_acceptance_test.dart    PASS
 ```
 
-This ledger commit is the clean exact-SHA full-production qualification trigger for C2.3 after removal of all one-shot staging workflows.
+The production format gate then exposed one remaining package-context formatting difference in the P2.11 recovery fixture. The exact production formatter sequence (`flutter pub get` followed by `dart format` inside `mobile/careerspeak_app`) produced the formatter-only repair:
+
+```text
+24a7fde15a529d59b4ceefb3f09ff2e271cb763a
+style(c2): format recovery typed fixture
+```
+
+All one-shot formatter workflows were removed atomically before this qualification trigger. This commit therefore starts the clean exact-SHA full-production qualification for C2.3.
