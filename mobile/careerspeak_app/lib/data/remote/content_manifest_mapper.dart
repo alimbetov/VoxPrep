@@ -19,6 +19,12 @@ final class ContentManifestMapper {
           checksum: pack.checksum,
         ),
       ),
+      localeFallbacks: dto.localeFallbacks.map(
+        (rule) => LocaleFallbackRule(
+          locale: rule.locale,
+          fallbackLocales: rule.fallbackLocales,
+        ),
+      ),
       tombstones: dto.tombstones.map(
         (tombstone) => ContentTombstone(
           identity: _identity(tombstone.contentCode, tombstone.contentType),
