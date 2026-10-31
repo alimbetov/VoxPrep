@@ -1,4 +1,5 @@
 import '../../application/content_delivery/content_manifest.dart';
+import '../../application/content_delivery/publication_manifest_canonicalizer.dart';
 import '../../application/ports/api_client.dart';
 import '../../application/ports/content_manifest_gateway.dart';
 import '../../application/result/result.dart';
@@ -10,19 +11,28 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
     required ApiClient apiClient,
     ContentManifestDecoder decoder = const ContentManifestDecoder(),
     PublicationManifestWireGuard wireGuard = const PublicationManifestWireGuard(),
+    PublicationManifestCanonicalizer canonicalizer =
+        const PublicationManifestCanonicalizer(),
   }) {
-    return HttpContentManifestGateway._(apiClient, decoder, wireGuard);
+    return HttpContentManifestGateway._(
+      apiClient,
+      decoder,
+      wireGuard,
+      canonicalizer,
+    );
   }
 
   const HttpContentManifestGateway._(
     this._apiClient,
     this._decoder,
     this._wireGuard,
+    this._canonicalizer,
   );
 
   final ApiClient _apiClient;
   final ContentManifestDecoder _decoder;
   final PublicationManifestWireGuard _wireGuard;
+  final PublicationManifestCanonicalizer _canonicalizer;
 
   @override
   Future<Result<RootManifestFetch>> fetchRootManifest({String? etag}) async {
@@ -94,9 +104,25 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
       return FailureResult<RootManifestFetch>(failure);
     }
 
+    final manifest = (decoded as Success<RootContentManifest>).value;
+    final calculatedChecksum = _canonicalizer.rootDigest(manifest);
+    if (calculatedChecksum != manifest.checksum) {
+      return FailureResult<RootManifestFetch>(
+        ApplicationFailure(
+          code: 'ROOT_MANIFEST_CHECKSUM_MISMATCH',
+          message: 'The root manifest checksum does not match its canonical immutable body.',
+          traceId: apiResponse.traceId,
+          details: <String, Object?>{
+            'declaredChecksum': manifest.checksum,
+            'calculatedChecksum': calculatedChecksum,
+          },
+        ),
+      );
+    }
+
     return Success<RootManifestFetch>(
       RootManifestChanged(
-        manifest: (decoded as Success<RootContentManifest>).value,
+        manifest: manifest,
         etag: responseEtag,
       ),
     );
@@ -145,6 +171,21 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
     }
 
     final manifest = (decoded as Success<PackContentManifest>).value;
+    final calculatedChecksum = _canonicalizer.packDigest(manifest);
+    if (calculatedChecksum != manifest.checksum) {
+      return FailureResult<PackContentManifest>(
+        ApplicationFailure(
+          code: 'PACK_MANIFEST_CHECKSUM_MISMATCH',
+          message: 'The pack manifest checksum does not match its canonical immutable body.',
+          traceId: apiResponse.traceId,
+          details: <String, Object?>{
+            'declaredChecksum': manifest.checksum,
+            'calculatedChecksum': calculatedChecksum,
+          },
+        ),
+      );
+    }
+
     if (manifest.identity != target.identity ||
         manifest.revision != target.revision ||
         manifest.checksum != target.checksum) {
