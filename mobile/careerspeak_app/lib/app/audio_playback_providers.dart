@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../application/content_delivery/content_audio_policy.dart';
 import '../application/ports/audio_playback_engine.dart';
 import '../application/services/asset_resolver.dart';
 import '../application/services/audio_playback_controller.dart';
@@ -19,10 +20,11 @@ final audioPlaybackControllerProvider = Provider<AudioPlaybackController>((
   final controller = AudioPlaybackController(
     resolveAudioAsset: (content, revision) async {
       final resolver = await ref.read(assetResolverProvider.future);
+      final role = ContentAudioPolicy.primaryRole(content.type);
       return resolver.resolveContent(
         content: content,
         revision: revision,
-        role: 'promptAudio',
+        role: role.wireName,
         policy: AssetResolutionPolicy.downloadIfMissing,
       );
     },
