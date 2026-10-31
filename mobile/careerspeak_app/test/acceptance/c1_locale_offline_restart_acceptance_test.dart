@@ -303,7 +303,13 @@ const _identity = ContentIdentity(
   code: 'JAVA_DI_001',
   type: ContentType.interview,
 );
-const _localizedRef = LocalizedContentRef._testOnlyPlaceholder;
+final _localizedRef = LocalizedContentRef(
+  identity: _identity,
+  contentRevision: 1,
+  locale: 'ru',
+  localizationRevision: 1,
+  checksum: _localizedChecksum,
+);
 
 const _rootChecksum =
     '1111111111111111111111111111111111111111111111111111111111111111';
@@ -313,3 +319,5 @@ const _russianPackChecksum =
     '3333333333333333333333333333333333333333333333333333333333333333';
 const _contentChecksum =
     '4444444444444444444444444444444444444444444444444444444444444444';
+const _localizedChecksum =
+    '5555555555555555555555555555555555555555555555555555555555555555';
