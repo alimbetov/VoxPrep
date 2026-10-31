@@ -17,6 +17,14 @@ import 'package:flutter_test/flutter_test.dart';
 const _checksum =
     '9f64a747e1b97f131fabb6b447296c9b6f0201e79fb3c5356e6c77e89b6a806a';
 const _bytes = <int>[1, 2, 3, 4];
+final _asset = ManifestAssetDescriptor(
+  assetId: 'concurrent-audio',
+  checksumSha256: _checksum,
+  deliveryKey: 'audio/concurrent.mp3',
+  sizeBytes: 4,
+  mediaType: 'audio/mpeg',
+  requiredOffline: false,
+);
 
 void main() {
   test('concurrent resolve calls coalesce to one immutable download', () async {
@@ -111,15 +119,6 @@ AssetResolver _resolver(
   );
 }
 
-const _asset = ManifestAssetDescriptor(
-  assetId: 'concurrent-audio',
-  checksumSha256: _checksum,
-  deliveryKey: 'audio/concurrent.mp3',
-  sizeBytes: 4,
-  mediaType: 'audio/mpeg',
-  requiredOffline: false,
-);
-
 Future<void> _waitUntil(bool Function() predicate) async {
   for (var i = 0; i < 100 && !predicate(); i += 1) {
     await Future<void>.delayed(Duration.zero);
@@ -164,7 +163,7 @@ final class _Catalog implements AssetCatalogRepository {
     required int revision,
     required String role,
     String variant = 'canonical',
-  }) async => const Success<ManifestAssetDescriptor?>(_asset);
+  }) async => Success<ManifestAssetDescriptor?>(_asset);
 }
 
 final class _Retention implements AssetCacheRetentionRepository {
