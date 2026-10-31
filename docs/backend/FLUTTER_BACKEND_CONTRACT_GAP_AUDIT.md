@@ -1,601 +1,841 @@
-# Flutter ↔ Backend Contract Gap Audit
+# CareerSpeak Backend Contract Gap Audit — System Architecture Review
 
-Status: **AUDIT / DESIGN INPUT**  
-Source baseline: `feat/p2-flutter-production-adapters` @ `c59c653475732cc1008d112306abe4248693afd9`
+**Status:** ACTIVE ARCHITECTURE AUDIT / BACKEND DESIGN INPUT  
+**Audit branch:** `feat/backend-contract-gap-audit`  
+**Current baseline:** `main` @ `52bcda6ac580d13467c8cbfa87befb404820a1e9`  
+**Scope:** Flutter ↔ Backend, Admin ↔ Backend, Backend ↔ TTS Worker, Backend ↔ RustFS/CDN, contract governance and operational invariants.
 
-## Purpose
+## 1. Executive verdict
 
-This document freezes the current observations about the Flutter ↔ Backend boundary before backend domain implementation starts.
+The project has a strong architectural foundation:
 
-The goal is not to mirror Flutter classes in the backend. The goal is to define which product data is **backend-owned**, which state is **device-owned**, and which missing contracts must be added so Flutter does not become the source of truth for product catalogs or learning content.
+- system actors are explicitly separated (`ADMIN`, `FLUTTER INSTALLATION`, `TTS WORKER`);
+- Flutter is offline-first and already uses immutable revision/checksum semantics;
+- local `CURRENT`, offline `READY`, and backend `ACTIVE` have separate ownership and vocabulary;
+- learner state is kept out of backend product-content truth in MVP;
+- the TTS Worker is correctly isolated from PostgreSQL and RustFS credentials;
+- the TTS queue uses lease ownership and `FOR UPDATE SKIP LOCKED` rather than introducing an unnecessary broker;
+- P2 production adapters, Drift projection, restart recovery and real renderer qualification are already materially ahead of the backend implementation.
 
-## Current state
+The main architectural warning is that **backend persistence/domain design should not be frozen yet for learner content/publication**.
 
-The production content path is already structurally correct:
+There are six P0 contract blockers that should be closed first:
 
 ```text
-Backend
-  ↓
-RootContentManifest / PackContentManifest / ContentPayload
-  ↓
-remote DTO + decoder + mapper
-  ↓
-Drift projection
-  ↓
-ContentRepository
-  ↓
-Flutter domain model
-  ↓
-UI
+BGA-001 root manifest locale identity
+BGA-002 localized payload delivery
+BGA-003 typed learning-content payloads
+BGA-004 production assessment contract
+BGA-005 atomic backend publication snapshot
+BGA-006 installation-token lifecycle / 401 recovery
 ```
 
-The current backend learner API already covers:
+The TTS boundary is much closer to implementation-ready. Its remaining findings are hardening items, not a reason to redesign the Worker architecture.
 
-- installation registration;
-- root content manifest;
-- pack manifests;
-- immutable content payload revisions;
-- content tombstones;
-- asset descriptors;
-- content ↔ asset relations;
-- revision and checksum semantics.
+## 2. Severity model
 
-The current content types are:
+```text
+P0 BLOCKER
+= close before backend aggregate/schema freeze or production API implementation
 
-- `vocabulary`
-- `interview`
-- `topic`
-- `shadowing`
-- `phrase`
+P1 HIGH
+= close during first backend implementation stream; leaving it open creates avoidable rework or production risk
 
-The current `ContentPayload` already carries product-owned display data:
+P2 MEDIUM
+= contract/operational hardening; may follow the first vertical slice but must be explicit before production acceptance
 
-- `contentCode`
-- `contentType`
-- `revision`
-- `checksum`
-- `title`
-- `subtitle`
-- `description`
-- `categoryCode`
-- `categoryLabel`
-- `levelCode`
-- `levelLabel`
-- `minutes`
-- `hasAudio`
+RISK ACCEPTANCE
+= not necessarily a defect; the product must explicitly accept or reject the trade-off
+```
 
-This is the correct direction: Flutter projects backend-owned data into local read models instead of inventing product content in the UI layer.
+## 3. Consolidated gap ledger
+
+| ID | Severity | Area | Finding |
+|---|---|---|---|
+| BGA-001 | P0 | Manifest / localization | Locale-scoped root request conflicts with global immutable `contentVersion + checksum` identity |
+| BGA-002 | P0 | Localization | Locale pack has no learner payload transport for translations/hints/explanations |
+| BGA-003 | P0 | Content domain | Current canonical `ContentPayload` is too shallow for real Vocabulary/Interview/Topic/Phrase/Shadowing pedagogy |
+| BGA-004 | P0 | Assessment | Practice tests/questions are not production-backed |
+| BGA-005 | P0 | Publication | Backend atomic publication snapshot / monotonic `contentVersion` issuance is specified conceptually but not frozen as an implementation contract |
+| BGA-006 | P0 | Installation security | Token expiry/revocation/re-registration/401 recovery semantics are not frozen |
+| BGA-007 | P1 | Taxonomy | Category/Level/Skill are not first-class revisioned backend catalogs |
+| BGA-008 | P1 | Capability catalogs | Supported locales and learner-facing TTS voice/accent availability are not backend-owned revisioned catalogs |
+| BGA-009 | P1 | Learner delivery | Specification describes cursor collection APIs while implemented mobile architecture uses manifest sync + local Drift queries; source-of-truth path is ambiguous |
+| BGA-010 | P1 | Delivery scalability | Initial/changed pack sync performs one canonical payload GET per content item; no pack-size or batching contract exists |
+| BGA-011 | P1 / risk | Media security/cost | CDN delivery authorization model is not explicit |
+| BGA-012 | P1 | Admin security | Fixed ADMIN account lacks a complete operational security contract |
+| BGA-013 | P1 | TTS concurrency | Generation dedupe/current-audio-slot uniqueness is recommended but not frozen transactionally |
+| BGA-014 | P1 | TTS OpenAPI | Piper config is checksum-sensitive raw bytes, but OpenAPI models it as an `application/json` string rather than an exact binary representation |
+| BGA-015 | P2 / accepted MVP risk | Worker auth | Shared static Worker token means `workerId` is an audit label, not an independently authenticated identity; zero-downtime rotation is intentionally absent |
+| BGA-016 | P1 | Integrity/versioning | Canonicalization scope for root/pack/content JSON checksums is not frozen |
+| BGA-017 | P2 | Tombstones | Tombstone `revision` semantics are not explicit enough relative to business-identity retirement |
+| BGA-018 | P1 | Reliability | Learner API does not freeze `429 / Retry-After` semantics even though Flutter already classifies 429 as retryable |
+| BGA-019 | P1 | Observability | TTS observability is detailed; installation/content/publication observability is not |
+| BGA-020 | P1 | Durability | PostgreSQL + RustFS backup/restore/reconciliation contract is missing |
+| BGA-021 | P1 | Contract governance | No backend-side consumer-contract gate is yet defined for `learner-api-v1.yaml` + Flutter fixtures |
+| BGA-022 | RISK ACCEPTANCE | Commercial boundary | Anonymous installation registration does not prove App Store / Play Store purchase entitlement |
 
 ---
 
-# Ownership boundary
+# 4. Detailed findings
 
-## Backend-owned
+## BGA-001 — Root manifest locale identity is internally inconsistent
 
-The backend must remain the source of truth for product and publication data:
+**Severity:** P0 BLOCKER
 
-| Area | Ownership | Notes |
-|---|---|---|
-| Learning content | Backend | Canonical immutable revisions |
-| Content type | Backend contract | Stable wire enum/code |
-| Content publication | Backend | Revision, availability, tombstones |
-| Packs/manifests | Backend | Snapshot and synchronization source |
-| Assets | Backend | Identity, checksum, media type, delivery key |
-| Content ↔ asset relation | Backend | Role and revision relation |
-| Taxonomy | Backend | Category, level, skill catalogs |
-| Practice tests | Backend | Test definitions and questions |
-| Supported locales | Backend | Product capability catalog |
-| TTS voice catalog | Backend | Available voices/models/capabilities |
-| Localization availability | Backend | Which localized packs exist |
-
-## Device-owned
-
-The mobile application should own local runtime state and user-local preferences:
-
-| Area | Ownership | Notes |
-|---|---|---|
-| Installation ID generation | Device | Registered with backend |
-| Secure installation token storage | Device | Token is backend-issued |
-| Favorite marker | Device | Learner state |
-| Listened marker | Device | Learner state |
-| Completed marker | Device | Learner state |
-| Playback position | Device | Resume state |
-| Download/cache state | Device | Runtime storage concern |
-| Theme | Device | UI preference |
-| Focus mode | Device | UI preference |
-| Storage quota preference | Device | Local runtime preference |
-| Selected UI locale | Device | User selection from backend-supported catalog |
-| Selected translation locale | Device | User selection from backend-supported catalog |
-| Selected voice/accent | Device | User selection from backend-supported catalog |
-
-The key rule is:
+Current learner contract requires:
 
 ```text
-Backend defines what exists.
-Device defines what the user selected and what the device has cached/progressed.
+GET /api/v1/content/manifest?locale=<translationLocale>
 ```
+
+At the same time the architecture defines one global immutable root snapshot:
+
+```text
+contentVersion
++ checksum
++ exact pack set
+```
+
+Flutter correctly rejects this condition:
+
+```text
+same contentVersion
++ different manifest checksum
+= CONTENT_VERSION_CHECKSUM_CONFLICT
+```
+
+This means the backend cannot safely return different root bodies/checksums for `ru`, `kk`, etc. under the same `contentVersion` without violating the current Flutter planner.
+
+### Required decision
+
+Choose exactly one model.
+
+### Recommended model — locale-independent root
+
+```text
+RootContentManifest
+= one global immutable snapshot
+= contains canonical + all published locale pack refs
+= checksum independent of the requester's selected translation locale
+```
+
+Flutter then selects/downloads only the locale variant it needs.
+
+Under this model the current `locale` query parameter should either:
+
+- be removed in the next contract revision; or
+- be explicitly declared non-semantic for root identity until removed.
+
+### Alternative model — locale-scoped root
+
+If the backend intentionally returns different root pack sets per locale, then snapshot identity must become locale-scoped:
+
+```text
+(locale, contentVersion, checksum, etag)
+```
+
+That requires changing Flutter durable manifest state, ETag storage, planner invariants and locale-switch recovery.
+
+**Recommendation:** do not choose the alternative for MVP. It adds state-space for little benefit.
+
+### Acceptance
+
+- changing `translationLocale` cannot create checksum conflict for the same immutable root;
+- ETag scope is unambiguous;
+- root checksum has one deterministic meaning;
+- locale-switch offline recovery is tested.
 
 ---
 
-# GAP-01 — PracticeTest is not production-backed
+## BGA-002 — Localized learner payload transport is missing
 
-Severity: **HIGH**
+**Severity:** P0 BLOCKER
 
-Flutter already contains domain models for:
+The product specification says backend-owned locale variants carry:
 
-- `PracticeTest`
-- `PracticeTestSummary`
-- `PracticeQuestion`
-- `PracticeTestMode`
+```text
+translation
+hint
+explanation
+localized title/description/support text
+```
 
-However, production wiring currently uses `UnavailablePracticeTestRepository`.
+But learner API v1 exposes only the canonical content payload endpoint:
 
-Therefore Practice Test is not currently backend-driven and does not participate in the same production content lifecycle as normal learning content.
+```text
+GET /api/v1/content/{contentType}/{contentCode}/revisions/{revision}
+```
 
-## Required backend contract
+and Flutter intentionally fetches no `ContentPayload` for non-canonical pack variants.
 
-Minimum model:
+Therefore a `locale:ru` or `locale:kk` pack can currently exist as metadata, but there is no frozen wire contract that actually delivers the translated support data.
+
+### Required contract
+
+Add an exact immutable localization projection, for example:
+
+```text
+GET /api/v1/content/{type}/{code}/revisions/{revision}/localizations/{locale}
+```
+
+or an equivalent exact pack-localization payload contract.
+
+Minimum identity:
+
+```text
+contentCode
+contentType
+canonicalRevision
+locale
+localizationRevision/checksum
+```
+
+Do not duplicate canonical English/audio in locale payloads.
+
+### Acceptance
+
+- `ru`/`kk` support text is delivered without duplicating canonical English/audio;
+- regional fallback is deterministic (`ru-KZ -> ru -> en` where policy allows);
+- locale payload survives offline/restart;
+- locale replacement cannot mutate canonical content identity.
+
+---
+
+## BGA-003 — Canonical `ContentPayload` is not yet a real learning-domain contract
+
+**Severity:** P0 BLOCKER
+
+The current canonical payload/read model is intentionally generic:
+
+```text
+title
+subtitle
+description
+category
+level
+minutes
+hasAudio
+```
+
+That is sufficient for a production-backed catalog card and generic detail shell, but not for the actual CareerSpeak pedagogy.
+
+The backend still needs typed immutable bodies for at least:
+
+```text
+VOCABULARY
+INTERVIEW
+TOPIC
+PHRASE
+SHADOWING
+```
+
+### Recommended design
+
+Keep shared envelope fields, but add a discriminated typed body rather than a generic EAV/blob.
+
+Conceptually:
+
+```text
+ContentPayload
+├── identity / revision / checksum
+├── shared presentation metadata
+└── body
+    ├── VocabularyBody
+    ├── InterviewBody
+    ├── TopicBody
+    ├── PhraseBody
+    └── ShadowingBody
+```
+
+Examples of domain fields that should be frozen before table design:
+
+```text
+VocabularyBody
+- lemma / display form
+- part-of-speech where required
+- definition / canonical explanation
+- examples
+
+InterviewBody
+- question/prompt
+- model answer
+- key points / guidance
+
+TopicBody
+- structured sections/body
+- learning objectives where required
+
+PhraseBody
+- canonical English phrase
+- usage/examples
+
+ShadowingBody
+- canonical transcript
+- segment boundaries/order
+- optional timing/alignment metadata if product requires it
+```
+
+Do not create one JPA entity that mirrors a future polymorphic REST DTO.
+
+### Acceptance
+
+- every product feature can render real learning material without hardcoded Flutter text;
+- immutable revision/checksum covers the typed body;
+- unsupported body schema fails closed;
+- body design is domain-specific, not EAV.
+
+---
+
+## BGA-004 — PracticeTest / Assessment is not production-backed
+
+**Severity:** P0 BLOCKER
+
+Flutter already has test domain/session behavior, but production composition still has no backend-driven assessment payload path.
+
+Required backend model should separate:
 
 ```text
 PracticeTest
-├── code
-├── revision
-├── title
-├── subtitle
-├── mode
-├── sortOrder
-├── active/published state
-└── questions[]
-      ├── code
-      ├── prompt
-      ├── options[]
-      ├── correctIndex
-      ├── skillCode
-      └── explanation
+PracticeTestRevision
+Question
+QuestionRevision
+TestQuestionRef (exact revision + order)
 ```
 
-Recommended wire separation:
+Wire projections should be separate from persistence entities.
 
-```text
-PracticeTestSummaryDto
-PracticeTestPayloadDto
-PracticeQuestionDto
-```
+Completed attempts must remain reproducible against exact immutable test/question revisions.
 
-The backend entity model does not have to equal the DTO model.
+### Acceptance
 
-## Required Flutter production path
-
-```text
-Backend
-  ↓
-PracticeTest manifest/reference
-  ↓
-PracticeTest payload DTO
-  ↓
-Drift projection
-  ↓
-Production PracticeTestRepository
-  ↓
-PracticeTest / PracticeTestSummary
-  ↓
-UI
-```
-
-## Acceptance criteria
-
-- no production `UnavailablePracticeTestRepository`;
-- no runtime mock test repository;
-- test definitions survive offline/restart after synchronization;
-- exact test revision is reproducible;
-- questions are not hardcoded in Flutter;
-- scoring remains deterministic for an immutable test revision.
+- no production unavailable/mock assessment repository;
+- exact test/question revision survives restart/offline;
+- scoring is deterministic;
+- later edits do not rewrite historical attempts.
 
 ---
 
-# GAP-02 — Taxonomy is embedded, not modeled as a first-class backend catalog
+## BGA-005 — Backend atomic publication snapshot needs a concrete contract
 
-Severity: **MEDIUM / HIGH for future Admin**
+**Severity:** P0 BLOCKER
 
-Today content payload contains:
+Flutter already assumes the root is an immutable, internally consistent publication barrier. Backend must therefore publish it as a transactional domain artifact, not dynamically assemble an unstable view from mutable tables.
+
+### Required invariant
+
+A new learner root becomes visible only after all referenced objects are valid:
 
 ```text
-categoryCode
-categoryLabel
-levelCode
-levelLabel
+content revisions immutable
+pack revisions materialized
+locale revisions materialized
+referenced FileAssets READY/published where required
+checksums calculated
+cross-references validated
 ```
 
-This is acceptable for the current MVP read model, but it becomes limiting once taxonomy must be managed independently.
+Then backend performs one atomic publication decision:
 
-## Recommended backend-owned catalogs
+```text
+allocate monotonic contentVersion
+persist immutable root snapshot
+persist exact pack refs/checksum
+switch current learner-root pointer
+COMMIT
+```
+
+`contentVersion` must never be reused for different root content.
+
+A failed publication attempt must not expose a partial new root.
+
+### Recommended backend aggregate
+
+```text
+PublicationSnapshot
+├── contentVersion
+├── schemaVersion
+├── publishedAt
+├── checksum
+├── packRevisionRefs[]
+└── tombstones[]
+```
+
+The implementation can use tables different from this projection, but the invariant must be first-class.
+
+---
+
+## BGA-006 — Installation token lifecycle and 401 recovery are not frozen
+
+**Severity:** P0 BLOCKER
+
+Registration is described as idempotent, but the following are still ambiguous:
+
+```text
+does re-registration return the same token or rotate it?
+can a token expire?
+can backend revoke it?
+what happens after database restore/token loss?
+what does Flutter do after a legitimate 401?
+```
+
+Flutter bootstrap currently re-registers only when a token is missing. A rejected stored token remains a stored token unless an explicit recovery policy is added.
+
+### Recommended MVP contract
+
+Keep it simple:
+
+- installation token is opaque and long-lived;
+- backend stores only a verifier/hash where practical;
+- `POST /installations` is safe to retry;
+- re-registration for the same installation identity issues/re-establishes one valid current token deterministically;
+- a backend `401` with an installation-credential rejection code causes Flutter to clear only the token, preserve installationId, re-register once, then retry the original safe startup flow;
+- repeated auth failure fails closed rather than loops;
+- registration endpoint is rate-limited.
+
+If token expiry is not needed in MVP, say so explicitly rather than leaving it undefined.
+
+---
+
+## BGA-007 — Taxonomy must become a first-class backend catalog
+
+**Severity:** P1 HIGH
+
+`categoryCode/categoryLabel` and `levelCode/levelLabel` are currently embedded in content payloads. This is acceptable as a projection, not as the authoritative taxonomy model.
+
+Backend needs revisionable catalogs for at least:
 
 ```text
 Category
-├── code
-├── sortOrder
-├── active
-└── localized labels
-
 Level
-├── code
-├── sortOrder
-├── active
-└── localized labels
-
 Skill
-├── code
-├── sortOrder
-├── active
-└── localized labels
 ```
 
-Optional future fields:
+Identity is the stable code; labels are localized presentation.
 
-- parent category / hierarchy;
-- icon/image asset reference;
-- description;
-- visibility rules;
-- product/module applicability.
-
-## Design rule
-
-Flutter may cache taxonomy projections, but taxonomy codes and available values should not be invented as client enums unless they are protocol-level constants.
+Catalog additions/deactivation must not require a Flutter release.
 
 ---
 
-# GAP-03 — Supported locale catalog is hardcoded in Flutter
+## BGA-008 — Locale and learner-facing voice availability need revisioned catalogs
 
-Severity: **MEDIUM**
+**Severity:** P1 HIGH
 
-Flutter currently knows concrete supported values such as:
+Device preference remains local, but product capability is backend-owned.
 
-```text
-en
-ru
-kk
-```
-
-The user choice should remain local, but the product capability catalog should be backend-owned.
-
-## Recommended contract
+Required projections:
 
 ```text
 SupportedLocale
-├── code
-├── displayName
-├── active
-├── uiSupported
-├── translationSupported
-├── contentPackAvailable
-└── fallbackLocaleCode
-```
-
-The exact shape can be simplified initially, but the backend must be able to add/remove availability without requiring a Flutter release.
-
-## Device responsibility
-
-Flutter stores only selections such as:
-
-```text
-selectedUiLocaleCode
-selectedTranslationLocaleCode
-```
-
-and validates/falls back against the current supported catalog.
-
----
-
-# GAP-04 — Accent / TTS voice availability is hardcoded or not yet connected to product catalog
-
-Severity: **HIGH for TTS rollout**
-
-Flutter currently contains concrete accent choices such as:
-
-```text
-en-US
-en-GB
-en-AU
-```
-
-These values are acceptable as stable codes, but the set of available voices, models and capabilities must come from backend catalog data.
-
-This aligns with the planned backend TTS domain:
-
-```text
-tts_voice
-tts_voice_model
-```
-
-## Recommended learner-facing catalog projection
-
-```text
 TtsVoice
-├── code
-├── localeCode
-├── accentCode
-├── displayName
-├── active
-├── defaultForLocale
-├── capabilities[]
-└── model/version metadata as needed by delivery logic
 ```
 
-Flutter should store the selected `voiceCode` / `accentCode`, not own the catalog.
+Do not expose Worker-only storage/model internals to Flutter.
 
-The learner-facing DTO should not expose internal worker/storage details that Flutter does not need.
+Flutter persists stable selected codes and applies deterministic fallback when a catalog choice disappears.
 
 ---
 
-# GAP-05 — Backend entity model must not mirror Flutter DTOs
+## BGA-009 — Avoid two competing learner-delivery protocols
 
-Severity: **ARCHITECTURAL**
+**Severity:** P1 HIGH
 
-The current OpenAPI explicitly represents the wire contract consumed by Flutter. It must not be treated as a persistence schema.
-
-Required separation:
+The retention specification describes learner cursor APIs such as:
 
 ```text
-Persistence Entity
-      ↓
-Domain Aggregate / Service
-      ↓
-API Projection / DTO
-      ↓
-Flutter DTO
-      ↓
-Flutter Domain Read Model
+GET /api/v1/vocabulary?...&cursor=...
 ```
 
-Example:
+but current production Flutter architecture obtains backend truth through:
 
 ```text
-Backend entities:
+root manifest
+→ pack manifest
+→ exact immutable payloads
+→ Drift
+→ local cursor/query repository
+```
+
+The learner OpenAPI currently contains the sync/exact-revision path, not collection-list endpoints.
+
+### Recommendation
+
+For MVP, make the manifest/exact-payload pipeline the only mobile content synchronization source of truth.
+
+Use local Drift for learner catalog browsing/filtering/pagination.
+
+Add remote collection APIs later only for a concrete use case. They must never become deletion evidence or a second independently versioned truth source.
+
+Update the specification to remove ambiguity.
+
+---
+
+## BGA-010 — Sync protocol is N+1 for canonical payloads
+
+**Severity:** P1 HIGH for content growth
+
+For every changed canonical pack Flutter currently fetches each referenced content payload individually.
+
+This is correct and simple for a small MVP, but the contract has no stated limits for:
+
+```text
+contents per pack
+pack manifest size
+payload size
+initial-install request count
+```
+
+### Recommendation
+
+Keep exact single-content endpoints, but define operational limits now and reserve a batch/bundle path, e.g. compressed JSON/NDJSON or immutable pack payload bundle.
+
+Do not wait until a 500-item pack makes first-install sync hundreds of HTTPS requests.
+
+---
+
+## BGA-011 — CDN authorization / entitlement boundary must be explicit
+
+**Severity:** P1 HIGH / PRODUCT RISK
+
+Flutter resolves:
+
+```text
+CAREERSPEAK_CDN_BASE_URL + deliveryKey
+```
+
+Normal learner media bypasses Spring Boot. That is a good scaling decision, but the authorization model is not frozen.
+
+Choose explicitly:
+
+```text
+A. public immutable CDN objects
+B. signed URLs/cookies
+C. another edge authorization mechanism
+```
+
+Given the stated MVP goals (`no DRM`, no learner account, low-price paid app), **public immutable CDN objects are a reasonable MVP choice**, but it must be documented as a deliberate trade-off with rate/cost controls.
+
+Do not imply that the installation token protects media bytes if the CDN does not validate it.
+
+---
+
+## BGA-012 — ADMIN fixed-account security needs operational rules
+
+**Severity:** P1 HIGH
+
+The fixed single ADMIN account is a good MVP simplification. It still needs:
+
+- deployment-managed secret/password hash;
+- strong password hashing policy;
+- login rate limiting / brute-force protection;
+- CSRF;
+- `Secure`, `HttpOnly`, appropriate `SameSite` cookie;
+- idle and absolute session timeout;
+- password/secret rotation procedure;
+- failed-login and privileged-publication audit events;
+- no default credential baked into image/source.
+
+No RBAC platform is needed.
+
+---
+
+## BGA-013 — TTS dedupe and logical audio-slot concurrency must be frozen
+
+**Severity:** P1 HIGH
+
+TTS requirements correctly say identical READY fingerprints SHOULD be reused and replacements must keep old READY audio until new output is READY.
+
+What is still missing is one explicit transactional uniqueness model for concurrent regeneration requests.
+
+Define a logical slot, for example:
+
+```text
+(contentRevisionId, audioRole, learnerVoice/accent selection policy)
+```
+
+and guarantee:
+
+- at most one authoritative current FileAsset per logical slot;
+- duplicate concurrent requests for the same generation fingerprint do not create competing current outputs;
+- replacement pointer switch is atomic;
+- old READY asset remains authoritative until replacement is READY.
+
+---
+
+## BGA-014 — TTS model-config OpenAPI does not model exact bytes correctly
+
+**Severity:** P1 HIGH, small fix
+
+Worker verifies `configSha256` against exact downloaded bytes.
+
+The OpenAPI currently declares the config response as `application/json` with schema `type: string` and a description saying it is raw stored Piper JSON bytes.
+
+That is ambiguous for generators/clients because a JSON `string` is not the same thing as an arbitrary exact JSON document byte sequence.
+
+### Recommendation
+
+Model the response explicitly as exact binary bytes (while retaining a suitable media type) so generated tooling cannot parse/re-serialize and accidentally invalidate the checksum.
+
+---
+
+## BGA-015 — Shared Worker token is an accepted MVP risk, not worker identity
+
+**Severity:** P2 / RISK ACCEPTANCE
+
+Current contract deliberately uses one deployment token. That is acceptable for MVP.
+
+Document clearly:
+
+```text
+WORKER_TOKEN authenticates membership in the worker trust zone.
+workerId is self-asserted operational identity/audit data.
+leaseToken proves one job's temporary ownership.
+```
+
+A compromised shared Worker token compromises the entire Worker API trust zone. Zero-downtime dual-token rotation is explicitly deferred.
+
+No redesign is required unless operational requirements change.
+
+---
+
+## BGA-016 — Freeze checksum canonicalization semantics
+
+**Severity:** P1 HIGH
+
+Assets have clear byte-level SHA-256 semantics. JSON domain objects are less explicit.
+
+Backend must define what is hashed for:
+
+```text
+RootContentManifest.checksum
+PackContentManifest.checksum
+ContentPayload.checksum
+localized payload checksum
+assessment payload checksum
+```
+
+### Recommendation
+
+Use one deterministic canonicalization/fingerprint service per schema family with golden vectors.
+
+The checksum must not depend on:
+
+```text
+JSON property order produced by a serializer
+whitespace
+server locale/timezone formatting
+non-semantic database row order
+```
+
+Whether Flutter recomputes every JSON checksum or treats it as a backend immutable identity is a separate implementation decision; backend publication must still guarantee deterministic checksum generation.
+
+---
+
+## BGA-017 — Tombstone revision meaning needs one sentence of normative semantics
+
+**Severity:** P2 MEDIUM
+
+Flutter retires content by stable business identity `(contentCode, contentType)`, while the tombstone also carries `revision`.
+
+Freeze whether `revision` means:
+
+```text
+last learner-deliverable revision being retired
+```
+
+rather than "delete only this exact local revision".
+
+This matters for republish/reactivation and audit history.
+
+---
+
+## BGA-018 — Learner API rate-limit contract should match Flutter retry behavior
+
+**Severity:** P1 HIGH
+
+Flutter already treats HTTP 429 as retryable, but learner OpenAPI does not define 429 on registration/manifest/payload endpoints and no `Retry-After` behavior is frozen.
+
+Add:
+
+- 429 response contract;
+- optional/required `Retry-After` policy;
+- bounded retry guidance;
+- registration-specific abuse limits.
+
+Flutter should eventually honor server retry hints instead of only fixed exponential delay.
+
+---
+
+## BGA-019 — Observability contract is asymmetric
+
+**Severity:** P1 HIGH
+
+TTS has a strong metric/logging plan. Learner delivery/publication does not yet have an equivalent baseline.
+
+Recommended metrics/events:
+
+```text
+installation_register_total
+installation_auth_rejected_total
+manifest_requests_total
+manifest_304_total
+manifest_publish_total
+manifest_publish_failed_total
+content_payload_requests_total
+publication_content_version
+publication_duration_seconds
+asset_delivery_metadata_errors_total
+admin_login_failed_total
+```
+
+Every API error should correlate through `traceId` without logging credentials.
+
+---
+
+## BGA-020 — Database/object-store recovery contract is missing
+
+**Severity:** P1 HIGH
+
+PostgreSQL is business truth; RustFS stores bytes. Production recovery must define what happens when they are restored independently.
+
+Required invariants:
+
+- no READY FileAsset may remain authoritative if its object is missing after restore;
+- orphan RustFS objects are non-authoritative and reclaimable;
+- restore/reconciliation can rebuild consistency without rewriting immutable IDs;
+- backup retention, RPO and RTO are documented;
+- publication root never references a known-missing required asset.
+
+A periodic reconciliation job/admin command is sufficient for MVP; no distributed storage transaction is required.
+
+---
+
+## BGA-021 — Add consumer-driven contract governance before backend implementation
+
+**Severity:** P1 HIGH
+
+`learner-api-v1.yaml` is already a useful frozen artifact, and Flutter has fixtures/decoder tests. Backend implementation must be prevented from drifting away from it.
+
+Required CI gate:
+
+```text
+OpenAPI schema
++ backend controller contract tests
++ shared representative fixtures
++ Flutter decoder/mapper fixture tests
+```
+
+Breaking changes require explicit contract/schema versioning rather than silent field mutation.
+
+Recommended rule:
+
+```text
+No backend learner API PR is merge-ready if it breaks current Flutter contract fixtures without an intentional versioned migration.
+```
+
+---
+
+## BGA-022 — Anonymous installation does not prove purchase entitlement
+
+**Severity:** RISK ACCEPTANCE
+
+The current model intentionally has no learner account and anonymous registration creates backend-issued installation tokens.
+
+Therefore anyone able to reproduce the registration call can potentially obtain a valid learner API token; the backend has no App Store / Play Store receipt proof in the current contract.
+
+This is not automatically a defect because CareerSpeak explicitly rejects heavy DRM/account infrastructure for MVP.
+
+The product decision must be recorded:
+
+```text
+MVP accepts distribution/storefront as the commercial gate
+and does not enforce server-side purchase entitlement
+```
+
+If abuse becomes material later, add store receipt validation/app attestation as a separate security feature, not by contaminating learner progress identity.
+
+---
+
+# 5. Backend design freeze decision
+
+## Can implementation start now?
+
+### Yes — with limited scope
+
+The following can proceed with low architectural risk:
+
+```text
+project/bootstrap infrastructure
+Spring Security zone separation
+PostgreSQL/Liquibase foundation
+RustFS adapter foundation
+TTS voice/model/job persistence and Worker API implementation
+observability/security plumbing
+```
+
+### Do not freeze yet
+
+Do not freeze final JPA/domain schema for:
+
+```text
 Content
 ContentRevision
-ContentLocalization
-Category
-Level
-FileAsset
-ContentAsset
-ContentPack
-ContentPackEntry
-
-API projection:
-ContentPayloadDto
-PackContentManifestDto
-ManifestAssetDescriptorDto
-```
-
-Do not create a single large backend entity matching `ContentPayloadDto` field-for-field only because Flutter currently consumes that shape.
-
----
-
-# GAP-06 — Stable codes vs labels must remain separated
-
-Severity: **MEDIUM**
-
-Codes are identity. Labels are presentation.
-
-Correct examples:
-
-```text
-categoryCode = INTERVIEW
-categoryLabel = Interview
-
-levelCode = B1
-levelLabel = Intermediate
-```
-
-Backend persistence and references should use stable codes/IDs. Labels may change, localize, or be republished without changing identity.
-
-Avoid using display labels as foreign keys or business identifiers.
-
----
-
-# GAP-07 — Product catalogs must be revisionable/cacheable
-
-Severity: **MEDIUM**
-
-Because Flutter is offline-first, new catalogs should follow the same deterministic synchronization philosophy as content.
-
-At minimum each backend-owned catalog must have one of:
-
-- revision/version;
-- ETag;
-- immutable snapshot version;
-- checksum where integrity matters.
-
-This applies especially to:
-
-- taxonomy;
-- supported locales;
-- voice catalog;
-- practice tests.
-
-The client must be able to recover after restart without rebuilding product data from hardcoded defaults.
-
----
-
-# GAP-08 — No backend ownership for local learner state in P2
-
-Severity: **NONE for current P2; future product decision**
-
-Current learner markers are device-owned:
-
-- favorite;
-- listened;
-- completed;
-- playback position;
-- last revision seen.
-
-This is correct for the current production foundation.
-
-Do not prematurely move this state to the backend merely to centralize data.
-
-A future authenticated multi-device account sync can introduce a separate learner-state synchronization contract. That is a different bounded context and should not contaminate current content contracts.
-
----
-
-# GAP-09 — UI/domain enums must be classified explicitly
-
-Severity: **MEDIUM**
-
-Every enum/code in Flutter should be classified into one of three groups:
-
-### A. Protocol constants
-Stable and shared with backend, for example `ContentType`.
-
-### B. Backend catalog values
-Dynamic product data, for example categories, skills, voices and supported locales.
-
-### C. Device-only values
-Local runtime/UI preferences, for example theme mode.
-
-Do not use Dart enums for category/skill/voice catalogs if the backend is expected to add values independently.
-
----
-
-# Proposed contract completion roadmap
-
-## B0.1 Content / Manifest
-
-Status: **DONE / baseline exists**
-
-Covers:
-
-- installation registration;
-- root manifest;
-- pack manifest;
-- content payload;
-- assets;
-- tombstones;
-- revision/checksum semantics.
-
-## B0.2 PracticeTest contract
-
-Status: **NEXT CONTRACT GAP**
-
-Deliver:
-
-- test summary/payload wire DTOs;
-- question DTO;
-- revision semantics;
-- manifest or discovery relation;
-- Flutter decoder/mapper;
-- Drift projection;
-- production repository.
-
-## B0.3 Taxonomy contract
-
-Deliver:
-
-- Category;
-- Level;
-- Skill;
-- stable codes;
-- localized labels;
-- ordering/active state;
-- versioning strategy.
-
-## B0.4 Locale / Voice catalog
-
-Deliver:
-
-- SupportedLocale;
-- learner-facing TtsVoice catalog;
-- relation to backend `tts_voice` / `tts_voice_model` domain;
-- default/fallback semantics;
-- client selection persistence by stable code.
-
-## B0.5 Backend domain mapping
-
-After B0.1-B0.4 are frozen, design persistence/domain entities independently from wire DTOs.
-
-Suggested backend domain areas:
-
-```text
-ContentCatalog
+Localization
+PublicationSnapshot
+PracticeTest / Question
 Taxonomy
-PracticeTesting
-AssetDelivery
-InstallationIdentity
-TtsCatalog
+learner-facing locale/voice catalogs
 ```
 
-Do not start from database tables alone. Start from aggregate ownership and immutable publication semantics.
+until BGA-001 through BGA-006 are resolved and BGA-007/BGA-008 shapes are agreed.
 
----
-
-# Target architecture
+# 6. Recommended target architecture
 
 ```text
-                    BACKEND
-                       │
-        ┌──────────────┼──────────────┐
-        │              │              │
-        ▼              ▼              ▼
-     Content        Taxonomy       Test/TTS
-     Catalog        Catalog        Catalog
-        │              │              │
-        └──────────────┼──────────────┘
-                       ▼
-                 API DTO / Manifest
-                       │
-                       ▼
+                         BACKEND
+                            │
+       ┌────────────────────┼────────────────────┐
+       │                    │                    │
+       ▼                    ▼                    ▼
+ Content Authoring      Assessment          TTS Catalog/Jobs
+       │                    │                    │
+       └──────────────┬─────┴──────────────┬─────┘
+                      ▼                    ▼
+              Publication Snapshot     FileAsset
+                      │                    │
+                      ├──── exact pack refs
+                      ├──── tombstones
+                      ├──── catalog refs
+                      └──── contentVersion/checksum
+                      │
+                      ▼
+                 Learner API
+                      │
+          root / packs / exact payloads
+                      │
+                      ▼
                     Flutter
-                       │
-                 remote decoder
-                       │
-                       ▼
-                     Drift
-                       │
-                       ▼
-                  Repository
-                       │
-                       ▼
-                       UI
-
-Device-owned side state:
-preferences + learner progress + cache/download/runtime state
+                      │
+                    Drift
+                      │
+                local repositories
 ```
 
----
-
-# Definition of complete Flutter ↔ Backend boundary
-
-The boundary can be considered complete for the current product scope when all of the following are true:
-
-- production learning content is backend-driven;
-- production practice tests are backend-driven;
-- taxonomy values are backend-owned;
-- locale availability is backend-owned;
-- TTS voice availability is backend-owned;
-- Flutter contains no runtime product mocks;
-- Flutter does not hardcode mutable product catalogs;
-- backend API DTOs are explicitly separated from persistence entities;
-- all backend-owned datasets have stable identity and deterministic revision/version semantics;
-- offline/restart reads use local projections without redefining product truth on the device;
-- device-owned preferences and learner progress remain separate from backend product content.
-
----
-
-# Recommended next decision
-
-Before implementing backend persistence entities, freeze B0.2-B0.4 wire/domain ownership contracts.
-
-Recommended order:
+Side channels remain explicit:
 
 ```text
-B0.2 PracticeTest
-      ↓
-B0.3 Taxonomy
-      ↓
-B0.4 Locale / Voice catalog
-      ↓
-Backend aggregate/entity design
-      ↓
-Backend implementation
+ADMIN Browser -> /admin/** session/CSRF
+TTS Worker    -> /internal/v1/tts/** worker token + lease
+Flutter       -> /api/v1/** installation token
+Flutter media -> CDN/edge -> published RustFS origin
 ```
 
-This avoids the most expensive failure mode: building backend tables first and then forcing Flutter contracts to mirror accidental persistence structure.
+# 7. Architectural conclusion
+
+The project should **not** be converted into microservices, Kafka/Rabbit infrastructure, Redis caching, Keycloak, or server-side learner profiles to close these gaps.
+
+The correct next move is contract completion inside the existing modular-monolith architecture.
+
+The largest current risk is not infrastructure scalability. It is freezing backend tables before the product contracts for localization, typed learning bodies, assessment and publication snapshots are complete.
+
+That is cheaper to fix now than after JPA entities, Liquibase migrations, Admin forms and Flutter decoders all depend on the wrong shape.

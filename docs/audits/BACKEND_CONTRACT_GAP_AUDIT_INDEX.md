@@ -1,111 +1,101 @@
 # Backend Contract Gap Audit Index
 
-This index links the current Flutter ↔ Backend contract-gap audit, the supplemental motion findings, and the consolidated remediation roadmap.
+**Branch:** `feat/backend-contract-gap-audit`  
+**Current audited baseline:** `main` @ `52bcda6ac580d13467c8cbfa87befb404820a1e9`
 
-## Primary contract-gap audit
+## Primary system architecture audit
 
 See:
 
 - `docs/backend/FLUTTER_BACKEND_CONTRACT_GAP_AUDIT.md`
 
-Primary backend-owned gaps:
+The current P0 backend-contract blockers are:
 
 ```text
-GAP-01 PracticeTest production contract
-GAP-02 first-class taxonomy catalog
-GAP-03 backend-owned supported locale catalog
-GAP-04 learner-facing TTS voice/accent availability
-GAP-05 backend entities must not mirror Flutter DTOs
-GAP-06 stable codes vs labels separation
-GAP-07 revisionable/cacheable product catalogs
-GAP-08 learner-state ownership boundary
-GAP-09 explicit enum/catalog classification
+BGA-001 root manifest locale identity
+BGA-002 localized payload delivery
+BGA-003 typed learning-content payloads
+BGA-004 production assessment contract
+BGA-005 atomic backend publication snapshot
+BGA-006 installation-token lifecycle / 401 recovery
 ```
 
-## Supplemental UI / Motion boundary audit
+The audit also records P1/P2 hardening for taxonomy, locale/voice catalogs, delivery scalability, media policy, ADMIN security, TTS concurrency, checksum semantics, rate limiting, observability, backup/restore and consumer-driven contract governance.
 
-See:
-
-- `docs/audits/BACKEND_CONTRACT_GAP_AUDIT_MOTION_PLAN.md`
-
-The motion audit records presentation-layer gaps discovered while reviewing the learner application. These findings are tracked here because backend-delivered state must remain render-safe and deterministic, but their remediation belongs exclusively to Flutter presentation infrastructure.
-
-Key motion findings:
-
-```text
-MOTION-GAP-001 centralized motion contract missing
-MOTION-GAP-002 route transitions not explicitly owned
-MOTION-GAP-003 adaptive shell child replacement abrupt
-MOTION-GAP-004 Learn detail-pane replacement abrupt
-MOTION-GAP-005 ContentCard selected state abrupt
-MOTION-GAP-006 favorite feedback missing
-MOTION-GAP-007 learner marker transitions missing
-MOTION-GAP-008 Home stats/progress jump
-MOTION-GAP-009 audio state transitions missing
-MOTION-GAP-010 practice-test transitions abrupt
-MOTION-GAP-011 reduced-motion contract missing
-MOTION-GAP-012 motion must not alter production semantics
-MOTION-GAP-013 avoid unnecessary third-party animation dependencies
-MOTION-GAP-014 Hero transitions premature
-MOTION-GAP-015 Settings motion should remain restrained
-```
-
-## Consolidated remediation roadmap
+## Remediation roadmap
 
 See:
 
 - `docs/backend/FLUTTER_BACKEND_CONTRACT_GAP_REMEDIATION_PLAN.md`
 
-Overall implementation order:
+Recommended contract-completion order:
 
 ```text
-B0.1 Content / Manifest baseline ✅
+C1 Root + localization identity
         ↓
-B0.2 PracticeTest contract
+C2 Typed learning content + catalogs
         ↓
-B0.3 Taxonomy contract
+C3 Assessment
         ↓
-B0.4 Locale / TTS voice catalog
+C4 Publication snapshot
         ↓
-B0.5 Backend aggregate/entity design
+C5 Installation / external security
+        ↓
+Backend aggregate/schema freeze
         ↓
 Backend implementation
-
-P2 production/recovery accepted
-        ↓
-P3.0 Motion contract
-        ↓
-P3.1 Navigation motion
-        ↓
-P3.2 Shared component motion
-        ↓
-P3.3 Learn + content + audio motion
-        ↓
-P3.4 Home motion
-        ↓
-P3.5 Tests + review motion
-        ↓
-P3.6 Motion qualification
 ```
 
-## Non-negotiable boundary
+TTS contract hardening (`C6`) may proceed in parallel because the Worker-facing boundary is already comparatively mature.
 
-Motion must not change:
-- backend API contracts;
-- sync correctness;
-- Drift CURRENT semantics;
-- installation bootstrap;
-- offline/restart recovery;
-- asset verification/repair;
-- audio correctness.
+Production operability / contract governance (`C7`) must be complete before production acceptance.
 
-Motion renders already-resolved state only.
+## Backend readiness decision
 
-## Acceptance policy
+Implementation may already proceed for:
 
-No remediation slice is accepted without its relevant qualification evidence. For Flutter motion slices this includes:
-- reduced-motion coverage;
-- compact/medium/large qualification;
-- full existing production/recovery regression suite;
-- renderer/screenshot evidence where appropriate;
-- exact-SHA green CI.
+```text
+project/bootstrap infrastructure
+security-zone plumbing
+PostgreSQL/Liquibase foundation
+RustFS adapter foundation
+TTS voice/model/job foundation
+observability plumbing
+```
+
+Do **not** freeze final domain/JPA schema yet for:
+
+```text
+Content / ContentRevision
+Localization
+PracticeTest / Question
+PublicationSnapshot
+Taxonomy
+learner-facing locale/voice catalogs
+```
+
+until the P0 contract blockers are resolved.
+
+## Supplemental motion audit — out of backend readiness scope
+
+Historical presentation findings remain in:
+
+- `docs/audits/BACKEND_CONTRACT_GAP_AUDIT_MOTION_PLAN.md`
+
+They are explicitly **not** part of backend contract readiness and must not block backend aggregate design once the backend P0 gaps above are closed.
+
+Motion remains a Flutter presentation concern only.
+
+## Architecture position
+
+The current gaps do not justify microservices, Kafka/RabbitMQ, Redis, Keycloak, an API Gateway or server learner profiles.
+
+The correct remediation is:
+
+```text
+complete contracts
+→ freeze transactional invariants
+→ derive backend aggregates
+→ implement inside the modular monolith
+→ qualify cross-system behavior
+```
