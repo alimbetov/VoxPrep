@@ -7,12 +7,11 @@ import '../ports/audio_playback_engine.dart';
 import '../result/result.dart';
 import 'asset_resolver.dart';
 
-typedef ResolveRoleAudioAsset =
-    Future<Result<ResolvedAsset>> Function(
-      ContentIdentity content,
-      int revision,
-      ContentAudioRole role,
-    );
+typedef ResolveRoleAudioAsset = Future<Result<ResolvedAsset>> Function(
+  ContentIdentity content,
+  int revision,
+  ContentAudioRole role,
+);
 
 final class RoleAudioClipState {
   const RoleAudioClipState({
@@ -197,7 +196,20 @@ final class RoleAudioClipController {
 
   Future<Result<void>> stop() async {
     if (_disposed) return _closedFailure();
-    if (_session == null) return const Success<void>(null);
+    if (_session == null) {
+      if (_state.phase == AudioPlaybackPhase.resolving) {
+        ++_generation;
+        _emit(
+          RoleAudioClipState(
+            phase: AudioPlaybackPhase.stopped,
+            role: _state.role,
+            positionMs: _state.positionMs,
+            durationMs: _state.durationMs,
+          ),
+        );
+      }
+      return const Success<void>(null);
+    }
     final result = await _closeCurrent();
     _emit(
       RoleAudioClipState(
