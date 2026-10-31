@@ -1,4 +1,4 @@
-# C3 exact-SHA qualification trigger 2
+# C3 final accepted-baseline qualification trigger
 name: Flutter Production Adapters
 
 on:
