@@ -13,12 +13,14 @@ const _checksum =
 void main() {
   test('downloads only from signed URL resolved by assetId', () async {
     Uri? requested;
+    bool? followRedirects;
     final access = _AccessGateway([
       Uri.parse('https://media.example.test/signed/a?signature=one'),
     ]);
     final source = HttpAssetByteSource(
       client: MockClient((request) async {
         requested = request.url;
+        followRedirects = request.followRedirects;
         return http.Response.bytes(<int>[1, 2, 3], 200);
       }),
       accessGateway: access,
@@ -31,6 +33,7 @@ void main() {
       requested,
       Uri.parse('https://media.example.test/signed/a?signature=one'),
     );
+    expect(followRedirects, isFalse);
     expect(access.assetIds, ['asset-a']);
   });
 
@@ -77,6 +80,31 @@ void main() {
       'ASSET_DOWNLOAD_REJECTED',
     );
     expect(access.assetIds.length, 2);
+  });
+
+  test('rejects redirects instead of leaving the signed HTTPS origin', () async {
+    final source = HttpAssetByteSource(
+      client: MockClient(
+        (request) async => http.Response(
+          '',
+          302,
+          headers: <String, String>{
+            'location': 'http://untrusted.example.test/asset-a',
+          },
+        ),
+      ),
+      accessGateway: _AccessGateway([
+        Uri.parse('https://media.example.test/signed/a?signature=one'),
+      ]),
+    );
+
+    final result = await source.open(_asset(size: 3));
+
+    expect(result, isA<FailureResult<AssetByteStream>>());
+    expect(
+      (result as FailureResult<AssetByteStream>).failure.code,
+      'ASSET_DOWNLOAD_REJECTED',
+    );
   });
 
   test('maps temporary media-origin failure to retryable failure', () async {
