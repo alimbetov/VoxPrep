@@ -7,6 +7,7 @@ import '../../application/content_delivery/catalogue_revision_ref.dart';
 import '../../application/ports/catalogue_snapshot_repository.dart';
 import '../../application/result/result.dart';
 import 'database/careerspeak_database.dart';
+import 'publication_snapshot_storage.dart';
 
 final class DriftCatalogueSnapshotRepository
     implements CatalogueSnapshotRepository {
@@ -17,6 +18,7 @@ final class DriftCatalogueSnapshotRepository
   @override
   Future<Result<CataloguePayload?>> readCurrent(CatalogueKind kind) async {
     try {
+      await PublicationSnapshotStorage(_database).ensureReady();
       final rows = await _database.customSelect(
         '''
         SELECT
