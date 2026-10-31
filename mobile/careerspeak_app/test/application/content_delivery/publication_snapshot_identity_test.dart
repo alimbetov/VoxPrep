@@ -21,13 +21,13 @@ void main() {
 
     final identity = PublicationSnapshotIdentity.fromRootManifest(
       manifest,
-      etag: '"root-v42"',
+      etag: 'etag-42',
     );
 
     expect(identity.schemaVersion, 1);
     expect(identity.contentVersion, 42);
     expect(identity.checksum, checksumA);
-    expect(identity.etag, '"root-v42"');
+    expect(identity.etag, 'etag-42');
   });
 
   test('same contentVersion and same immutable identity is compatible', () {
@@ -35,13 +35,13 @@ void main() {
       schemaVersion: 1,
       contentVersion: 42,
       checksum: checksumA,
-      etag: '"root-v42"',
+      etag: 'etag-42',
     );
     final incoming = PublicationSnapshotIdentity(
       schemaVersion: 1,
       contentVersion: 42,
       checksum: checksumA,
-      etag: '"root-v42"',
+      etag: 'etag-42',
     );
 
     expect(() => existing.requireCompatibleWith(incoming), returnsNormally);
@@ -53,13 +53,13 @@ void main() {
       schemaVersion: 1,
       contentVersion: 42,
       checksum: checksumA,
-      etag: '"root-v42"',
+      etag: 'etag-42',
     );
     final incoming = PublicationSnapshotIdentity(
       schemaVersion: 1,
       contentVersion: 42,
       checksum: checksumB,
-      etag: '"root-v42"',
+      etag: 'etag-42',
     );
 
     expect(
@@ -73,13 +73,13 @@ void main() {
       schemaVersion: 1,
       contentVersion: 42,
       checksum: checksumA,
-      etag: '"root-v42-a"',
+      etag: 'etag-42-a',
     );
     final incoming = PublicationSnapshotIdentity(
       schemaVersion: 1,
       contentVersion: 42,
       checksum: checksumA,
-      etag: '"root-v42-b"',
+      etag: 'etag-42-b',
     );
 
     expect(
@@ -109,27 +109,35 @@ void main() {
       schemaVersion: 1,
       contentVersion: 42,
       checksum: checksumA,
-      etag: '"root-v42"',
+      etag: 'etag-42',
     );
     final afterTokenRotation = PublicationSnapshotIdentity(
       schemaVersion: 1,
       contentVersion: 42,
       checksum: checksumA,
-      etag: '"root-v42"',
+      etag: 'etag-42',
     );
 
     expect(beforeTokenRotation, afterTokenRotation);
   });
 
-  test('rejects malformed ETag', () {
+  test('rejects blank ETag but preserves opaque nonblank values', () {
     expect(
       () => PublicationSnapshotIdentity(
         schemaVersion: 1,
         contentVersion: 42,
         checksum: checksumA,
-        etag: 'root-v42',
+        etag: '   ',
       ),
       throwsArgumentError,
     );
+
+    final identity = PublicationSnapshotIdentity(
+      schemaVersion: 1,
+      contentVersion: 42,
+      checksum: checksumA,
+      etag: '  etag-42  ',
+    );
+    expect(identity.etag, 'etag-42');
   });
 }
