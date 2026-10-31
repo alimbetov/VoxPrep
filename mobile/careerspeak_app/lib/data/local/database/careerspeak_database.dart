@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'careerspeak_assessment_tables.dart';
 import 'careerspeak_content_read_tables.dart';
 import 'careerspeak_locale_tables.dart';
 import 'careerspeak_retirement_tables.dart';
@@ -29,6 +30,9 @@ part 'careerspeak_database.g.dart';
     ContentCatalogReads,
     TypedContentReads,
     LocalizedContentReads,
+    AssessmentQuestionReads,
+    PracticeTestRevisionReads,
+    PracticeTestQuestionRefs,
     Favorites,
     ContentLearningStates,
   ],
@@ -38,7 +42,7 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
     : super(executor ?? driftDatabase(name: 'careerspeak'));
 
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -157,6 +161,11 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
       }
       if (from < 7) {
         await migrator.createTable(typedContentReads);
+      }
+      if (from < 8) {
+        await migrator.createTable(assessmentQuestionReads);
+        await migrator.createTable(practiceTestRevisionReads);
+        await migrator.createTable(practiceTestQuestionRefs);
       }
     },
     beforeOpen: (details) async {
