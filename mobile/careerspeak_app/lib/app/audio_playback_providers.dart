@@ -55,7 +55,7 @@ final audioPlaybackControllerProvider = Provider<AudioPlaybackController>((
     resolveAudioAsset: (content, revision) async {
       final resolver = await ref.read(assetResolverProvider.future);
       final role = ContentAudioPolicy.primaryRole(content.type);
-      return resolver.resolveContent(
+      return resolver.resolveAudioContent(
         content: content,
         revision: revision,
         role: role.wireName,
@@ -75,7 +75,7 @@ final interviewAudioClipControllerProvider = Provider<RoleAudioClipController>((
   final controller = RoleAudioClipController(
     resolveAudioAsset: (content, revision, role) async {
       final resolver = await ref.read(assetResolverProvider.future);
-      return resolver.resolveContent(
+      return resolver.resolveAudioContent(
         content: content,
         revision: revision,
         role: role.wireName,
