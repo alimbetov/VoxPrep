@@ -1,5 +1,5 @@
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../support/test_database_factory.dart';
@@ -247,9 +247,11 @@ void main() {
           AssetCatalogCompanion.insert(
             assetId: 'audio-1',
             checksumSha256: checksum,
+            assetKind: 'AUDIO',
             deliveryKey: 'audio/java-q-001.mp3',
             sizeBytes: 100,
             mimeType: 'audio/mpeg',
+            createdAt: now,
           ),
         );
 
@@ -262,7 +264,7 @@ void main() {
             contentRevision: 3,
             assetId: 'audio-1',
             assetRole: 'promptAudio',
-            requiredOffline: false,
+            requiredOffline: const Value(false),
           ),
         );
 
@@ -274,7 +276,7 @@ void main() {
             variantKey: 'canonical',
             packRevision: 8,
             assetId: 'audio-1',
-            requiredOffline: false,
+            requiredOffline: const Value(false),
           ),
         );
 
