@@ -510,4 +510,12 @@ const _contentPayload = <String, Object?>{
   'levelLabel': 'Senior',
   'minutes': 8,
   'hasAudio': false,
+  'skillCodes': <String>['COMMUNICATION', 'SYSTEM_DESIGN'],
+  'body': <String, Object?>{
+    'kind': 'interview',
+    'prompt': 'What is dependency injection?',
+    'modelAnswer':
+        'Dependencies are supplied externally rather than created internally.',
+    'keyPoints': <String>['loose coupling', 'testability'],
+  },
 };
