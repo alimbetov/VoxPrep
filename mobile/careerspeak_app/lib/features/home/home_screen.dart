@@ -145,7 +145,7 @@ class _HomeContent extends StatelessWidget {
             ActionChip(
               avatar: const Icon(Icons.school_outlined),
               label: const Text('Learn'),
-              onPressed: () => context.go('/learn'),
+              onPressed: () => context.go('/catalogue'),
             ),
             ActionChip(
               avatar: const Icon(Icons.quiz_outlined),
