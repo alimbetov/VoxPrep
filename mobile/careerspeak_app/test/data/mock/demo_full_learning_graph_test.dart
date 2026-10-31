@@ -12,7 +12,6 @@ import 'package:careerspeak_app/data/mock/demo_assessment_payload_gateway.dart';
 import 'package:careerspeak_app/data/mock/demo_catalogue_payload_gateway.dart';
 import 'package:careerspeak_app/data/mock/demo_content_manifest_gateway.dart';
 import 'package:careerspeak_app/data/mock/demo_content_payload_gateway.dart';
-import 'package:careerspeak_app/data/mock/demo_learning_fixture.dart';
 import 'package:careerspeak_app/data/mock/demo_vertical_catalogue_fixture.dart';
 import 'package:careerspeak_app/data/remote/universal_catalogue_decoder_registry.dart';
 import 'package:careerspeak_app/domain/assessment.dart';
