@@ -11,6 +11,7 @@ import 'app_preferences_providers.dart';
 import 'content_manifest_providers.dart';
 import 'content_payload_providers.dart';
 import 'learner_state_providers.dart';
+import 'localized_content_payload_providers.dart';
 
 final contentSyncPlannerProvider = Provider<ContentSyncPlanner>((ref) {
   return const ContentSyncPlanner();
@@ -25,6 +26,7 @@ final syncPlanExecutorProvider = Provider<SyncPlanExecutor>((ref) {
     ref.watch(careerSpeakDatabaseProvider),
     ref.watch(contentManifestGatewayProvider),
     ref.watch(contentPayloadGatewayProvider),
+    localizedPayloadGateway: ref.watch(localizedContentPayloadGatewayProvider),
   );
 });
 
