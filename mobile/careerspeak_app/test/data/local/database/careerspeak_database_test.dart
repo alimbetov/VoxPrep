@@ -163,7 +163,8 @@ void main() {
             packCode: 'JAVA_SENIOR',
             variantKey: 'canonical',
             targetRevision: 8,
-            targetChecksum: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            targetChecksum:
+                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             state: 'PLANNED',
             updatedAt: now,
           ),
