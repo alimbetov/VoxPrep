@@ -166,6 +166,7 @@ jobs:
 
       - name: T4 repository and storage qualification
         run: |
+          flutter test test/application/typed_asset_resolution_test.dart
           flutter test test/data/local/drift_universal_catalogue_repository_test.dart
           flutter test test/data/local/drift_universal_catalogue_graph_materializer_test.dart
           flutter test test/data/local/drift_catalogue_snapshot_repository_test.dart
