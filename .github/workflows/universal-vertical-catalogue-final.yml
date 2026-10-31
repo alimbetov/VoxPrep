@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: universal-vertical-catalogue-final-${{ github.ref }}
+  group: universal-vertical-catalogue-final-${{ github.sha }}
   cancel-in-progress: true
 
 jobs:
