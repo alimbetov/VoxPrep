@@ -93,8 +93,8 @@ void main() {
           now: () => now.add(const Duration(minutes: 1)),
         );
 
-        final persistedSnapshot =
-            (await restartedJournal.readLocalSnapshot()).getOrThrow();
+        final persistedSnapshot = (await restartedJournal.readLocalSnapshot())
+            .getOrThrow();
         expect(persistedSnapshot.currentContentVersion, 108);
         expect(persistedSnapshot.currentManifestChecksum, _root108);
 
