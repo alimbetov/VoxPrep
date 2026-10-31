@@ -163,13 +163,21 @@ void main() {
       expect(backend.registrationCalls, 1);
       expect(backend.packManifestCalls, 0);
       expect(backend.contentPayloadCalls, 0);
-      await _captureScreenshot(tester, screenshotKey, '01-home-before-sync.png');
+      await _captureScreenshot(
+        tester,
+        screenshotKey,
+        '01-home-before-sync.png',
+      );
 
       manifestGate.complete();
       await _pumpUntil(tester, find.text('Dependency Injection'));
       expect(backend.packManifestCalls, 1);
       expect(backend.contentPayloadCalls, 1);
-      await _captureScreenshot(tester, screenshotKey, '02-home-after-sync.png');
+      await _captureScreenshot(
+        tester,
+        screenshotKey,
+        '02-home-after-sync.png',
+      );
 
       final learnDestination = find.descendant(
         of: find.byType(NavigationBar),
@@ -179,12 +187,23 @@ void main() {
       await tester.tap(learnDestination);
       await _pumpUntil(tester, find.byType(SearchBar));
       expect(find.text('Dependency Injection'), findsOneWidget);
-      await _captureScreenshot(tester, screenshotKey, '03-learn-after-sync.png');
+      await _captureScreenshot(
+        tester,
+        screenshotKey,
+        '03-learn-after-sync.png',
+      );
 
       await tester.tap(find.text('Dependency Injection'));
       await _pumpUntil(tester, find.text('Overview'));
-      expect(find.text('Explain constructor injection and its tradeoffs.'), findsOneWidget);
-      await _captureScreenshot(tester, screenshotKey, '04-detail-after-sync.png');
+      expect(
+        find.text('Explain constructor injection and its tradeoffs.'),
+        findsOneWidget,
+      );
+      await _captureScreenshot(
+        tester,
+        screenshotKey,
+        '04-detail-after-sync.png',
+      );
     },
   );
 }
@@ -296,7 +315,11 @@ Future<void> _pumpUntilCondition(
     );
   }
 
-  expect(condition(), isTrue, reason: 'Timed out waiting for $description.');
+  expect(
+    condition(),
+    isTrue,
+    reason: 'Timed out waiting for $description.',
+  );
 }
 
 Future<void> _captureScreenshot(
@@ -305,7 +328,9 @@ Future<void> _captureScreenshot(
   String fileName,
 ) async {
   await tester.pump();
-  final boundary = tester.renderObject<RenderRepaintBoundary>(find.byKey(key));
+  final boundary = tester.renderObject<RenderRepaintBoundary>(
+    find.byKey(key),
+  );
   final image = await boundary.toImage(pixelRatio: 1);
   final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
   if (byteData == null) {
