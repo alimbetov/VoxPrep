@@ -20,11 +20,13 @@ final contentRepositoryProvider = Provider<ContentRepository>((ref) {
   return DriftContentRepository(ref.watch(careerSpeakDatabaseProvider));
 });
 
-final localizedContentRepositoryProvider = Provider<LocalizedContentRepository>((
-  ref,
-) {
-  return DriftLocalizedContentRepository(ref.watch(careerSpeakDatabaseProvider));
-});
+final localizedContentRepositoryProvider = Provider<LocalizedContentRepository>(
+  (ref) {
+    return DriftLocalizedContentRepository(
+      ref.watch(careerSpeakDatabaseProvider),
+    );
+  },
+);
 
 final practiceTestRepositoryProvider = Provider<PracticeTestRepository>((ref) {
   return const UnavailablePracticeTestRepository();
@@ -43,18 +45,21 @@ final contentByIdentityProvider =
       return (await repository.getByIdentity(identity)).getOrThrow();
     });
 
-final localizedContentProvider = FutureProvider.family<
-  ResolvedLocalizedContent?,
-  LocalizedContentRequest
->((ref, request) async {
-  final preferences = await ref.watch(applicationPreferencesProvider.future);
-  final repository = ref.watch(localizedContentRepositoryProvider);
-  return (await repository.resolve(
-    identity: request.identity,
-    contentRevision: request.contentRevision,
-    requestedLocale: preferences.translationLocale.code,
-  )).getOrThrow();
-});
+final localizedContentProvider =
+    FutureProvider.family<ResolvedLocalizedContent?, LocalizedContentRequest>((
+      ref,
+      request,
+    ) async {
+      final preferences = await ref.watch(
+        applicationPreferencesProvider.future,
+      );
+      final repository = ref.watch(localizedContentRepositoryProvider);
+      return (await repository.resolve(
+        identity: request.identity,
+        contentRevision: request.contentRevision,
+        requestedLocale: preferences.translationLocale.code,
+      )).getOrThrow();
+    });
 
 final practiceTestPageProvider = StreamProvider<Page<PracticeTestSummary>>((
   ref,
