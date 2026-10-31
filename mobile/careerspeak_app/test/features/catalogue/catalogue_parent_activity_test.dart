@@ -22,10 +22,7 @@ void main() {
     await _pump(
       tester,
       _snapshot(verticalActive: false),
-      const CatalogueGoalScreen(
-        verticalCode: 'VERTICAL_A',
-        goalCode: 'GOAL_A',
-      ),
+      const CatalogueGoalScreen(verticalCode: 'VERTICAL_A', goalCode: 'GOAL_A'),
     );
 
     expect(find.text('Learning goal is unavailable.'), findsOneWidget);
@@ -67,22 +64,23 @@ void main() {
     expect(find.text('Collection A'), findsNothing);
   });
 
-  testWidgets('active collection cannot be deep-linked through inactive track', (
-    tester,
-  ) async {
-    await _pump(
-      tester,
-      _snapshot(trackActive: false),
-      const CatalogueCollectionScreen(
-        verticalCode: 'VERTICAL_A',
-        goalCode: 'GOAL_A',
-        trackCode: 'TRACK_A',
-        collectionCode: 'COLLECTION_A',
-      ),
-    );
+  testWidgets(
+    'active collection cannot be deep-linked through inactive track',
+    (tester) async {
+      await _pump(
+        tester,
+        _snapshot(trackActive: false),
+        const CatalogueCollectionScreen(
+          verticalCode: 'VERTICAL_A',
+          goalCode: 'GOAL_A',
+          trackCode: 'TRACK_A',
+          collectionCode: 'COLLECTION_A',
+        ),
+      );
 
-    expect(find.text('Learning collection is unavailable.'), findsOneWidget);
-  });
+      expect(find.text('Learning collection is unavailable.'), findsOneWidget);
+    },
+  );
 
   for (final mode in VerticalCataloguePresentationMode.values) {
     testWidgets('inactive section hides its vertical in ${mode.wireName}', (

@@ -18,7 +18,10 @@ void main() {
 
     expect(find.byType(NavigationBar), findsOneWidget);
     expect(find.byType(NavigationRail), findsNothing);
-    expect(tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex, 1);
+    expect(
+      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
+      1,
+    );
     expect(find.text('Catalogue body'), findsOneWidget);
   });
 
@@ -37,7 +40,10 @@ void main() {
 
     expect(find.byType(NavigationRail), findsOneWidget);
     expect(find.byType(NavigationBar), findsNothing);
-    expect(tester.widget<NavigationRail>(find.byType(NavigationRail)).selectedIndex, 2);
+    expect(
+      tester.widget<NavigationRail>(find.byType(NavigationRail)).selectedIndex,
+      2,
+    );
   });
 
   testWidgets('large width extends the navigation rail', (tester) async {
@@ -86,8 +92,7 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(
         home: CareerSpeakAdaptiveScaffold(
-          location:
-              '/catalogue/vertical/V/goal/G/track/T/collection/C',
+          location: '/catalogue/vertical/V/goal/G/track/T/collection/C',
           child: Text('Collection'),
         ),
       ),
