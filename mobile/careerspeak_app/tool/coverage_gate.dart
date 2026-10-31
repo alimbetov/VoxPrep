@@ -105,7 +105,9 @@ void _writeLedger({
   final buffer = StringBuffer()
     ..writeln('# Production coverage ledger')
     ..writeln()
-    ..writeln('- Overall: **${percent.toStringAsFixed(2)}%** ($totalHit/$totalFound)')
+    ..writeln(
+      '- Overall: **${percent.toStringAsFixed(2)}%** ($totalHit/$totalFound)',
+    )
     ..writeln('- Gate: **${threshold.toStringAsFixed(2)}%**')
     ..writeln('- Production files measured: **${files.length}**')
     ..writeln('- Files below gate: **${belowThreshold.length}**')
@@ -121,7 +123,9 @@ void _writeLedger({
   }
 
   if (belowThreshold.isEmpty) {
-    buffer.writeln('| 100.00% | - | All measured production files satisfy the gate. |');
+    buffer.writeln(
+      '| 100.00% | - | All measured production files satisfy the gate. |',
+    );
   }
 
   output.writeAsStringSync(buffer.toString());
