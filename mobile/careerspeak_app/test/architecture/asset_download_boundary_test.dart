@@ -43,7 +43,8 @@ void main() {
       if (entity is! File || !entity.path.endsWith('.dart')) continue;
       final path = entity.path.replaceAll('\\', '/');
       final source = entity.readAsStringSync();
-      if (source.contains('package:http/') && !allowedHttpImports.contains(path)) {
+      if (source.contains('package:http/') &&
+          !allowedHttpImports.contains(path)) {
         violations.add(path);
       }
     }
