@@ -1,8 +1,8 @@
 # CareerSpeak — Product Requirements Specification
 
-**Document version:** 1.0  
-**Status:** Normative product baseline  
-**Applies to:** CareerSpeak v1 product/domain freeze  
+**Document version:** 1.1  
+**Status:** Normative MVP product baseline  
+**Applies to:** CareerSpeak v1  
 **Target platforms:** Android, iOS
 
 Related normative documents:
@@ -11,90 +11,73 @@ Related normative documents:
 - [`CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md`](CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md)
 - [`CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md`](CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
 - [`../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md`](../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md)
-- [`../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md`](../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md)
 
-The historical expert critique in [`../product/MARKETING_DESIGN_EXPERT_PANEL_REVIEW.md`](../product/MARKETING_DESIGN_EXPERT_PANEL_REVIEW.md) is design input. This document is the normative product decision produced from that audit.
+The expert review in [`../product/MARKETING_DESIGN_EXPERT_PANEL_REVIEW.md`](../product/MARKETING_DESIGN_EXPERT_PANEL_REVIEW.md) is design input. This document contains only the decisions needed for MVP.
 
 ---
 
 ## 1. Product definition
 
-CareerSpeak is an **offline-first English performance coach for international career situations**.
+CareerSpeak is an **offline-first English practice application for international career situations**.
 
-Primary product wedge:
+Primary focus:
 
 ```text
 international job interviews
-+ professional / technical English
+professional / technical English
 ```
 
-IELTS remains a supported, clearly separated learning goal rather than competing with career preparation in the first-touch product message.
+IELTS remains a separate supported goal.
 
-Internal positioning statement:
-
-```text
-CareerSpeak helps non-native professionals practise the English they need
-for interviews, work communication and international career progression
-through structured reading, listening, repetition, testing and review
-that remains usable offline.
-```
-
-The product SHALL NOT present itself primarily as a generic English content catalogue.
+The product is goal-driven, but it must remain simple. MVP SHALL NOT introduce a recommendation engine, learning rules engine, remote UI model, server learner profile or complex curriculum graph.
 
 ---
 
-## 2. Target learner and jobs-to-be-done
+## 2. Target learner
 
 Primary learner:
 
 ```text
 adult non-native English speaker
-preparing for international career opportunities
-roughly B1-C1 working proficiency
-values practical rehearsal over gamification
-may need Russian/Kazakh/other-language support
-may practise while commuting/travelling/offline
+preparing for interviews or professional communication
+roughly B1-C1
+wants practical listening/speaking/test practice
+may use the application offline
 ```
 
 Primary jobs-to-be-done:
 
 ```text
 prepare for a job interview
-explain professional experience clearly
-answer behavioural questions
-practise technical/professional vocabulary
-improve confidence before real work conversations
-prepare for IELTS as a separate goal path
-review weak material efficiently
+practise professional vocabulary and answers
+improve confidence before work conversations
+prepare for IELTS as a separate path
+review weak material
 ```
-
-Product information architecture SHALL be organized around learner outcomes first and implementation content types second.
 
 ---
 
-## 3. Product principles
+## 3. MVP product principles
 
 ```text
-goal-driven, not catalogue-driven
-professional coaching tone
-no mandatory learner account in MVP
-offline-first consumption
-local-first learner intent/progress
+simple goal-based navigation
+professional tone
+no mandatory learner account
+offline-first
+local progress
 real reviewed audio
-structured READ → LISTEN → REPEAT → TEST → REVIEW loop
-multilingual support without changing English as learning language
-low visual noise
-no childish economy/gamification
-one coherent Material Design 3 system
-backend-owned mutable product catalogues
-stable business codes across systems
+READ → LISTEN → REPEAT → TEST → REVIEW
+Material Design 3
+backend owns mutable product/content catalogues
+Flutter owns learner preferences/progress
+no unnecessary infrastructure or domain layers
 ```
 
 ---
 
-## 4. Product hierarchy
+## 4. Minimal product hierarchy
 
-The normative product hierarchy is:
+The MVP hierarchy is intentionally small:
 
 ```text
 LearningGoal
@@ -103,95 +86,79 @@ LearningTrack
     ↓
 LearningCollection
     ↓
-LearningActivity
-    ↓
 Content / PracticeTest
-    ↓
-ReviewSchedule / learner progress
 ```
 
-This hierarchy is independent from technical content types such as `vocabulary`, `interview`, `topic`, `phrase` and `shadowing`.
+No separate backend `LearningActivity` aggregate is required in MVP.
 
-### 4.1 Career taxonomy vs learning taxonomy
-
-The following concepts MUST NOT be collapsed into one entity:
+The learning loop:
 
 ```text
-Profession / CareerTrack
-= what career/professional domain the learner belongs to
+READ → LISTEN → REPEAT → TEST → REVIEW
+```
 
-LearningGoal
-= what outcome the learner is trying to achieve
+is implemented by Flutter using content/test capabilities and local learner state. Backend does not need a workflow engine to describe every pedagogical step.
+
+### Career taxonomy vs learner path
+
+Keep only one important distinction:
+
+```text
+CareerTrack
+= professional domain, e.g. JAVA_BACKEND
 
 LearningTrack
-= curated learning path toward a goal
+= learning path, e.g. JAVA_SENIOR_INTERVIEW
 ```
 
-Example:
-
-```text
-Profession       = SOFTWARE_ENGINEERING
-CareerTrack      = JAVA_BACKEND
-LearningGoal     = TECH_INTERVIEW
-LearningTrack    = JAVA_SENIOR_INTERVIEW
-LearningCollection = BEHAVIORAL_INTERVIEW
-```
+Do not merge them into one entity.
 
 ---
 
 ## 5. Backend-owned product catalogues
 
-Backend is the source of truth for mutable product structure.
-
 ### 5.1 LearningGoal
 
-Minimum logical contract:
+Minimum fields:
 
 ```text
 code
-canonicalTitle
-canonicalDescription
+title
+description
 sortOrder
 active
-optional hero/presentation metadata
 ```
 
-Initial goal codes may include:
+Example codes:
 
 ```text
 JOB_INTERVIEW
 TECH_INTERVIEW
 WORKPLACE_ENGLISH
-MANAGEMENT_INTERVIEW
 IELTS
 ```
 
-These are product data, not permanent Flutter enums.
+These are backend data, not permanent Flutter enums.
 
 ### 5.2 LearningTrack
 
-A `LearningTrack` is a curated path toward one or more goals.
-
-Minimum logical contract:
+Minimum fields:
 
 ```text
 code
 goalCode
 title
-subtitle
 description
 levelCode
-estimatedMinutes
 sortOrder
 active
-collectionRefs[]
 ```
 
-A track MAY additionally reference profession/career/seniority/skill taxonomy.
+A track MAY reference career/profession/seniority taxonomy where useful.
 
 ### 5.3 LearningCollection
 
-A `LearningCollection` groups learning activities around a concrete learner outcome.
+A collection packages content around one practical topic.
 
 Examples:
 
@@ -200,54 +167,27 @@ Tell me about yourself
 Behavioural interview
 System design English
 Meetings and status updates
-Salary and negotiation
 IELTS Speaking Part 2
 ```
 
-Minimum logical contract:
+Minimum fields:
 
 ```text
 code
+trackCode
 title
-subtitle
 description
-goalCode
-levelCode
-estimatedMinutes
 sortOrder
 active
-activityRefs[]
-optional heroAssetId
+contentRefs[]
+practiceTestRefs[]
 ```
 
-### 5.4 LearningActivity
+A collection does not need its own workflow/state machine.
 
-A `LearningActivity` describes the pedagogical action expected from the learner.
+### 5.4 Existing catalogues
 
-Minimum logical contract:
-
-```text
-activityType
-sequence
-required
-contentRef OR practiceTestRef
-```
-
-Initial activity types:
-
-```text
-READ
-LISTEN
-REPEAT
-TEST
-REVIEW
-```
-
-The backend may publish a recommended sequence; Flutter owns runtime execution state.
-
-### 5.5 Taxonomy and capability catalogues
-
-Backend also owns mutable catalogues for:
+Backend also owns:
 
 ```text
 Category
@@ -257,172 +197,113 @@ SupportedLocale
 TtsVoice learner-facing projection
 ```
 
-Stable code is identity; localized labels are presentation.
+Stable code is identity; labels are presentation.
 
 ---
 
-## 6. Device-owned learner intent
+## 6. Device-owned learner state
 
-MVP has no server learner profile.
-
-Flutter stores a local learner-intent projection such as:
+Flutter stores locally:
 
 ```text
 onboardingCompleted
 selectedGoalCode
-selectedTrackCode? 
+selectedTrackCode?
 selfAssessedLevelCode?
 uiLocale
 translationLocale
 preferredAccent / preferredVoiceCode?
+favorites
+listened/completed markers
+review schedule
+test history
 ```
 
-Rules:
+No server learner profile is required in MVP.
 
-```text
-selected codes must come from backend-owned catalogues where applicable
-preferences survive restart
-cache eviction must not erase learner intent
-invalid/deactivated catalogue selections fall back deterministically
-no account is required to choose or change a goal
-```
+Cache cleanup must not erase learner preferences/progress.
 
-A future optional cloud profile may replicate this state, but it must not become product-content source of truth.
+If a selected backend catalogue item becomes inactive, Flutter applies a deterministic fallback without failing startup.
 
 ---
 
 ## 7. First-run onboarding
 
-Onboarding is a product requirement, not an optional decorative screen.
+Onboarding SHALL be short, skippable, account-free and restart-safe.
 
-It SHALL be:
-
-```text
-short
-skippable
-account-free
-restart-safe
-accessible
-```
-
-Recommended first-run questions:
+MVP asks only:
 
 ```text
-1. What are you preparing for?
-   Interview / Workplace / IELTS / other published goal
-
-2. What is your approximate English level?
-   B1 / B2 / C1 / Not sure
-
-3. What support language do you want?
-
-4. Which English accent/voice do you prefer?
-
-5. Download a recommended starter pack?
-   Yes / Later
+1. What are you preparing for?  → LearningGoal
+2. Approximate English level?   → B1 / B2 / C1 / Not sure
+3. Support language?            → published SupportedLocale
 ```
 
-The exact wording is localized UI copy; goal/level/locale/voice availability is backend-owned where mutable.
+Accent/voice and offline download choices belong in normal Settings/Download flows and do not need to lengthen onboarding.
 
-Onboarding MAY be skipped. Skipping SHALL produce deterministic defaults and SHALL NOT block normal browsing.
+Skipping onboarding uses safe defaults and never blocks browsing.
 
 ---
 
-## 8. Home experience
+## 8. Home
 
-Home SHALL prioritize the learner's next useful action rather than database counters.
+Home must answer one question first:
 
-Required information hierarchy:
+> What should I do next?
 
-```text
-1. Next best action / Continue
-2. Current goal or track
-3. Goal/track progress
-4. Due review
-5. Recommended next collection/content
-6. Browse/library shortcuts
-7. Secondary statistics
-```
-
-`Completed`, `Listened` and `Favorites` may be shown, but SHALL NOT dominate the primary Home hierarchy.
-
-A generic `Recommended` section SHALL NOT imply personalization unless a deterministic recommendation basis exists.
-
-MVP recommendation inputs may include:
+MVP hierarchy:
 
 ```text
-selected goal
-selected track
-level
-completion/listening state
-review due state
-published sort/order metadata
+1. Continue last/current item
+2. Current goal/track
+3. Review due
+4. Browse current track / collections
+5. Secondary statistics
 ```
 
-No ML/runtime AI is required.
+No AI/recommendation service is required.
+
+A `Recommended` label is allowed only when it means simple deterministic editorial ordering or continuation based on local progress.
 
 ---
 
-## 9. Learn / discovery experience
+## 9. Learn / discovery
 
-The learner-facing hierarchy SHALL favor outcomes over implementation types.
-
-Recommended structure:
+MVP discovery:
 
 ```text
 Learn
-├── Continue your track
-├── Goals / tracks
-├── Recommended
+├── Current track
 ├── Collections
 ├── Categories
-└── Browse all / Search
+└── Browse / Search
 ```
 
-Technical content types remain valid internal/domain classifications but SHALL NOT be the only discovery model.
+Goals/tracks may be changed from Learn or Settings.
 
-Search and state filters remain available for direct access and power users.
+Technical content types remain internal classifications; they do not have to dominate the learner navigation.
 
 ---
 
-## 10. Learning loop
+## 10. Review semantics
 
-The core loop is normative:
-
-```text
-READ → LISTEN → REPEAT → TEST → REVIEW
-```
-
-A lesson/collection SHOULD make progression visible where the content supports those activities.
-
-Example presentation semantics:
+`Due` has one strict meaning:
 
 ```text
-Read      completed
-Listen    completed
-Repeat    current
-Test      next
-Review    scheduled
+Due = nextReviewAt <= now
 ```
 
-This is not a universal hard-lock sequence. Required/optional activity metadata determines what applies to each learning unit.
+`Not completed` is not `Due`.
 
----
-
-## 11. Review semantics
-
-The label `Due` SHALL be used only for a real deterministic review schedule.
-
-Normative local review state:
+Minimal local review state:
 
 ```text
 nextReviewAt
 reviewStage
-lastReviewedAt
 lastReviewOutcome
 ```
 
-Possible outcomes include:
+Possible outcomes:
 
 ```text
 incorrect
@@ -431,64 +312,50 @@ correct
 known
 ```
 
-Rule:
-
-```text
-Due = nextReviewAt <= now
-```
-
-`Not completed` is a separate learner/content state and MUST NOT be presented as `Due`.
-
-Review scheduling remains device-owned in MVP and must survive restart/cache eviction.
+The interval policy is deterministic and local. No ML/AI scheduler is required.
 
 ---
 
-## 12. Assessment product requirements
+## 11. Assessment
 
-Tests SHALL provide learning feedback, not only a score.
-
-A completed assessment SHOULD communicate:
+Tests provide:
 
 ```text
-score/result
-strong skills
-weak skills
-question explanations
-recommended next learning action
+score
+correct/incorrect answers
+explanations
+skillCode where useful
 ```
 
-Skill identity SHALL use stable backend-owned `skillCode` values rather than free-text names where recommendations depend on skill semantics.
+A complex recommendation engine based on weak skills is not required for MVP.
+
+Flutter may use `skillCode` and current track/collection to show a simple next-practice link.
 
 Historical attempts remain reproducible against exact immutable test/question revisions.
 
 ---
 
-## 13. Audio and speaking practice
+## 12. Audio and speaking practice
 
-Career/interview learners are preparing to perform, not only consume content.
-
-Even without speech recognition, product flows SHOULD support:
+MVP supports:
 
 ```text
 listen
 pause
+seek
+speed
+repeat
 repeat aloud
-change speed
-repeat segment
-compare against model audio
-retry
-continue progress
+segment repeat where content provides segments
 ```
 
-Runtime STT, pronunciation scoring and learner voice upload remain MVP non-goals unless separately approved.
+Runtime STT, pronunciation scoring, learner audio upload and runtime TTS remain non-goals.
 
 ---
 
-## 14. Learner-facing language policy
+## 13. Learner-facing copy
 
-Production learner UI SHALL NOT expose implementation vocabulary.
-
-Forbidden learner-facing concepts include ordinary use of terms such as:
+Production learner UI SHALL NOT expose implementation terminology such as:
 
 ```text
 repository
@@ -497,201 +364,105 @@ persistence
 manifest
 DTO
 qualification
-production adapter
-sync journal
 Drift
 RustFS
 ```
 
-Use learner-benefit/state language instead.
+Use simple learner language.
 
-Examples:
+Raw HTTP/database exceptions SHALL NOT be shown directly.
 
-```text
-Incorrect:
-Assessment catalogue qualified against repository ports.
-
-Correct:
-Practise with short quizzes or timed test sessions.
-
-Incorrect:
-Offline content is managed by production adapters.
-
-Correct:
-Manage lessons saved for offline practice.
-```
-
-Raw transport/database exceptions SHALL never be used as learner-facing copy.
+Empty/error states should explain the problem and provide a safe next action when possible.
 
 ---
 
-## 15. Empty, loading and failure states
-
-Every meaningful empty/error state SHOULD answer:
-
-```text
-what happened
-why it matters
-what the learner can do next
-```
-
-The UI SHALL distinguish at least:
-
-```text
-no published content
-no downloaded content
-no results for current filter
-network unavailable
-sync/update failed
-storage unavailable/full
-```
-
-Where a safe next action exists, provide it.
-
----
-
-## 16. Visual and brand direction
+## 14. Visual direction
 
 Material Design 3 remains the only design system.
 
-CareerSpeak SHALL build a recognizable component layer on top of Material primitives, including where applicable:
+Do not create a large custom component framework before it is needed.
+
+MVP may define a small reusable set:
 
 ```text
-CareerSpeak Learning Card
-Goal / Track Card
-Collection Card
-Audio Practice Card
-Interview Question Card
-Review Card
-Goal Progress block
-CareerSpeak Empty State
-CareerSpeak Status Chip
+Learning Card
+Track/Collection Card
+Audio controls
+Review state
+Empty state
 ```
 
-Desired emotional territory:
+Desired tone:
 
 ```text
-confidence
-clarity
-competence
-progress
-calm preparation
+professional
+calm
+clear
+focused
 ```
 
-Avoid:
-
-```text
-childish mascots
-coins/virtual economy
-competitive pressure
-excessive confetti
-high-noise gamification
-```
-
-Positive reinforcement is allowed when it supports professional coaching tone.
+Avoid childish gamification and visual noise.
 
 ---
 
-## 17. Activation and progress semantics
+## 15. Explicit non-goals for product-domain design
 
-The product SHALL define activation in terms of meaningful learning behavior rather than installation alone.
-
-MVP activation definition:
+Do NOT add in MVP:
 
 ```text
-learner selects/skips onboarding deterministically
-AND completes at least one meaningful learning activity
+LearningActivity backend aggregate
+workflow/rules engine
+recommendation microservice
+AI personalization
+server learner profile
+remote UI JSON schema
+generic EAV content model
+complex achievement/badge economy
+social graph
+leaderboards
+analytics domain model before telemetry is approved
 ```
 
-A meaningful activity is one of:
-
-```text
-qualified audio listen
-content completion
-completed practice test
-completed review
-```
-
-Product progress MAY show:
-
-```text
-track progress
-collection progress
-activities completed
-review due count
-practice time where locally measurable
-```
-
-Server-side learner analytics are not required for MVP. Any future telemetry requires a separate privacy/data contract.
+If future evidence requires one of these, add it as a separate versioned requirement.
 
 ---
 
-## 18. Commercial and trust principles
+## 16. Product acceptance
 
-Initial commercial direction remains:
+MVP product contract is ready when:
 
 ```text
-one-time paid app model
-no ads initially
-no mandatory account
+[ ] career/interview is primary focus; IELTS is a separate goal
+[ ] Goal → Track → Collection → Content/Test is sufficient for navigation
+[ ] CareerTrack and LearningTrack are not conflated
+[ ] backend owns Goal/Track/Collection and mutable catalogues
+[ ] Flutter owns local learner preferences/progress/review
+[ ] onboarding is 3-step, skippable and restart-safe
+[ ] Home starts with Continue/current goal rather than dashboard counters
+[ ] Due means nextReviewAt <= now
+[ ] assessment revisions/answers/explanations are deterministic
+[ ] learner UI contains no engineering implementation language
+[ ] no extra domain/infrastructure layer is introduced without a concrete MVP use case
 ```
-
-Storefront purchase entitlement and media-delivery authorization are separate architecture decisions and must not be falsely represented as learner identity/authentication.
-
-Product copy SHALL not claim stronger privacy/security guarantees than the implementation provides.
 
 ---
 
-## 19. Product acceptance
-
-Product contract freeze requires evidence that:
+## 17. Delivery order
 
 ```text
-[ ] primary positioning is career/interview first; IELTS is a separate goal path
-[ ] LearningGoal is distinct from Profession/CareerTrack
-[ ] LearningTrack is a curated learning path, not a career taxonomy alias
-[ ] LearningCollection and activity ordering are specified
-[ ] backend owns mutable goal/track/collection/taxonomy/capability catalogues
-[ ] Flutter owns local learner intent/progress/review schedule
-[ ] onboarding is skippable and deterministic
-[ ] Home prioritizes next action/current goal before statistics
-[ ] Due is based on nextReviewAt, never merely !completed
-[ ] assessment feedback uses stable skills and explanations
-[ ] learner-facing copy contains no architecture implementation language
-[ ] core READ → LISTEN → REPEAT → TEST → REVIEW loop is representable
-[ ] Material 3 remains the single design system with CareerSpeak branded components
-[ ] product acceptance is reflected in system/domain/mobile requirements
-[ ] learner OpenAPI can be derived without Flutter becoming product source of truth
+PR0  Product ownership + simple hierarchy
+ ↓
+PR1  Goal / Track / Collection contracts
+ ↓
+PR2  typed Content + Assessment contracts
+ ↓
+PR3  localization / taxonomy / voice catalogues
+ ↓
+PR4  publication snapshot + learner OpenAPI
+ ↓
+PR5  backend aggregate/schema freeze
+ ↓
+PR6  Flutter UX alignment and cross-system acceptance
 ```
 
-Product requirements are not considered frozen while these decisions exist only in audit/review documents.
-
----
-
-## 20. Delivery order
-
-Normative product-to-implementation order:
-
-```text
-PR0  Product positioning + ownership freeze
- ↓
-PR1  LearningGoal / LearningTrack / LearningCollection contract
- ↓
-PR2  onboarding + local learner intent
- ↓
-PR3  typed content + LearningActivity contract
- ↓
-PR4  assessment + skill feedback contract
- ↓
-PR5  real review scheduling semantics
- ↓
-PR6  Home / Learn information architecture
- ↓
-PR7  branded Material component qualification
- ↓
-PR8  learner OpenAPI / persistence derivation
- ↓
-PR9  cross-system acceptance
-```
-
-Backend JPA/schema design SHALL be derived after the relevant product/domain contracts are frozen, not by mirroring current Flutter DTO classes.
+Backend JPA/schema is derived after these contracts are frozen. It must not mirror Flutter DTOs blindly.
