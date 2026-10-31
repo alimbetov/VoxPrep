@@ -1,5 +1,7 @@
 import '../../domain/content_identity.dart';
+import '../content_delivery/asset_retention.dart';
 import '../content_delivery/content_manifest.dart';
+import '../ports/asset_cache_retention_repository.dart';
 import '../ports/asset_catalog_repository.dart';
 import '../ports/asset_file_store.dart';
 import '../result/result.dart';
@@ -25,13 +27,20 @@ final class AssetResolver {
     required AssetCatalogRepository catalog,
     required AssetFileStore store,
     required AssetDownloadManager downloads,
-  }) => AssetResolver._(catalog, store, downloads);
+    AssetCacheRetentionRepository? retention,
+  }) => AssetResolver._(catalog, store, downloads, retention);
 
-  AssetResolver._(this._catalog, this._store, this._downloads);
+  AssetResolver._(
+    this._catalog,
+    this._store,
+    this._downloads,
+    this._retention,
+  );
 
   final AssetCatalogRepository _catalog;
   final AssetFileStore _store;
   final AssetDownloadManager _downloads;
+  final AssetCacheRetentionRepository? _retention;
   final _inFlight = <String, Future<Result<AssetDownloadOutcome>>>{};
 
   Future<Result<ResolvedAsset>> resolve(
@@ -91,6 +100,7 @@ final class AssetResolver {
           ),
         );
       }
+      await _recordAutoCacheAccess(asset);
       return Success(_resolved(asset, path));
     }
 
@@ -104,7 +114,20 @@ final class AssetResolver {
       return FailureResult(failure);
     }
     final path = (downloaded as Success<AssetDownloadOutcome>).value.localPath;
+    await _recordAutoCacheAccess(asset);
     return Success(_resolved(asset, path));
+  }
+
+  Future<void> _recordAutoCacheAccess(ManifestAssetDescriptor asset) async {
+    final retention = _retention;
+    if (retention == null) return;
+
+    // Retention bookkeeping must never make an otherwise valid learner asset
+    // unavailable. A failed write only makes cleanup more conservative.
+    await retention.recordAccess(
+      asset: asset,
+      retentionClass: AssetRetentionClass.autoCache,
+    );
   }
 
   static ResolvedAsset _resolved(ManifestAssetDescriptor asset, String path) {
