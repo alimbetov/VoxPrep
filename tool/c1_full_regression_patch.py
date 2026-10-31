@@ -76,6 +76,125 @@ replace_once(
 ''',
 )
 
+# Renderer acceptance must not hold an HTTP request open while taking a PNG.
+# Render the real empty production UI first, then enable ProductionBootstrapHost
+# against the same Drift database and assert that the live query updates.
+replace_once(
+    'mobile/careerspeak_app/test/acceptance/p2_10_7_production_e2e_test.dart',
+    '''      final manifestGate = Completer<void>();
+      final backend = _LearnerApiFixture(rootManifestGate: manifestGate);
+      final client = MockClient(backend.handle);
+      addTearDown(database.close);
+      addTearDown(client.close);
+
+      const screenshotKey = Key('production-e2e-screenshot');
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            careerSpeakDatabaseProvider.overrideWithValue(database),
+            installationCredentialStoreProvider.overrideWithValue(
+              credentialStore,
+            ),
+            httpClientProvider.overrideWithValue(client),
+            apiBaseUriProvider.overrideWithValue(
+              Uri.parse('https://api.careerspeak.test'),
+            ),
+          ],
+          child: const RepaintBoundary(
+            key: screenshotKey,
+            child: ProductionBootstrapHost(child: CareerSpeakApp()),
+          ),
+        ),
+      );
+
+      expect(find.byKey(screenshotKey), findsOneWidget);
+      expect(find.text('Dependency Injection'), findsNothing);
+      await _pumpUntilCondition(
+        tester,
+        () => backend.rootManifestCalls == 1,
+        'root manifest request',
+      );
+      expect(backend.registrationCalls, 1);
+      expect(backend.packManifestCalls, 0);
+      expect(backend.contentPayloadCalls, 0);
+      await _captureScreenshot(
+        tester,
+        screenshotKey,
+        '01-home-before-sync.png',
+      );
+
+      manifestGate.complete();
+      await _pumpUntil(tester, find.text('Dependency Injection'));
+      expect(backend.packManifestCalls, 1);
+      expect(backend.contentPayloadCalls, 1);
+''',
+    '''      final backend = _LearnerApiFixture();
+      final client = MockClient(backend.handle);
+      addTearDown(database.close);
+      addTearDown(client.close);
+
+      const screenshotKey = Key('production-e2e-screenshot');
+      ProviderScope buildApp({required bool bootstrap}) => ProviderScope(
+        overrides: [
+          careerSpeakDatabaseProvider.overrideWithValue(database),
+          installationCredentialStoreProvider.overrideWithValue(
+            credentialStore,
+          ),
+          httpClientProvider.overrideWithValue(client),
+          apiBaseUriProvider.overrideWithValue(
+            Uri.parse('https://api.careerspeak.test'),
+          ),
+        ],
+        child: RepaintBoundary(
+          key: screenshotKey,
+          child: bootstrap
+              ? const ProductionBootstrapHost(child: CareerSpeakApp())
+              : const CareerSpeakApp(),
+        ),
+      );
+
+      await tester.pumpWidget(buildApp(bootstrap: false));
+      expect(find.byKey(screenshotKey), findsOneWidget);
+      expect(find.text('Dependency Injection'), findsNothing);
+      expect(backend.registrationCalls, 0);
+      expect(backend.rootManifestCalls, 0);
+      expect(backend.packManifestCalls, 0);
+      expect(backend.contentPayloadCalls, 0);
+      await _captureScreenshot(
+        tester,
+        screenshotKey,
+        '01-home-before-sync.png',
+      );
+
+      await tester.pumpWidget(buildApp(bootstrap: true));
+      await _pumpUntil(tester, find.text('Dependency Injection'));
+      expect(backend.registrationCalls, 1);
+      expect(backend.rootManifestCalls, 1);
+      expect(backend.packManifestCalls, 1);
+      expect(backend.contentPayloadCalls, 1);
+''',
+)
+replace_once(
+    'mobile/careerspeak_app/test/acceptance/p2_10_7_production_e2e_test.dart',
+    '''      await _captureScreenshot(
+        tester,
+        screenshotKey,
+        '04-detail-after-sync.png',
+      );
+''',
+    '''      await _captureScreenshot(
+        tester,
+        screenshotKey,
+        '04-detail-after-sync.png',
+      );
+
+      // Dispose ProviderScope and its Drift subscriptions before closing the
+      // database in tearDown. This also proves the E2E owns no dangling work.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+''',
+)
+
 # Recovery fixtures use canonical packs. Canonical packs explicitly carry an
 # empty localization-ref collection under the hardened pack contract.
 replace_once(
