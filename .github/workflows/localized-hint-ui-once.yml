@@ -1,0 +1,62 @@
+name: Localized Hint UI Once
+
+on:
+  push:
+    branches:
+      - feat/universal-vertical-catalogue
+    paths:
+      - '.github/workflows/localized-hint-ui-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - name: Add optional localized hint popup
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('mobile/careerspeak_app/lib/features/content/content_detail_panel.dart')
+          text = path.read_text()
+
+          old_ctor = """class ContentDetailPanel extends ConsumerWidget {\n  const ContentDetailPanel({required this.item, super.key});\n\n  final ContentItem item;\n"""
+          new_ctor = """class ContentDetailPanel extends ConsumerWidget {\n  const ContentDetailPanel({\n    required this.item,\n    this.localizedHint,\n    super.key,\n  });\n\n  final ContentItem item;\n  final String? localizedHint;\n"""
+          if old_ctor not in text:
+              raise SystemExit('ContentDetailPanel constructor target missing')
+          text = text.replace(old_ctor, new_ctor, 1)
+
+          old_overview = """        const SizedBox(height: 32),\n        Text('Overview', style: Theme.of(context).textTheme.titleLarge),\n        const SizedBox(height: 8),\n        Text(item.description, style: Theme.of(context).textTheme.bodyLarge),\n"""
+          new_overview = """        const SizedBox(height: 32),\n        Row(\n          children: [\n            Expanded(\n              child: Text(\n                'Overview',\n                style: Theme.of(context).textTheme.titleLarge,\n              ),\n            ),\n            if (localizedHint case final hint?)\n              IconButton.filledTonal(\n                tooltip: 'Hint',\n                onPressed: () => _showLocalizedHint(context, hint),\n                icon: const Icon(Icons.lightbulb_outline),\n              ),\n          ],\n        ),\n        const SizedBox(height: 8),\n        Text(item.description, style: Theme.of(context).textTheme.bodyLarge),\n"""
+          if old_overview not in text:
+              raise SystemExit('Overview target missing')
+          text = text.replace(old_overview, new_overview, 1)
+
+          helper_anchor = "\nString _formatDuration(int milliseconds) {"
+          helper = """\nFuture<void> _showLocalizedHint(BuildContext context, String hint) {\n  return showDialog<void>(\n    context: context,\n    builder: (context) => AlertDialog(\n      title: const Text('Hint'),\n      content: SelectableText(hint),\n      actions: [\n        TextButton(\n          onPressed: () => Navigator.of(context).pop(),\n          child: const Text('Close'),\n        ),\n      ],\n    ),\n  );\n}\n\nString _formatDuration(int milliseconds) {"""
+          if helper_anchor not in text:
+              raise SystemExit('duration helper anchor missing')
+          text = text.replace(helper_anchor, helper, 1)
+
+          path.write_text(text)
+          PY
+      - name: Format
+        working-directory: mobile/careerspeak_app
+        run: dart format lib/features/content/content_detail_panel.dart
+      - name: Commit
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mobile/careerspeak_app/lib/features/content/content_detail_panel.dart
+          git commit -m 'feat(localization): show optional localized hint popup'
+          git push origin HEAD:${GITHUB_REF_NAME}
