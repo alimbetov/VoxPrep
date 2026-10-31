@@ -63,7 +63,9 @@ final class HttpMediaAccessGateway implements MediaAccessGateway {
           urlValue is! String ||
           expiresAtValue is! String ||
           responseAssetId != normalizedAssetId) {
-        throw const FormatException('response identity or field types are invalid');
+        throw const FormatException(
+          'response identity or field types are invalid',
+        );
       }
       final url = Uri.tryParse(urlValue);
       final expiresAt = DateTime.tryParse(expiresAtValue);
