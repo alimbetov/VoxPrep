@@ -2,7 +2,7 @@
 
 **Status:** IMPLEMENTING  
 **Baseline:** C2 accepted at `92a8a2e01575869b8f94ec874a6d77b0cc7fee16`  
-**Normative component contract:** `contracts/c3-assessment-v1.yaml`
+**Normative contract:** `contracts/c3-assessment-v1.yaml`
 
 ## Scope
 
@@ -72,7 +72,20 @@ exact QuestionRevision identity
 points
 ```
 
-Question order is contiguous from zero. The same exact question revision cannot appear twice in one test revision.
+`questionRefs[]` array order is semantic and checksum-covered. The array must already be contiguous `0..N-1`; Flutter never sorts or repairs it. The same `questionCode + revision` cannot occur twice, even with different checksums.
+
+## Exact payload delivery
+
+C3 owns exact immutable assessment payload delivery:
+
+```text
+GET /api/v1/assessment/practice-tests/{practiceTestCode}/revisions/{revision}
+GET /api/v1/assessment/questions/{questionCode}/revisions/{revision}
+```
+
+The expected checksum comes from the exact immutable ref and is verified against the response. A same-code/same-revision payload with another checksum is an integrity mismatch and fails closed.
+
+C4 still owns **publication membership**: which exact `PracticeTestRevision` is current/referenced by a published collection/root. C3 does not add a competing mutable assessment-list endpoint.
 
 ## Deterministic scoring
 
@@ -89,12 +102,12 @@ The result uses integer floor division. No floating-point rounding is part of th
 Rules:
 
 ```text
-missing answer                 = incorrect / zero points
-answer outside option set      = fail closed
-answer for unknown order       = fail closed
-missing exact QuestionRevision = fail closed
-newer QuestionRevision         != old referenced revision
-passed                         = scoreBasisPoints >= passingScoreBasisPoints
+missing answer                    = incorrect / zero points
+answer outside option set         = fail closed
+answer for unknown order          = fail closed
+Missing exact `QuestionRevision`  = fail closed
+newer QuestionRevision            != old referenced revision
+passed                            = scoreBasisPoints >= passingScoreBasisPoints
 ```
 
 A completed historical attempt can therefore be reproduced from the exact `PracticeTestRevision`, exact referenced `QuestionRevision` set and captured answers.
@@ -106,11 +119,11 @@ C3 immutable projections use the C2 RFC 8785 / SHA-256 canonicalization rule. A 
 ## Implementation slices
 
 ```text
-C3.1 PracticeTest / PracticeTestRevision contract       IMPLEMENTING
-C3.2 Question / QuestionRevision typed body            IMPLEMENTING
-C3.3 exact ordered TestQuestionRef                      IMPLEMENTING
-C3.4 deterministic scoring                             IMPLEMENTING
-C3.5 production decoder/gateway                        PENDING
+C3.1 PracticeTest / PracticeTestRevision contract       IMPLEMENTED
+C3.2 Question / QuestionRevision typed body            IMPLEMENTED
+C3.3 exact ordered TestQuestionRef                      IMPLEMENTED
+C3.4 deterministic scoring                             IMPLEMENTED
+C3.5 production decoder/gateway                        IMPLEMENTING
 C3.6 Drift assessment persistence                      PENDING
 C3.7 offline/restart reproducibility                    PENDING
 C3.8 adversarial qualification                          PENDING
@@ -119,14 +132,15 @@ C3.9 exact-SHA full production CI                       PENDING
 
 ## Acceptance direction
 
-C3 is not accepted until production delivery and persistence prove:
+C3 is not accepted until exact production assessment delivery and persistence prove:
 
 ```text
 exact test/question revisions survive restart/offline
 scoring is reproducible after newer revisions are published
 unsupported/malformed assessment payloads fail closed
-production repository no longer uses unavailable/mock assessment source
+same logical revision with conflicting checksum fails closed
+production exact-revision reads do not depend on mock assessment objects
 full exact-SHA production CI is green
 ```
 
-Endpoint/publication composition remains C4. C3 freezes the component semantics first so backend assessment tables are derived from domain invariants rather than from the current Flutter mock objects.
+The legacy `PracticeTestRepository` list/current projection is intentionally not forced into C3. Its current-membership source is publication metadata and therefore belongs to C4. C3 instead creates the production exact-revision boundary that C4 will compose into the learner-visible assessment catalogue.

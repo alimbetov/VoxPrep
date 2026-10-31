@@ -1,13 +1,89 @@
 openapi: 3.1.0
 info:
-  title: CareerSpeak C3 Assessment Components
-  version: 0.1.0
+  title: CareerSpeak C3 Assessment API
+  version: 0.2.0
   description: >-
-    Normative C3 component contract for immutable practice-test revisions,
-    immutable question revisions, exact ordered membership and deterministic
-    scoring. Endpoint/publication wiring remains C4.
-paths: {}
+    Normative C3 contract for immutable practice-test revisions, immutable
+    question revisions, exact ordered membership and deterministic scoring.
+    C3 owns exact assessment payload delivery. Publication membership and atomic
+    root composition remain C4.
+
+paths:
+  /api/v1/assessment/practice-tests/{practiceTestCode}/revisions/{revision}:
+    get:
+      operationId: getPracticeTestRevision
+      security:
+        - installationBearer: []
+      parameters:
+        - name: practiceTestCode
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/BusinessCode'
+        - name: revision
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/PositiveRevision'
+      responses:
+        '200':
+          description: Exact immutable practice-test revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PracticeTestRevision'
+        '400':
+          description: Invalid exact revision request.
+        '401':
+          description: Installation credential rejected.
+        '403':
+          description: Installation is not allowed to access the payload.
+        '404':
+          description: Exact practice-test revision does not exist.
+        '500':
+          description: Server failure.
+
+  /api/v1/assessment/questions/{questionCode}/revisions/{revision}:
+    get:
+      operationId: getQuestionRevision
+      security:
+        - installationBearer: []
+      parameters:
+        - name: questionCode
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/BusinessCode'
+        - name: revision
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/PositiveRevision'
+      responses:
+        '200':
+          description: Exact immutable question revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QuestionRevision'
+        '400':
+          description: Invalid exact revision request.
+        '401':
+          description: Installation credential rejected.
+        '403':
+          description: Installation is not allowed to access the payload.
+        '404':
+          description: Exact question revision does not exist.
+        '500':
+          description: Server failure.
+
 components:
+  securitySchemes:
+    installationBearer:
+      type: http
+      scheme: bearer
+      description: Opaque backend-issued installation token.
+
   schemas:
     BusinessCode:
       type: string
@@ -151,6 +227,9 @@ components:
         questionRefs:
           type: array
           minItems: 1
+          description: >-
+            Array order is semantic and must match each item's contiguous order
+            field starting at zero. Flutter must not sort or normalize this array.
           items:
             $ref: '#/components/schemas/TestQuestionRef'
 

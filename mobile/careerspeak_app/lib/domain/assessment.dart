@@ -7,11 +7,11 @@ final class QuestionRevisionId {
     required String checksum,
   }) {
     final normalizedCode = questionCode.trim();
-    if (normalizedCode.isEmpty) {
+    if (!_businessCodePattern.hasMatch(normalizedCode)) {
       throw ArgumentError.value(
         questionCode,
         'questionCode',
-        'must not be blank',
+        'must be a stable business code',
       );
     }
     if (revision < 1) {
@@ -65,7 +65,14 @@ final class SingleChoiceQuestionBody extends AssessmentQuestionBody {
     required String explanation,
   }) {
     final normalizedPrompt = _nonBlank(prompt, 'prompt');
-    final normalizedSkillCode = _nonBlank(skillCode, 'skillCode');
+    final normalizedSkillCode = skillCode.trim();
+    if (!_stableCodePattern.hasMatch(normalizedSkillCode)) {
+      throw ArgumentError.value(
+        skillCode,
+        'skillCode',
+        'must be an uppercase stable code',
+      );
+    }
     final normalizedExplanation = _nonBlank(explanation, 'explanation');
     final normalizedOptions = options
         .map((option) => _nonBlank(option, 'options'))
@@ -164,7 +171,14 @@ final class PracticeTestRevision {
     required int passingScoreBasisPoints,
     required Iterable<PracticeTestQuestionRef> questionRefs,
   }) {
-    final normalizedCode = _nonBlank(practiceTestCode, 'practiceTestCode');
+    final normalizedCode = practiceTestCode.trim();
+    if (!_businessCodePattern.hasMatch(normalizedCode)) {
+      throw ArgumentError.value(
+        practiceTestCode,
+        'practiceTestCode',
+        'must be a stable business code',
+      );
+    }
     if (revision < 1) {
       throw ArgumentError.value(revision, 'revision', 'must be positive');
     }
@@ -183,8 +197,7 @@ final class PracticeTestRevision {
       );
     }
 
-    final refs = questionRefs.toList(growable: false)
-      ..sort((left, right) => left.order.compareTo(right.order));
+    final refs = questionRefs.toList(growable: false);
     if (refs.isEmpty) {
       throw ArgumentError.value(
         questionRefs,
@@ -192,22 +205,23 @@ final class PracticeTestRevision {
         'must not be empty',
       );
     }
+    final revisionKeys = <String>{};
     for (var index = 0; index < refs.length; index++) {
-      if (refs[index].order != index) {
+      final ref = refs[index];
+      if (ref.order != index) {
         throw ArgumentError.value(
           questionRefs,
           'questionRefs',
-          'orders must be contiguous starting at zero',
+          'array order must match contiguous order starting at zero',
         );
       }
-    }
-    final identities = refs.map((ref) => ref.question).toSet();
-    if (identities.length != refs.length) {
-      throw ArgumentError.value(
-        questionRefs,
-        'questionRefs',
-        'must not repeat an exact question revision',
-      );
+      if (!revisionKeys.add(_questionRevisionKey(ref.question))) {
+        throw ArgumentError.value(
+          questionRefs,
+          'questionRefs',
+          'must not repeat a question code and revision',
+        );
+      }
     }
 
     return PracticeTestRevision._(
@@ -270,14 +284,16 @@ final class AssessmentScorer {
     required Map<int, int> answersByOrder,
   }) {
     final byIdentity = <QuestionRevisionId, AssessmentQuestionRevision>{};
+    final revisionKeys = <String>{};
     for (final question in questions) {
-      if (byIdentity.putIfAbsent(question.id, () => question) != question) {
+      if (!revisionKeys.add(_questionRevisionKey(question.id))) {
         throw ArgumentError.value(
           question.id,
           'questions',
-          'contains duplicate exact question revisions',
+          'contains duplicate question code and revision',
         );
       }
+      byIdentity[question.id] = question;
     }
 
     final validOrders = test.questionRefs.map((ref) => ref.order).toSet();
@@ -338,7 +354,12 @@ final class AssessmentScorer {
   }
 }
 
+final _businessCodePattern = RegExp(r'^[A-Za-z0-9][A-Za-z0-9._-]*$');
+final _stableCodePattern = RegExp(r'^[A-Z0-9][A-Z0-9._-]*$');
 final _sha256Pattern = RegExp(r'^[0-9a-f]{64}$');
+
+String _questionRevisionKey(QuestionRevisionId id) =>
+    '${id.questionCode}\u0000${id.revision}';
 
 String _nonBlank(String value, String name) {
   final normalized = value.trim();

@@ -9,7 +9,7 @@ const _testChecksum =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 void main() {
-  test('test revision freezes contiguous ordered exact question refs', () {
+  test('test revision preserves contiguous ordered exact question refs', () {
     final q1 = QuestionRevisionId(
       questionCode: 'Q1',
       revision: 1,
@@ -30,8 +30,8 @@ void main() {
       mode: AssessmentMode.exam,
       passingScoreBasisPoints: 7500,
       questionRefs: [
-        PracticeTestQuestionRef(order: 1, question: q2, points: 2),
         PracticeTestQuestionRef(order: 0, question: q1, points: 1),
+        PracticeTestQuestionRef(order: 1, question: q2, points: 2),
       ],
     );
 
@@ -39,11 +39,16 @@ void main() {
     expect(testRevision.questionRefs[1].question.revision, 3);
   });
 
-  test('non-contiguous question order fails closed', () {
+  test('wire order permutation fails closed instead of being normalized', () {
     final q1 = QuestionRevisionId(
       questionCode: 'Q1',
       revision: 1,
       checksum: _q1Checksum,
+    );
+    final q2 = QuestionRevisionId(
+      questionCode: 'Q2',
+      revision: 1,
+      checksum: _q2Checksum,
     );
 
     expect(
@@ -56,7 +61,38 @@ void main() {
         mode: AssessmentMode.quick,
         passingScoreBasisPoints: 5000,
         questionRefs: [
-          PracticeTestQuestionRef(order: 1, question: q1, points: 1),
+          PracticeTestQuestionRef(order: 1, question: q2, points: 1),
+          PracticeTestQuestionRef(order: 0, question: q1, points: 1),
+        ],
+      ),
+      throwsArgumentError,
+    );
+  });
+
+  test('same question code and revision cannot carry two checksums', () {
+    final q1a = QuestionRevisionId(
+      questionCode: 'Q1',
+      revision: 1,
+      checksum: _q1Checksum,
+    );
+    final q1b = QuestionRevisionId(
+      questionCode: 'Q1',
+      revision: 1,
+      checksum: _q2Checksum,
+    );
+
+    expect(
+      () => PracticeTestRevision(
+        practiceTestCode: 'CONFLICT',
+        revision: 1,
+        checksum: _testChecksum,
+        title: 'Conflict',
+        subtitle: 'Checksum conflict',
+        mode: AssessmentMode.exam,
+        passingScoreBasisPoints: 5000,
+        questionRefs: [
+          PracticeTestQuestionRef(order: 0, question: q1a, points: 1),
+          PracticeTestQuestionRef(order: 1, question: q1b, points: 1),
         ],
       ),
       throwsArgumentError,
