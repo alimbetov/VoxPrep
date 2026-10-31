@@ -1,0 +1,48 @@
+name: Backend Contract Gap C1.4 Commit
+
+on:
+  push:
+    branches: [feat/backend-contract-gap-audit]
+    paths: ['.github/workflows/backend-contract-gap-c1-4-commit.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  commit-qualified-c1-4:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - working-directory: mobile/careerspeak_app
+        run: flutter pub get
+      - run: |
+          python3 tool/c1_4_patch.py
+          python3 tool/c1_4_fix.py
+      - working-directory: mobile/careerspeak_app
+        run: |
+          mapfile -t dart_files < <(find lib test -type f -name '*.dart' ! -name '*.g.dart' ! -path 'test/generated_migrations/*' -print)
+          dart format "${dart_files[@]}"
+          dart run build_runner build --delete-conflicting-outputs
+          dart run drift_dev schema dump lib/data/local/database/careerspeak_database.dart drift_schemas/drift_schema_v5.json
+          rm -rf test/generated_migrations
+          dart run drift_dev schema generate --data-classes --companions drift_schemas/ test/generated_migrations/
+          flutter analyze
+          flutter test test/data/remote/localized_content_payload_decoder_test.dart
+          flutter test test/data/remote/http_localized_content_payload_gateway_test.dart
+          flutter test test/data/local/database/careerspeak_database_test.dart
+          flutter test test/data/local/drift_sync_plan_executor_test.dart
+          flutter test test/contracts/openapi_contract_baseline_test.dart
+      - name: Commit verified implementation
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/flutter-production-adapters.yml mobile/careerspeak_app/lib mobile/careerspeak_app/test mobile/careerspeak_app/drift_schemas
+          git commit -m 'feat(c1): persist exact localized payloads in Drift'
+          git push origin HEAD:feat/backend-contract-gap-audit
