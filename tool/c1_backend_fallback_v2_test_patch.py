@@ -46,6 +46,13 @@ repo_test = Path(
 )
 text = repo_test.read_text()
 text = text.replace(
+    "import 'package:careerspeak_app/application/content_delivery/locale_fallback.dart';\n",
+    """import 'package:careerspeak_app/application/content_delivery/locale_fallback.dart';
+import 'package:careerspeak_app/application/content_delivery/localized_content_resolution.dart';
+""",
+    1,
+)
+text = text.replace(
     "test('exact locale overlays language fallback field by field', () async {\n    await _seedLocalization(",
     """test('exact locale overlays configured fallback field by field', () async {
     await _seedFallbackRule(
@@ -71,6 +78,14 @@ text = text.replace(
     1,
 )
 text = text.replace('LocaleFallbackKind.language', 'LocaleFallbackKind.configured')
+text = text.replace(
+    'isA<FailureResult>()',
+    'isA<FailureResult<ResolvedLocalizedContent?>>()',
+)
+text = text.replace(
+    '(result as FailureResult).failure.code',
+    '(result as FailureResult<ResolvedLocalizedContent?>).failure.code',
+)
 helper_anchor = 'Future<void> _seedLocalization(\n'
 helper = '''Future<void> _seedFallbackRule(
   CareerSpeakDatabase database, {
@@ -184,10 +199,9 @@ persistence = Path(
 )
 text = persistence.read_text()
 text = text.replace('database.rootLocaleFallbacks', 'database.localeFallbackRules')
-text = text.replace('row.contentVersion.equals(120)', 'row.sourceContentVersion.equals(120)')
-text = text.replace('row.position', 'row.fallbackOrder')
 text = text.replace(
-    "expect(fallbackRows.map((row) => row.locale).toSet(), <String>{'ru-KZ'});",
-    "expect(fallbackRows.map((row) => row.locale).toSet(), <String>{'ru-KZ'});",
+    'row.contentVersion.equals(120)',
+    'row.sourceContentVersion.equals(120)',
 )
+text = text.replace('row.position', 'row.fallbackOrder')
 persistence.write_text(text)
