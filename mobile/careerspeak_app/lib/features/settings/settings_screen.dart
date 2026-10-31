@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/app_preferences_providers.dart';
 import '../../app/mock_visual_preferences.dart';
 import '../../domain/application_preferences.dart';
+import 'catalogue_source_settings_tile.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -23,6 +24,10 @@ class SettingsScreen extends ConsumerWidget {
       children: [
         Text('Settings', style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 24),
+        Text('Catalogue source', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: 8),
+        const CatalogueSourceSettingsTile(),
+        const SizedBox(height: 28),
         Text('Appearance', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 12),
         Wrap(
