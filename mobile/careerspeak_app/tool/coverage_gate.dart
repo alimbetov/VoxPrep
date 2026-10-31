@@ -4,7 +4,9 @@ void main(List<String> args) {
   final threshold = args.isEmpty ? 90.0 : double.parse(args.first);
   final file = File('coverage/lcov.info');
   if (!file.existsSync()) {
-    stderr.writeln('coverage/lcov.info is missing. Run flutter test --coverage first.');
+    stderr.writeln(
+      'coverage/lcov.info is missing. Run flutter test --coverage first.',
+    );
     exitCode = 2;
     return;
   }
