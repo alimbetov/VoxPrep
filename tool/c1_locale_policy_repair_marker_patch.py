@@ -282,6 +282,33 @@ replace_once(
 ''',
 )
 
+# Offline reads only trust fallback rows that are part of a committed CURRENT
+# policy snapshot. Marker-less/stale rows are corruption, not usable policy.
+repository = 'mobile/careerspeak_app/lib/data/local/drift_localized_content_repository.dart'
+replace_once(
+    repository,
+    '''    final rows = await (_database.select(_database.localeFallbackRules)
+          ..where((row) => row.locale.equals(locale))
+          ..orderBy([(row) => OrderingTerm.asc(row.fallbackOrder)]))
+        .get();
+    for (var index = 0; index < rows.length; index += 1) {
+''',
+    '''    final rows = await (_database.select(_database.localeFallbackRules)
+          ..where((row) => row.locale.equals(locale))
+          ..orderBy([(row) => OrderingTerm.asc(row.fallbackOrder)]))
+        .get();
+    if (manifest.localePolicyContentVersion != manifest.currentContentVersion) {
+      if (rows.isEmpty) {
+        return const <String>[];
+      }
+      throw _LocalizedReadInvariant(
+        'Backend fallback rows are not committed for the CURRENT root',
+      );
+    }
+    for (var index = 0; index < rows.length; index += 1) {
+''',
+)
+
 # Qualify same-root policy corruption repair without adding another schema
 # marker. A partial local chain must differ from the immutable backend root and
 # therefore force a metadata-only commit.
@@ -390,3 +417,39 @@ if journal_case not in journal_text:
         raise SystemExit('missing policy journal test anchor')
     journal_text = journal_text.replace(journal_anchor, journal_case + journal_anchor, 1)
 journal_test.write_text(journal_text)
+
+policy_test = Path(
+    'mobile/careerspeak_app/test/data/local/drift_locale_fallback_policy_test.dart'
+)
+policy_text = policy_test.read_text()
+policy_anchor = "  test('missing Backend rule never invents base-language fallback', () async {\n"
+policy_case = '''  test('uncommitted CURRENT-version fallback rows fail closed offline', () async {
+    final database = createTestDatabase();
+    addTearDown(database.close);
+    await _seedCanonicalAndRussian(database, contentVersion: 2);
+    await _seedFallback(
+      database,
+      locale: 'ru-KZ',
+      sourceContentVersion: 2,
+      fallbackLocales: const <String>['ru', 'en'],
+    );
+
+    final result = await DriftLocalizedContentRepository(database).resolve(
+      identity: _identity,
+      contentRevision: 1,
+      requestedLocale: 'ru-KZ',
+    );
+
+    expect(result, isA<FailureResult<ResolvedLocalizedContent?>>());
+    expect(
+      (result as FailureResult<ResolvedLocalizedContent?>).failure.code,
+      'LOCALIZED_CONTENT_READ_MODEL_INVALID',
+    );
+  });
+
+'''
+if policy_case not in policy_text:
+    if policy_anchor not in policy_text:
+        raise SystemExit('missing offline policy marker test anchor')
+    policy_text = policy_text.replace(policy_anchor, policy_case + policy_anchor, 1)
+policy_test.write_text(policy_text)
