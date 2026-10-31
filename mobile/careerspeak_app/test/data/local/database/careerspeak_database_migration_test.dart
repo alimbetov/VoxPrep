@@ -9,6 +9,7 @@ import '../../../generated_migrations/schema_v2.dart' as v2;
 import '../../../generated_migrations/schema_v3.dart' as v3;
 import '../../../generated_migrations/schema_v5.dart' as v5;
 import '../../../generated_migrations/schema_v6.dart' as v6;
+import '../../../generated_migrations/schema_v7.dart' as v7;
 
 void main() {
   late SchemaVerifier verifier;
@@ -17,7 +18,7 @@ void main() {
     verifier = SchemaVerifier(GeneratedHelper());
   });
 
-  test('v1 to v6 preserves durable learner state', () async {
+  test('v1 to v7 preserves durable learner state', () async {
     final schema = await verifier.schemaAt(1);
     final storedNow =
         DateTime.utc(2026, 10, 30, 10).millisecondsSinceEpoch ~/ 1000;
@@ -46,10 +47,10 @@ void main() {
     await oldDatabase.close();
 
     final database = CareerSpeakDatabase(schema.newConnection());
-    await verifier.migrateAndValidate(database, 6);
+    await verifier.migrateAndValidate(database, 7);
     await database.close();
 
-    final migratedDatabase = v6.DatabaseAtV6(schema.newConnection());
+    final migratedDatabase = v7.DatabaseAtV7(schema.newConnection());
     final favorites = await migratedDatabase
         .select(migratedDatabase.favorites)
         .get();
@@ -78,7 +79,7 @@ void main() {
     await migratedDatabase.close();
   });
 
-  test('v2 to v6 preserves durable sync journal', () async {
+  test('v2 to v7 preserves durable sync journal', () async {
     final schema = await verifier.schemaAt(2);
     final storedNow =
         DateTime.utc(2026, 10, 30, 11).millisecondsSinceEpoch ~/ 1000;
@@ -99,10 +100,10 @@ void main() {
     await oldDatabase.close();
 
     final database = CareerSpeakDatabase(schema.newConnection());
-    await verifier.migrateAndValidate(database, 6);
+    await verifier.migrateAndValidate(database, 7);
     await database.close();
 
-    final migratedDatabase = v6.DatabaseAtV6(schema.newConnection());
+    final migratedDatabase = v7.DatabaseAtV7(schema.newConnection());
     final runs = await migratedDatabase.select(migratedDatabase.syncRuns).get();
 
     expect(runs, hasLength(1));
@@ -120,7 +121,7 @@ void main() {
     await migratedDatabase.close();
   });
 
-  test('v3 to v6 adds immutable read and fallback models empty', () async {
+  test('v3 to v7 adds immutable read and fallback models empty', () async {
     final schema = await verifier.schemaAt(3);
     final storedNow =
         DateTime.utc(2026, 10, 30, 12).millisecondsSinceEpoch ~/ 1000;
@@ -138,10 +139,10 @@ void main() {
     await oldDatabase.close();
 
     final database = CareerSpeakDatabase(schema.newConnection());
-    await verifier.migrateAndValidate(database, 6);
+    await verifier.migrateAndValidate(database, 7);
     await database.close();
 
-    final migratedDatabase = v6.DatabaseAtV6(schema.newConnection());
+    final migratedDatabase = v7.DatabaseAtV7(schema.newConnection());
     expect(
       await migratedDatabase.select(migratedDatabase.favorites).get(),
       hasLength(1),
@@ -169,7 +170,7 @@ void main() {
   });
 
   test(
-    'v5 to v6 preserves localization data and adds no invented fallback',
+    'v5 to v7 preserves localization data and adds no invented fallback',
     () async {
       final schema = await verifier.schemaAt(5);
       final storedNow =
@@ -195,10 +196,10 @@ void main() {
       await oldDatabase.close();
 
       final database = CareerSpeakDatabase(schema.newConnection());
-      await verifier.migrateAndValidate(database, 6);
+      await verifier.migrateAndValidate(database, 7);
       await database.close();
 
-      final migratedDatabase = v6.DatabaseAtV6(schema.newConnection());
+      final migratedDatabase = v7.DatabaseAtV7(schema.newConnection());
       final localized = await migratedDatabase
           .select(migratedDatabase.localizedContentReads)
           .get();
@@ -218,6 +219,53 @@ void main() {
         isEmpty,
       );
 
+      await migratedDatabase.close();
+    },
+  );
+
+  test(
+    'v6 to v7 adds typed content projection without mutating C1 reads',
+    () async {
+      final schema = await verifier.schemaAt(6);
+      final storedNow =
+          DateTime.utc(2026, 10, 31, 8).millisecondsSinceEpoch ~/ 1000;
+
+      final oldDatabase = v6.DatabaseAtV6(schema.newConnection());
+      await oldDatabase
+          .into(oldDatabase.contentCatalogReads)
+          .insert(
+            v6.ContentCatalogReadsCompanion.insert(
+              contentCode: 'JAVA_DI_001',
+              contentType: 'INTERVIEW',
+              revision: 3,
+              checksum:
+                  'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd',
+              title: 'Dependency Injection',
+              subtitle: 'Java Backend',
+              description: 'Explain constructor injection and its tradeoffs.',
+              category: 'Java Backend',
+              level: 'Senior',
+              minutes: 6,
+              hasAudio: 1,
+              createdAt: storedNow,
+            ),
+          );
+      await oldDatabase.close();
+
+      final database = CareerSpeakDatabase(schema.newConnection());
+      await verifier.migrateAndValidate(database, 7);
+      await database.close();
+
+      final migratedDatabase = v7.DatabaseAtV7(schema.newConnection());
+      final common = await migratedDatabase
+          .select(migratedDatabase.contentCatalogReads)
+          .get();
+      expect(common, hasLength(1));
+      expect(common.single.contentCode, 'JAVA_DI_001');
+      expect(
+        await migratedDatabase.select(migratedDatabase.typedContentReads).get(),
+        isEmpty,
+      );
       await migratedDatabase.close();
     },
   );

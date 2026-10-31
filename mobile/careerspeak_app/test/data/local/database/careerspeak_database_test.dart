@@ -15,15 +15,15 @@ void main() {
     await database.close();
   });
 
-  test('schema version 6 creates the production content foundation', () async {
+  test('schema version 7 creates the production content foundation', () async {
     await database.customSelect('SELECT 1').getSingle();
 
-    expect(database.schemaVersion, 6);
+    expect(database.schemaVersion, 7);
 
     final userVersion = await database
         .customSelect('PRAGMA user_version')
         .getSingle();
-    expect(userVersion.read<int>('user_version'), 6);
+    expect(userVersion.read<int>('user_version'), 7);
 
     final foreignKeys = await database
         .customSelect('PRAGMA foreign_keys')

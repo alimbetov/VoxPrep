@@ -9046,6 +9046,640 @@ class ContentCatalogReadsCompanion extends UpdateCompanion<ContentCatalogRead> {
   }
 }
 
+class $TypedContentReadsTable extends TypedContentReads
+    with TableInfo<$TypedContentReadsTable, TypedContentRead> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $TypedContentReadsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _contentCodeMeta = const VerificationMeta(
+    'contentCode',
+  );
+  @override
+  late final GeneratedColumn<String> contentCode = GeneratedColumn<String>(
+    'content_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentTypeMeta = const VerificationMeta(
+    'contentType',
+  );
+  @override
+  late final GeneratedColumn<String> contentType = GeneratedColumn<String>(
+    'content_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  @override
+  late final GeneratedColumn<int> revision = GeneratedColumn<int>(
+    'revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _checksumMeta = const VerificationMeta(
+    'checksum',
+  );
+  @override
+  late final GeneratedColumn<String> checksum = GeneratedColumn<String>(
+    'checksum',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _categoryCodeMeta = const VerificationMeta(
+    'categoryCode',
+  );
+  @override
+  late final GeneratedColumn<String> categoryCode = GeneratedColumn<String>(
+    'category_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _levelCodeMeta = const VerificationMeta(
+    'levelCode',
+  );
+  @override
+  late final GeneratedColumn<String> levelCode = GeneratedColumn<String>(
+    'level_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _skillCodesJsonMeta = const VerificationMeta(
+    'skillCodesJson',
+  );
+  @override
+  late final GeneratedColumn<String> skillCodesJson = GeneratedColumn<String>(
+    'skill_codes_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bodyKindMeta = const VerificationMeta(
+    'bodyKind',
+  );
+  @override
+  late final GeneratedColumn<String> bodyKind = GeneratedColumn<String>(
+    'body_kind',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _bodyJsonMeta = const VerificationMeta(
+    'bodyJson',
+  );
+  @override
+  late final GeneratedColumn<String> bodyJson = GeneratedColumn<String>(
+    'body_json',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    contentCode,
+    contentType,
+    revision,
+    checksum,
+    categoryCode,
+    levelCode,
+    skillCodesJson,
+    bodyKind,
+    bodyJson,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'typed_content_reads';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<TypedContentRead> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('content_code')) {
+      context.handle(
+        _contentCodeMeta,
+        contentCode.isAcceptableOrUnknown(
+          data['content_code']!,
+          _contentCodeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentCodeMeta);
+    }
+    if (data.containsKey('content_type')) {
+      context.handle(
+        _contentTypeMeta,
+        contentType.isAcceptableOrUnknown(
+          data['content_type']!,
+          _contentTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentTypeMeta);
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_revisionMeta);
+    }
+    if (data.containsKey('checksum')) {
+      context.handle(
+        _checksumMeta,
+        checksum.isAcceptableOrUnknown(data['checksum']!, _checksumMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_checksumMeta);
+    }
+    if (data.containsKey('category_code')) {
+      context.handle(
+        _categoryCodeMeta,
+        categoryCode.isAcceptableOrUnknown(
+          data['category_code']!,
+          _categoryCodeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_categoryCodeMeta);
+    }
+    if (data.containsKey('level_code')) {
+      context.handle(
+        _levelCodeMeta,
+        levelCode.isAcceptableOrUnknown(data['level_code']!, _levelCodeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_levelCodeMeta);
+    }
+    if (data.containsKey('skill_codes_json')) {
+      context.handle(
+        _skillCodesJsonMeta,
+        skillCodesJson.isAcceptableOrUnknown(
+          data['skill_codes_json']!,
+          _skillCodesJsonMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_skillCodesJsonMeta);
+    }
+    if (data.containsKey('body_kind')) {
+      context.handle(
+        _bodyKindMeta,
+        bodyKind.isAcceptableOrUnknown(data['body_kind']!, _bodyKindMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bodyKindMeta);
+    }
+    if (data.containsKey('body_json')) {
+      context.handle(
+        _bodyJsonMeta,
+        bodyJson.isAcceptableOrUnknown(data['body_json']!, _bodyJsonMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_bodyJsonMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {contentCode, contentType, revision};
+  @override
+  TypedContentRead map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return TypedContentRead(
+      contentCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_code'],
+      )!,
+      contentType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_type'],
+      )!,
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}revision'],
+      )!,
+      checksum: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}checksum'],
+      )!,
+      categoryCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_code'],
+      )!,
+      levelCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}level_code'],
+      )!,
+      skillCodesJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}skill_codes_json'],
+      )!,
+      bodyKind: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body_kind'],
+      )!,
+      bodyJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}body_json'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $TypedContentReadsTable createAlias(String alias) {
+    return $TypedContentReadsTable(attachedDatabase, alias);
+  }
+}
+
+class TypedContentRead extends DataClass
+    implements Insertable<TypedContentRead> {
+  final String contentCode;
+  final String contentType;
+  final int revision;
+  final String checksum;
+  final String categoryCode;
+  final String levelCode;
+  final String skillCodesJson;
+  final String bodyKind;
+  final String bodyJson;
+  final DateTime createdAt;
+  const TypedContentRead({
+    required this.contentCode,
+    required this.contentType,
+    required this.revision,
+    required this.checksum,
+    required this.categoryCode,
+    required this.levelCode,
+    required this.skillCodesJson,
+    required this.bodyKind,
+    required this.bodyJson,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['content_code'] = Variable<String>(contentCode);
+    map['content_type'] = Variable<String>(contentType);
+    map['revision'] = Variable<int>(revision);
+    map['checksum'] = Variable<String>(checksum);
+    map['category_code'] = Variable<String>(categoryCode);
+    map['level_code'] = Variable<String>(levelCode);
+    map['skill_codes_json'] = Variable<String>(skillCodesJson);
+    map['body_kind'] = Variable<String>(bodyKind);
+    map['body_json'] = Variable<String>(bodyJson);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  TypedContentReadsCompanion toCompanion(bool nullToAbsent) {
+    return TypedContentReadsCompanion(
+      contentCode: Value(contentCode),
+      contentType: Value(contentType),
+      revision: Value(revision),
+      checksum: Value(checksum),
+      categoryCode: Value(categoryCode),
+      levelCode: Value(levelCode),
+      skillCodesJson: Value(skillCodesJson),
+      bodyKind: Value(bodyKind),
+      bodyJson: Value(bodyJson),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory TypedContentRead.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return TypedContentRead(
+      contentCode: serializer.fromJson<String>(json['contentCode']),
+      contentType: serializer.fromJson<String>(json['contentType']),
+      revision: serializer.fromJson<int>(json['revision']),
+      checksum: serializer.fromJson<String>(json['checksum']),
+      categoryCode: serializer.fromJson<String>(json['categoryCode']),
+      levelCode: serializer.fromJson<String>(json['levelCode']),
+      skillCodesJson: serializer.fromJson<String>(json['skillCodesJson']),
+      bodyKind: serializer.fromJson<String>(json['bodyKind']),
+      bodyJson: serializer.fromJson<String>(json['bodyJson']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'contentCode': serializer.toJson<String>(contentCode),
+      'contentType': serializer.toJson<String>(contentType),
+      'revision': serializer.toJson<int>(revision),
+      'checksum': serializer.toJson<String>(checksum),
+      'categoryCode': serializer.toJson<String>(categoryCode),
+      'levelCode': serializer.toJson<String>(levelCode),
+      'skillCodesJson': serializer.toJson<String>(skillCodesJson),
+      'bodyKind': serializer.toJson<String>(bodyKind),
+      'bodyJson': serializer.toJson<String>(bodyJson),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  TypedContentRead copyWith({
+    String? contentCode,
+    String? contentType,
+    int? revision,
+    String? checksum,
+    String? categoryCode,
+    String? levelCode,
+    String? skillCodesJson,
+    String? bodyKind,
+    String? bodyJson,
+    DateTime? createdAt,
+  }) => TypedContentRead(
+    contentCode: contentCode ?? this.contentCode,
+    contentType: contentType ?? this.contentType,
+    revision: revision ?? this.revision,
+    checksum: checksum ?? this.checksum,
+    categoryCode: categoryCode ?? this.categoryCode,
+    levelCode: levelCode ?? this.levelCode,
+    skillCodesJson: skillCodesJson ?? this.skillCodesJson,
+    bodyKind: bodyKind ?? this.bodyKind,
+    bodyJson: bodyJson ?? this.bodyJson,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  TypedContentRead copyWithCompanion(TypedContentReadsCompanion data) {
+    return TypedContentRead(
+      contentCode: data.contentCode.present
+          ? data.contentCode.value
+          : this.contentCode,
+      contentType: data.contentType.present
+          ? data.contentType.value
+          : this.contentType,
+      revision: data.revision.present ? data.revision.value : this.revision,
+      checksum: data.checksum.present ? data.checksum.value : this.checksum,
+      categoryCode: data.categoryCode.present
+          ? data.categoryCode.value
+          : this.categoryCode,
+      levelCode: data.levelCode.present ? data.levelCode.value : this.levelCode,
+      skillCodesJson: data.skillCodesJson.present
+          ? data.skillCodesJson.value
+          : this.skillCodesJson,
+      bodyKind: data.bodyKind.present ? data.bodyKind.value : this.bodyKind,
+      bodyJson: data.bodyJson.present ? data.bodyJson.value : this.bodyJson,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TypedContentRead(')
+          ..write('contentCode: $contentCode, ')
+          ..write('contentType: $contentType, ')
+          ..write('revision: $revision, ')
+          ..write('checksum: $checksum, ')
+          ..write('categoryCode: $categoryCode, ')
+          ..write('levelCode: $levelCode, ')
+          ..write('skillCodesJson: $skillCodesJson, ')
+          ..write('bodyKind: $bodyKind, ')
+          ..write('bodyJson: $bodyJson, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    contentCode,
+    contentType,
+    revision,
+    checksum,
+    categoryCode,
+    levelCode,
+    skillCodesJson,
+    bodyKind,
+    bodyJson,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is TypedContentRead &&
+          other.contentCode == this.contentCode &&
+          other.contentType == this.contentType &&
+          other.revision == this.revision &&
+          other.checksum == this.checksum &&
+          other.categoryCode == this.categoryCode &&
+          other.levelCode == this.levelCode &&
+          other.skillCodesJson == this.skillCodesJson &&
+          other.bodyKind == this.bodyKind &&
+          other.bodyJson == this.bodyJson &&
+          other.createdAt == this.createdAt);
+}
+
+class TypedContentReadsCompanion extends UpdateCompanion<TypedContentRead> {
+  final Value<String> contentCode;
+  final Value<String> contentType;
+  final Value<int> revision;
+  final Value<String> checksum;
+  final Value<String> categoryCode;
+  final Value<String> levelCode;
+  final Value<String> skillCodesJson;
+  final Value<String> bodyKind;
+  final Value<String> bodyJson;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const TypedContentReadsCompanion({
+    this.contentCode = const Value.absent(),
+    this.contentType = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.checksum = const Value.absent(),
+    this.categoryCode = const Value.absent(),
+    this.levelCode = const Value.absent(),
+    this.skillCodesJson = const Value.absent(),
+    this.bodyKind = const Value.absent(),
+    this.bodyJson = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  TypedContentReadsCompanion.insert({
+    required String contentCode,
+    required String contentType,
+    required int revision,
+    required String checksum,
+    required String categoryCode,
+    required String levelCode,
+    required String skillCodesJson,
+    required String bodyKind,
+    required String bodyJson,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : contentCode = Value(contentCode),
+       contentType = Value(contentType),
+       revision = Value(revision),
+       checksum = Value(checksum),
+       categoryCode = Value(categoryCode),
+       levelCode = Value(levelCode),
+       skillCodesJson = Value(skillCodesJson),
+       bodyKind = Value(bodyKind),
+       bodyJson = Value(bodyJson),
+       createdAt = Value(createdAt);
+  static Insertable<TypedContentRead> custom({
+    Expression<String>? contentCode,
+    Expression<String>? contentType,
+    Expression<int>? revision,
+    Expression<String>? checksum,
+    Expression<String>? categoryCode,
+    Expression<String>? levelCode,
+    Expression<String>? skillCodesJson,
+    Expression<String>? bodyKind,
+    Expression<String>? bodyJson,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (contentCode != null) 'content_code': contentCode,
+      if (contentType != null) 'content_type': contentType,
+      if (revision != null) 'revision': revision,
+      if (checksum != null) 'checksum': checksum,
+      if (categoryCode != null) 'category_code': categoryCode,
+      if (levelCode != null) 'level_code': levelCode,
+      if (skillCodesJson != null) 'skill_codes_json': skillCodesJson,
+      if (bodyKind != null) 'body_kind': bodyKind,
+      if (bodyJson != null) 'body_json': bodyJson,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  TypedContentReadsCompanion copyWith({
+    Value<String>? contentCode,
+    Value<String>? contentType,
+    Value<int>? revision,
+    Value<String>? checksum,
+    Value<String>? categoryCode,
+    Value<String>? levelCode,
+    Value<String>? skillCodesJson,
+    Value<String>? bodyKind,
+    Value<String>? bodyJson,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return TypedContentReadsCompanion(
+      contentCode: contentCode ?? this.contentCode,
+      contentType: contentType ?? this.contentType,
+      revision: revision ?? this.revision,
+      checksum: checksum ?? this.checksum,
+      categoryCode: categoryCode ?? this.categoryCode,
+      levelCode: levelCode ?? this.levelCode,
+      skillCodesJson: skillCodesJson ?? this.skillCodesJson,
+      bodyKind: bodyKind ?? this.bodyKind,
+      bodyJson: bodyJson ?? this.bodyJson,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (contentCode.present) {
+      map['content_code'] = Variable<String>(contentCode.value);
+    }
+    if (contentType.present) {
+      map['content_type'] = Variable<String>(contentType.value);
+    }
+    if (revision.present) {
+      map['revision'] = Variable<int>(revision.value);
+    }
+    if (checksum.present) {
+      map['checksum'] = Variable<String>(checksum.value);
+    }
+    if (categoryCode.present) {
+      map['category_code'] = Variable<String>(categoryCode.value);
+    }
+    if (levelCode.present) {
+      map['level_code'] = Variable<String>(levelCode.value);
+    }
+    if (skillCodesJson.present) {
+      map['skill_codes_json'] = Variable<String>(skillCodesJson.value);
+    }
+    if (bodyKind.present) {
+      map['body_kind'] = Variable<String>(bodyKind.value);
+    }
+    if (bodyJson.present) {
+      map['body_json'] = Variable<String>(bodyJson.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('TypedContentReadsCompanion(')
+          ..write('contentCode: $contentCode, ')
+          ..write('contentType: $contentType, ')
+          ..write('revision: $revision, ')
+          ..write('checksum: $checksum, ')
+          ..write('categoryCode: $categoryCode, ')
+          ..write('levelCode: $levelCode, ')
+          ..write('skillCodesJson: $skillCodesJson, ')
+          ..write('bodyKind: $bodyKind, ')
+          ..write('bodyJson: $bodyJson, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $LocalizedContentReadsTable extends LocalizedContentReads
     with TableInfo<$LocalizedContentReadsTable, LocalizedContentRead> {
   @override
@@ -10825,6 +11459,8 @@ abstract class _$CareerSpeakDatabase extends GeneratedDatabase {
   late final $PackAssetRefsTable packAssetRefs = $PackAssetRefsTable(this);
   late final $ContentCatalogReadsTable contentCatalogReads =
       $ContentCatalogReadsTable(this);
+  late final $TypedContentReadsTable typedContentReads =
+      $TypedContentReadsTable(this);
   late final $LocalizedContentReadsTable localizedContentReads =
       $LocalizedContentReadsTable(this);
   late final $FavoritesTable favorites = $FavoritesTable(this);
@@ -10851,6 +11487,7 @@ abstract class _$CareerSpeakDatabase extends GeneratedDatabase {
     contentAssetRefs,
     packAssetRefs,
     contentCatalogReads,
+    typedContentReads,
     localizedContentReads,
     favorites,
     contentLearningStates,
@@ -16438,6 +17075,331 @@ typedef $$ContentCatalogReadsTableProcessedTableManager =
       ContentCatalogRead,
       PrefetchHooks Function()
     >;
+typedef $$TypedContentReadsTableCreateCompanionBuilder =
+    TypedContentReadsCompanion Function({
+      required String contentCode,
+      required String contentType,
+      required int revision,
+      required String checksum,
+      required String categoryCode,
+      required String levelCode,
+      required String skillCodesJson,
+      required String bodyKind,
+      required String bodyJson,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$TypedContentReadsTableUpdateCompanionBuilder =
+    TypedContentReadsCompanion Function({
+      Value<String> contentCode,
+      Value<String> contentType,
+      Value<int> revision,
+      Value<String> checksum,
+      Value<String> categoryCode,
+      Value<String> levelCode,
+      Value<String> skillCodesJson,
+      Value<String> bodyKind,
+      Value<String> bodyJson,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$TypedContentReadsTableFilterComposer
+    extends Composer<_$CareerSpeakDatabase, $TypedContentReadsTable> {
+  $$TypedContentReadsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get checksum => $composableBuilder(
+    column: $table.checksum,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get categoryCode => $composableBuilder(
+    column: $table.categoryCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get levelCode => $composableBuilder(
+    column: $table.levelCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get skillCodesJson => $composableBuilder(
+    column: $table.skillCodesJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bodyKind => $composableBuilder(
+    column: $table.bodyKind,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get bodyJson => $composableBuilder(
+    column: $table.bodyJson,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$TypedContentReadsTableOrderingComposer
+    extends Composer<_$CareerSpeakDatabase, $TypedContentReadsTable> {
+  $$TypedContentReadsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get checksum => $composableBuilder(
+    column: $table.checksum,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get categoryCode => $composableBuilder(
+    column: $table.categoryCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get levelCode => $composableBuilder(
+    column: $table.levelCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get skillCodesJson => $composableBuilder(
+    column: $table.skillCodesJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bodyKind => $composableBuilder(
+    column: $table.bodyKind,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get bodyJson => $composableBuilder(
+    column: $table.bodyJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$TypedContentReadsTableAnnotationComposer
+    extends Composer<_$CareerSpeakDatabase, $TypedContentReadsTable> {
+  $$TypedContentReadsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+
+  GeneratedColumn<String> get checksum =>
+      $composableBuilder(column: $table.checksum, builder: (column) => column);
+
+  GeneratedColumn<String> get categoryCode => $composableBuilder(
+    column: $table.categoryCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get levelCode =>
+      $composableBuilder(column: $table.levelCode, builder: (column) => column);
+
+  GeneratedColumn<String> get skillCodesJson => $composableBuilder(
+    column: $table.skillCodesJson,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get bodyKind =>
+      $composableBuilder(column: $table.bodyKind, builder: (column) => column);
+
+  GeneratedColumn<String> get bodyJson =>
+      $composableBuilder(column: $table.bodyJson, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$TypedContentReadsTableTableManager
+    extends
+        RootTableManager<
+          _$CareerSpeakDatabase,
+          $TypedContentReadsTable,
+          TypedContentRead,
+          $$TypedContentReadsTableFilterComposer,
+          $$TypedContentReadsTableOrderingComposer,
+          $$TypedContentReadsTableAnnotationComposer,
+          $$TypedContentReadsTableCreateCompanionBuilder,
+          $$TypedContentReadsTableUpdateCompanionBuilder,
+          (
+            TypedContentRead,
+            BaseReferences<
+              _$CareerSpeakDatabase,
+              $TypedContentReadsTable,
+              TypedContentRead
+            >,
+          ),
+          TypedContentRead,
+          PrefetchHooks Function()
+        > {
+  $$TypedContentReadsTableTableManager(
+    _$CareerSpeakDatabase db,
+    $TypedContentReadsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$TypedContentReadsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$TypedContentReadsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$TypedContentReadsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> contentCode = const Value.absent(),
+                Value<String> contentType = const Value.absent(),
+                Value<int> revision = const Value.absent(),
+                Value<String> checksum = const Value.absent(),
+                Value<String> categoryCode = const Value.absent(),
+                Value<String> levelCode = const Value.absent(),
+                Value<String> skillCodesJson = const Value.absent(),
+                Value<String> bodyKind = const Value.absent(),
+                Value<String> bodyJson = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => TypedContentReadsCompanion(
+                contentCode: contentCode,
+                contentType: contentType,
+                revision: revision,
+                checksum: checksum,
+                categoryCode: categoryCode,
+                levelCode: levelCode,
+                skillCodesJson: skillCodesJson,
+                bodyKind: bodyKind,
+                bodyJson: bodyJson,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String contentCode,
+                required String contentType,
+                required int revision,
+                required String checksum,
+                required String categoryCode,
+                required String levelCode,
+                required String skillCodesJson,
+                required String bodyKind,
+                required String bodyJson,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => TypedContentReadsCompanion.insert(
+                contentCode: contentCode,
+                contentType: contentType,
+                revision: revision,
+                checksum: checksum,
+                categoryCode: categoryCode,
+                levelCode: levelCode,
+                skillCodesJson: skillCodesJson,
+                bodyKind: bodyKind,
+                bodyJson: bodyJson,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$TypedContentReadsTable, TypedContentRead>(table),
+                  BaseReferences<
+                    _$CareerSpeakDatabase,
+                    $TypedContentReadsTable,
+                    TypedContentRead
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$TypedContentReadsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$CareerSpeakDatabase,
+      $TypedContentReadsTable,
+      TypedContentRead,
+      $$TypedContentReadsTableFilterComposer,
+      $$TypedContentReadsTableOrderingComposer,
+      $$TypedContentReadsTableAnnotationComposer,
+      $$TypedContentReadsTableCreateCompanionBuilder,
+      $$TypedContentReadsTableUpdateCompanionBuilder,
+      (
+        TypedContentRead,
+        BaseReferences<
+          _$CareerSpeakDatabase,
+          $TypedContentReadsTable,
+          TypedContentRead
+        >,
+      ),
+      TypedContentRead,
+      PrefetchHooks Function()
+    >;
 typedef $$LocalizedContentReadsTableCreateCompanionBuilder =
     LocalizedContentReadsCompanion Function({
       required String contentCode,
@@ -17393,6 +18355,8 @@ class $CareerSpeakDatabaseManager {
       $$PackAssetRefsTableTableManager(_db, _db.packAssetRefs);
   $$ContentCatalogReadsTableTableManager get contentCatalogReads =>
       $$ContentCatalogReadsTableTableManager(_db, _db.contentCatalogReads);
+  $$TypedContentReadsTableTableManager get typedContentReads =>
+      $$TypedContentReadsTableTableManager(_db, _db.typedContentReads);
   $$LocalizedContentReadsTableTableManager get localizedContentReads =>
       $$LocalizedContentReadsTableTableManager(_db, _db.localizedContentReads);
   $$FavoritesTableTableManager get favorites =>

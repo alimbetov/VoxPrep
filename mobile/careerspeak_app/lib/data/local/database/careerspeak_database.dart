@@ -27,6 +27,7 @@ part 'careerspeak_database.g.dart';
     ContentAssetRefs,
     PackAssetRefs,
     ContentCatalogReads,
+    TypedContentReads,
     LocalizedContentReads,
     Favorites,
     ContentLearningStates,
@@ -37,7 +38,7 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
     : super(executor ?? driftDatabase(name: 'careerspeak'));
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -153,6 +154,9 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
           FROM ranked_retirements
           WHERE retirement_rank = 1
         ''');
+      }
+      if (from < 7) {
+        await migrator.createTable(typedContentReads);
       }
     },
     beforeOpen: (details) async {

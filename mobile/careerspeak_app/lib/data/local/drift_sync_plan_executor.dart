@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 
 import '../../application/content_delivery/content_manifest.dart';
 import '../../application/content_delivery/content_payload.dart';
 import '../../application/content_delivery/localized_content_payload.dart';
+import '../../application/content_delivery/typed_content_body.dart';
 import '../../application/content_sync/sync_models.dart';
 import '../../application/ports/content_manifest_gateway.dart';
 import '../../application/ports/content_payload_gateway.dart';
@@ -555,6 +558,7 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
               createdAt: now,
             ),
           );
+      await _ensureTypedContentRead(payload, now);
       return;
     }
 
@@ -571,6 +575,66 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
           code: 'CONTENT_PAYLOAD_IMMUTABLE_CONFLICT',
           message:
               'A persisted content payload conflicts with its immutable revision.',
+        ),
+      );
+    }
+
+    await _ensureTypedContentRead(payload, now);
+  }
+
+  Future<void> _ensureTypedContentRead(
+    ContentPayload payload,
+    DateTime now,
+  ) async {
+    final body = payload.body;
+    if (body == null) {
+      return;
+    }
+
+    final type = _contentTypeToStorage(payload.ref.identity.type);
+    final skillCodesJson = jsonEncode(payload.skillCodes);
+    final bodyKind = body.contentType.name;
+    final bodyJson = jsonEncode(_typedBodyJson(body));
+    final existing =
+        await (_database.select(_database.typedContentReads)..where(
+              (row) =>
+                  row.contentCode.equals(payload.ref.identity.code) &
+                  row.contentType.equals(type) &
+                  row.revision.equals(payload.ref.revision),
+            ))
+            .getSingleOrNull();
+
+    if (existing == null) {
+      await _database
+          .into(_database.typedContentReads)
+          .insert(
+            TypedContentReadsCompanion.insert(
+              contentCode: payload.ref.identity.code,
+              contentType: type,
+              revision: payload.ref.revision,
+              checksum: payload.ref.checksum,
+              categoryCode: payload.categoryCode,
+              levelCode: payload.levelCode,
+              skillCodesJson: skillCodesJson,
+              bodyKind: bodyKind,
+              bodyJson: bodyJson,
+              createdAt: now,
+            ),
+          );
+      return;
+    }
+
+    if (existing.checksum != payload.ref.checksum ||
+        existing.categoryCode != payload.categoryCode ||
+        existing.levelCode != payload.levelCode ||
+        existing.skillCodesJson != skillCodesJson ||
+        existing.bodyKind != bodyKind ||
+        existing.bodyJson != bodyJson) {
+      throw const _SyncExecutorInvariant(
+        ApplicationFailure(
+          code: 'TYPED_CONTENT_PAYLOAD_IMMUTABLE_CONFLICT',
+          message:
+              'A persisted typed content payload conflicts with its immutable revision.',
         ),
       );
     }
@@ -1205,6 +1269,59 @@ String _contentTypeToStorage(ContentType type) => switch (type) {
   ContentType.shadowing => 'SHADOWING',
   ContentType.phrase => 'PHRASE',
 };
+
+Map<String, Object?> _typedBodyJson(TypedContentBody body) {
+  if (body is VocabularyBody) {
+    return <String, Object?>{
+      'kind': 'vocabulary',
+      'term': body.term,
+      'definition': body.definition,
+      'partOfSpeech': body.partOfSpeech,
+      'examples': body.examples,
+    };
+  }
+  if (body is InterviewBody) {
+    return <String, Object?>{
+      'kind': 'interview',
+      'prompt': body.prompt,
+      'modelAnswer': body.modelAnswer,
+      'keyPoints': body.keyPoints,
+    };
+  }
+  if (body is TopicBody) {
+    return <String, Object?>{
+      'kind': 'topic',
+      'sections': <Object?>[
+        for (final section in body.sections)
+          <String, Object?>{'heading': section.heading, 'text': section.text},
+      ],
+    };
+  }
+  if (body is PhraseBody) {
+    return <String, Object?>{
+      'kind': 'phrase',
+      'phrase': body.phrase,
+      'usage': body.usage,
+      'examples': body.examples,
+    };
+  }
+  if (body is ShadowingBody) {
+    return <String, Object?>{
+      'kind': 'shadowing',
+      'transcript': body.transcript,
+      'segments': <Object?>[
+        for (final segment in body.segments)
+          <String, Object?>{
+            'order': segment.order,
+            'text': segment.text,
+            'startMs': segment.startMs,
+            'endMs': segment.endMs,
+          },
+      ],
+    };
+  }
+  throw StateError('Unsupported typed content body ${body.runtimeType}.');
+}
 
 String _assetKind(String mediaType) {
   if (mediaType.startsWith('audio/')) return 'AUDIO';

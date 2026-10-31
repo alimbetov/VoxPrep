@@ -1,5 +1,6 @@
 import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
 import 'package:careerspeak_app/application/content_delivery/content_payload.dart';
+import 'package:careerspeak_app/application/content_delivery/typed_content_body.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_planner.dart';
 import 'package:careerspeak_app/application/content_sync/sync_models.dart';
 import 'package:careerspeak_app/application/ports/content_manifest_gateway.dart';
@@ -103,6 +104,19 @@ void main() {
     expect(payload.checksum, _contentHash);
     expect(payload.title, 'Dependency Injection');
     expect(payload.minutes, 6);
+
+    final typedPayload = await database
+        .select(database.typedContentReads)
+        .getSingle();
+    expect(typedPayload.contentCode, 'JAVA_Q_001');
+    expect(typedPayload.categoryCode, 'JAVA_BACKEND');
+    expect(typedPayload.levelCode, 'SENIOR');
+    expect(typedPayload.skillCodesJson, '["COMMUNICATION","SYSTEM_DESIGN"]');
+    expect(typedPayload.bodyKind, 'interview');
+    expect(
+      typedPayload.bodyJson,
+      contains('"prompt":"What is dependency injection?"'),
+    );
 
     final asset = await database.select(database.assetCatalog).getSingle();
     expect(asset.assetKind, 'AUDIO');
@@ -437,15 +451,23 @@ final class _PayloadGateway implements ContentPayloadGateway {
       checksum: mismatched ? _root108 : target.checksum,
     );
     return Success<ContentPayload>(
-      ContentPayload(
+      ContentPayload.typed(
         ref: ref,
         title: 'Dependency Injection',
         subtitle: 'Java Backend',
         description: 'Explain constructor injection and its tradeoffs.',
+        categoryCode: 'JAVA_BACKEND',
         category: 'Java Backend',
+        levelCode: 'SENIOR',
         level: 'Senior',
         minutes: 6,
         hasAudio: true,
+        skillCodes: const <String>['COMMUNICATION', 'SYSTEM_DESIGN'],
+        body: InterviewBody(
+          prompt: 'What is dependency injection?',
+          modelAnswer: 'Dependencies are supplied externally.',
+          keyPoints: const <String>['loose coupling', 'testability'],
+        ),
       ),
     );
   }

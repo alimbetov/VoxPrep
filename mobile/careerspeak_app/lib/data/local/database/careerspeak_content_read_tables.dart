@@ -27,6 +27,33 @@ class ContentCatalogReads extends Table {
   ];
 }
 
+class TypedContentReads extends Table {
+  TextColumn get contentCode => text()();
+  TextColumn get contentType => text()();
+  IntColumn get revision => integer()();
+  TextColumn get checksum => text()();
+  TextColumn get categoryCode => text()();
+  TextColumn get levelCode => text()();
+  TextColumn get skillCodesJson => text()();
+  TextColumn get bodyKind => text()();
+  TextColumn get bodyJson => text()();
+  DateTimeColumn get createdAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {contentCode, contentType, revision};
+
+  @override
+  List<String> get customConstraints => const [
+    'CHECK (revision > 0)',
+    'CHECK (length(trim(checksum)) > 0)',
+    'CHECK (length(trim(category_code)) > 0)',
+    'CHECK (length(trim(level_code)) > 0)',
+    'CHECK (length(trim(skill_codes_json)) > 0)',
+    'CHECK (length(trim(body_kind)) > 0)',
+    'CHECK (length(trim(body_json)) > 0)',
+  ];
+}
+
 class LocalizedContentReads extends Table {
   TextColumn get contentCode => text()();
   TextColumn get contentType => text()();
