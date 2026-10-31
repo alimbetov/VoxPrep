@@ -205,3 +205,20 @@ text = text.replace(
 )
 text = text.replace('row.position', 'row.fallbackOrder')
 persistence.write_text(text)
+
+# Pack manifest v1 now has an explicit immutable localization-ref collection.
+# Canonical packs carry the field as an empty array rather than omitting it.
+fixture = Path('mobile/careerspeak_app/test/contracts/fixtures/pack_manifest_v1.json')
+fixture_text = fixture.read_text()
+fixture_old = '''  ],
+  "assets": [
+'''
+fixture_new = '''  ],
+  "localizations": [],
+  "assets": [
+'''
+if fixture_new not in fixture_text:
+    if fixture_old not in fixture_text:
+        raise SystemExit('missing canonical pack fixture localization anchor')
+    fixture_text = fixture_text.replace(fixture_old, fixture_new, 1)
+fixture.write_text(fixture_text)
