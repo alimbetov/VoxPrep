@@ -97,11 +97,11 @@ final class SyncLocalSnapshot {
       contentPayloadRepairPacks,
     );
     for (final identity in repairPacks) {
-      if (!identities.contains(identity) || identity.variant != 'canonical') {
+      if (!identities.contains(identity)) {
         throw ArgumentError.value(
           identity,
           'contentPayloadRepairPacks',
-          'must reference a CURRENT canonical pack',
+          'must reference a CURRENT pack',
         );
       }
     }
@@ -149,6 +149,11 @@ final class SyncLocalSnapshot {
   final String? currentManifestChecksum;
   final String? etag;
   final List<PackRevisionRef> currentPacks;
+
+  /// CURRENT pack identities whose immutable learner payload graph is missing
+  /// or inconsistent and therefore must be re-fetched even when the root and
+  /// pack revision/checksum are unchanged. Applies to canonical and locale
+  /// packs alike.
   final Set<PackIdentity> contentPayloadRepairPacks;
 }
 
@@ -162,6 +167,9 @@ final class SyncPlan {
        tombstones = List<ContentTombstone>.unmodifiable(tombstones);
 
   final RootContentManifest target;
+
+  /// True when committing is required because either the immutable publication
+  /// changed or the device-local pack projection changed for the same root.
   final bool rootChanged;
   final List<PackRevisionRef> changedPacks;
   final List<ContentTombstone> tombstones;
