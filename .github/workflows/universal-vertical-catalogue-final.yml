@@ -81,6 +81,7 @@ jobs:
           flutter test test/features/content/interview_audio_role_source_of_truth_test.dart
           flutter test test/features/content/content_detail_learner_state_interaction_test.dart
           flutter test test/features/content/content_detail_supersession_ui_test.dart
+          flutter test test/features/content/content_detail_localized_hint_test.dart
 
       - name: Content Detail audio E2E
         run: |
