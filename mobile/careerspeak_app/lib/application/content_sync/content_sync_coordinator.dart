@@ -1,3 +1,4 @@
+import '../content_delivery/content_manifest.dart';
 import '../ports/content_manifest_gateway.dart';
 import '../ports/sync_journal.dart';
 import '../ports/sync_plan_executor.dart';
