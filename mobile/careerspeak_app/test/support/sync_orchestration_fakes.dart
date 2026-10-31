@@ -1,4 +1,6 @@
+import 'package:careerspeak_app/application/content_delivery/catalogue_revision_ref.dart';
 import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
+import 'package:careerspeak_app/application/content_delivery/product_catalog.dart';
 import 'package:careerspeak_app/application/content_sync/sync_models.dart';
 import 'package:careerspeak_app/application/ports/content_manifest_gateway.dart';
 import 'package:careerspeak_app/application/ports/sync_journal.dart';
@@ -22,6 +24,9 @@ SyncLocalSnapshot emptySnapshot() => SyncLocalSnapshot(
 RootContentManifest manifest(
   int version, {
   Iterable<PackRevisionRef> packs = const <PackRevisionRef>[],
+  Iterable<PracticeTestRevisionRef> practiceTests =
+      const <PracticeTestRevisionRef>[],
+  Iterable<CatalogueRevisionRef> catalogues = const <CatalogueRevisionRef>[],
   Iterable<LocaleFallbackRule> localeFallbacks = const <LocaleFallbackRule>[],
 }) {
   return RootContentManifest(
@@ -31,6 +36,8 @@ RootContentManifest manifest(
     publishedAt: DateTime.utc(2026, 10, 30, 10),
     checksum: version == 108 ? rootA : rootB,
     packs: packs,
+    practiceTests: practiceTests,
+    catalogues: catalogues,
     localeFallbacks: localeFallbacks,
     tombstones: const <ContentTombstone>[],
   );
