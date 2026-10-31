@@ -184,11 +184,12 @@ final class DriftUniversalCatalogueGraphMaterializer {
   ) {
     final payloadByKind = <CatalogueKind, CataloguePayload>{};
     for (final payload in payloads) {
-      if (payloadByKind.putIfAbsent(payload.ref.kind, () => payload) != payload) {
+      if (payloadByKind.containsKey(payload.ref.kind)) {
         throw FormatException(
           'Duplicate payload for catalogue ${payload.ref.kind.wireName}.',
         );
       }
+      payloadByKind[payload.ref.kind] = payload;
     }
 
     CataloguePayload exact(CatalogueKind kind) {
