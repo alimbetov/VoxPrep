@@ -49,7 +49,9 @@ final class HttpAssetByteSource implements AssetByteSource {
       );
     }
 
-    final request = http.Request('GET', grant.url)..headers['accept'] = '*/*';
+    final request = http.Request('GET', grant.url)
+      ..headers['accept'] = '*/*'
+      ..followRedirects = false;
 
     try {
       final response = await _client.send(request).timeout(_timeout);
