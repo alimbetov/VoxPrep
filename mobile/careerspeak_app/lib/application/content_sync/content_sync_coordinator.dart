@@ -126,6 +126,7 @@ final class ContentSyncCoordinator {
     final planResult = _planner.plan(
       local: local,
       remote: targetRoot,
+      remoteEtag: remoteFetch.etag,
       immutableRootPackIdentities: fullRoot.packs.map((pack) => pack.identity),
     );
     if (planResult is FailureResult<SyncPlan>) {
