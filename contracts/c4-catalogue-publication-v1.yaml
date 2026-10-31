@@ -1,0 +1,407 @@
+openapi: 3.1.0
+info:
+  title: CareerSpeak C4 Catalogue Publication Contract
+  version: 1.0.0
+  description: >-
+    C4.7 exact immutable catalogue delivery consumed by Flutter. This contract
+    supplements learner-api-v1 until the endpoint is folded into the consolidated
+    learner API. No latest/current catalogue endpoint exists.
+
+paths:
+  /api/v1/catalogues/{catalogueKind}/revisions/{revision}:
+    get:
+      operationId: getExactCatalogueRevision
+      description: >-
+        Returns one exact immutable catalogue payload identified by catalogue kind
+        and revision. Flutter obtains the expected revision and checksum only from
+        the CURRENT PublicationSnapshot root.
+      security:
+        - installationBearer: []
+      parameters:
+        - name: catalogueKind
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/CatalogueKind'
+        - name: revision
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/PositiveRevision'
+      responses:
+        '200':
+          description: Exact immutable catalogue revision.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CataloguePayload'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '401':
+          $ref: '#/components/responses/ApiError'
+        '403':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+
+components:
+  securitySchemes:
+    installationBearer:
+      type: http
+      scheme: bearer
+
+  responses:
+    ApiError:
+      description: Typed API failure.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
+  schemas:
+    PositiveRevision:
+      type: integer
+      minimum: 1
+
+    Sha256:
+      type: string
+      pattern: '^[0-9a-f]{64}$'
+
+    BusinessCode:
+      type: string
+      minLength: 1
+      pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$'
+
+    StableTaxonomyCode:
+      type: string
+      minLength: 1
+      pattern: '^[A-Z0-9][A-Z0-9._-]*$'
+
+    LocaleCode:
+      type: string
+      pattern: '^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$'
+
+    ContentType:
+      type: string
+      enum: [vocabulary, interview, topic, shadowing, phrase]
+
+    CatalogueKind:
+      type: string
+      enum:
+        - learning-goals
+        - learning-tracks
+        - learning-collections
+        - categories
+        - levels
+        - skills
+        - supported-locales
+        - tts-voices
+
+    CataloguePayload:
+      oneOf:
+        - $ref: '#/components/schemas/LearningGoalsCataloguePayload'
+        - $ref: '#/components/schemas/LearningTracksCataloguePayload'
+        - $ref: '#/components/schemas/LearningCollectionsCataloguePayload'
+        - $ref: '#/components/schemas/CategoriesCataloguePayload'
+        - $ref: '#/components/schemas/LevelsCataloguePayload'
+        - $ref: '#/components/schemas/SkillsCataloguePayload'
+        - $ref: '#/components/schemas/SupportedLocalesCataloguePayload'
+        - $ref: '#/components/schemas/TtsVoicesCataloguePayload'
+
+    CataloguePayloadBase:
+      type: object
+      additionalProperties: false
+      required: [kind, revision, checksum, items]
+      properties:
+        kind:
+          $ref: '#/components/schemas/CatalogueKind'
+        revision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+        items:
+          type: array
+
+    LearningGoalsCataloguePayload:
+      allOf:
+        - $ref: '#/components/schemas/CataloguePayloadBase'
+        - type: object
+          properties:
+            kind:
+              const: learning-goals
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/LearningGoal'
+
+    LearningTracksCataloguePayload:
+      allOf:
+        - $ref: '#/components/schemas/CataloguePayloadBase'
+        - type: object
+          properties:
+            kind:
+              const: learning-tracks
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/LearningTrack'
+
+    LearningCollectionsCataloguePayload:
+      allOf:
+        - $ref: '#/components/schemas/CataloguePayloadBase'
+        - type: object
+          properties:
+            kind:
+              const: learning-collections
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/LearningCollection'
+
+    CategoriesCataloguePayload:
+      allOf:
+        - $ref: '#/components/schemas/CataloguePayloadBase'
+        - type: object
+          properties:
+            kind:
+              const: categories
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/TaxonomyEntry'
+
+    LevelsCataloguePayload:
+      allOf:
+        - $ref: '#/components/schemas/CataloguePayloadBase'
+        - type: object
+          properties:
+            kind:
+              const: levels
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/TaxonomyEntry'
+
+    SkillsCataloguePayload:
+      allOf:
+        - $ref: '#/components/schemas/CataloguePayloadBase'
+        - type: object
+          properties:
+            kind:
+              const: skills
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/TaxonomyEntry'
+
+    SupportedLocalesCataloguePayload:
+      allOf:
+        - $ref: '#/components/schemas/CataloguePayloadBase'
+        - type: object
+          properties:
+            kind:
+              const: supported-locales
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/SupportedLocale'
+
+    TtsVoicesCataloguePayload:
+      allOf:
+        - $ref: '#/components/schemas/CataloguePayloadBase'
+        - type: object
+          properties:
+            kind:
+              const: tts-voices
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/TtsVoice'
+
+    LearningGoal:
+      type: object
+      additionalProperties: false
+      required: [code, title, description, sortOrder, active]
+      properties:
+        code:
+          $ref: '#/components/schemas/StableTaxonomyCode'
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+          minimum: 0
+        active:
+          type: boolean
+
+    LearningTrack:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - goalCode
+        - title
+        - description
+        - levelCode
+        - careerTrackCode
+        - sortOrder
+        - active
+      properties:
+        code:
+          $ref: '#/components/schemas/StableTaxonomyCode'
+        goalCode:
+          $ref: '#/components/schemas/StableTaxonomyCode'
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        levelCode:
+          $ref: '#/components/schemas/StableTaxonomyCode'
+        careerTrackCode:
+          oneOf:
+            - $ref: '#/components/schemas/StableTaxonomyCode'
+            - type: 'null'
+        sortOrder:
+          type: integer
+          minimum: 0
+        active:
+          type: boolean
+
+    LearningCollection:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - trackCode
+        - title
+        - description
+        - sortOrder
+        - active
+        - members
+      properties:
+        code:
+          $ref: '#/components/schemas/StableTaxonomyCode'
+        trackCode:
+          $ref: '#/components/schemas/StableTaxonomyCode'
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+          minimum: 0
+        active:
+          type: boolean
+        members:
+          type: array
+          minItems: 1
+          description: >-
+            Normative cross-type order of exact content and practice-test members.
+            Every exact member must belong to the same PublicationSnapshot.
+          items:
+            oneOf:
+              - $ref: '#/components/schemas/CollectionContentMember'
+              - $ref: '#/components/schemas/CollectionPracticeTestMember'
+
+    CollectionContentMember:
+      type: object
+      additionalProperties: false
+      required: [kind, contentCode, contentType, revision, checksum]
+      properties:
+        kind:
+          const: content
+        contentCode:
+          $ref: '#/components/schemas/BusinessCode'
+        contentType:
+          $ref: '#/components/schemas/ContentType'
+        revision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+
+    CollectionPracticeTestMember:
+      type: object
+      additionalProperties: false
+      required: [kind, practiceTestCode, revision, checksum]
+      properties:
+        kind:
+          const: practiceTest
+        practiceTestCode:
+          $ref: '#/components/schemas/BusinessCode'
+        revision:
+          $ref: '#/components/schemas/PositiveRevision'
+        checksum:
+          $ref: '#/components/schemas/Sha256'
+
+    TaxonomyEntry:
+      type: object
+      additionalProperties: false
+      required: [code, label, sortOrder, active]
+      properties:
+        code:
+          $ref: '#/components/schemas/StableTaxonomyCode'
+        label:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+          minimum: 0
+        active:
+          type: boolean
+
+    SupportedLocale:
+      type: object
+      additionalProperties: false
+      required: [code, label, sortOrder, active]
+      properties:
+        code:
+          $ref: '#/components/schemas/LocaleCode'
+        label:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+          minimum: 0
+        active:
+          type: boolean
+
+    TtsVoice:
+      type: object
+      additionalProperties: false
+      required: [code, locale, accentCode, label, sortOrder, active]
+      properties:
+        code:
+          $ref: '#/components/schemas/StableTaxonomyCode'
+        locale:
+          $ref: '#/components/schemas/LocaleCode'
+        accentCode:
+          $ref: '#/components/schemas/StableTaxonomyCode'
+        label:
+          type: string
+          minLength: 1
+        sortOrder:
+          type: integer
+          minimum: 0
+        active:
+          type: boolean
+
+    ApiError:
+      type: object
+      additionalProperties: true
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
