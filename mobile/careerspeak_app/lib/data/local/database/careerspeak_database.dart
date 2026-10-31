@@ -42,13 +42,14 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
     : super(executor ?? driftDatabase(name: 'careerspeak'));
 
   @override
-  int get schemaVersion => 9;
+  int get schemaVersion => 10;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) async {
       await migrator.createAll();
       await _createPublicationMembershipTables();
+      await _createCatalogueRevisionCache();
     },
     onUpgrade: (migrator, from, _) async {
       if (from < 2) {
@@ -171,6 +172,9 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
       if (from < 9) {
         await _createPublicationMembershipTables();
       }
+      if (from < 10) {
+        await _createCatalogueRevisionCache();
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -202,6 +206,23 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
         CHECK (revision > 0),
         CHECK (length(trim(catalogue_kind)) > 0),
         CHECK (length(trim(checksum)) = 64)
+      )
+    ''');
+  }
+
+  Future<void> _createCatalogueRevisionCache() async {
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS catalogue_revision_reads (
+        catalogue_kind TEXT NOT NULL,
+        revision INTEGER NOT NULL,
+        checksum TEXT NOT NULL,
+        payload_json TEXT NOT NULL,
+        created_at INTEGER NOT NULL,
+        PRIMARY KEY (catalogue_kind, revision),
+        CHECK (revision > 0),
+        CHECK (length(trim(catalogue_kind)) > 0),
+        CHECK (length(trim(checksum)) = 64),
+        CHECK (length(trim(payload_json)) > 0)
       )
     ''');
   }
