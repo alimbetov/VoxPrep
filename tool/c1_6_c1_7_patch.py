@@ -4,6 +4,8 @@ from pathlib import Path
 def replace_once(path: str, old: str, new: str) -> None:
     file = Path(path)
     text = file.read_text()
+    if new in text:
+        return
     if old not in text:
         raise SystemExit(f'missing C1.6/C1.7 patch anchor in {path}: {old[:180]}')
     file.write_text(text.replace(old, new, 1))
@@ -43,6 +45,47 @@ replace_once(
     }
 
     final existing =
+""",
+)
+
+journal = 'mobile/careerspeak_app/lib/data/local/drift_sync_journal.dart'
+replace_once(
+    journal,
+    """        if (row.variantKey != 'canonical') continue;
+
+        final refs =
+""",
+    """        if (row.variantKey != 'canonical') {
+          final localizationRefs =
+              await (_database.select(_database.packLocalizationRefs)..where(
+                    (ref) =>
+                        ref.packCode.equals(row.packCode) &
+                        ref.variantKey.equals(row.variantKey) &
+                        ref.packRevision.equals(row.revision),
+                  ))
+                  .get();
+          for (final ref in localizationRefs) {
+            final payload =
+                await (_database.select(_database.localizedContentReads)..where(
+                      (content) =>
+                          content.contentCode.equals(ref.contentCode) &
+                          content.contentType.equals(ref.contentType) &
+                          content.contentRevision.equals(ref.contentRevision) &
+                          content.locale.equals(ref.locale) &
+                          content.localizationRevision.equals(
+                            ref.localizationRevision,
+                          ),
+                    ))
+                    .getSingleOrNull();
+            if (payload == null || payload.checksum != ref.checksum) {
+              contentPayloadRepairPacks.add(identity);
+              break;
+            }
+          }
+          continue;
+        }
+
+        final refs =
 """,
 )
 
