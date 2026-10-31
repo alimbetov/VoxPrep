@@ -47,8 +47,12 @@ final class CatalogueSourceModeController {
   const CatalogueSourceModeController({
     required CatalogueSourcePreferenceRepository repository,
     required void Function(CatalogueSourceMode mode) applyRuntimeMode,
-  }) : _repository = repository,
-       _applyRuntimeMode = applyRuntimeMode;
+  }) : this._(repository, applyRuntimeMode);
+
+  const CatalogueSourceModeController._(
+    this._repository,
+    this._applyRuntimeMode,
+  );
 
   final CatalogueSourcePreferenceRepository _repository;
   final void Function(CatalogueSourceMode mode) _applyRuntimeMode;
