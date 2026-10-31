@@ -35,6 +35,25 @@ final audioPlaybackControllerProvider = Provider<AudioPlaybackController>((
   return controller;
 });
 
+final interviewSampleAnswerPlaybackControllerProvider =
+    Provider<AudioPlaybackController>((ref) {
+      final controller = AudioPlaybackController(
+        resolveAudioAsset: (content, revision) async {
+          final resolver = await ref.read(assetResolverProvider.future);
+          return resolver.resolveContent(
+            content: content,
+            revision: revision,
+            role: ContentAudioRole.sampleAnswer.wireName,
+            policy: AssetResolutionPolicy.downloadIfMissing,
+          );
+        },
+        engine: ref.watch(audioPlaybackEngineProvider),
+        learnerState: ref.watch(learnerStateRepositoryProvider),
+      );
+      ref.onDispose(() => unawaited(controller.dispose()));
+      return controller;
+    });
+
 final audioPlaybackStateProvider = StreamProvider<ContentPlaybackState>((
   ref,
 ) async* {
@@ -42,3 +61,12 @@ final audioPlaybackStateProvider = StreamProvider<ContentPlaybackState>((
   yield controller.state;
   yield* controller.states;
 });
+
+final interviewSampleAnswerPlaybackStateProvider =
+    StreamProvider<ContentPlaybackState>((ref) async* {
+      final controller = ref.watch(
+        interviewSampleAnswerPlaybackControllerProvider,
+      );
+      yield controller.state;
+      yield* controller.states;
+    });
