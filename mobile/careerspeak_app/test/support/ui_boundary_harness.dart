@@ -49,14 +49,33 @@ const adaptiveUiBoundaryCases = <UiBoundaryCase>[
   ),
 ];
 
+Future<void> configureAdaptiveSurface(
+  WidgetTester tester, {
+  required UiBoundaryCase boundary,
+}) async {
+  await tester.binding.setSurfaceSize(boundary.size);
+  addTearDown(() => tester.binding.setSurfaceSize(null));
+}
+
+TransitionBuilder adaptiveMediaQueryBuilder(UiBoundaryCase boundary) {
+  return (context, child) {
+    final inherited = MediaQuery.maybeOf(context) ?? const MediaQueryData();
+    return MediaQuery(
+      data: inherited.copyWith(
+        size: boundary.size,
+        textScaler: TextScaler.linear(boundary.textScale),
+      ),
+      child: child ?? const SizedBox.shrink(),
+    );
+  };
+}
+
 Future<void> pumpAdaptiveSurface(
   WidgetTester tester, {
   required UiBoundaryCase boundary,
   required Widget child,
 }) async {
-  await tester.binding.setSurfaceSize(boundary.size);
-  addTearDown(() => tester.binding.setSurfaceSize(null));
-
+  await configureAdaptiveSurface(tester, boundary: boundary);
   await tester.pumpWidget(
     MediaQuery(
       data: MediaQueryData(
