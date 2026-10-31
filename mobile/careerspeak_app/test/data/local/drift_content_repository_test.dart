@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:careerspeak_app/application/query/content_query.dart';
 import 'package:careerspeak_app/application/query/page.dart';
 import 'package:careerspeak_app/application/result/result.dart';
+import 'package:careerspeak_app/data/local/content_type_storage.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_content_repository.dart';
 import 'package:careerspeak_app/domain/content_identity.dart';
@@ -306,12 +307,13 @@ Future<void> _seed(
   bool includePayload = true,
 }) async {
   final now = DateTime.utc(2026, 10, 30, 18);
+  final storageType = contentTypeToStorage(type);
   await database
       .into(database.localContentRecords)
       .insert(
         LocalContentRecordsCompanion.insert(
           contentCode: code,
-          contentType: type.name,
+          contentType: storageType,
           revision: revision,
           checksum: metadataChecksum,
           sortOrder: Value<int?>(sortOrder),
@@ -331,7 +333,7 @@ Future<void> _seed(
       .insert(
         ContentCatalogReadsCompanion.insert(
           contentCode: code,
-          contentType: type.name,
+          contentType: storageType,
           revision: revision,
           checksum: payloadChecksum ?? metadataChecksum,
           title: title,
