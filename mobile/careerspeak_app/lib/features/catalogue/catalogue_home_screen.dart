@@ -182,6 +182,7 @@ class _Shelves extends StatelessWidget {
           _Shelf(
             title: section.title,
             description: section.description,
+            iconAssetId: section.iconAssetId,
             verticals: graph.verticals
                 .where(
                   (item) => item.active && item.sectionCode == section.code,
@@ -197,11 +198,13 @@ class _Shelf extends StatelessWidget {
   const _Shelf({
     required this.title,
     required this.description,
+    required this.iconAssetId,
     required this.verticals,
   });
 
   final String title;
   final String? description;
+  final String? iconAssetId;
   final List<LearningVerticalProjection> verticals;
 
   @override
@@ -213,11 +216,27 @@ class _Shelf extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: Theme.of(context).textTheme.titleLarge),
-          if (description != null) ...[
-            const SizedBox(height: 4),
-            Text(description!),
-          ],
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (iconAssetId case final String assetId) ...[
+                CatalogueAssetIcon(assetId: assetId, size: 28),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: Theme.of(context).textTheme.titleLarge),
+                    if (description != null) ...[
+                      const SizedBox(height: 4),
+                      Text(description!),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
           const SizedBox(height: 10),
           SizedBox(
             height: cardHeight,
