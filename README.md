@@ -291,6 +291,8 @@ Elasticsearch/OpenSearch
 
 ## Normative specifications
 
+- [Universal Vertical Catalogue — implementation requirements v1.0](docs/backend/UNIVERSAL_VERTICAL_CATALOGUE.md)
+
 - [System Requirements & Architecture Specification v0.10](docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
 - [Cross-System Contract Standard v1.0](docs/architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md)
 - [Flutter Mobile Application Requirements v2.1](docs/specification/CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md)
