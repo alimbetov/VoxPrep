@@ -196,10 +196,7 @@ final class ShadowingBody extends TypedContentBody {
     );
   }
 
-  const ShadowingBody._({
-    required this.transcript,
-    required this.segments,
-  });
+  const ShadowingBody._({required this.transcript, required this.segments});
 
   @override
   ContentType get contentType => ContentType.shadowing;

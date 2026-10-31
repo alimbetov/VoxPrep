@@ -92,30 +92,33 @@ void main() {
     );
   });
 
-  test('freezes taxonomy locale and learner-facing voice capability shapes', () {
-    final category = TaxonomyProjection(
-      code: 'JAVA_BACKEND',
-      label: 'Java Backend',
-      sortOrder: 0,
-      active: true,
-    );
-    final locale = SupportedLocaleProjection(
-      code: 'ru-KZ',
-      label: 'Русский',
-      sortOrder: 0,
-      active: true,
-    );
-    final voice = TtsVoiceProjection(
-      code: 'EN_US_AMY',
-      locale: 'en-US',
-      accentCode: 'US',
-      label: 'Amy',
-      sortOrder: 0,
-      active: true,
-    );
+  test(
+    'freezes taxonomy locale and learner-facing voice capability shapes',
+    () {
+      final category = TaxonomyProjection(
+        code: 'JAVA_BACKEND',
+        label: 'Java Backend',
+        sortOrder: 0,
+        active: true,
+      );
+      final locale = SupportedLocaleProjection(
+        code: 'ru-KZ',
+        label: 'Русский',
+        sortOrder: 0,
+        active: true,
+      );
+      final voice = TtsVoiceProjection(
+        code: 'EN_US_AMY',
+        locale: 'en-US',
+        accentCode: 'US',
+        label: 'Amy',
+        sortOrder: 0,
+        active: true,
+      );
 
-    expect(category.code, 'JAVA_BACKEND');
-    expect(locale.code, 'ru-KZ');
-    expect(voice.accentCode, 'US');
-  });
+      expect(category.code, 'JAVA_BACKEND');
+      expect(locale.code, 'ru-KZ');
+      expect(voice.accentCode, 'US');
+    },
+  );
 }

@@ -154,10 +154,7 @@ final class LearningCollectionProjection {
         'a learning collection must contain content or a practice test',
       );
     }
-    _requireUnique(
-      contentRefs.map((ref) => ref.identityKey),
-      'contentRefs',
-    );
+    _requireUnique(contentRefs.map((ref) => ref.identityKey), 'contentRefs');
     _requireUnique(
       practiceTestRefs.map((ref) => ref.identityKey),
       'practiceTestRefs',
@@ -320,7 +317,11 @@ String _businessCode(String value, String fieldName) {
 String _stableCode(String value, String fieldName) {
   final normalized = value.trim();
   if (!_stableCodePattern.hasMatch(normalized)) {
-    throw ArgumentError.value(value, fieldName, 'must be an uppercase stable code');
+    throw ArgumentError.value(
+      value,
+      fieldName,
+      'must be an uppercase stable code',
+    );
   }
   return normalized;
 }
@@ -351,7 +352,11 @@ void _requireUnique(Iterable<String> keys, String fieldName) {
   final seen = <String>{};
   for (final key in keys) {
     if (!seen.add(key)) {
-      throw ArgumentError.value(key, fieldName, 'contains a duplicate exact ref');
+      throw ArgumentError.value(
+        key,
+        fieldName,
+        'contains a duplicate exact ref',
+      );
     }
   }
 }

@@ -48,16 +48,13 @@ void main() {
       ),
     ];
 
-    expect(
-      bodies.map((body) => body.contentType),
-      <ContentType>[
-        ContentType.vocabulary,
-        ContentType.interview,
-        ContentType.topic,
-        ContentType.phrase,
-        ContentType.shadowing,
-      ],
-    );
+    expect(bodies.map((body) => body.contentType), <ContentType>[
+      ContentType.vocabulary,
+      ContentType.interview,
+      ContentType.topic,
+      ContentType.phrase,
+      ContentType.shadowing,
+    ]);
   });
 
   test('typed body fields are normalized and immutable', () {
@@ -84,12 +81,7 @@ void main() {
         transcript: 'A B',
         segments: <ShadowingSegment>[
           ShadowingSegment(order: 0, text: 'A', startMs: 0, endMs: 1000),
-          ShadowingSegment(
-            order: 1,
-            text: 'B',
-            startMs: 900,
-            endMs: 1500,
-          ),
+          ShadowingSegment(order: 1, text: 'B', startMs: 900, endMs: 1500),
         ],
       ),
       throwsArgumentError,
@@ -98,9 +90,16 @@ void main() {
 
   test('typed bodies reject empty required collections', () {
     expect(
-      () => VocabularyBody(term: 'term', definition: 'definition', examples: const <String>[]),
+      () => VocabularyBody(
+        term: 'term',
+        definition: 'definition',
+        examples: const <String>[],
+      ),
       throwsArgumentError,
     );
-    expect(() => TopicBody(sections: const <TopicSection>[]), throwsArgumentError);
+    expect(
+      () => TopicBody(sections: const <TopicSection>[]),
+      throwsArgumentError,
+    );
   });
 }

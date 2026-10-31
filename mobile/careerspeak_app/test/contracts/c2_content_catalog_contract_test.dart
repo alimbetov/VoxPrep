@@ -45,7 +45,9 @@ void main() {
   });
 
   test('C2 checksum contract freezes one RFC 8785 hashing rule', () {
-    final document = File('../../docs/backend/C2_TYPED_CONTENT_CATALOG_CONTRACT.md');
+    final document = File(
+      '../../docs/backend/C2_TYPED_CONTENT_CATALOG_CONTRACT.md',
+    );
     expect(document.existsSync(), isTrue);
 
     final source = document.readAsStringSync();
