@@ -37,7 +37,14 @@ replace_once(
 )
 
 # Drift generated row classes intentionally reuse table-singular names. The
-# acceptance tests need the domain manifest classes, not generated row classes.
+# production journal needs the domain fallback rule, not Drift's generated row.
+replace_once(
+    'mobile/careerspeak_app/lib/data/local/drift_sync_journal.dart',
+    "import 'database/careerspeak_database.dart';",
+    "import 'database/careerspeak_database.dart' hide LocaleFallbackRule;",
+)
+
+# Acceptance tests need domain manifest classes, not generated row classes.
 for path in (
     'mobile/careerspeak_app/test/acceptance/c1_locale_offline_restart_acceptance_test.dart',
     'mobile/careerspeak_app/test/acceptance/c1_online_sync_offline_reopen_acceptance_test.dart',
