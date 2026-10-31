@@ -70,61 +70,68 @@ class SettingsScreen extends ConsumerWidget {
         const SizedBox(height: 28),
         Text('Language', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          children: [
-            SizedBox(
-              width: 280,
-              child: DropdownMenu<AppUiLocale>(
-                initialSelection: preferences.uiLocale,
-                enabled: preferencesReady,
-                label: const Text('UI language'),
-                expandedInsets: EdgeInsets.zero,
-                dropdownMenuEntries: [
-                  for (final value in AppUiLocale.values)
-                    DropdownMenuEntry(value: value, label: value.label),
-                ],
-                onSelected: (value) {
-                  if (value != null) {
-                    preferencesController.setUiLocale(value);
-                  }
-                },
-              ),
-            ),
-            SizedBox(
-              width: 280,
-              child: DropdownMenu<AppTranslationLocale>(
-                initialSelection: preferences.translationLocale,
-                enabled: preferencesReady,
-                label: const Text('Translation language'),
-                expandedInsets: EdgeInsets.zero,
-                dropdownMenuEntries: [
-                  for (final value in AppTranslationLocale.values)
-                    DropdownMenuEntry(value: value, label: value.label),
-                ],
-                onSelected: (value) {
-                  if (value != null) {
-                    preferencesController.setTranslationLocale(value);
-                  }
-                },
-              ),
-            ),
-            SizedBox(
-              width: 280,
-              child: DropdownMenu<PreferredEnglishAccent>(
-                initialSelection: preferences.preferredAccent,
-                enabled: preferencesReady,
-                label: const Text('Preferred accent'),
-                expandedInsets: EdgeInsets.zero,
-                dropdownMenuEntries: [
-                  for (final value in PreferredEnglishAccent.values)
-                    DropdownMenuEntry(value: value, label: value.label),
-                ],
-                onSelected: preferencesController.setPreferredAccent,
-              ),
-            ),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final fieldWidth = constraints.maxWidth < 280
+                ? constraints.maxWidth
+                : 280.0;
+            return Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: [
+                SizedBox(
+                  width: fieldWidth,
+                  child: DropdownMenu<AppUiLocale>(
+                    initialSelection: preferences.uiLocale,
+                    enabled: preferencesReady,
+                    label: const Text('UI language'),
+                    expandedInsets: EdgeInsets.zero,
+                    dropdownMenuEntries: [
+                      for (final value in AppUiLocale.values)
+                        DropdownMenuEntry(value: value, label: value.label),
+                    ],
+                    onSelected: (value) {
+                      if (value != null) {
+                        preferencesController.setUiLocale(value);
+                      }
+                    },
+                  ),
+                ),
+                SizedBox(
+                  width: fieldWidth,
+                  child: DropdownMenu<AppTranslationLocale>(
+                    initialSelection: preferences.translationLocale,
+                    enabled: preferencesReady,
+                    label: const Text('Translation language'),
+                    expandedInsets: EdgeInsets.zero,
+                    dropdownMenuEntries: [
+                      for (final value in AppTranslationLocale.values)
+                        DropdownMenuEntry(value: value, label: value.label),
+                    ],
+                    onSelected: (value) {
+                      if (value != null) {
+                        preferencesController.setTranslationLocale(value);
+                      }
+                    },
+                  ),
+                ),
+                SizedBox(
+                  width: fieldWidth,
+                  child: DropdownMenu<PreferredEnglishAccent>(
+                    initialSelection: preferences.preferredAccent,
+                    enabled: preferencesReady,
+                    label: const Text('Preferred accent'),
+                    expandedInsets: EdgeInsets.zero,
+                    dropdownMenuEntries: [
+                      for (final value in PreferredEnglishAccent.values)
+                        DropdownMenuEntry(value: value, label: value.label),
+                    ],
+                    onSelected: preferencesController.setPreferredAccent,
+                  ),
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 8),
         Text(
