@@ -1,0 +1,307 @@
+name: C1 Locale Policy Contract Patch
+
+on:
+  push:
+    branches: [feat/backend-contract-gap-audit]
+    paths: ['.github/workflows/c1-locale-policy-contract-patch.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch locale fallback contract
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f'anchor missing: {path}: {old[:100]!r}')
+              p.write_text(text.replace(old, new, 1))
+
+          manifest = 'mobile/careerspeak_app/lib/application/content_delivery/content_manifest.dart'
+          replace_once(
+              manifest,
+              "import '../../domain/content_identity.dart';\n",
+              "import '../../domain/application_preferences.dart';\nimport '../../domain/content_identity.dart';\n",
+          )
+          replace_once(
+              manifest,
+              'final class ContentTombstone {\n',
+              '''final class LocaleFallbackRule {
+            factory LocaleFallbackRule({
+              required String locale,
+              required Iterable<String> fallbackLocales,
+            }) {
+              final normalizedLocale = LocaleCode.canonicalize(locale);
+              final normalizedFallbacks = fallbackLocales
+                  .map(LocaleCode.canonicalize)
+                  .toList(growable: false);
+              final seen = <String>{normalizedLocale};
+              for (final fallback in normalizedFallbacks) {
+                if (!seen.add(fallback)) {
+                  throw ArgumentError.value(
+                    fallback,
+                    'fallbackLocales',
+                    'must not contain the requested locale or duplicates',
+                  );
+                }
+              }
+              final englishIndex = normalizedFallbacks.indexOf('en');
+              if (englishIndex >= 0 && englishIndex != normalizedFallbacks.length - 1) {
+                throw ArgumentError.value(
+                  normalizedFallbacks,
+                  'fallbackLocales',
+                  'canonical English must be terminal when configured',
+                );
+              }
+              return LocaleFallbackRule._(
+                locale: normalizedLocale,
+                fallbackLocales: List<String>.unmodifiable(normalizedFallbacks),
+              );
+            }
+
+            const LocaleFallbackRule._({
+              required this.locale,
+              required this.fallbackLocales,
+            });
+
+            final String locale;
+            final List<String> fallbackLocales;
+          }
+
+          final class ContentTombstone {
+          ''',
+          )
+          replace_once(
+              manifest,
+              '''    required Iterable<PackRevisionRef> packs,
+              required Iterable<ContentTombstone> tombstones,
+            }) {
+              final packList = List<PackRevisionRef>.unmodifiable(packs);
+              final tombstoneList = List<ContentTombstone>.unmodifiable(tombstones);
+              _requireUniquePackIdentities(packList);
+              _requireUniqueTombstoneIdentities(tombstoneList);
+          ''',
+              '''    required Iterable<PackRevisionRef> packs,
+              Iterable<LocaleFallbackRule> localeFallbacks = const <LocaleFallbackRule>[],
+              required Iterable<ContentTombstone> tombstones,
+            }) {
+              final packList = List<PackRevisionRef>.unmodifiable(packs);
+              final fallbackList = List<LocaleFallbackRule>.unmodifiable(localeFallbacks);
+              final tombstoneList = List<ContentTombstone>.unmodifiable(tombstones);
+              _requireUniquePackIdentities(packList);
+              _requireUniqueLocaleFallbackRules(fallbackList);
+              _requireUniqueTombstoneIdentities(tombstoneList);
+          ''',
+          )
+          replace_once(
+              manifest,
+              '''      checksum: normalizeSha256(checksum, 'checksum'),
+              packs: packList,
+              tombstones: tombstoneList,
+          ''',
+              '''      checksum: normalizeSha256(checksum, 'checksum'),
+              packs: packList,
+              localeFallbacks: fallbackList,
+              tombstones: tombstoneList,
+          ''',
+          )
+          replace_once(
+              manifest,
+              '''    required this.checksum,
+              required this.packs,
+              required this.tombstones,
+          ''',
+              '''    required this.checksum,
+              required this.packs,
+              required this.localeFallbacks,
+              required this.tombstones,
+          ''',
+          )
+          replace_once(
+              manifest,
+              '''  final String checksum;
+            final List<PackRevisionRef> packs;
+            final List<ContentTombstone> tombstones;
+          ''',
+              '''  final String checksum;
+            final List<PackRevisionRef> packs;
+            final List<LocaleFallbackRule> localeFallbacks;
+            final List<ContentTombstone> tombstones;
+          ''',
+          )
+          replace_once(
+              manifest,
+              'void _requireUniqueTombstoneIdentities(List<ContentTombstone> tombstones) {\n',
+              '''void _requireUniqueLocaleFallbackRules(List<LocaleFallbackRule> rules) {
+            final locales = <String>{};
+            for (final rule in rules) {
+              if (!locales.add(rule.locale)) {
+                throw ArgumentError.value(
+                  rule.locale,
+                  'localeFallbacks',
+                  'contains duplicate requested locale',
+                );
+              }
+            }
+          }
+
+          void _requireUniqueTombstoneIdentities(List<ContentTombstone> tombstones) {
+          ''',
+          )
+
+          decoder = 'mobile/careerspeak_app/lib/data/remote/content_manifest_decoder.dart'
+          replace_once(
+              decoder,
+              '''      final tombstones = <ContentTombstoneDto>[];
+          ''',
+              '''      final localeFallbacks = <LocaleFallbackRuleDto>[];
+            final fallbackRuleValues = object['localeFallbacks'] == null
+                ? const <Object?>[]
+                : _list(object, 'localeFallbacks', r'$.localeFallbacks');
+            for (var index = 0; index < fallbackRuleValues.length; index += 1) {
+              final path = '\\$.localeFallbacks[$index]';
+              final rule = _object(fallbackRuleValues[index], path);
+              final locale = _locale(rule, 'locale', '$path.locale');
+              final fallbackValues = _list(
+                rule,
+                'fallbackLocales',
+                '$path.fallbackLocales',
+              );
+              final fallbacks = <String>[];
+              for (var fallbackIndex = 0;
+                  fallbackIndex < fallbackValues.length;
+                  fallbackIndex += 1) {
+                final fallbackPath = '$path.fallbackLocales[$fallbackIndex]';
+                final value = fallbackValues[fallbackIndex];
+                if (value is! String || value.trim().isEmpty) {
+                  throw _ContractViolation(fallbackPath, 'must be a locale string');
+                }
+                final normalized = value.trim();
+                if (!_localePattern.hasMatch(normalized)) {
+                  throw _ContractViolation(
+                    fallbackPath,
+                    'must be a BCP-47-compatible locale',
+                  );
+                }
+                fallbacks.add(normalized);
+              }
+              localeFallbacks.add(
+                LocaleFallbackRuleDto(
+                  locale: locale,
+                  fallbackLocales: List<String>.unmodifiable(fallbacks),
+                ),
+              );
+            }
+
+            final tombstones = <ContentTombstoneDto>[];
+          ''',
+          )
+          replace_once(
+              decoder,
+              '''        packs: packs,
+                tombstones: tombstones,
+          ''',
+              '''        packs: packs,
+                localeFallbacks: localeFallbacks,
+                tombstones: tombstones,
+          ''',
+          )
+
+          materializer = 'mobile/careerspeak_app/lib/application/content_sync/root_manifest_materializer.dart'
+          replace_once(
+              materializer,
+              '''    final fallback = LocaleFallbackPlan(locale.code);
+          ''',
+              '''    LocaleFallbackRule? fallbackRule;
+              for (final rule in root.localeFallbacks) {
+                if (rule.locale == locale.code) {
+                  fallbackRule = rule;
+                  break;
+                }
+              }
+              final fallback = LocaleFallbackPlan(
+                requestedLocale: locale.code,
+                configuredFallbackLocales:
+                    fallbackRule?.fallbackLocales ?? const <String>[],
+              );
+          ''',
+          )
+          replace_once(
+              materializer,
+              '''        packs: packs,
+                tombstones: root.tombstones,
+          ''',
+              '''        packs: packs,
+                localeFallbacks: root.localeFallbacks,
+                tombstones: root.tombstones,
+          ''',
+          )
+
+          api = 'contracts/learner-api-v1.yaml'
+          replace_once(
+              api,
+              '''    ContentTombstone:
+          ''',
+              '''    LocaleFallbackRule:
+              type: object
+              additionalProperties: false
+              description: >-
+                Backend-owned ordered fallback locales for one requested locale.
+                The requested locale itself is implicit; canonical English is the
+                final product fallback even when omitted from fallbackLocales.
+              required:
+                - locale
+                - fallbackLocales
+              properties:
+                locale:
+                  $ref: '#/components/schemas/LocaleCode'
+                fallbackLocales:
+                  type: array
+                  uniqueItems: true
+                  items:
+                    $ref: '#/components/schemas/LocaleCode'
+
+            ContentTombstone:
+          ''',
+          )
+          replace_once(
+              api,
+              '''        packs:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/PackRevisionRef'
+                tombstones:
+          ''',
+              '''        packs:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/PackRevisionRef'
+                localeFallbacks:
+                  type: array
+                  description: >-
+                    Backend-owned fallback policy. Omitted/empty means exact locale
+                    then canonical English.
+                  default: []
+                  items:
+                    $ref: '#/components/schemas/LocaleFallbackRule'
+                tombstones:
+          ''',
+          )
+          PY
+      - name: Commit contract patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add contracts/learner-api-v1.yaml mobile/careerspeak_app/lib/application/content_delivery/content_manifest.dart mobile/careerspeak_app/lib/application/content_sync/root_manifest_materializer.dart mobile/careerspeak_app/lib/data/remote/content_manifest_decoder.dart
+          git commit -m 'feat(c1): carry backend locale fallback policy in root'
+          git push origin HEAD:feat/backend-contract-gap-audit
