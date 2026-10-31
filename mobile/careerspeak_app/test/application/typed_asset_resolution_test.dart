@@ -9,30 +9,32 @@ import 'package:careerspeak_app/domain/content_identity.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const _sha =
-    '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824';
+const _sha = '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824';
 const _content = ContentIdentity(code: 'ITEM_1', type: ContentType.interview);
 
 void main() {
-  test('catalogue image uses managed download path and becomes local', () async {
-    final source = _Source();
-    final store = _Store();
-    final resolver = _resolver(
-      source: source,
-      store: store,
-      byId: _asset('icon-1', 'image/png', 'icons/icon-1.png'),
-    );
+  test(
+    'catalogue image uses managed download path and becomes local',
+    () async {
+      final source = _Source();
+      final store = _Store();
+      final resolver = _resolver(
+        source: source,
+        store: store,
+        byId: _asset('icon-1', 'image/png', 'icons/icon-1.png'),
+      );
 
-    final result = await resolver.resolveImage(
-      'icon-1',
-      policy: AssetResolutionPolicy.downloadIfMissing,
-    );
+      final result = await resolver.resolveImage(
+        'icon-1',
+        policy: AssetResolutionPolicy.downloadIfMissing,
+      );
 
-    expect(result.getOrThrow().mediaType, 'image/png');
-    expect(result.getOrThrow().localPath, '/verified/icon-1');
-    expect(source.calls, 1);
-    expect(store.writes, 1);
-  });
+      expect(result.getOrThrow().mediaType, 'image/png');
+      expect(result.getOrThrow().localPath, '/verified/icon-1');
+      expect(source.calls, 1);
+      expect(store.writes, 1);
+    },
+  );
 
   test('catalogue image rejects non-image before network access', () async {
     final source = _Source();
@@ -114,7 +116,11 @@ AssetResolver _resolver({
   );
 }
 
-ManifestAssetDescriptor _asset(String id, String mediaType, String deliveryKey) {
+ManifestAssetDescriptor _asset(
+  String id,
+  String mediaType,
+  String deliveryKey,
+) {
   return ManifestAssetDescriptor(
     assetId: id,
     checksumSha256: _sha,
@@ -135,7 +141,9 @@ final class _Catalog implements AssetCatalogRepository {
   final ManifestAssetDescriptor? forContent;
 
   @override
-  Future<Result<ManifestAssetDescriptor?>> findCurrentById(String assetId) async {
+  Future<Result<ManifestAssetDescriptor?>> findCurrentById(
+    String assetId,
+  ) async {
     return Success(byId);
   }
 
