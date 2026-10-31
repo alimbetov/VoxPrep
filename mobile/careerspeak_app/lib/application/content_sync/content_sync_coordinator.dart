@@ -86,10 +86,10 @@ final class ContentSyncCoordinator {
     );
     if (remoteTransition != null) return FailureResult(remoteTransition);
 
-    final remoteResult = await _manifestGateway.fetchRootManifest(
-      translationLocale: translationLocale,
-      etag: null,
-    );
+    // Root snapshot identity is deliberately locale-independent. The selected
+    // translation locale remains part of the durable sync run so the executor
+    // can choose the required locale pack from the one immutable root.
+    final remoteResult = await _manifestGateway.fetchRootManifest(etag: null);
     if (remoteResult is FailureResult<RootManifestFetch>) {
       return _finishFailure(activeRunId, remoteResult.failure);
     }
