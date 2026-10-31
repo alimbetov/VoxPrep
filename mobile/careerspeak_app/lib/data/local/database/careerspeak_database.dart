@@ -7,6 +7,7 @@ import 'careerspeak_locale_tables.dart';
 import 'careerspeak_retirement_tables.dart';
 import 'careerspeak_sync_metadata_tables.dart';
 import 'careerspeak_tables.dart';
+import 'universal_catalogue_schema_v9.dart';
 
 part 'careerspeak_database.g.dart';
 
@@ -42,14 +43,15 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
     : super(executor ?? driftDatabase(name: 'careerspeak'));
 
   @override
-  int get schemaVersion => 8;
+  int get schemaVersion => 9;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) async {
       await migrator.createAll();
+      await _createUniversalCatalogueSchemaV9();
     },
-    onUpgrade: (migrator, from, _) async {
+    onUpgrade: (migrator, from, to) async {
       if (from < 2) {
         await migrator.createTable(syncRuns);
         await migrator.createTable(syncPackUpdates);
@@ -167,9 +169,18 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
         await migrator.createTable(practiceTestRevisionReads);
         await migrator.createTable(practiceTestQuestionRefs);
       }
+      if (from < 9 && to >= 9) {
+        await _createUniversalCatalogueSchemaV9();
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
     },
   );
+
+  Future<void> _createUniversalCatalogueSchemaV9() async {
+    for (final statement in universalCatalogueSchemaV9Statements) {
+      await customStatement(statement);
+    }
+  }
 }
