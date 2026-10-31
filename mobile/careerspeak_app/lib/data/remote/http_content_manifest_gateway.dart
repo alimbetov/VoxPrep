@@ -3,19 +3,26 @@ import '../../application/ports/api_client.dart';
 import '../../application/ports/content_manifest_gateway.dart';
 import '../../application/result/result.dart';
 import 'content_manifest_decoder.dart';
+import 'publication_manifest_wire_guard.dart';
 
 final class HttpContentManifestGateway implements ContentManifestGateway {
   factory HttpContentManifestGateway({
     required ApiClient apiClient,
     ContentManifestDecoder decoder = const ContentManifestDecoder(),
+    PublicationManifestWireGuard wireGuard = const PublicationManifestWireGuard(),
   }) {
-    return HttpContentManifestGateway._(apiClient, decoder);
+    return HttpContentManifestGateway._(apiClient, decoder, wireGuard);
   }
 
-  const HttpContentManifestGateway._(this._apiClient, this._decoder);
+  const HttpContentManifestGateway._(
+    this._apiClient,
+    this._decoder,
+    this._wireGuard,
+  );
 
   final ApiClient _apiClient;
   final ContentManifestDecoder _decoder;
+  final PublicationManifestWireGuard _wireGuard;
 
   @override
   Future<Result<RootManifestFetch>> fetchRootManifest({String? etag}) async {
@@ -77,6 +84,11 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
       );
     }
 
+    final shape = _wireGuard.validateRoot(apiResponse.jsonBody);
+    if (shape case FailureResult<void>(:final failure)) {
+      return FailureResult<RootManifestFetch>(failure);
+    }
+
     final decoded = _decoder.decodeRoot(apiResponse.jsonBody);
     if (decoded case FailureResult<RootContentManifest>(:final failure)) {
       return FailureResult<RootManifestFetch>(failure);
@@ -120,6 +132,11 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
           details: <String, Object?>{'statusCode': apiResponse.statusCode},
         ),
       );
+    }
+
+    final shape = _wireGuard.validatePack(apiResponse.jsonBody);
+    if (shape case FailureResult<void>(:final failure)) {
+      return FailureResult<PackContentManifest>(failure);
     }
 
     final decoded = _decoder.decodePack(apiResponse.jsonBody);
