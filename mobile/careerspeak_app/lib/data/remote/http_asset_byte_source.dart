@@ -20,11 +20,7 @@ final class HttpAssetByteSource implements AssetByteSource {
     );
   }
 
-  const HttpAssetByteSource._(
-    this._client,
-    this._accessGateway,
-    this._timeout,
-  );
+  const HttpAssetByteSource._(this._client, this._accessGateway, this._timeout);
 
   final http.Client _client;
   final MediaAccessGateway _accessGateway;
