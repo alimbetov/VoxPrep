@@ -54,41 +54,43 @@ void main() {
     expect(find.text('Sample answer'), findsOneWidget);
   });
 
-  testWidgets('INTERVIEW renders explicit empty audio state when no roles exist', (
-    tester,
-  ) async {
-    await _pump(
-      tester,
-      item: _interview,
-      repository: _FakeLearnerStateRepository(),
-      assetCatalog: const _RoleCatalog(<String>{}),
-    );
+  testWidgets(
+    'INTERVIEW renders explicit empty audio state when no roles exist',
+    (tester) async {
+      await _pump(
+        tester,
+        item: _interview,
+        repository: _FakeLearnerStateRepository(),
+        assetCatalog: const _RoleCatalog(<String>{}),
+      );
 
-    expect(
-      find.text('No interview audio is published for this revision.'),
-      findsOneWidget,
-    );
-    expect(find.text('Question'), findsNothing);
-    expect(find.text('Sample answer'), findsNothing);
-  });
+      expect(
+        find.text('No interview audio is published for this revision.'),
+        findsOneWidget,
+      );
+      expect(find.text('Question'), findsNothing);
+      expect(find.text('Sample answer'), findsNothing);
+    },
+  );
 
-  testWidgets('INTERVIEW exposes metadata failure instead of phantom controls', (
-    tester,
-  ) async {
-    await _pump(
-      tester,
-      item: _interview,
-      repository: _FakeLearnerStateRepository(),
-      assetCatalog: const _FailingRoleCatalog(),
-    );
+  testWidgets(
+    'INTERVIEW exposes metadata failure instead of phantom controls',
+    (tester) async {
+      await _pump(
+        tester,
+        item: _interview,
+        repository: _FakeLearnerStateRepository(),
+        assetCatalog: const _FailingRoleCatalog(),
+      );
 
-    expect(
-      find.textContaining('Interview audio metadata unavailable:'),
-      findsOneWidget,
-    );
-    expect(find.text('Question'), findsNothing);
-    expect(find.text('Sample answer'), findsNothing);
-  });
+      expect(
+        find.textContaining('Interview audio metadata unavailable:'),
+        findsOneWidget,
+      );
+      expect(find.text('Question'), findsNothing);
+      expect(find.text('Sample answer'), findsNothing);
+    },
+  );
 
   testWidgets('INTERVIEW playback failure is learner-visible', (tester) async {
     await _pump(
@@ -109,29 +111,30 @@ void main() {
     expect(find.text('synthetic playback failure'), findsOneWidget);
   });
 
-  testWidgets('generic audio failure is shown only for current exact revision', (
-    tester,
-  ) async {
-    final identity = ContentIdentity.fromItem(_topicWithAudio);
-    await _pump(
-      tester,
-      item: _topicWithAudio,
-      repository: _FakeLearnerStateRepository(),
-      assetCatalog: const _RoleCatalog(<String>{}),
-      playbackState: content_audio.ContentPlaybackState(
-        phase: content_audio.AudioPlaybackPhase.failed,
-        content: identity,
-        revision: _topicWithAudio.revision,
-        failure: const ApplicationFailure(
-          code: 'SYNTHETIC_GENERIC_AUDIO_FAILURE',
-          message: 'generic playback failed',
+  testWidgets(
+    'generic audio failure is shown only for current exact revision',
+    (tester) async {
+      final identity = ContentIdentity.fromItem(_topicWithAudio);
+      await _pump(
+        tester,
+        item: _topicWithAudio,
+        repository: _FakeLearnerStateRepository(),
+        assetCatalog: const _RoleCatalog(<String>{}),
+        playbackState: content_audio.ContentPlaybackState(
+          phase: content_audio.AudioPlaybackPhase.failed,
+          content: identity,
+          revision: _topicWithAudio.revision,
+          failure: const ApplicationFailure(
+            code: 'SYNTHETIC_GENERIC_AUDIO_FAILURE',
+            message: 'generic playback failed',
+          ),
         ),
-      ),
-    );
+      );
 
-    expect(find.text('generic playback failed'), findsOneWidget);
-    expect(find.text('Play'), findsOneWidget);
-  });
+      expect(find.text('generic playback failed'), findsOneWidget);
+      expect(find.text('Play'), findsOneWidget);
+    },
+  );
 
   testWidgets('stale playback failure from another item never leaks into UI', (
     tester,
@@ -143,10 +146,7 @@ void main() {
       assetCatalog: const _RoleCatalog(<String>{}),
       playbackState: const content_audio.ContentPlaybackState(
         phase: content_audio.AudioPlaybackPhase.failed,
-        content: ContentIdentity(
-          code: 'OTHER_TOPIC',
-          type: ContentType.topic,
-        ),
+        content: ContentIdentity(code: 'OTHER_TOPIC', type: ContentType.topic),
         revision: 99,
         failure: ApplicationFailure(
           code: 'STALE_FAILURE',
@@ -190,13 +190,18 @@ void main() {
       assetCatalog: const _RoleCatalog(<String>{}),
     );
 
-    expect(tester.widget<IconButton>(find.byTooltip('Back 10 seconds')).onPressed, isNull);
+    expect(
+      tester.widget<IconButton>(find.byTooltip('Back 10 seconds')).onPressed,
+      isNull,
+    );
     expect(
       tester.widget<IconButton>(find.byTooltip('Forward 10 seconds')).onPressed,
       isNull,
     );
     expect(
-      tester.widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Stop')).onPressed,
+      tester
+          .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Stop'))
+          .onPressed,
       isNull,
     );
   });
@@ -227,47 +232,49 @@ void main() {
     );
   });
 
-  testWidgets('favorite write failure is surfaced and current state is preserved', (
-    tester,
-  ) async {
-    final repository = _FakeLearnerStateRepository(failWrites: true);
-    await _pump(
-      tester,
-      item: _topicNoAudio,
-      repository: repository,
-      assetCatalog: const _RoleCatalog(<String>{}),
-    );
+  testWidgets(
+    'favorite write failure is surfaced and current state is preserved',
+    (tester) async {
+      final repository = _FakeLearnerStateRepository(failWrites: true);
+      await _pump(
+        tester,
+        item: _topicNoAudio,
+        repository: repository,
+        assetCatalog: const _RoleCatalog(<String>{}),
+      );
 
-    await tester.tap(find.byTooltip('Add favorite'));
-    await tester.pump();
+      await tester.tap(find.byTooltip('Add favorite'));
+      await tester.pump();
 
-    expect(
-      find.textContaining('Unable to update learner state:'),
-      findsOneWidget,
-    );
-    expect(find.byTooltip('Add favorite'), findsOneWidget);
-  });
+      expect(
+        find.textContaining('Unable to update learner state:'),
+        findsOneWidget,
+      );
+      expect(find.byTooltip('Add favorite'), findsOneWidget);
+    },
+  );
 
-  testWidgets('completed write failure is surfaced and does not fake completion', (
-    tester,
-  ) async {
-    final repository = _FakeLearnerStateRepository(failWrites: true);
-    await _pump(
-      tester,
-      item: _topicNoAudio,
-      repository: repository,
-      assetCatalog: const _RoleCatalog(<String>{}),
-    );
+  testWidgets(
+    'completed write failure is surfaced and does not fake completion',
+    (tester) async {
+      final repository = _FakeLearnerStateRepository(failWrites: true);
+      await _pump(
+        tester,
+        item: _topicNoAudio,
+        repository: repository,
+        assetCatalog: const _RoleCatalog(<String>{}),
+      );
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Mark completed'));
-    await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Mark completed'));
+      await tester.pump();
 
-    expect(
-      find.textContaining('Unable to update learner state:'),
-      findsOneWidget,
-    );
-    expect(find.text('Mark completed'), findsOneWidget);
-  });
+      expect(
+        find.textContaining('Unable to update learner state:'),
+        findsOneWidget,
+      );
+      expect(find.text('Mark completed'), findsOneWidget);
+    },
+  );
 
   testWidgets('content without audio never renders playback controls', (
     tester,
@@ -303,9 +310,8 @@ Future<void> _pump(
           (ref) => Stream<role_audio.RoleAudioClipState>.value(roleState),
         ),
         audioPlaybackStateProvider.overrideWith(
-          (ref) => Stream<content_audio.ContentPlaybackState>.value(
-            playbackState,
-          ),
+          (ref) =>
+              Stream<content_audio.ContentPlaybackState>.value(playbackState),
         ),
       ],
       child: MaterialApp(
