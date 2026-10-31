@@ -1,10 +1,10 @@
 import 'dart:io';
 
 import 'package:careerspeak_app/application/assessment/assessment_revision_loader.dart';
-import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_coordinator.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_planner.dart';
 import 'package:careerspeak_app/application/content_sync/sync_models.dart';
+import 'package:careerspeak_app/application/ports/universal_catalogue_repository.dart';
 import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_assessment_revision_repository.dart';
@@ -22,6 +22,7 @@ import 'package:careerspeak_app/data/mock/demo_learning_fixture.dart';
 import 'package:careerspeak_app/data/mock/demo_vertical_catalogue_fixture.dart';
 import 'package:careerspeak_app/domain/content_identity.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
+import 'package:careerspeak_app/domain/practice_test.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -86,8 +87,12 @@ void main() {
       final beforeRestart = await DriftUniversalCatalogueRepository(
         database,
       ).readCurrent();
-      expect(beforeRestart, isA<Success>());
-      final beforeSnapshot = (beforeRestart as Success).value;
+      expect(
+        beforeRestart,
+        isA<Success<CurrentUniversalCatalogueSnapshot?>>(),
+      );
+      final beforeSnapshot =
+          (beforeRestart as Success<CurrentUniversalCatalogueSnapshot?>).value;
       expect(beforeSnapshot, isNotNull);
       expect(beforeSnapshot!.graph.verticals, hasLength(8));
 
@@ -115,8 +120,12 @@ void main() {
       );
 
       final reopenedResult = await catalogueRepository.readCurrent();
-      expect(reopenedResult, isA<Success>());
-      final reopened = (reopenedResult as Success).value;
+      expect(
+        reopenedResult,
+        isA<Success<CurrentUniversalCatalogueSnapshot?>>(),
+      );
+      final reopened =
+          (reopenedResult as Success<CurrentUniversalCatalogueSnapshot?>).value;
       expect(reopened, isNotNull);
       expect(reopened!.contentVersion, 1);
       expect(reopened.graph.verticals, hasLength(8));
@@ -163,8 +172,8 @@ void main() {
       final practiceTest = await practiceTestRepository.getByCode(
         testRef.practiceTestCode,
       );
-      expect(practiceTest, isA<Success>());
-      final test = (practiceTest as Success).value;
+      expect(practiceTest, isA<Success<PracticeTest?>>());
+      final test = (practiceTest as Success<PracticeTest?>).value;
       expect(test, isNotNull);
       expect(test!.code, demoJavaTestCode);
       expect(test.questions, isNotEmpty);
