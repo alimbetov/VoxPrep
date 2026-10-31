@@ -88,8 +88,7 @@ final class DriftLocalizedContentRepository
           requestedLocale: fallback.requestedLocale,
           resolvedLocale:
               primary?.locale ?? LocaleFallbackPlan.canonicalEnglishLocale,
-          fallbackKind:
-              primary?.kind ?? LocaleFallbackKind.canonicalEnglish,
+          fallbackKind: primary?.kind ?? LocaleFallbackKind.canonicalEnglish,
           matchedLocalizationLocales: List<String>.unmodifiable(
             matches.map((match) => match.candidate.locale),
           ),
