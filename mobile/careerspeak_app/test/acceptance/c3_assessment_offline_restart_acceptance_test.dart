@@ -3,7 +3,8 @@ import 'dart:io';
 import 'package:careerspeak_app/application/assessment/assessment_revision_loader.dart';
 import 'package:careerspeak_app/application/ports/assessment_payload_gateway.dart';
 import 'package:careerspeak_app/application/result/result.dart';
-import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
+import 'package:careerspeak_app/data/local/database/careerspeak_database.dart'
+    hide PracticeTestQuestionRef;
 import 'package:careerspeak_app/data/local/drift_assessment_revision_repository.dart';
 import 'package:careerspeak_app/domain/assessment.dart';
 import 'package:careerspeak_app/domain/assessment_bundle.dart';

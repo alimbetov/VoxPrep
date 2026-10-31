@@ -5,11 +5,14 @@ import '../ports/assessment_revision_repository.dart';
 import '../result/result.dart';
 
 final class AssessmentRevisionLoader {
-  const AssessmentRevisionLoader({
+  factory AssessmentRevisionLoader({
     required AssessmentPayloadGateway gateway,
     required AssessmentRevisionRepository repository,
-  }) : _gateway = gateway,
-       _repository = repository;
+  }) {
+    return AssessmentRevisionLoader._(gateway, repository);
+  }
+
+  const AssessmentRevisionLoader._(this._gateway, this._repository);
 
   final AssessmentPayloadGateway _gateway;
   final AssessmentRevisionRepository _repository;
