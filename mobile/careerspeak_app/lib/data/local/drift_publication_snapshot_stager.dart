@@ -13,15 +13,17 @@ import 'publication_snapshot_storage.dart';
 
 final class DriftPublicationSnapshotStager
     implements PublicationSnapshotStager {
-  const DriftPublicationSnapshotStager(
+  DriftPublicationSnapshotStager(
     this._database,
     this._assessmentLoader,
-    this._catalogueGateway,
-  );
+    this._catalogueGateway, {
+    DateTime Function()? now,
+  }) : _now = now ?? (() => DateTime.now().toUtc());
 
   final CareerSpeakDatabase _database;
   final AssessmentRevisionLoader _assessmentLoader;
   final CataloguePayloadGateway _catalogueGateway;
+  final DateTime Function() _now;
 
   @override
   Future<Result<void>> stage(RootContentManifest target) async {
@@ -60,6 +62,7 @@ final class DriftPublicationSnapshotStager
 
     try {
       await _database.transaction(() async {
+        final now = _now();
         for (final payload in cataloguePayloads) {
           final existing = await _database
               .customSelect(
@@ -98,7 +101,7 @@ final class DriftPublicationSnapshotStager
                 payload.ref.revision,
                 payload.ref.checksum,
                 payloadJson,
-                DateTime.now().toUtc().millisecondsSinceEpoch,
+                now.millisecondsSinceEpoch,
               ],
             );
           }
@@ -148,6 +151,23 @@ final class DriftPublicationSnapshotStager
               ref.revision,
               ref.checksum,
             ],
+          );
+        }
+
+        // Raw auxiliary tables are intentionally outside the generated Drift v8
+        // schema, so they do not invalidate active Drift watchers themselves.
+        // If this is an idempotent repair of the already-CURRENT snapshot, touch
+        // only runtime metadata to make UI streams re-evaluate exact membership.
+        // This timestamp is not part of PublicationSnapshot identity/checksum.
+        final current = await (_database.select(
+          _database.contentManifestStates,
+        )..where((row) => row.id.equals(1))).getSingleOrNull();
+        if (current != null &&
+            current.currentContentVersion == target.contentVersion) {
+          await (_database.update(
+            _database.contentManifestStates,
+          )..where((row) => row.id.equals(1))).write(
+            ContentManifestStatesCompanion(updatedAt: Value(now)),
           );
         }
       });
