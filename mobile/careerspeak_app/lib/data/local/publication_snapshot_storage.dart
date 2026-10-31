@@ -5,9 +5,9 @@ import 'database/careerspeak_database.dart';
 ///
 /// Tables are created idempotently on first C4 use over the same SQLite
 /// connection. They contain only immutable snapshot membership/cache data;
-/// repeated application/bootstrap initialization is therefore safe. Learner
-/// visibility is still fenced exclusively by
-/// ContentManifestStates.currentContentVersion.
+/// repeated application/bootstrap initialization is therefore safe. Presence
+/// of rows here never makes a staged snapshot learner-visible: visibility is
+/// fenced exclusively by ContentManifestStates.currentContentVersion.
 final class PublicationSnapshotStorage {
   const PublicationSnapshotStorage(this._database);
 
