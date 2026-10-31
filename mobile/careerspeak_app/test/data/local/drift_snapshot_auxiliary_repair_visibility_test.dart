@@ -10,7 +10,8 @@ import 'package:careerspeak_app/application/ports/catalogue_payload_gateway.dart
 import 'package:careerspeak_app/application/query/page.dart';
 import 'package:careerspeak_app/application/query/practice_test_query.dart';
 import 'package:careerspeak_app/application/result/result.dart';
-import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
+import 'package:careerspeak_app/data/local/database/careerspeak_database.dart'
+    hide PracticeTestQuestionRef;
 import 'package:careerspeak_app/data/local/drift_assessment_revision_repository.dart';
 import 'package:careerspeak_app/data/local/drift_practice_test_repository.dart';
 import 'package:careerspeak_app/data/local/drift_publication_snapshot_stager.dart';
