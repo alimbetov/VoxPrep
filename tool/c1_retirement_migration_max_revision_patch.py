@@ -142,4 +142,23 @@ if new_local not in text:
         raise SystemExit('missing local-tombstone migration selection')
     text = text.replace(old_local, new_local, 1)
 
+# Durable local snapshot is the strongest surviving evidence after old journal
+# pruning. Insert its highest revision first; APPLIED journal rows then fill only
+# identities for which no local tombstoned row survives (fresh-install retirements).
+sync_marker = '        // Preserve already-applied retirement facts'
+local_marker = '        // Older local snapshots may contain the retired marker'
+sync_start = text.index(sync_marker)
+local_start = text.index(local_marker)
+if sync_start < local_start:
+    block_end = text.index('      }\n', local_start)
+    sync_section = text[sync_start:local_start]
+    local_section = text[local_start:block_end]
+    text = (
+        text[:sync_start]
+        + local_section
+        + '\n'
+        + sync_section
+        + text[block_end:]
+    )
+
 path.write_text(text)
