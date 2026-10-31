@@ -54,30 +54,21 @@ void main() {
           '${scenario.network.name}|${scenario.policy.name}',
       };
 
-      expect(
-        cacheNetwork,
-        {
-          for (final cache in _CacheState.values)
-            for (final network in _NetworkState.values)
-              '${cache.name}|${network.name}',
-        },
-      );
-      expect(
-        cachePolicy,
-        {
-          for (final cache in _CacheState.values)
-            for (final policy in AssetResolutionPolicy.values)
-              '${cache.name}|${policy.name}',
-        },
-      );
-      expect(
-        networkPolicy,
-        {
+      expect(cacheNetwork, {
+        for (final cache in _CacheState.values)
           for (final network in _NetworkState.values)
-            for (final policy in AssetResolutionPolicy.values)
-              '${network.name}|${policy.name}',
-        },
-      );
+            '${cache.name}|${network.name}',
+      });
+      expect(cachePolicy, {
+        for (final cache in _CacheState.values)
+          for (final policy in AssetResolutionPolicy.values)
+            '${cache.name}|${policy.name}',
+      });
+      expect(networkPolicy, {
+        for (final network in _NetworkState.values)
+          for (final policy in AssetResolutionPolicy.values)
+            '${network.name}|${policy.name}',
+      });
     });
 
     for (final scenario in scenarios) {
@@ -164,10 +155,7 @@ void main() {
 
   return switch (network) {
     _NetworkState.online => (succeeds: true, failureCode: null),
-    _NetworkState.offline => (
-      succeeds: false,
-      failureCode: 'NETWORK_OFFLINE',
-    ),
+    _NetworkState.offline => (succeeds: false, failureCode: 'NETWORK_OFFLINE'),
     _NetworkState.badChecksum => (
       succeeds: false,
       failureCode: 'ASSET_CHECKSUM_MISMATCH',
