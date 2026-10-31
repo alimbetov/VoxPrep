@@ -128,14 +128,13 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.textContaining('It provides concurrency-oriented'));
     await tester.pump();
-    await tester.scrollUntilVisible(
-      find.text('Submit'),
-      240,
-      scrollable: find.byType(Scrollable).first,
-    );
-    await tester.tap(find.text('Submit'));
+    final submit = find.text('Submit');
+    await tester.ensureVisible(submit);
+    await tester.pumpAndSettle();
+    await tester.tap(submit);
     await tester.pumpAndSettle();
 
+    expect(find.text('Review answers'), findsOneWidget);
     await expectLater(
       find.byKey(_goldenRootKey),
       matchesGoldenFile('baselines/practice_result.png'),
