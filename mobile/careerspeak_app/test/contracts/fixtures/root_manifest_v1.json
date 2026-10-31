@@ -12,6 +12,16 @@
       "checksum": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     }
   ],
+  "localeFallbacks": [
+    {
+      "locale": "ru-KZ",
+      "fallbackLocales": ["ru", "en"]
+    },
+    {
+      "locale": "kk",
+      "fallbackLocales": ["en"]
+    }
+  ],
   "tombstones": [
     {
       "contentCode": "JAVA_QUESTION_001",
