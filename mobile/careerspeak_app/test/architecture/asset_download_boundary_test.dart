@@ -28,6 +28,35 @@ void main() {
     );
   });
 
+  test('production HTTP transport is confined to two explicit planes', () {
+    final root = Directory('lib');
+    expect(root.existsSync(), isTrue, reason: root.path);
+
+    const allowedHttpImports = <String>{
+      'lib/app/api_client_providers.dart',
+      'lib/data/remote/http_api_client.dart',
+      'lib/data/remote/http_asset_byte_source.dart',
+    };
+    final violations = <String>[];
+
+    for (final entity in root.listSync(recursive: true)) {
+      if (entity is! File || !entity.path.endsWith('.dart')) continue;
+      final path = entity.path.replaceAll('\\', '/');
+      final source = entity.readAsStringSync();
+      if (source.contains('package:http/') && !allowedHttpImports.contains(path)) {
+        violations.add(path);
+      }
+    }
+
+    expect(
+      violations,
+      isEmpty,
+      reason:
+          'JSON/control-plane HTTP must use ApiClient. Binary/data-plane HTTP '
+          'must use HttpAssetByteSource after MediaAccessGateway grants access.',
+    );
+  });
+
   test('catalogue icons and audio use typed signed-grant resolution', () {
     final iconProvider = File(
       'lib/app/asset_resolver_providers.dart',
