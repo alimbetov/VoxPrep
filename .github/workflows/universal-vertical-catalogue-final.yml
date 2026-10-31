@@ -72,7 +72,7 @@ jobs:
         run: flutter pub get
 
       - name: Production coverage
-        run: flutter test --coverage --coverage-path=lib
+        run: flutter test --coverage
 
       - name: Enforce 90 percent line coverage
         run: dart run tool/coverage_gate.dart 90
