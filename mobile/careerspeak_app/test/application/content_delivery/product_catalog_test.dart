@@ -160,4 +160,182 @@ void main() {
       expect(voice.accentCode, 'US');
     },
   );
+
+  group('catalogue primitive validation', () {
+    test('revision refs normalize checksums and expose deterministic identity', () {
+      final content = ContentRevisionRef(
+        contentCode: 'java.topic-1',
+        contentType: ContentType.topic,
+        revision: 2,
+        checksum: _contentHash.toUpperCase(),
+      );
+      final practice = PracticeTestRevisionRef(
+        practiceTestCode: 'java.test-1',
+        revision: 4,
+        checksum: _testHash.toUpperCase(),
+      );
+
+      expect(content.checksum, _contentHash);
+      expect(content.identityKey, 'java.topic-1|topic|2');
+      expect(practice.checksum, _testHash);
+      expect(practice.identityKey, 'java.test-1|4');
+    });
+
+    test('revision refs reject non-positive revision and malformed checksum', () {
+      expect(
+        () => ContentRevisionRef(
+          contentCode: 'CONTENT',
+          contentType: ContentType.topic,
+          revision: 0,
+          checksum: _contentHash,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => PracticeTestRevisionRef(
+          practiceTestCode: 'TEST',
+          revision: -1,
+          checksum: _testHash,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => ContentRevisionRef(
+          contentCode: 'CONTENT',
+          contentType: ContentType.topic,
+          revision: 1,
+          checksum: 'not-a-sha256',
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('member factories reject negative position and preserve wire identity', () {
+      final content = ContentRevisionRef(
+        contentCode: 'CONTENT',
+        contentType: ContentType.topic,
+        revision: 1,
+        checksum: _contentHash,
+      );
+      final member = LearningCollectionMember.content(
+        position: 0,
+        content: content,
+      );
+
+      expect(member.identityKey, 'CONTENT|CONTENT|topic|1');
+      expect(
+        LearningCollectionMemberType.fromWireName('CONTENT'),
+        LearningCollectionMemberType.content,
+      );
+      expect(
+        LearningCollectionMemberType.fromWireName('PRACTICE_TEST'),
+        LearningCollectionMemberType.practiceTest,
+      );
+      expect(
+        () => LearningCollectionMember.content(position: -1, content: content),
+        throwsArgumentError,
+      );
+      expect(
+        () => LearningCollectionMemberType.fromWireName('UNKNOWN'),
+        throwsFormatException,
+      );
+    });
+
+    test('stable-code projections reject lowercase, blank text and negative order', () {
+      expect(
+        () => TaxonomyProjection(
+          code: 'java_backend',
+          label: 'Java',
+          sortOrder: 0,
+          active: true,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => TaxonomyProjection(
+          code: 'JAVA_BACKEND',
+          label: '   ',
+          sortOrder: 0,
+          active: true,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => LearningGoalProjection(
+          code: 'GOAL',
+          verticalCode: 'VERTICAL',
+          title: 'Goal',
+          description: 'Description',
+          sortOrder: -1,
+          active: true,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => LearningTrackProjection(
+          code: 'TRACK',
+          verticalCode: 'VERTICAL',
+          goalCode: 'GOAL',
+          title: 'Track',
+          description: 'Description',
+          levelCode: 'b2',
+          sortOrder: 0,
+          active: true,
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('optional career track accepts null but rejects invalid stable code', () {
+      final track = LearningTrackProjection(
+        code: 'TRACK',
+        verticalCode: 'VERTICAL',
+        goalCode: 'GOAL',
+        title: 'Track',
+        description: 'Description',
+        levelCode: 'B2',
+        sortOrder: 0,
+        active: true,
+      );
+      expect(track.careerTrackCode, isNull);
+
+      expect(
+        () => LearningTrackProjection(
+          code: 'TRACK',
+          verticalCode: 'VERTICAL',
+          goalCode: 'GOAL',
+          title: 'Track',
+          description: 'Description',
+          levelCode: 'B2',
+          careerTrackCode: 'java backend',
+          sortOrder: 0,
+          active: true,
+        ),
+        throwsArgumentError,
+      );
+    });
+
+    test('locale and voice reject malformed locale codes', () {
+      expect(
+        () => SupportedLocaleProjection(
+          code: 'r',
+          label: 'Russian',
+          sortOrder: 0,
+          active: true,
+        ),
+        throwsArgumentError,
+      );
+      expect(
+        () => TtsVoiceProjection(
+          code: 'VOICE',
+          locale: 'english_US',
+          accentCode: 'US',
+          label: 'Voice',
+          sortOrder: 0,
+          active: true,
+        ),
+        throwsArgumentError,
+      );
+    });
+  });
 }
