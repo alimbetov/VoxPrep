@@ -8,6 +8,7 @@ on:
       - 'tool/c1_backend_fallback_v2_patch.py'
       - 'tool/c1_backend_fallback_v2_test_patch.py'
       - 'tool/c1_schema_v6_retirement_patch.py'
+      - 'tool/c1_retirement_migration_max_revision_patch.py'
       - 'tool/c1_retirement_migration_hardening_patch.py'
       - 'tool/c1_locale_policy_repair_marker_patch.py'
       - 'tool/c1_locale_repair_patch.py'
@@ -43,6 +44,7 @@ jobs:
           python3 tool/c1_backend_fallback_v2_patch.py
           python3 tool/c1_backend_fallback_v2_test_patch.py
           python3 tool/c1_schema_v6_retirement_patch.py
+          python3 tool/c1_retirement_migration_max_revision_patch.py
           python3 tool/c1_retirement_migration_hardening_patch.py
           python3 tool/c1_locale_policy_repair_marker_patch.py
           python3 tool/c1_locale_repair_patch.py
