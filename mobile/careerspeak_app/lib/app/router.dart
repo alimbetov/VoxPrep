@@ -83,6 +83,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               hierarchical: true,
               child: CatalogueCollectionScreen(
                 verticalCode: state.pathParameters['verticalCode']!,
+                goalCode: state.pathParameters['goalCode']!,
                 trackCode: state.pathParameters['trackCode']!,
                 collectionCode: state.pathParameters['collectionCode']!,
               ),
