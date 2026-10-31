@@ -1,4 +1,4 @@
-# C3 exact-SHA qualification trigger 1
+# C3 exact-SHA qualification trigger 2
 name: Flutter Production Adapters
 
 on:
@@ -39,7 +39,7 @@ jobs:
           dart run build_runner build
           dart run drift_dev schema dump \
             lib/data/local/database/careerspeak_database.dart \
-            drift_schemas/drift_schema_v7.json
+            drift_schemas/drift_schema_v8.json
           rm -rf test/generated_migrations
           dart run drift_dev schema generate \
             --data-classes \
@@ -55,6 +55,7 @@ jobs:
             drift_schemas/drift_schema_v5.json \
             drift_schemas/drift_schema_v6.json \
             drift_schemas/drift_schema_v7.json \
+            drift_schemas/drift_schema_v8.json \
             test/generated_migrations
       - name: Analyze
         working-directory: mobile/careerspeak_app
