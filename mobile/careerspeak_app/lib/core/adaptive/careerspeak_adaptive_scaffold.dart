@@ -15,7 +15,7 @@ class CareerSpeakAdaptiveScaffold extends StatelessWidget {
 
   static const _destinations = <_Destination>[
     _Destination('/', 'Home', Icons.home_outlined, Icons.home),
-    _Destination('/learn', 'Learn', Icons.school_outlined, Icons.school),
+    _Destination('/catalogue', 'Learn', Icons.school_outlined, Icons.school),
     _Destination('/tests', 'Tests', Icons.quiz_outlined, Icons.quiz),
     _Destination('/review', 'Review', Icons.replay_outlined, Icons.replay),
     _Destination(
@@ -27,7 +27,9 @@ class CareerSpeakAdaptiveScaffold extends StatelessWidget {
   ];
 
   int get _selectedIndex {
-    if (location.startsWith('/content/')) return 1;
+    if (location.startsWith('/content/') || location.startsWith('/learn')) {
+      return 1;
+    }
     final index = _destinations.indexWhere(
       (destination) =>
           destination.path != '/' && location.startsWith(destination.path),
