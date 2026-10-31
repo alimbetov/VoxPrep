@@ -121,6 +121,17 @@ jobs:
           flutter test test/features/shared/learner_surfaces_adaptive_visual_boundary_test.dart
           flutter test test/core/adaptive/careerspeak_adaptive_scaffold_test.dart
 
+      - name: Golden baseline completeness
+        run: |
+          test -f test/goldens/baselines/catalogue_grid.png
+          test -f test/goldens/baselines/content_detail.png
+          test -f test/goldens/baselines/interview_two_audio_roles.png
+          test -f test/goldens/baselines/practice_question.png
+          test -f test/goldens/baselines/practice_result.png
+          test -f test/goldens/baselines/settings_rtl.png
+          test -f test/goldens/baselines/home_small_phone.png
+          test "$(find test/goldens/baselines -maxdepth 1 -type f -name '*.png' | wc -l)" -eq 7
+
       - name: Targeted learner UI goldens
         run: flutter test test/goldens/learner_ui_golden_test.dart
 
