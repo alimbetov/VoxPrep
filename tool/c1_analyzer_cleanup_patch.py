@@ -152,26 +152,31 @@ replace_once(
       await _pumpUntil(tester, find.byType(SearchBar));
       expect(find.text('Dependency Injection'), findsOneWidget);
 ''',
-    '''      await tester.tap(learnDestination);
-      await _pumpUntil(tester, find.byType(SearchBar));
+    '''      await _pumpUntil(tester, find.byType(SearchBar));
       await _pumpUntil(tester, find.text('Dependency Injection'));
       expect(find.text('Dependency Injection'), findsOneWidget);
 ''',
 )
 
-# NavigationDestination owns its label as a String and Material does not expose
-# that label as a stable descendant Text widget in every state. Target the
-# actual compact navigation contract instead of its internal rendering detail.
+# Adaptive navigation has its own P1.7 acceptance. This production renderer E2E
+# validates the stable router contract instead of coupling to NavigationBar vs
+# NavigationRail internals that vary with test-surface MediaQuery behavior.
+replace_once(
+    e2e,
+    "import 'package:careerspeak_app/app/learner_state_providers.dart';",
+    "import 'package:careerspeak_app/app/learner_state_providers.dart';\nimport 'package:careerspeak_app/app/router.dart';",
+)
 replace_once(
     e2e,
     '''      final learnDestination = find.descendant(
         of: find.byType(NavigationBar),
         matching: find.text('Learn'),
       );
+      expect(learnDestination, findsOneWidget);
+      await tester.tap(learnDestination);
 ''',
-    '''      final learnDestination = find.byWidgetPredicate(
-        (widget) => widget is NavigationDestination && widget.label == 'Learn',
-      );
+    '''      container.read(routerProvider).go('/learn');
+      await tester.pump();
 ''',
 )
 
