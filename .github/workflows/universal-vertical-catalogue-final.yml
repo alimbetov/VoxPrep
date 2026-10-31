@@ -80,8 +80,16 @@ jobs:
       - name: V12 adversarial qualification
         run: flutter test test/acceptance/v12_universal_catalogue_adversarial_acceptance_test.dart
 
-      - name: Drift migration v1 through v9
+      - name: Drift migration v1 through v10
         run: flutter test test/data/local/database/universal_catalogue_schema_v9_test.dart
+
+      - name: Audio retention unit qualification
+        run: |
+          flutter test test/application/asset_cache_retention_manager_test.dart
+          flutter test test/data/local/drift_asset_cache_retention_repository_test.dart
+
+      - name: Audio eviction redownload acceptance
+        run: flutter test test/acceptance/audio_cache_eviction_redownload_acceptance_test.dart
 
       - name: Production E2E
         run: flutter test test/acceptance/p2_10_7_production_e2e_test.dart
