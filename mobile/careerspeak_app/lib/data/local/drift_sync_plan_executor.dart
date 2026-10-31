@@ -341,7 +341,10 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
 
     final checksumMatches = existing.checksum == content.checksum;
     final sortOrderMatches = existing.sortOrder == content.sortOrder;
-    final publishedAtMatches = existing.publishedAt == content.publishedAt;
+    final publishedAtMatches = _sameOptionalInstant(
+      existing.publishedAt,
+      content.publishedAt,
+    );
     final schemaVersionMatches = existing.sourceSchemaVersion == schemaVersion;
     if (!checksumMatches ||
         !sortOrderMatches ||
@@ -804,11 +807,15 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
   }
 
   Future<void> _setRunState(String runId, SyncRunState state) async {
-    final updated = await (_database.update(
-      _database.syncRuns,
-    )..where((row) => row.runId.equals(runId))).write(
-      SyncRunsCompanion(state: Value(state.storageCode), updatedAt: Value(_now())),
-    );
+    final updated =
+        await (_database.update(
+          _database.syncRuns,
+        )..where((row) => row.runId.equals(runId))).write(
+          SyncRunsCompanion(
+            state: Value(state.storageCode),
+            updatedAt: Value(_now()),
+          ),
+        );
     if (updated != 1) {
       throw const _SyncExecutorInvariant(
         ApplicationFailure(
@@ -824,18 +831,19 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
     PackRevisionRef target,
     SyncPackUpdateState state,
   ) async {
-    final updated = await (_database.update(_database.syncPackUpdates)..where(
-          (row) =>
-              row.runId.equals(runId) &
-              row.packCode.equals(target.identity.code) &
-              row.variantKey.equals(target.identity.variant),
-        ))
-        .write(
-          SyncPackUpdatesCompanion(
-            state: Value(state.storageCode),
-            updatedAt: Value(_now()),
-          ),
-        );
+    final updated =
+        await (_database.update(_database.syncPackUpdates)..where(
+              (row) =>
+                  row.runId.equals(runId) &
+                  row.packCode.equals(target.identity.code) &
+                  row.variantKey.equals(target.identity.variant),
+            ))
+            .write(
+              SyncPackUpdatesCompanion(
+                state: Value(state.storageCode),
+                updatedAt: Value(_now()),
+              ),
+            );
     if (updated != 1) {
       throw const _SyncExecutorInvariant(
         ApplicationFailure(
@@ -857,6 +865,13 @@ bool _samePayloadTarget(ContentPayloadRef left, ContentPayloadRef right) {
   return left.identity == right.identity &&
       left.revision == right.revision &&
       left.checksum == right.checksum;
+}
+
+bool _sameOptionalInstant(DateTime? left, DateTime? right) {
+  if (left == null || right == null) {
+    return left == null && right == null;
+  }
+  return left.isAtSameMomentAs(right);
 }
 
 String _contentKey(String code, String type, int revision) =>
