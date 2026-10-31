@@ -424,6 +424,29 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
     DateTime now,
   ) async {
     final type = _contentTypeToStorage(content.identity.type);
+    final retired =
+        await (_database.select(_database.localContentRecords)..where(
+              (row) =>
+                  row.contentCode.equals(content.identity.code) &
+                  row.contentType.equals(type) &
+                  row.snapshotState.equals('TOMBSTONED'),
+            )..limit(1))
+            .getSingleOrNull();
+    if (retired != null) {
+      throw _SyncExecutorInvariant(
+        ApplicationFailure(
+          code: 'CONTENT_IDENTITY_RETIRED',
+          message: 'A tombstoned content identity cannot be republished.',
+          details: <String, Object?>{
+            'contentCode': content.identity.code,
+            'contentType': type,
+            'incomingRevision': content.revision,
+            'retiredRevision': retired.revision,
+          },
+        ),
+      );
+    }
+
     final existing =
         await (_database.select(_database.localContentRecords)..where(
               (row) =>
