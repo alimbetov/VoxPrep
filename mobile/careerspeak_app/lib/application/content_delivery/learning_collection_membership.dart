@@ -114,7 +114,8 @@ final class LearningCollectionMembership {
   final String collectionCode;
   final List<LearningCollectionMemberRef> members;
 
-  List<ContentRevisionRef> get contentRefs => List<ContentRevisionRef>.unmodifiable(
+  List<ContentRevisionRef> get contentRefs =>
+      List<ContentRevisionRef>.unmodifiable(
         members
             .whereType<LearningCollectionContentMemberRef>()
             .map((member) => member.ref),
@@ -126,4 +127,56 @@ final class LearningCollectionMembership {
             .whereType<LearningCollectionPracticeTestMemberRef>()
             .map((member) => member.ref),
       );
+}
+
+extension LearningCollectionPublicationBinding on LearningCollectionProjection {
+  LearningCollectionMembership bindToPublication({
+    required PublicationRevisionMembership publication,
+    required Iterable<LearningCollectionMemberRef> orderedMembers,
+  }) {
+    final membership = LearningCollectionMembership(
+      collectionCode: code,
+      members: orderedMembers,
+      publication: publication,
+    );
+
+    _requireSameExactRefs(
+      expected: contentRefs.map(
+        (ref) => '${ref.identityKey}|${ref.checksum}',
+      ),
+      actual: membership.contentRefs.map(
+        (ref) => '${ref.identityKey}|${ref.checksum}',
+      ),
+      fieldName: 'contentRefs',
+    );
+    _requireSameExactRefs(
+      expected: practiceTestRefs.map(
+        (ref) => '${ref.identityKey}|${ref.checksum}',
+      ),
+      actual: membership.practiceTestRefs.map(
+        (ref) => '${ref.identityKey}|${ref.checksum}',
+      ),
+      fieldName: 'practiceTestRefs',
+    );
+
+    return membership;
+  }
+}
+
+void _requireSameExactRefs({
+  required Iterable<String> expected,
+  required Iterable<String> actual,
+  required String fieldName,
+}) {
+  final expectedSet = expected.toSet();
+  final actualSet = actual.toSet();
+  if (expectedSet.length != actualSet.length ||
+      !expectedSet.containsAll(actualSet) ||
+      !actualSet.containsAll(expectedSet)) {
+    throw ArgumentError.value(
+      actualSet,
+      fieldName,
+      'ordered membership must contain exactly the projection refs',
+    );
+  }
 }
