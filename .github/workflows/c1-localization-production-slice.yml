@@ -28,7 +28,7 @@ jobs:
 
       - name: Apply C1.5-C1.7 implementation patches
         run: |
-          python3 tool/c1_complete_backend_fallback.py
+          python3 tool/c1_complete_backend_fallback_v2.py
           python3 tool/c1_schema_v6_test_patch.py
 
       - name: Format handwritten Dart
