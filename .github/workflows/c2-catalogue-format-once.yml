@@ -1,0 +1,41 @@
+name: C2 Catalogue Format Once
+
+on:
+  push:
+    branches:
+      - feat/backend-contract-gap-audit
+    paths:
+      - '.github/workflows/c2-catalogue-format-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/backend-contract-gap-audit
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - name: Resolve dependencies
+        working-directory: mobile/careerspeak_app
+        run: flutter pub get
+      - name: Apply official formatter
+        working-directory: mobile/careerspeak_app
+        run: dart format lib/application/content_delivery/catalogue_selection.dart
+      - name: Commit formatter-only repair
+        run: |
+          if git diff --quiet -- mobile/careerspeak_app/lib/application/content_delivery/catalogue_selection.dart; then
+            echo 'No formatter changes required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mobile/careerspeak_app/lib/application/content_delivery/catalogue_selection.dart
+          git commit -m 'style(c2): apply official catalogue formatter'
+          git push origin HEAD:feat/backend-contract-gap-audit
