@@ -5,7 +5,7 @@ import 'package:careerspeak_app/app/catalogue_payload_providers.dart';
 import 'package:careerspeak_app/app/learner_state_providers.dart';
 import 'package:careerspeak_app/app/repository_providers.dart';
 import 'package:careerspeak_app/application/content_delivery/content_audio_policy.dart';
-import 'package:careerspeak_app/application/query/page.dart';
+import 'package:careerspeak_app/application/query/page.dart' as app_page;
 import 'package:careerspeak_app/application/services/role_audio_clip_controller.dart';
 import 'package:careerspeak_app/domain/application_preferences.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
@@ -171,8 +171,8 @@ void main() {
       size: const Size(320, 568),
       overrides: [
         contentPageProvider.overrideWith(
-          (ref) => Stream<Page<ContentItem>>.value(
-            const Page<ContentItem>(
+          (ref) => Stream<app_page.Page<ContentItem>>.value(
+            const app_page.Page<ContentItem>(
               items: <ContentItem>[goldenTopic, goldenInterview],
               hasMore: false,
             ),
@@ -197,7 +197,7 @@ const _goldenRootKey = ValueKey<String>('learner-ui-golden-root');
 Future<void> _pumpGolden(
   WidgetTester tester, {
   required Size size,
-  required List<Override> overrides,
+  required dynamic overrides,
   required Widget child,
   TextDirection textDirection = TextDirection.ltr,
 }) async {
