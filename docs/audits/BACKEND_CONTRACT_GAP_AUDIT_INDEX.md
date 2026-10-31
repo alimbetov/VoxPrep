@@ -54,10 +54,10 @@ P1/P2 findings remain useful hardening input, but they SHALL NOT be promoted int
 C0P product contract freeze                  ACCEPTED
 C1.1 locale-independent root identity        IMPLEMENTED
 C1.2 locale-pack exact localization refs     IMPLEMENTED
-C1.3 exact localized payload wire transport  IMPLEMENTED / QUALIFYING
-C1.4 Drift localization persistence          NEXT
-C1.5 deterministic locale fallback           NEXT
-C1.6 offline/restart/tombstone acceptance    NEXT
+C1.3 exact localized payload wire transport  IMPLEMENTED
+C1.4 Drift localization persistence          IMPLEMENTED
+C1.5 Backend-owned deterministic fallback    IMPLEMENTED / QUALIFYING
+C1.6 retirement + offline/restart hardening  IMPLEMENTED / QUALIFYING
 C1.7 exact-SHA green CI                      REQUIRED
 
 C2 typed content + small catalogues          PENDING
@@ -66,20 +66,36 @@ C4 atomic publication                        PENDING
 C5 installation/security                     PENDING
 ```
 
-The learner wire contract now uses one locale-independent root and an exact
-immutable localized payload identity:
+The learner wire contract uses one locale-independent root and an exact immutable localized payload identity:
 
 ```text
 (contentCode, contentType, contentRevision,
  locale, localizationRevision, checksum)
 ```
 
-Localized payloads contain locale-owned support copy only. Canonical English
-content and shared audio/media remain owned by the canonical content revision.
+Localized payloads contain locale-owned support copy only. Canonical English content and shared audio/media remain owned by the canonical content revision.
 
-C1 is not accepted until localized payloads are persisted independently in
-Drift, fallback/restart behavior is qualified, and the exact branch SHA passes
-the complete production-adapters workflow.
+Fallback policy is Backend-owned publication metadata. Flutter canonicalizes BCP-47 identities and applies the supplied ordered chain; it does not infer a base-language fallback from the requested locale. Missing policy or missing locale content therefore degrades safely to canonical English instead of inventing client policy.
+
+The local production model keeps fallback policy and content retirement separate from per-run sync journal state:
+
+```text
+immutable root
+    ├── packs / exact localization refs
+    └── locale fallback rules
+             ↓
+        Drift CURRENT policy
+
+root tombstone
+    ↓
+ContentRetirements
+    ↓
+permanent stable-business-identity guard
+```
+
+`SyncTombstones` remains execution evidence only. Permanent no-resurrection semantics are owned by `ContentRetirements`, so later journal cleanup cannot make a retired identity publishable again.
+
+C1 is not accepted until the final Drift v6 baseline, Backend-owned fallback persistence, locale repair, file-backed offline/restart behavior, and retirement acceptance all pass on one exact branch SHA through the complete production-adapters workflow.
 
 ## Localization
 
@@ -92,7 +108,7 @@ Backend-owned SupportedLocale
 locale-independent root
 immutable localized payloads
 BCP-47 support
-configured fallback
+Backend-configured fallback
 canonical English/audio reuse
 RTL readiness
 ```
