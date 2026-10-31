@@ -1,49 +1,6 @@
+import 'catalogue_revision_ref.dart';
 import 'content_manifest.dart';
 import 'product_catalog.dart';
-
-enum CatalogueKind {
-  learningGoals('learning-goals'),
-  learningTracks('learning-tracks'),
-  learningCollections('learning-collections'),
-  categories('categories'),
-  levels('levels'),
-  skills('skills'),
-  supportedLocales('supported-locales'),
-  ttsVoices('tts-voices');
-
-  const CatalogueKind(this.wireName);
-
-  final String wireName;
-}
-
-final class CatalogueRevisionRef {
-  factory CatalogueRevisionRef({
-    required CatalogueKind kind,
-    required int revision,
-    required String checksum,
-  }) {
-    if (revision < 1) {
-      throw ArgumentError.value(revision, 'revision', 'must be positive');
-    }
-    return CatalogueRevisionRef._(
-      kind: kind,
-      revision: revision,
-      checksum: normalizeSha256(checksum, 'checksum'),
-    );
-  }
-
-  const CatalogueRevisionRef._({
-    required this.kind,
-    required this.revision,
-    required this.checksum,
-  });
-
-  final CatalogueKind kind;
-  final int revision;
-  final String checksum;
-
-  String get identityKey => kind.wireName;
-}
 
 /// Exact immutable resource membership of one publication snapshot.
 ///
