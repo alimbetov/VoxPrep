@@ -40,14 +40,8 @@ void main() {
 
     expect(iconProvider, contains('resolver.resolveImage('));
     expect(audioProvider, contains('resolver.resolveAudioContent('));
-    expect(
-      iconProvider,
-      contains('AssetResolutionPolicy.downloadIfMissing'),
-    );
-    expect(
-      audioProvider,
-      contains('AssetResolutionPolicy.downloadIfMissing'),
-    );
+    expect(iconProvider, contains('AssetResolutionPolicy.downloadIfMissing'));
+    expect(audioProvider, contains('AssetResolutionPolicy.downloadIfMissing'));
     expect(byteSource, contains("http.Request('GET'"));
     expect(byteSource, contains('asset.deliveryKey'));
   });
