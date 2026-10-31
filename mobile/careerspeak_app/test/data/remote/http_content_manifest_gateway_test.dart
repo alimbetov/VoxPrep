@@ -95,6 +95,8 @@ void main() {
         expect(fetch, isA<RootManifestChanged>());
         final changed = fetch as RootManifestChanged;
         expect(changed.manifest.contentVersion, 108);
+        expect(changed.manifest.practiceTests, isEmpty);
+        expect(changed.manifest.catalogues, isEmpty);
         expect(changed.etag, 'etag-108');
         expect(apiClient.requests.single.queryParameters, isEmpty);
       },
@@ -210,6 +212,8 @@ Map<String, Object?> _rootManifest() {
         'checksum': _shaB,
       },
     ],
+    'practiceTests': const <Object?>[],
+    'catalogues': const <Object?>[],
     'tombstones': const <Object?>[],
   };
 }
