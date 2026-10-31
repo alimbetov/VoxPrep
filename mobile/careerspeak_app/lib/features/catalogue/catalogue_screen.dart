@@ -50,6 +50,7 @@ class CatalogueVerticalScreen extends ConsumerWidget {
       return _HierarchyPage(
         title: vertical.title,
         description: vertical.description,
+        emptyMessage: 'No learning goals are published for this vertical.',
         children: [
           for (final goal in goals)
             _HierarchyCard(
@@ -59,7 +60,6 @@ class CatalogueVerticalScreen extends ConsumerWidget {
                   context.push(catalogueGoalLocation(vertical.code, goal.code)),
             ),
         ],
-        emptyMessage: 'No learning goals are published for this vertical.',
       );
     });
   }
@@ -98,6 +98,7 @@ class CatalogueGoalScreen extends ConsumerWidget {
       return _HierarchyPage(
         title: goal.title,
         description: goal.description,
+        emptyMessage: 'No learning tracks are published for this goal.',
         children: [
           for (final track in tracks)
             _HierarchyCard(
@@ -109,7 +110,6 @@ class CatalogueGoalScreen extends ConsumerWidget {
               ),
             ),
         ],
-        emptyMessage: 'No learning tracks are published for this goal.',
       );
     });
   }
@@ -154,6 +154,7 @@ class CatalogueTrackScreen extends ConsumerWidget {
       return _HierarchyPage(
         title: track.title,
         description: track.description,
+        emptyMessage: 'No learning collections are published for this track.',
         children: [
           for (final collection in collections)
             _HierarchyCard(
@@ -170,7 +171,6 @@ class CatalogueTrackScreen extends ConsumerWidget {
               ),
             ),
         ],
-        emptyMessage: 'No learning collections are published for this track.',
       );
     });
   }
