@@ -6,6 +6,10 @@ import '../result/result.dart';
 /// Builds the device-local pack projection from one locale-independent backend
 /// root snapshot. The global contentVersion/checksum remain the identity of the
 /// full published root; Flutter only applies Backend-owned fallback metadata.
+///
+/// Non-pack snapshot membership is never locale-projected. Exact practice-test
+/// and catalogue refs therefore survive materialization unchanged and remain
+/// owned by the same immutable PublicationSnapshot.
 final class RootManifestMaterializer {
   const RootManifestMaterializer();
 
@@ -64,6 +68,8 @@ final class RootManifestMaterializer {
         publishedAt: root.publishedAt,
         checksum: root.checksum,
         packs: packs,
+        practiceTests: root.practiceTests,
+        catalogues: root.catalogues,
         localeFallbacks: root.localeFallbacks,
         tombstones: root.tombstones,
       ),
