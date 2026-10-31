@@ -4,14 +4,21 @@ on:
   push:
     branches:
       - feat/p2-flutter-production-adapters
+      - feat/backend-contract-gap-audit
     paths:
       - 'mobile/careerspeak_app/**'
       - 'contracts/**'
+      - 'docs/backend/**'
+      - 'docs/mobile/**'
+      - 'docs/audits/**'
       - '.github/workflows/flutter-production-adapters.yml'
   pull_request:
     paths:
       - 'mobile/careerspeak_app/**'
       - 'contracts/**'
+      - 'docs/backend/**'
+      - 'docs/mobile/**'
+      - 'docs/audits/**'
       - '.github/workflows/flutter-production-adapters.yml'
 
 jobs:
