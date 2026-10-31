@@ -22,6 +22,7 @@ SyncLocalSnapshot emptySnapshot() => SyncLocalSnapshot(
 RootContentManifest manifest(
   int version, {
   Iterable<PackRevisionRef> packs = const <PackRevisionRef>[],
+  Iterable<LocaleFallbackRule> localeFallbacks = const <LocaleFallbackRule>[],
 }) {
   return RootContentManifest(
     schemaVersion: 1,
@@ -30,6 +31,7 @@ RootContentManifest manifest(
     publishedAt: DateTime.utc(2026, 10, 30, 10),
     checksum: version == 108 ? rootA : rootB,
     packs: packs,
+    localeFallbacks: localeFallbacks,
     tombstones: const <ContentTombstone>[],
   );
 }
