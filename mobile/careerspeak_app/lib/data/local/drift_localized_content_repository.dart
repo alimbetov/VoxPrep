@@ -304,6 +304,7 @@ WHERE r.snapshot_state = 'CURRENT'
 
 const _localizedSql = '''
 SELECT DISTINCT
+  p.localization_revision AS localization_revision,
   p.checksum AS ref_checksum,
   l.checksum AS payload_checksum,
   l.title,
