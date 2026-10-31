@@ -1,0 +1,55 @@
+name: C2 Format Once
+
+on:
+  push:
+    branches:
+      - feat/backend-contract-gap-audit
+    paths:
+      - '.github/workflows/c2-format-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - name: Format C2 Dart sources
+        run: |
+          dart format \
+            mobile/careerspeak_app/lib/application/content_delivery/product_catalog.dart \
+            mobile/careerspeak_app/lib/application/content_delivery/typed_content_body.dart \
+            mobile/careerspeak_app/test/application/content_delivery/product_catalog_test.dart \
+            mobile/careerspeak_app/test/application/content_delivery/typed_content_body_test.dart \
+            mobile/careerspeak_app/test/contracts/c2_content_catalog_contract_test.dart
+      - name: Commit formatter-only change
+        env:
+          BASE_SHA: ${{ github.sha }}
+        run: |
+          if git diff --quiet -- \
+            mobile/careerspeak_app/lib/application/content_delivery/product_catalog.dart \
+            mobile/careerspeak_app/lib/application/content_delivery/typed_content_body.dart \
+            mobile/careerspeak_app/test/application/content_delivery/product_catalog_test.dart \
+            mobile/careerspeak_app/test/application/content_delivery/typed_content_body_test.dart \
+            mobile/careerspeak_app/test/contracts/c2_content_catalog_contract_test.dart; then
+            echo 'No formatting changes required.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            mobile/careerspeak_app/lib/application/content_delivery/product_catalog.dart \
+            mobile/careerspeak_app/lib/application/content_delivery/typed_content_body.dart \
+            mobile/careerspeak_app/test/application/content_delivery/product_catalog_test.dart \
+            mobile/careerspeak_app/test/application/content_delivery/typed_content_body_test.dart \
+            mobile/careerspeak_app/test/contracts/c2_content_catalog_contract_test.dart
+          git commit -m 'style(c2): format typed content contract'
+          git fetch origin feat/backend-contract-gap-audit
+          test "$(git rev-parse origin/feat/backend-contract-gap-audit)" = "$BASE_SHA"
+          git push origin HEAD:feat/backend-contract-gap-audit
