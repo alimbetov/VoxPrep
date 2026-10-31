@@ -1,6 +1,7 @@
 import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_planner.dart';
 import 'package:careerspeak_app/application/content_sync/sync_models.dart';
+import 'package:careerspeak_app/application/result/result.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
