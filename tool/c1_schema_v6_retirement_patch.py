@@ -41,7 +41,7 @@ replace_once(
         await migrator.createTable(localizedContentReads);
       }
 ''',
-    '''      if (from < 5) {
+    """      if (from < 5) {
         await migrator.createTable(packLocalizationRefs);
         await migrator.createTable(localizedContentReads);
       }
@@ -109,7 +109,7 @@ replace_once(
           WHERE local.snapshot_state = 'TOMBSTONED'
         ''');
       }
-''',
+""",
 )
 
 executor = 'mobile/careerspeak_app/lib/data/local/drift_sync_plan_executor.dart'
