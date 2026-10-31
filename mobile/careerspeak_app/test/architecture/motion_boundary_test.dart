@@ -17,8 +17,8 @@ void main() {
         final source = entity.readAsStringSync();
         expect(
           source.contains('core/motion/') ||
-              source.contains("../motion/") ||
-              source.contains("../../motion/"),
+              source.contains('../motion/') ||
+              source.contains('../../motion/'),
           isFalse,
           reason: 'Motion dependency leaked into ${entity.path}',
         );

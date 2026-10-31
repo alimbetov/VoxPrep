@@ -1,3 +1,5 @@
+// ignore_for_file: use_super_parameters
+
 sealed class LocaleCode {
   const LocaleCode._(this.code);
 

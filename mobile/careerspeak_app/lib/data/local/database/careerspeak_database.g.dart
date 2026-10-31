@@ -5503,6 +5503,608 @@ class PackContentRefsCompanion extends UpdateCompanion<PackContentRef> {
   }
 }
 
+class $PackLocalizationRefsTable extends PackLocalizationRefs
+    with TableInfo<$PackLocalizationRefsTable, PackLocalizationRef> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PackLocalizationRefsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _packCodeMeta = const VerificationMeta(
+    'packCode',
+  );
+  @override
+  late final GeneratedColumn<String> packCode = GeneratedColumn<String>(
+    'pack_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _variantKeyMeta = const VerificationMeta(
+    'variantKey',
+  );
+  @override
+  late final GeneratedColumn<String> variantKey = GeneratedColumn<String>(
+    'variant_key',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _packRevisionMeta = const VerificationMeta(
+    'packRevision',
+  );
+  @override
+  late final GeneratedColumn<int> packRevision = GeneratedColumn<int>(
+    'pack_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentCodeMeta = const VerificationMeta(
+    'contentCode',
+  );
+  @override
+  late final GeneratedColumn<String> contentCode = GeneratedColumn<String>(
+    'content_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentTypeMeta = const VerificationMeta(
+    'contentType',
+  );
+  @override
+  late final GeneratedColumn<String> contentType = GeneratedColumn<String>(
+    'content_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentRevisionMeta = const VerificationMeta(
+    'contentRevision',
+  );
+  @override
+  late final GeneratedColumn<int> contentRevision = GeneratedColumn<int>(
+    'content_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _localeMeta = const VerificationMeta('locale');
+  @override
+  late final GeneratedColumn<String> locale = GeneratedColumn<String>(
+    'locale',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _localizationRevisionMeta =
+      const VerificationMeta('localizationRevision');
+  @override
+  late final GeneratedColumn<int> localizationRevision = GeneratedColumn<int>(
+    'localization_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _checksumMeta = const VerificationMeta(
+    'checksum',
+  );
+  @override
+  late final GeneratedColumn<String> checksum = GeneratedColumn<String>(
+    'checksum',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    packCode,
+    variantKey,
+    packRevision,
+    contentCode,
+    contentType,
+    contentRevision,
+    locale,
+    localizationRevision,
+    checksum,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pack_localization_refs';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PackLocalizationRef> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('pack_code')) {
+      context.handle(
+        _packCodeMeta,
+        packCode.isAcceptableOrUnknown(data['pack_code']!, _packCodeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_packCodeMeta);
+    }
+    if (data.containsKey('variant_key')) {
+      context.handle(
+        _variantKeyMeta,
+        variantKey.isAcceptableOrUnknown(data['variant_key']!, _variantKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_variantKeyMeta);
+    }
+    if (data.containsKey('pack_revision')) {
+      context.handle(
+        _packRevisionMeta,
+        packRevision.isAcceptableOrUnknown(
+          data['pack_revision']!,
+          _packRevisionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_packRevisionMeta);
+    }
+    if (data.containsKey('content_code')) {
+      context.handle(
+        _contentCodeMeta,
+        contentCode.isAcceptableOrUnknown(
+          data['content_code']!,
+          _contentCodeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentCodeMeta);
+    }
+    if (data.containsKey('content_type')) {
+      context.handle(
+        _contentTypeMeta,
+        contentType.isAcceptableOrUnknown(
+          data['content_type']!,
+          _contentTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentTypeMeta);
+    }
+    if (data.containsKey('content_revision')) {
+      context.handle(
+        _contentRevisionMeta,
+        contentRevision.isAcceptableOrUnknown(
+          data['content_revision']!,
+          _contentRevisionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentRevisionMeta);
+    }
+    if (data.containsKey('locale')) {
+      context.handle(
+        _localeMeta,
+        locale.isAcceptableOrUnknown(data['locale']!, _localeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_localeMeta);
+    }
+    if (data.containsKey('localization_revision')) {
+      context.handle(
+        _localizationRevisionMeta,
+        localizationRevision.isAcceptableOrUnknown(
+          data['localization_revision']!,
+          _localizationRevisionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_localizationRevisionMeta);
+    }
+    if (data.containsKey('checksum')) {
+      context.handle(
+        _checksumMeta,
+        checksum.isAcceptableOrUnknown(data['checksum']!, _checksumMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_checksumMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {
+    packCode,
+    variantKey,
+    packRevision,
+    contentCode,
+    contentType,
+    contentRevision,
+    locale,
+  };
+  @override
+  PackLocalizationRef map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PackLocalizationRef(
+      packCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}pack_code'],
+      )!,
+      variantKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}variant_key'],
+      )!,
+      packRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}pack_revision'],
+      )!,
+      contentCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_code'],
+      )!,
+      contentType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_type'],
+      )!,
+      contentRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}content_revision'],
+      )!,
+      locale: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}locale'],
+      )!,
+      localizationRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}localization_revision'],
+      )!,
+      checksum: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}checksum'],
+      )!,
+    );
+  }
+
+  @override
+  $PackLocalizationRefsTable createAlias(String alias) {
+    return $PackLocalizationRefsTable(attachedDatabase, alias);
+  }
+}
+
+class PackLocalizationRef extends DataClass
+    implements Insertable<PackLocalizationRef> {
+  final String packCode;
+  final String variantKey;
+  final int packRevision;
+  final String contentCode;
+  final String contentType;
+  final int contentRevision;
+  final String locale;
+  final int localizationRevision;
+  final String checksum;
+  const PackLocalizationRef({
+    required this.packCode,
+    required this.variantKey,
+    required this.packRevision,
+    required this.contentCode,
+    required this.contentType,
+    required this.contentRevision,
+    required this.locale,
+    required this.localizationRevision,
+    required this.checksum,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['pack_code'] = Variable<String>(packCode);
+    map['variant_key'] = Variable<String>(variantKey);
+    map['pack_revision'] = Variable<int>(packRevision);
+    map['content_code'] = Variable<String>(contentCode);
+    map['content_type'] = Variable<String>(contentType);
+    map['content_revision'] = Variable<int>(contentRevision);
+    map['locale'] = Variable<String>(locale);
+    map['localization_revision'] = Variable<int>(localizationRevision);
+    map['checksum'] = Variable<String>(checksum);
+    return map;
+  }
+
+  PackLocalizationRefsCompanion toCompanion(bool nullToAbsent) {
+    return PackLocalizationRefsCompanion(
+      packCode: Value(packCode),
+      variantKey: Value(variantKey),
+      packRevision: Value(packRevision),
+      contentCode: Value(contentCode),
+      contentType: Value(contentType),
+      contentRevision: Value(contentRevision),
+      locale: Value(locale),
+      localizationRevision: Value(localizationRevision),
+      checksum: Value(checksum),
+    );
+  }
+
+  factory PackLocalizationRef.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PackLocalizationRef(
+      packCode: serializer.fromJson<String>(json['packCode']),
+      variantKey: serializer.fromJson<String>(json['variantKey']),
+      packRevision: serializer.fromJson<int>(json['packRevision']),
+      contentCode: serializer.fromJson<String>(json['contentCode']),
+      contentType: serializer.fromJson<String>(json['contentType']),
+      contentRevision: serializer.fromJson<int>(json['contentRevision']),
+      locale: serializer.fromJson<String>(json['locale']),
+      localizationRevision: serializer.fromJson<int>(
+        json['localizationRevision'],
+      ),
+      checksum: serializer.fromJson<String>(json['checksum']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'packCode': serializer.toJson<String>(packCode),
+      'variantKey': serializer.toJson<String>(variantKey),
+      'packRevision': serializer.toJson<int>(packRevision),
+      'contentCode': serializer.toJson<String>(contentCode),
+      'contentType': serializer.toJson<String>(contentType),
+      'contentRevision': serializer.toJson<int>(contentRevision),
+      'locale': serializer.toJson<String>(locale),
+      'localizationRevision': serializer.toJson<int>(localizationRevision),
+      'checksum': serializer.toJson<String>(checksum),
+    };
+  }
+
+  PackLocalizationRef copyWith({
+    String? packCode,
+    String? variantKey,
+    int? packRevision,
+    String? contentCode,
+    String? contentType,
+    int? contentRevision,
+    String? locale,
+    int? localizationRevision,
+    String? checksum,
+  }) => PackLocalizationRef(
+    packCode: packCode ?? this.packCode,
+    variantKey: variantKey ?? this.variantKey,
+    packRevision: packRevision ?? this.packRevision,
+    contentCode: contentCode ?? this.contentCode,
+    contentType: contentType ?? this.contentType,
+    contentRevision: contentRevision ?? this.contentRevision,
+    locale: locale ?? this.locale,
+    localizationRevision: localizationRevision ?? this.localizationRevision,
+    checksum: checksum ?? this.checksum,
+  );
+  PackLocalizationRef copyWithCompanion(PackLocalizationRefsCompanion data) {
+    return PackLocalizationRef(
+      packCode: data.packCode.present ? data.packCode.value : this.packCode,
+      variantKey: data.variantKey.present
+          ? data.variantKey.value
+          : this.variantKey,
+      packRevision: data.packRevision.present
+          ? data.packRevision.value
+          : this.packRevision,
+      contentCode: data.contentCode.present
+          ? data.contentCode.value
+          : this.contentCode,
+      contentType: data.contentType.present
+          ? data.contentType.value
+          : this.contentType,
+      contentRevision: data.contentRevision.present
+          ? data.contentRevision.value
+          : this.contentRevision,
+      locale: data.locale.present ? data.locale.value : this.locale,
+      localizationRevision: data.localizationRevision.present
+          ? data.localizationRevision.value
+          : this.localizationRevision,
+      checksum: data.checksum.present ? data.checksum.value : this.checksum,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PackLocalizationRef(')
+          ..write('packCode: $packCode, ')
+          ..write('variantKey: $variantKey, ')
+          ..write('packRevision: $packRevision, ')
+          ..write('contentCode: $contentCode, ')
+          ..write('contentType: $contentType, ')
+          ..write('contentRevision: $contentRevision, ')
+          ..write('locale: $locale, ')
+          ..write('localizationRevision: $localizationRevision, ')
+          ..write('checksum: $checksum')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    packCode,
+    variantKey,
+    packRevision,
+    contentCode,
+    contentType,
+    contentRevision,
+    locale,
+    localizationRevision,
+    checksum,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PackLocalizationRef &&
+          other.packCode == this.packCode &&
+          other.variantKey == this.variantKey &&
+          other.packRevision == this.packRevision &&
+          other.contentCode == this.contentCode &&
+          other.contentType == this.contentType &&
+          other.contentRevision == this.contentRevision &&
+          other.locale == this.locale &&
+          other.localizationRevision == this.localizationRevision &&
+          other.checksum == this.checksum);
+}
+
+class PackLocalizationRefsCompanion
+    extends UpdateCompanion<PackLocalizationRef> {
+  final Value<String> packCode;
+  final Value<String> variantKey;
+  final Value<int> packRevision;
+  final Value<String> contentCode;
+  final Value<String> contentType;
+  final Value<int> contentRevision;
+  final Value<String> locale;
+  final Value<int> localizationRevision;
+  final Value<String> checksum;
+  final Value<int> rowid;
+  const PackLocalizationRefsCompanion({
+    this.packCode = const Value.absent(),
+    this.variantKey = const Value.absent(),
+    this.packRevision = const Value.absent(),
+    this.contentCode = const Value.absent(),
+    this.contentType = const Value.absent(),
+    this.contentRevision = const Value.absent(),
+    this.locale = const Value.absent(),
+    this.localizationRevision = const Value.absent(),
+    this.checksum = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PackLocalizationRefsCompanion.insert({
+    required String packCode,
+    required String variantKey,
+    required int packRevision,
+    required String contentCode,
+    required String contentType,
+    required int contentRevision,
+    required String locale,
+    required int localizationRevision,
+    required String checksum,
+    this.rowid = const Value.absent(),
+  }) : packCode = Value(packCode),
+       variantKey = Value(variantKey),
+       packRevision = Value(packRevision),
+       contentCode = Value(contentCode),
+       contentType = Value(contentType),
+       contentRevision = Value(contentRevision),
+       locale = Value(locale),
+       localizationRevision = Value(localizationRevision),
+       checksum = Value(checksum);
+  static Insertable<PackLocalizationRef> custom({
+    Expression<String>? packCode,
+    Expression<String>? variantKey,
+    Expression<int>? packRevision,
+    Expression<String>? contentCode,
+    Expression<String>? contentType,
+    Expression<int>? contentRevision,
+    Expression<String>? locale,
+    Expression<int>? localizationRevision,
+    Expression<String>? checksum,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (packCode != null) 'pack_code': packCode,
+      if (variantKey != null) 'variant_key': variantKey,
+      if (packRevision != null) 'pack_revision': packRevision,
+      if (contentCode != null) 'content_code': contentCode,
+      if (contentType != null) 'content_type': contentType,
+      if (contentRevision != null) 'content_revision': contentRevision,
+      if (locale != null) 'locale': locale,
+      if (localizationRevision != null)
+        'localization_revision': localizationRevision,
+      if (checksum != null) 'checksum': checksum,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PackLocalizationRefsCompanion copyWith({
+    Value<String>? packCode,
+    Value<String>? variantKey,
+    Value<int>? packRevision,
+    Value<String>? contentCode,
+    Value<String>? contentType,
+    Value<int>? contentRevision,
+    Value<String>? locale,
+    Value<int>? localizationRevision,
+    Value<String>? checksum,
+    Value<int>? rowid,
+  }) {
+    return PackLocalizationRefsCompanion(
+      packCode: packCode ?? this.packCode,
+      variantKey: variantKey ?? this.variantKey,
+      packRevision: packRevision ?? this.packRevision,
+      contentCode: contentCode ?? this.contentCode,
+      contentType: contentType ?? this.contentType,
+      contentRevision: contentRevision ?? this.contentRevision,
+      locale: locale ?? this.locale,
+      localizationRevision: localizationRevision ?? this.localizationRevision,
+      checksum: checksum ?? this.checksum,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (packCode.present) {
+      map['pack_code'] = Variable<String>(packCode.value);
+    }
+    if (variantKey.present) {
+      map['variant_key'] = Variable<String>(variantKey.value);
+    }
+    if (packRevision.present) {
+      map['pack_revision'] = Variable<int>(packRevision.value);
+    }
+    if (contentCode.present) {
+      map['content_code'] = Variable<String>(contentCode.value);
+    }
+    if (contentType.present) {
+      map['content_type'] = Variable<String>(contentType.value);
+    }
+    if (contentRevision.present) {
+      map['content_revision'] = Variable<int>(contentRevision.value);
+    }
+    if (locale.present) {
+      map['locale'] = Variable<String>(locale.value);
+    }
+    if (localizationRevision.present) {
+      map['localization_revision'] = Variable<int>(localizationRevision.value);
+    }
+    if (checksum.present) {
+      map['checksum'] = Variable<String>(checksum.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PackLocalizationRefsCompanion(')
+          ..write('packCode: $packCode, ')
+          ..write('variantKey: $variantKey, ')
+          ..write('packRevision: $packRevision, ')
+          ..write('contentCode: $contentCode, ')
+          ..write('contentType: $contentType, ')
+          ..write('contentRevision: $contentRevision, ')
+          ..write('locale: $locale, ')
+          ..write('localizationRevision: $localizationRevision, ')
+          ..write('checksum: $checksum, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $AssetCatalogTable extends AssetCatalog
     with TableInfo<$AssetCatalogTable, AssetCatalogData> {
   @override
@@ -7598,6 +8200,806 @@ class ContentCatalogReadsCompanion extends UpdateCompanion<ContentCatalogRead> {
   }
 }
 
+class $LocalizedContentReadsTable extends LocalizedContentReads
+    with TableInfo<$LocalizedContentReadsTable, LocalizedContentRead> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $LocalizedContentReadsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _contentCodeMeta = const VerificationMeta(
+    'contentCode',
+  );
+  @override
+  late final GeneratedColumn<String> contentCode = GeneratedColumn<String>(
+    'content_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentTypeMeta = const VerificationMeta(
+    'contentType',
+  );
+  @override
+  late final GeneratedColumn<String> contentType = GeneratedColumn<String>(
+    'content_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentRevisionMeta = const VerificationMeta(
+    'contentRevision',
+  );
+  @override
+  late final GeneratedColumn<int> contentRevision = GeneratedColumn<int>(
+    'content_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _localeMeta = const VerificationMeta('locale');
+  @override
+  late final GeneratedColumn<String> locale = GeneratedColumn<String>(
+    'locale',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _localizationRevisionMeta =
+      const VerificationMeta('localizationRevision');
+  @override
+  late final GeneratedColumn<int> localizationRevision = GeneratedColumn<int>(
+    'localization_revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _checksumMeta = const VerificationMeta(
+    'checksum',
+  );
+  @override
+  late final GeneratedColumn<String> checksum = GeneratedColumn<String>(
+    'checksum',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _subtitleMeta = const VerificationMeta(
+    'subtitle',
+  );
+  @override
+  late final GeneratedColumn<String> subtitle = GeneratedColumn<String>(
+    'subtitle',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _translationMeta = const VerificationMeta(
+    'translation',
+  );
+  @override
+  late final GeneratedColumn<String> translation = GeneratedColumn<String>(
+    'translation',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _hintMeta = const VerificationMeta('hint');
+  @override
+  late final GeneratedColumn<String> hint = GeneratedColumn<String>(
+    'hint',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _explanationMeta = const VerificationMeta(
+    'explanation',
+  );
+  @override
+  late final GeneratedColumn<String> explanation = GeneratedColumn<String>(
+    'explanation',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    contentCode,
+    contentType,
+    contentRevision,
+    locale,
+    localizationRevision,
+    checksum,
+    title,
+    subtitle,
+    description,
+    translation,
+    hint,
+    explanation,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'localized_content_reads';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<LocalizedContentRead> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('content_code')) {
+      context.handle(
+        _contentCodeMeta,
+        contentCode.isAcceptableOrUnknown(
+          data['content_code']!,
+          _contentCodeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentCodeMeta);
+    }
+    if (data.containsKey('content_type')) {
+      context.handle(
+        _contentTypeMeta,
+        contentType.isAcceptableOrUnknown(
+          data['content_type']!,
+          _contentTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentTypeMeta);
+    }
+    if (data.containsKey('content_revision')) {
+      context.handle(
+        _contentRevisionMeta,
+        contentRevision.isAcceptableOrUnknown(
+          data['content_revision']!,
+          _contentRevisionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentRevisionMeta);
+    }
+    if (data.containsKey('locale')) {
+      context.handle(
+        _localeMeta,
+        locale.isAcceptableOrUnknown(data['locale']!, _localeMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_localeMeta);
+    }
+    if (data.containsKey('localization_revision')) {
+      context.handle(
+        _localizationRevisionMeta,
+        localizationRevision.isAcceptableOrUnknown(
+          data['localization_revision']!,
+          _localizationRevisionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_localizationRevisionMeta);
+    }
+    if (data.containsKey('checksum')) {
+      context.handle(
+        _checksumMeta,
+        checksum.isAcceptableOrUnknown(data['checksum']!, _checksumMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_checksumMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    }
+    if (data.containsKey('subtitle')) {
+      context.handle(
+        _subtitleMeta,
+        subtitle.isAcceptableOrUnknown(data['subtitle']!, _subtitleMeta),
+      );
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('translation')) {
+      context.handle(
+        _translationMeta,
+        translation.isAcceptableOrUnknown(
+          data['translation']!,
+          _translationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('hint')) {
+      context.handle(
+        _hintMeta,
+        hint.isAcceptableOrUnknown(data['hint']!, _hintMeta),
+      );
+    }
+    if (data.containsKey('explanation')) {
+      context.handle(
+        _explanationMeta,
+        explanation.isAcceptableOrUnknown(
+          data['explanation']!,
+          _explanationMeta,
+        ),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {
+    contentCode,
+    contentType,
+    contentRevision,
+    locale,
+    localizationRevision,
+  };
+  @override
+  LocalizedContentRead map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return LocalizedContentRead(
+      contentCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_code'],
+      )!,
+      contentType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_type'],
+      )!,
+      contentRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}content_revision'],
+      )!,
+      locale: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}locale'],
+      )!,
+      localizationRevision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}localization_revision'],
+      )!,
+      checksum: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}checksum'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      ),
+      subtitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subtitle'],
+      ),
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      translation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}translation'],
+      ),
+      hint: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}hint'],
+      ),
+      explanation: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}explanation'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $LocalizedContentReadsTable createAlias(String alias) {
+    return $LocalizedContentReadsTable(attachedDatabase, alias);
+  }
+}
+
+class LocalizedContentRead extends DataClass
+    implements Insertable<LocalizedContentRead> {
+  final String contentCode;
+  final String contentType;
+  final int contentRevision;
+  final String locale;
+  final int localizationRevision;
+  final String checksum;
+  final String? title;
+  final String? subtitle;
+  final String? description;
+  final String? translation;
+  final String? hint;
+  final String? explanation;
+  final DateTime createdAt;
+  const LocalizedContentRead({
+    required this.contentCode,
+    required this.contentType,
+    required this.contentRevision,
+    required this.locale,
+    required this.localizationRevision,
+    required this.checksum,
+    this.title,
+    this.subtitle,
+    this.description,
+    this.translation,
+    this.hint,
+    this.explanation,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['content_code'] = Variable<String>(contentCode);
+    map['content_type'] = Variable<String>(contentType);
+    map['content_revision'] = Variable<int>(contentRevision);
+    map['locale'] = Variable<String>(locale);
+    map['localization_revision'] = Variable<int>(localizationRevision);
+    map['checksum'] = Variable<String>(checksum);
+    if (!nullToAbsent || title != null) {
+      map['title'] = Variable<String>(title);
+    }
+    if (!nullToAbsent || subtitle != null) {
+      map['subtitle'] = Variable<String>(subtitle);
+    }
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    if (!nullToAbsent || translation != null) {
+      map['translation'] = Variable<String>(translation);
+    }
+    if (!nullToAbsent || hint != null) {
+      map['hint'] = Variable<String>(hint);
+    }
+    if (!nullToAbsent || explanation != null) {
+      map['explanation'] = Variable<String>(explanation);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  LocalizedContentReadsCompanion toCompanion(bool nullToAbsent) {
+    return LocalizedContentReadsCompanion(
+      contentCode: Value(contentCode),
+      contentType: Value(contentType),
+      contentRevision: Value(contentRevision),
+      locale: Value(locale),
+      localizationRevision: Value(localizationRevision),
+      checksum: Value(checksum),
+      title: title == null && nullToAbsent
+          ? const Value.absent()
+          : Value(title),
+      subtitle: subtitle == null && nullToAbsent
+          ? const Value.absent()
+          : Value(subtitle),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      translation: translation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(translation),
+      hint: hint == null && nullToAbsent ? const Value.absent() : Value(hint),
+      explanation: explanation == null && nullToAbsent
+          ? const Value.absent()
+          : Value(explanation),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory LocalizedContentRead.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return LocalizedContentRead(
+      contentCode: serializer.fromJson<String>(json['contentCode']),
+      contentType: serializer.fromJson<String>(json['contentType']),
+      contentRevision: serializer.fromJson<int>(json['contentRevision']),
+      locale: serializer.fromJson<String>(json['locale']),
+      localizationRevision: serializer.fromJson<int>(
+        json['localizationRevision'],
+      ),
+      checksum: serializer.fromJson<String>(json['checksum']),
+      title: serializer.fromJson<String?>(json['title']),
+      subtitle: serializer.fromJson<String?>(json['subtitle']),
+      description: serializer.fromJson<String?>(json['description']),
+      translation: serializer.fromJson<String?>(json['translation']),
+      hint: serializer.fromJson<String?>(json['hint']),
+      explanation: serializer.fromJson<String?>(json['explanation']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'contentCode': serializer.toJson<String>(contentCode),
+      'contentType': serializer.toJson<String>(contentType),
+      'contentRevision': serializer.toJson<int>(contentRevision),
+      'locale': serializer.toJson<String>(locale),
+      'localizationRevision': serializer.toJson<int>(localizationRevision),
+      'checksum': serializer.toJson<String>(checksum),
+      'title': serializer.toJson<String?>(title),
+      'subtitle': serializer.toJson<String?>(subtitle),
+      'description': serializer.toJson<String?>(description),
+      'translation': serializer.toJson<String?>(translation),
+      'hint': serializer.toJson<String?>(hint),
+      'explanation': serializer.toJson<String?>(explanation),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  LocalizedContentRead copyWith({
+    String? contentCode,
+    String? contentType,
+    int? contentRevision,
+    String? locale,
+    int? localizationRevision,
+    String? checksum,
+    Value<String?> title = const Value.absent(),
+    Value<String?> subtitle = const Value.absent(),
+    Value<String?> description = const Value.absent(),
+    Value<String?> translation = const Value.absent(),
+    Value<String?> hint = const Value.absent(),
+    Value<String?> explanation = const Value.absent(),
+    DateTime? createdAt,
+  }) => LocalizedContentRead(
+    contentCode: contentCode ?? this.contentCode,
+    contentType: contentType ?? this.contentType,
+    contentRevision: contentRevision ?? this.contentRevision,
+    locale: locale ?? this.locale,
+    localizationRevision: localizationRevision ?? this.localizationRevision,
+    checksum: checksum ?? this.checksum,
+    title: title.present ? title.value : this.title,
+    subtitle: subtitle.present ? subtitle.value : this.subtitle,
+    description: description.present ? description.value : this.description,
+    translation: translation.present ? translation.value : this.translation,
+    hint: hint.present ? hint.value : this.hint,
+    explanation: explanation.present ? explanation.value : this.explanation,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  LocalizedContentRead copyWithCompanion(LocalizedContentReadsCompanion data) {
+    return LocalizedContentRead(
+      contentCode: data.contentCode.present
+          ? data.contentCode.value
+          : this.contentCode,
+      contentType: data.contentType.present
+          ? data.contentType.value
+          : this.contentType,
+      contentRevision: data.contentRevision.present
+          ? data.contentRevision.value
+          : this.contentRevision,
+      locale: data.locale.present ? data.locale.value : this.locale,
+      localizationRevision: data.localizationRevision.present
+          ? data.localizationRevision.value
+          : this.localizationRevision,
+      checksum: data.checksum.present ? data.checksum.value : this.checksum,
+      title: data.title.present ? data.title.value : this.title,
+      subtitle: data.subtitle.present ? data.subtitle.value : this.subtitle,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      translation: data.translation.present
+          ? data.translation.value
+          : this.translation,
+      hint: data.hint.present ? data.hint.value : this.hint,
+      explanation: data.explanation.present
+          ? data.explanation.value
+          : this.explanation,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalizedContentRead(')
+          ..write('contentCode: $contentCode, ')
+          ..write('contentType: $contentType, ')
+          ..write('contentRevision: $contentRevision, ')
+          ..write('locale: $locale, ')
+          ..write('localizationRevision: $localizationRevision, ')
+          ..write('checksum: $checksum, ')
+          ..write('title: $title, ')
+          ..write('subtitle: $subtitle, ')
+          ..write('description: $description, ')
+          ..write('translation: $translation, ')
+          ..write('hint: $hint, ')
+          ..write('explanation: $explanation, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    contentCode,
+    contentType,
+    contentRevision,
+    locale,
+    localizationRevision,
+    checksum,
+    title,
+    subtitle,
+    description,
+    translation,
+    hint,
+    explanation,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is LocalizedContentRead &&
+          other.contentCode == this.contentCode &&
+          other.contentType == this.contentType &&
+          other.contentRevision == this.contentRevision &&
+          other.locale == this.locale &&
+          other.localizationRevision == this.localizationRevision &&
+          other.checksum == this.checksum &&
+          other.title == this.title &&
+          other.subtitle == this.subtitle &&
+          other.description == this.description &&
+          other.translation == this.translation &&
+          other.hint == this.hint &&
+          other.explanation == this.explanation &&
+          other.createdAt == this.createdAt);
+}
+
+class LocalizedContentReadsCompanion
+    extends UpdateCompanion<LocalizedContentRead> {
+  final Value<String> contentCode;
+  final Value<String> contentType;
+  final Value<int> contentRevision;
+  final Value<String> locale;
+  final Value<int> localizationRevision;
+  final Value<String> checksum;
+  final Value<String?> title;
+  final Value<String?> subtitle;
+  final Value<String?> description;
+  final Value<String?> translation;
+  final Value<String?> hint;
+  final Value<String?> explanation;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const LocalizedContentReadsCompanion({
+    this.contentCode = const Value.absent(),
+    this.contentType = const Value.absent(),
+    this.contentRevision = const Value.absent(),
+    this.locale = const Value.absent(),
+    this.localizationRevision = const Value.absent(),
+    this.checksum = const Value.absent(),
+    this.title = const Value.absent(),
+    this.subtitle = const Value.absent(),
+    this.description = const Value.absent(),
+    this.translation = const Value.absent(),
+    this.hint = const Value.absent(),
+    this.explanation = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  LocalizedContentReadsCompanion.insert({
+    required String contentCode,
+    required String contentType,
+    required int contentRevision,
+    required String locale,
+    required int localizationRevision,
+    required String checksum,
+    this.title = const Value.absent(),
+    this.subtitle = const Value.absent(),
+    this.description = const Value.absent(),
+    this.translation = const Value.absent(),
+    this.hint = const Value.absent(),
+    this.explanation = const Value.absent(),
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : contentCode = Value(contentCode),
+       contentType = Value(contentType),
+       contentRevision = Value(contentRevision),
+       locale = Value(locale),
+       localizationRevision = Value(localizationRevision),
+       checksum = Value(checksum),
+       createdAt = Value(createdAt);
+  static Insertable<LocalizedContentRead> custom({
+    Expression<String>? contentCode,
+    Expression<String>? contentType,
+    Expression<int>? contentRevision,
+    Expression<String>? locale,
+    Expression<int>? localizationRevision,
+    Expression<String>? checksum,
+    Expression<String>? title,
+    Expression<String>? subtitle,
+    Expression<String>? description,
+    Expression<String>? translation,
+    Expression<String>? hint,
+    Expression<String>? explanation,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (contentCode != null) 'content_code': contentCode,
+      if (contentType != null) 'content_type': contentType,
+      if (contentRevision != null) 'content_revision': contentRevision,
+      if (locale != null) 'locale': locale,
+      if (localizationRevision != null)
+        'localization_revision': localizationRevision,
+      if (checksum != null) 'checksum': checksum,
+      if (title != null) 'title': title,
+      if (subtitle != null) 'subtitle': subtitle,
+      if (description != null) 'description': description,
+      if (translation != null) 'translation': translation,
+      if (hint != null) 'hint': hint,
+      if (explanation != null) 'explanation': explanation,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  LocalizedContentReadsCompanion copyWith({
+    Value<String>? contentCode,
+    Value<String>? contentType,
+    Value<int>? contentRevision,
+    Value<String>? locale,
+    Value<int>? localizationRevision,
+    Value<String>? checksum,
+    Value<String?>? title,
+    Value<String?>? subtitle,
+    Value<String?>? description,
+    Value<String?>? translation,
+    Value<String?>? hint,
+    Value<String?>? explanation,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return LocalizedContentReadsCompanion(
+      contentCode: contentCode ?? this.contentCode,
+      contentType: contentType ?? this.contentType,
+      contentRevision: contentRevision ?? this.contentRevision,
+      locale: locale ?? this.locale,
+      localizationRevision: localizationRevision ?? this.localizationRevision,
+      checksum: checksum ?? this.checksum,
+      title: title ?? this.title,
+      subtitle: subtitle ?? this.subtitle,
+      description: description ?? this.description,
+      translation: translation ?? this.translation,
+      hint: hint ?? this.hint,
+      explanation: explanation ?? this.explanation,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (contentCode.present) {
+      map['content_code'] = Variable<String>(contentCode.value);
+    }
+    if (contentType.present) {
+      map['content_type'] = Variable<String>(contentType.value);
+    }
+    if (contentRevision.present) {
+      map['content_revision'] = Variable<int>(contentRevision.value);
+    }
+    if (locale.present) {
+      map['locale'] = Variable<String>(locale.value);
+    }
+    if (localizationRevision.present) {
+      map['localization_revision'] = Variable<int>(localizationRevision.value);
+    }
+    if (checksum.present) {
+      map['checksum'] = Variable<String>(checksum.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (subtitle.present) {
+      map['subtitle'] = Variable<String>(subtitle.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (translation.present) {
+      map['translation'] = Variable<String>(translation.value);
+    }
+    if (hint.present) {
+      map['hint'] = Variable<String>(hint.value);
+    }
+    if (explanation.present) {
+      map['explanation'] = Variable<String>(explanation.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('LocalizedContentReadsCompanion(')
+          ..write('contentCode: $contentCode, ')
+          ..write('contentType: $contentType, ')
+          ..write('contentRevision: $contentRevision, ')
+          ..write('locale: $locale, ')
+          ..write('localizationRevision: $localizationRevision, ')
+          ..write('checksum: $checksum, ')
+          ..write('title: $title, ')
+          ..write('subtitle: $subtitle, ')
+          ..write('description: $description, ')
+          ..write('translation: $translation, ')
+          ..write('hint: $hint, ')
+          ..write('explanation: $explanation, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $FavoritesTable extends Favorites
     with TableInfo<$FavoritesTable, Favorite> {
   @override
@@ -8564,6 +9966,8 @@ abstract class _$CareerSpeakDatabase extends GeneratedDatabase {
   late final $PackContentRefsTable packContentRefs = $PackContentRefsTable(
     this,
   );
+  late final $PackLocalizationRefsTable packLocalizationRefs =
+      $PackLocalizationRefsTable(this);
   late final $AssetCatalogTable assetCatalog = $AssetCatalogTable(this);
   late final $ContentAssetRefsTable contentAssetRefs = $ContentAssetRefsTable(
     this,
@@ -8571,6 +9975,8 @@ abstract class _$CareerSpeakDatabase extends GeneratedDatabase {
   late final $PackAssetRefsTable packAssetRefs = $PackAssetRefsTable(this);
   late final $ContentCatalogReadsTable contentCatalogReads =
       $ContentCatalogReadsTable(this);
+  late final $LocalizedContentReadsTable localizedContentReads =
+      $LocalizedContentReadsTable(this);
   late final $FavoritesTable favorites = $FavoritesTable(this);
   late final $ContentLearningStatesTable contentLearningStates =
       $ContentLearningStatesTable(this);
@@ -8588,10 +9994,12 @@ abstract class _$CareerSpeakDatabase extends GeneratedDatabase {
     contentPackRevisions,
     localContentRecords,
     packContentRefs,
+    packLocalizationRefs,
     assetCatalog,
     contentAssetRefs,
     packAssetRefs,
     contentCatalogReads,
+    localizedContentReads,
     favorites,
     contentLearningStates,
   ];
@@ -11844,6 +13252,321 @@ typedef $$PackContentRefsTableProcessedTableManager =
       PackContentRef,
       PrefetchHooks Function()
     >;
+typedef $$PackLocalizationRefsTableCreateCompanionBuilder =
+    PackLocalizationRefsCompanion Function({
+      required String packCode,
+      required String variantKey,
+      required int packRevision,
+      required String contentCode,
+      required String contentType,
+      required int contentRevision,
+      required String locale,
+      required int localizationRevision,
+      required String checksum,
+      Value<int> rowid,
+    });
+typedef $$PackLocalizationRefsTableUpdateCompanionBuilder =
+    PackLocalizationRefsCompanion Function({
+      Value<String> packCode,
+      Value<String> variantKey,
+      Value<int> packRevision,
+      Value<String> contentCode,
+      Value<String> contentType,
+      Value<int> contentRevision,
+      Value<String> locale,
+      Value<int> localizationRevision,
+      Value<String> checksum,
+      Value<int> rowid,
+    });
+
+class $$PackLocalizationRefsTableFilterComposer
+    extends Composer<_$CareerSpeakDatabase, $PackLocalizationRefsTable> {
+  $$PackLocalizationRefsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get packCode => $composableBuilder(
+    column: $table.packCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get variantKey => $composableBuilder(
+    column: $table.variantKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get packRevision => $composableBuilder(
+    column: $table.packRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get contentRevision => $composableBuilder(
+    column: $table.contentRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get locale => $composableBuilder(
+    column: $table.locale,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get localizationRevision => $composableBuilder(
+    column: $table.localizationRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get checksum => $composableBuilder(
+    column: $table.checksum,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PackLocalizationRefsTableOrderingComposer
+    extends Composer<_$CareerSpeakDatabase, $PackLocalizationRefsTable> {
+  $$PackLocalizationRefsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get packCode => $composableBuilder(
+    column: $table.packCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get variantKey => $composableBuilder(
+    column: $table.variantKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get packRevision => $composableBuilder(
+    column: $table.packRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get contentRevision => $composableBuilder(
+    column: $table.contentRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get locale => $composableBuilder(
+    column: $table.locale,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get localizationRevision => $composableBuilder(
+    column: $table.localizationRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get checksum => $composableBuilder(
+    column: $table.checksum,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PackLocalizationRefsTableAnnotationComposer
+    extends Composer<_$CareerSpeakDatabase, $PackLocalizationRefsTable> {
+  $$PackLocalizationRefsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get packCode =>
+      $composableBuilder(column: $table.packCode, builder: (column) => column);
+
+  GeneratedColumn<String> get variantKey => $composableBuilder(
+    column: $table.variantKey,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get packRevision => $composableBuilder(
+    column: $table.packRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get contentRevision => $composableBuilder(
+    column: $table.contentRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get locale =>
+      $composableBuilder(column: $table.locale, builder: (column) => column);
+
+  GeneratedColumn<int> get localizationRevision => $composableBuilder(
+    column: $table.localizationRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get checksum =>
+      $composableBuilder(column: $table.checksum, builder: (column) => column);
+}
+
+class $$PackLocalizationRefsTableTableManager
+    extends
+        RootTableManager<
+          _$CareerSpeakDatabase,
+          $PackLocalizationRefsTable,
+          PackLocalizationRef,
+          $$PackLocalizationRefsTableFilterComposer,
+          $$PackLocalizationRefsTableOrderingComposer,
+          $$PackLocalizationRefsTableAnnotationComposer,
+          $$PackLocalizationRefsTableCreateCompanionBuilder,
+          $$PackLocalizationRefsTableUpdateCompanionBuilder,
+          (
+            PackLocalizationRef,
+            BaseReferences<
+              _$CareerSpeakDatabase,
+              $PackLocalizationRefsTable,
+              PackLocalizationRef
+            >,
+          ),
+          PackLocalizationRef,
+          PrefetchHooks Function()
+        > {
+  $$PackLocalizationRefsTableTableManager(
+    _$CareerSpeakDatabase db,
+    $PackLocalizationRefsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PackLocalizationRefsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PackLocalizationRefsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$PackLocalizationRefsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> packCode = const Value.absent(),
+                Value<String> variantKey = const Value.absent(),
+                Value<int> packRevision = const Value.absent(),
+                Value<String> contentCode = const Value.absent(),
+                Value<String> contentType = const Value.absent(),
+                Value<int> contentRevision = const Value.absent(),
+                Value<String> locale = const Value.absent(),
+                Value<int> localizationRevision = const Value.absent(),
+                Value<String> checksum = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PackLocalizationRefsCompanion(
+                packCode: packCode,
+                variantKey: variantKey,
+                packRevision: packRevision,
+                contentCode: contentCode,
+                contentType: contentType,
+                contentRevision: contentRevision,
+                locale: locale,
+                localizationRevision: localizationRevision,
+                checksum: checksum,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String packCode,
+                required String variantKey,
+                required int packRevision,
+                required String contentCode,
+                required String contentType,
+                required int contentRevision,
+                required String locale,
+                required int localizationRevision,
+                required String checksum,
+                Value<int> rowid = const Value.absent(),
+              }) => PackLocalizationRefsCompanion.insert(
+                packCode: packCode,
+                variantKey: variantKey,
+                packRevision: packRevision,
+                contentCode: contentCode,
+                contentType: contentType,
+                contentRevision: contentRevision,
+                locale: locale,
+                localizationRevision: localizationRevision,
+                checksum: checksum,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PackLocalizationRefsTable, PackLocalizationRef>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$CareerSpeakDatabase,
+                    $PackLocalizationRefsTable,
+                    PackLocalizationRef
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PackLocalizationRefsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$CareerSpeakDatabase,
+      $PackLocalizationRefsTable,
+      PackLocalizationRef,
+      $$PackLocalizationRefsTableFilterComposer,
+      $$PackLocalizationRefsTableOrderingComposer,
+      $$PackLocalizationRefsTableAnnotationComposer,
+      $$PackLocalizationRefsTableCreateCompanionBuilder,
+      $$PackLocalizationRefsTableUpdateCompanionBuilder,
+      (
+        PackLocalizationRef,
+        BaseReferences<
+          _$CareerSpeakDatabase,
+          $PackLocalizationRefsTable,
+          PackLocalizationRef
+        >,
+      ),
+      PackLocalizationRef,
+      PrefetchHooks Function()
+    >;
 typedef $$AssetCatalogTableCreateCompanionBuilder =
     AssetCatalogCompanion Function({
       required String assetId,
@@ -13377,6 +15100,403 @@ typedef $$ContentCatalogReadsTableProcessedTableManager =
       ContentCatalogRead,
       PrefetchHooks Function()
     >;
+typedef $$LocalizedContentReadsTableCreateCompanionBuilder =
+    LocalizedContentReadsCompanion Function({
+      required String contentCode,
+      required String contentType,
+      required int contentRevision,
+      required String locale,
+      required int localizationRevision,
+      required String checksum,
+      Value<String?> title,
+      Value<String?> subtitle,
+      Value<String?> description,
+      Value<String?> translation,
+      Value<String?> hint,
+      Value<String?> explanation,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$LocalizedContentReadsTableUpdateCompanionBuilder =
+    LocalizedContentReadsCompanion Function({
+      Value<String> contentCode,
+      Value<String> contentType,
+      Value<int> contentRevision,
+      Value<String> locale,
+      Value<int> localizationRevision,
+      Value<String> checksum,
+      Value<String?> title,
+      Value<String?> subtitle,
+      Value<String?> description,
+      Value<String?> translation,
+      Value<String?> hint,
+      Value<String?> explanation,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$LocalizedContentReadsTableFilterComposer
+    extends Composer<_$CareerSpeakDatabase, $LocalizedContentReadsTable> {
+  $$LocalizedContentReadsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get contentRevision => $composableBuilder(
+    column: $table.contentRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get locale => $composableBuilder(
+    column: $table.locale,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get localizationRevision => $composableBuilder(
+    column: $table.localizationRevision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get checksum => $composableBuilder(
+    column: $table.checksum,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subtitle => $composableBuilder(
+    column: $table.subtitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get translation => $composableBuilder(
+    column: $table.translation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get hint => $composableBuilder(
+    column: $table.hint,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get explanation => $composableBuilder(
+    column: $table.explanation,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$LocalizedContentReadsTableOrderingComposer
+    extends Composer<_$CareerSpeakDatabase, $LocalizedContentReadsTable> {
+  $$LocalizedContentReadsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get contentRevision => $composableBuilder(
+    column: $table.contentRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get locale => $composableBuilder(
+    column: $table.locale,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get localizationRevision => $composableBuilder(
+    column: $table.localizationRevision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get checksum => $composableBuilder(
+    column: $table.checksum,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subtitle => $composableBuilder(
+    column: $table.subtitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get translation => $composableBuilder(
+    column: $table.translation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get hint => $composableBuilder(
+    column: $table.hint,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get explanation => $composableBuilder(
+    column: $table.explanation,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$LocalizedContentReadsTableAnnotationComposer
+    extends Composer<_$CareerSpeakDatabase, $LocalizedContentReadsTable> {
+  $$LocalizedContentReadsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get contentRevision => $composableBuilder(
+    column: $table.contentRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get locale =>
+      $composableBuilder(column: $table.locale, builder: (column) => column);
+
+  GeneratedColumn<int> get localizationRevision => $composableBuilder(
+    column: $table.localizationRevision,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get checksum =>
+      $composableBuilder(column: $table.checksum, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get subtitle =>
+      $composableBuilder(column: $table.subtitle, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get translation => $composableBuilder(
+    column: $table.translation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get hint =>
+      $composableBuilder(column: $table.hint, builder: (column) => column);
+
+  GeneratedColumn<String> get explanation => $composableBuilder(
+    column: $table.explanation,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$LocalizedContentReadsTableTableManager
+    extends
+        RootTableManager<
+          _$CareerSpeakDatabase,
+          $LocalizedContentReadsTable,
+          LocalizedContentRead,
+          $$LocalizedContentReadsTableFilterComposer,
+          $$LocalizedContentReadsTableOrderingComposer,
+          $$LocalizedContentReadsTableAnnotationComposer,
+          $$LocalizedContentReadsTableCreateCompanionBuilder,
+          $$LocalizedContentReadsTableUpdateCompanionBuilder,
+          (
+            LocalizedContentRead,
+            BaseReferences<
+              _$CareerSpeakDatabase,
+              $LocalizedContentReadsTable,
+              LocalizedContentRead
+            >,
+          ),
+          LocalizedContentRead,
+          PrefetchHooks Function()
+        > {
+  $$LocalizedContentReadsTableTableManager(
+    _$CareerSpeakDatabase db,
+    $LocalizedContentReadsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$LocalizedContentReadsTableFilterComposer(
+                $db: db,
+                $table: table,
+              ),
+          createOrderingComposer: () =>
+              $$LocalizedContentReadsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$LocalizedContentReadsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> contentCode = const Value.absent(),
+                Value<String> contentType = const Value.absent(),
+                Value<int> contentRevision = const Value.absent(),
+                Value<String> locale = const Value.absent(),
+                Value<int> localizationRevision = const Value.absent(),
+                Value<String> checksum = const Value.absent(),
+                Value<String?> title = const Value.absent(),
+                Value<String?> subtitle = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<String?> translation = const Value.absent(),
+                Value<String?> hint = const Value.absent(),
+                Value<String?> explanation = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => LocalizedContentReadsCompanion(
+                contentCode: contentCode,
+                contentType: contentType,
+                contentRevision: contentRevision,
+                locale: locale,
+                localizationRevision: localizationRevision,
+                checksum: checksum,
+                title: title,
+                subtitle: subtitle,
+                description: description,
+                translation: translation,
+                hint: hint,
+                explanation: explanation,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String contentCode,
+                required String contentType,
+                required int contentRevision,
+                required String locale,
+                required int localizationRevision,
+                required String checksum,
+                Value<String?> title = const Value.absent(),
+                Value<String?> subtitle = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<String?> translation = const Value.absent(),
+                Value<String?> hint = const Value.absent(),
+                Value<String?> explanation = const Value.absent(),
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => LocalizedContentReadsCompanion.insert(
+                contentCode: contentCode,
+                contentType: contentType,
+                contentRevision: contentRevision,
+                locale: locale,
+                localizationRevision: localizationRevision,
+                checksum: checksum,
+                title: title,
+                subtitle: subtitle,
+                description: description,
+                translation: translation,
+                hint: hint,
+                explanation: explanation,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<
+                    $LocalizedContentReadsTable,
+                    LocalizedContentRead
+                  >(table),
+                  BaseReferences<
+                    _$CareerSpeakDatabase,
+                    $LocalizedContentReadsTable,
+                    LocalizedContentRead
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$LocalizedContentReadsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$CareerSpeakDatabase,
+      $LocalizedContentReadsTable,
+      LocalizedContentRead,
+      $$LocalizedContentReadsTableFilterComposer,
+      $$LocalizedContentReadsTableOrderingComposer,
+      $$LocalizedContentReadsTableAnnotationComposer,
+      $$LocalizedContentReadsTableCreateCompanionBuilder,
+      $$LocalizedContentReadsTableUpdateCompanionBuilder,
+      (
+        LocalizedContentRead,
+        BaseReferences<
+          _$CareerSpeakDatabase,
+          $LocalizedContentReadsTable,
+          LocalizedContentRead
+        >,
+      ),
+      LocalizedContentRead,
+      PrefetchHooks Function()
+    >;
 typedef $$FavoritesTableCreateCompanionBuilder =
     FavoritesCompanion Function({
       required String contentCode,
@@ -13921,6 +16041,8 @@ class $CareerSpeakDatabaseManager {
       $$LocalContentRecordsTableTableManager(_db, _db.localContentRecords);
   $$PackContentRefsTableTableManager get packContentRefs =>
       $$PackContentRefsTableTableManager(_db, _db.packContentRefs);
+  $$PackLocalizationRefsTableTableManager get packLocalizationRefs =>
+      $$PackLocalizationRefsTableTableManager(_db, _db.packLocalizationRefs);
   $$AssetCatalogTableTableManager get assetCatalog =>
       $$AssetCatalogTableTableManager(_db, _db.assetCatalog);
   $$ContentAssetRefsTableTableManager get contentAssetRefs =>
@@ -13929,6 +16051,8 @@ class $CareerSpeakDatabaseManager {
       $$PackAssetRefsTableTableManager(_db, _db.packAssetRefs);
   $$ContentCatalogReadsTableTableManager get contentCatalogReads =>
       $$ContentCatalogReadsTableTableManager(_db, _db.contentCatalogReads);
+  $$LocalizedContentReadsTableTableManager get localizedContentReads =>
+      $$LocalizedContentReadsTableTableManager(_db, _db.localizedContentReads);
   $$FavoritesTableTableManager get favorites =>
       $$FavoritesTableTableManager(_db, _db.favorites);
   $$ContentLearningStatesTableTableManager get contentLearningStates =>

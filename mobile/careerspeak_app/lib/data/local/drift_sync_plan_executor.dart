@@ -2,9 +2,11 @@ import 'package:drift/drift.dart';
 
 import '../../application/content_delivery/content_manifest.dart';
 import '../../application/content_delivery/content_payload.dart';
+import '../../application/content_delivery/localized_content_payload.dart';
 import '../../application/content_sync/sync_models.dart';
 import '../../application/ports/content_manifest_gateway.dart';
 import '../../application/ports/content_payload_gateway.dart';
+import '../../application/ports/localized_content_payload_gateway.dart';
 import '../../application/ports/sync_plan_executor.dart';
 import '../../application/result/result.dart';
 import '../../domain/content_item.dart';
@@ -16,12 +18,14 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
     this._database,
     this._manifestGateway,
     this._payloadGateway, {
+    this._localizedPayloadGateway,
     DateTime Function()? now,
   }) : _now = now ?? (() => DateTime.now().toUtc());
 
   final CareerSpeakDatabase _database;
   final ContentManifestGateway _manifestGateway;
   final ContentPayloadGateway _payloadGateway;
+  final LocalizedContentPayloadGateway? _localizedPayloadGateway;
   final DateTime Function() _now;
 
   @override
@@ -51,12 +55,21 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
           return FailureResult(failure);
         }
 
+        final localizedPayloadResult = await _fetchLocalizedPayloads(manifest);
+        if (localizedPayloadResult
+            case FailureResult<List<LocalizedContentPayload>>(:final failure)) {
+          return FailureResult(failure);
+        }
+
         await _setPackState(runId, target, SyncPackUpdateState.stagingMetadata);
         await _stagePack(
           plan: plan,
           target: target,
           manifest: manifest,
           payloads: (payloadResult as Success<List<ContentPayload>>).value,
+          localizedPayloads:
+              (localizedPayloadResult as Success<List<LocalizedContentPayload>>)
+                  .value,
         );
         await _setPackState(runId, target, SyncPackUpdateState.readyToCommit);
       }
@@ -142,11 +155,61 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
     );
   }
 
+  Future<Result<List<LocalizedContentPayload>>> _fetchLocalizedPayloads(
+    PackContentManifest manifest,
+  ) async {
+    if (manifest.localizations.isEmpty) {
+      return const Success<List<LocalizedContentPayload>>(
+        <LocalizedContentPayload>[],
+      );
+    }
+    final gateway = _localizedPayloadGateway;
+    if (gateway == null) {
+      return const FailureResult<List<LocalizedContentPayload>>(
+        ApplicationFailure(
+          code: 'LOCALIZED_CONTENT_GATEWAY_MISSING',
+          message:
+              'Localized payload references require a localized payload gateway.',
+        ),
+      );
+    }
+
+    final payloads = <LocalizedContentPayload>[];
+    for (final target in manifest.localizations) {
+      final fetched = await gateway.fetch(target);
+      if (fetched case FailureResult<LocalizedContentPayload>(:final failure)) {
+        return FailureResult<List<LocalizedContentPayload>>(failure);
+      }
+      final payload = (fetched as Success<LocalizedContentPayload>).value;
+      if (!_sameLocalizedPayloadTarget(payload.ref, target)) {
+        return FailureResult<List<LocalizedContentPayload>>(
+          ApplicationFailure(
+            code: 'LOCALIZED_CONTENT_PAYLOAD_MISMATCH',
+            message:
+                'The fetched localized payload does not match the pack manifest.',
+            details: <String, Object?>{
+              'contentCode': target.identity.code,
+              'contentType': target.identity.type.name,
+              'contentRevision': target.contentRevision,
+              'locale': target.locale,
+              'localizationRevision': target.localizationRevision,
+            },
+          ),
+        );
+      }
+      payloads.add(payload);
+    }
+    return Success<List<LocalizedContentPayload>>(
+      List<LocalizedContentPayload>.unmodifiable(payloads),
+    );
+  }
+
   Future<void> _stagePack({
     required SyncPlan plan,
     required PackRevisionRef target,
     required PackContentManifest manifest,
     required List<ContentPayload> payloads,
+    required List<LocalizedContentPayload> localizedPayloads,
   }) async {
     _validateManifestTarget(target, manifest);
 
@@ -158,6 +221,20 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
           payload.ref.revision,
         ): payload,
     };
+    final localizedPayloadByKey = <String, LocalizedContentPayload>{
+      for (final payload in localizedPayloads)
+        _localizationKey(payload.ref): payload,
+    };
+    if (localizedPayloadByKey.length != manifest.localizations.length) {
+      throw const _SyncExecutorInvariant(
+        ApplicationFailure(
+          code: 'LOCALIZED_CONTENT_PAYLOAD_SET_MISMATCH',
+          message:
+              'The staged localized payload set is incomplete or duplicated.',
+        ),
+      );
+    }
+
     if (target.identity.variant == 'canonical' &&
         payloadByKey.length != manifest.contents.length) {
       throw const _SyncExecutorInvariant(
@@ -227,6 +304,13 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
                 row.packRevision.equals(target.revision),
           ))
           .go();
+      await (_database.delete(_database.packLocalizationRefs)..where(
+            (row) =>
+                row.packCode.equals(target.identity.code) &
+                row.variantKey.equals(target.identity.variant) &
+                row.packRevision.equals(target.revision),
+          ))
+          .go();
       await (_database.delete(_database.packAssetRefs)..where(
             (row) =>
                 row.packCode.equals(target.identity.code) &
@@ -270,6 +354,35 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
                 contentCode: content.identity.code,
                 contentType: type,
                 contentRevision: content.revision,
+              ),
+            );
+      }
+
+      for (final localization in manifest.localizations) {
+        final payload = localizedPayloadByKey[_localizationKey(localization)];
+        if (payload == null || payload.ref.checksum != localization.checksum) {
+          throw const _SyncExecutorInvariant(
+            ApplicationFailure(
+              code: 'LOCALIZED_CONTENT_PAYLOAD_SET_MISMATCH',
+              message:
+                  'A locale pack reference has no exact staged localized payload.',
+            ),
+          );
+        }
+        await _ensureLocalizedContentRead(payload, now);
+        await _database
+            .into(_database.packLocalizationRefs)
+            .insert(
+              PackLocalizationRefsCompanion.insert(
+                packCode: target.identity.code,
+                variantKey: target.identity.variant,
+                packRevision: target.revision,
+                contentCode: localization.identity.code,
+                contentType: _contentTypeToStorage(localization.identity.type),
+                contentRevision: localization.contentRevision,
+                locale: localization.locale,
+                localizationRevision: localization.localizationRevision,
+                checksum: localization.checksum,
               ),
             );
       }
@@ -425,6 +538,61 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
           code: 'CONTENT_PAYLOAD_IMMUTABLE_CONFLICT',
           message:
               'A persisted content payload conflicts with its immutable revision.',
+        ),
+      );
+    }
+  }
+
+  Future<void> _ensureLocalizedContentRead(
+    LocalizedContentPayload payload,
+    DateTime now,
+  ) async {
+    final ref = payload.ref;
+    final type = _contentTypeToStorage(ref.identity.type);
+    final existing =
+        await (_database.select(_database.localizedContentReads)..where(
+              (row) =>
+                  row.contentCode.equals(ref.identity.code) &
+                  row.contentType.equals(type) &
+                  row.contentRevision.equals(ref.contentRevision) &
+                  row.locale.equals(ref.locale) &
+                  row.localizationRevision.equals(ref.localizationRevision),
+            ))
+            .getSingleOrNull();
+    if (existing == null) {
+      await _database
+          .into(_database.localizedContentReads)
+          .insert(
+            LocalizedContentReadsCompanion.insert(
+              contentCode: ref.identity.code,
+              contentType: type,
+              contentRevision: ref.contentRevision,
+              locale: ref.locale,
+              localizationRevision: ref.localizationRevision,
+              checksum: ref.checksum,
+              title: Value(payload.title),
+              subtitle: Value(payload.subtitle),
+              description: Value(payload.description),
+              translation: Value(payload.translation),
+              hint: Value(payload.hint),
+              explanation: Value(payload.explanation),
+              createdAt: now,
+            ),
+          );
+      return;
+    }
+    if (existing.checksum != ref.checksum ||
+        existing.title != payload.title ||
+        existing.subtitle != payload.subtitle ||
+        existing.description != payload.description ||
+        existing.translation != payload.translation ||
+        existing.hint != payload.hint ||
+        existing.explanation != payload.explanation) {
+      throw const _SyncExecutorInvariant(
+        ApplicationFailure(
+          code: 'LOCALIZED_CONTENT_PAYLOAD_IMMUTABLE_CONFLICT',
+          message:
+              'A persisted localized payload conflicts with its immutable revision.',
         ),
       );
     }
@@ -640,6 +808,49 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
             _contentKey(ref.contentCode, ref.contentType, ref.contentRevision),
           );
           currentIdentities.add(_identityKey(ref.contentCode, ref.contentType));
+        }
+      }
+
+      for (final target in plan.target.packs) {
+        final localizationRefs =
+            await (_database.select(_database.packLocalizationRefs)..where(
+                  (row) =>
+                      row.packCode.equals(target.identity.code) &
+                      row.variantKey.equals(target.identity.variant) &
+                      row.packRevision.equals(target.revision),
+                ))
+                .get();
+        for (final ref in localizationRefs) {
+          final payload =
+              await (_database.select(_database.localizedContentReads)..where(
+                    (row) =>
+                        row.contentCode.equals(ref.contentCode) &
+                        row.contentType.equals(ref.contentType) &
+                        row.contentRevision.equals(ref.contentRevision) &
+                        row.locale.equals(ref.locale) &
+                        row.localizationRevision.equals(
+                          ref.localizationRevision,
+                        ),
+                  ))
+                  .getSingleOrNull();
+          if (payload == null) {
+            throw const _SyncExecutorInvariant(
+              ApplicationFailure(
+                code: 'SYNC_TARGET_LOCALIZATION_MISSING',
+                message:
+                    'A target locale pack is missing an exact localized payload.',
+              ),
+            );
+          }
+          if (payload.checksum != ref.checksum) {
+            throw const _SyncExecutorInvariant(
+              ApplicationFailure(
+                code: 'SYNC_TARGET_LOCALIZATION_MISMATCH',
+                message:
+                    'A target localized payload does not match pack metadata.',
+              ),
+            );
+          }
         }
       }
 
@@ -871,6 +1082,20 @@ bool _samePayloadTarget(ContentPayloadRef left, ContentPayloadRef right) {
       left.revision == right.revision &&
       left.checksum == right.checksum;
 }
+
+bool _sameLocalizedPayloadTarget(
+  LocalizedContentRef left,
+  LocalizedContentRef right,
+) {
+  return left.identity == right.identity &&
+      left.contentRevision == right.contentRevision &&
+      left.locale == right.locale &&
+      left.localizationRevision == right.localizationRevision &&
+      left.checksum == right.checksum;
+}
+
+String _localizationKey(LocalizedContentRef ref) =>
+    '${ref.identity.code}|${ref.identity.type.name}|${ref.contentRevision}|${ref.locale}|${ref.localizationRevision}';
 
 bool _sameOptionalInstant(DateTime? left, DateTime? right) {
   if (left == null || right == null) {

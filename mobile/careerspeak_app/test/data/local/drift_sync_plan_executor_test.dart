@@ -410,10 +410,7 @@ final class _PackGateway implements ContentManifestGateway {
   final PackContentManifest pack;
 
   @override
-  Future<Result<RootManifestFetch>> fetchRootManifest({
-    required String translationLocale,
-    String? etag,
-  }) async {
+  Future<Result<RootManifestFetch>> fetchRootManifest({String? etag}) async {
     return const FailureResult(
       ApplicationFailure(code: 'NOT_USED', message: 'Root fetch is not used.'),
     );
