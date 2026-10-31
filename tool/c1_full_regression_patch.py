@@ -167,11 +167,20 @@ replace_once(
       );
 
       await tester.pumpWidget(buildApp(bootstrap: true));
-      await _pumpUntil(tester, find.text('Dependency Injection'));
+      final container = ProviderScope.containerOf(
+        tester.element(find.byKey(screenshotKey)),
+      );
+      final bootstrapResult = await tester.runAsync(
+        () => container.read(applicationBootstrapProvider.future),
+      );
+      expect(bootstrapResult, isNotNull);
+      bootstrapResult!.getOrThrow();
       expect(backend.registrationCalls, 1);
       expect(backend.rootManifestCalls, 1);
       expect(backend.packManifestCalls, 1);
       expect(backend.contentPayloadCalls, 1);
+      await tester.pump();
+      await _pumpUntil(tester, find.text('Dependency Injection'));
 ''',
 )
 replace_once(
