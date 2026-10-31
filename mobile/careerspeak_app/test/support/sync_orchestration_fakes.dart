@@ -46,6 +46,7 @@ final class FakeJournal implements SyncJournal {
   final Result<SyncLocalSnapshot> snapshot;
   final states = <SyncRunState>[];
   final plans = <SyncPlan>[];
+  final translationLocales = <String>[];
   String? coalescedRunId;
   ApplicationFailure? transitionFailure;
 
@@ -57,11 +58,14 @@ final class FakeJournal implements SyncJournal {
     required String runId,
     required SyncTrigger trigger,
     required String translationLocale,
-  }) async => Success(
-    coalescedRunId == null
-        ? SyncRunStarted(runId)
-        : SyncRunCoalesced(coalescedRunId!),
-  );
+  }) async {
+    translationLocales.add(translationLocale);
+    return Success(
+      coalescedRunId == null
+          ? SyncRunStarted(runId)
+          : SyncRunCoalesced(coalescedRunId!),
+    );
+  }
 
   @override
   Future<Result<void>> persistPlan({
@@ -90,16 +94,11 @@ final class FakeGateway implements ContentManifestGateway {
   final Result<RootManifestFetch> result;
   int calls = 0;
   final etags = <String?>[];
-  final translationLocales = <String>[];
 
   @override
-  Future<Result<RootManifestFetch>> fetchRootManifest({
-    required String translationLocale,
-    String? etag,
-  }) async {
+  Future<Result<RootManifestFetch>> fetchRootManifest({String? etag}) async {
     calls += 1;
     etags.add(etag);
-    translationLocales.add(translationLocale);
     return result;
   }
 
