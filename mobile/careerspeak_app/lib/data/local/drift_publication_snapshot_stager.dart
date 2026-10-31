@@ -164,11 +164,9 @@ final class DriftPublicationSnapshotStager
         )..where((row) => row.id.equals(1))).getSingleOrNull();
         if (current != null &&
             current.currentContentVersion == target.contentVersion) {
-          await (_database.update(
-            _database.contentManifestStates,
-          )..where((row) => row.id.equals(1))).write(
-            ContentManifestStatesCompanion(updatedAt: Value(now)),
-          );
+          await (_database.update(_database.contentManifestStates)
+                ..where((row) => row.id.equals(1)))
+              .write(ContentManifestStatesCompanion(updatedAt: Value(now)));
         }
       });
       return const Success(null);
