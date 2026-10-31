@@ -25,7 +25,7 @@ class CatalogueHomeScreen extends ConsumerWidget {
           );
         }
         final graph = value.graph;
-        final active = graph.verticals.where((item) => item.active).toList();
+        final visibleVerticals = _visibleVerticals(graph);
         return ListView(
           padding: const EdgeInsets.all(24),
           children: [
@@ -57,17 +57,20 @@ class CatalogueHomeScreen extends ConsumerWidget {
               ],
             ),
             const SizedBox(height: 24),
-            switch (graph.presentation.mode) {
-              VerticalCataloguePresentationMode.shelves => _Shelves(
-                graph: graph,
-              ),
-              VerticalCataloguePresentationMode.carousel => _Carousel(
-                verticals: active,
-              ),
-              VerticalCataloguePresentationMode.grid => _Grid(
-                verticals: active,
-              ),
-            },
+            if (visibleVerticals.isEmpty)
+              const _Message('No active learning paths.')
+            else
+              switch (graph.presentation.mode) {
+                VerticalCataloguePresentationMode.shelves => _Shelves(
+                  graph: graph,
+                ),
+                VerticalCataloguePresentationMode.carousel => _Carousel(
+                  verticals: visibleVerticals,
+                ),
+                VerticalCataloguePresentationMode.grid => _Grid(
+                  verticals: visibleVerticals,
+                ),
+              },
           ],
         );
       },
@@ -90,9 +93,7 @@ class CatalogueAllScreen extends ConsumerWidget {
             'No published learning catalogue is available yet.',
           );
         }
-        final verticals = value.graph.verticals
-            .where((item) => item.active)
-            .toList(growable: false);
+        final verticals = _visibleVerticals(value.graph);
         return ListView(
           padding: const EdgeInsets.all(24),
           children: [
@@ -107,6 +108,21 @@ class CatalogueAllScreen extends ConsumerWidget {
       },
     );
   }
+}
+
+List<LearningVerticalProjection> _visibleVerticals(
+  UniversalCatalogueGraph graph,
+) {
+  final activeSections = graph.sections
+      .where((section) => section.active)
+      .map((section) => section.code)
+      .toSet();
+  return graph.verticals
+      .where(
+        (vertical) =>
+            vertical.active && activeSections.contains(vertical.sectionCode),
+      )
+      .toList(growable: false);
 }
 
 class _Shelves extends StatelessWidget {
@@ -195,7 +211,6 @@ class _Carousel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (verticals.isEmpty) return const _Message('No active learning paths.');
     return SizedBox(
       height: 250,
       child: PageView.builder(
