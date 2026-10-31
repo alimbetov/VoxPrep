@@ -50,7 +50,7 @@ void main() {
       Success(
         RootManifestChanged(
           manifest: manifest(108, packs: <PackRevisionRef>[p]),
-          etag: 'e',
+          etag: 'etag-108',
         ),
       ),
     );

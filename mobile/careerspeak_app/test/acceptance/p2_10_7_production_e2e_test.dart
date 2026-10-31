@@ -472,6 +472,8 @@ const _rootManifest = <String, Object?>{
       'checksum': _packChecksum,
     },
   ],
+  'practiceTests': <Object?>[],
+  'catalogues': <Object?>[],
   'tombstones': <Object?>[],
 };
 
