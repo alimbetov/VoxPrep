@@ -37,6 +37,7 @@ jobs:
           flutter test test/data/local/drift_atomic_snapshot_visibility_test.dart
           flutter test test/data/local/drift_practice_test_snapshot_repository_test.dart
           flutter test test/data/local/drift_catalogue_snapshot_repository_test.dart
+          flutter test test/data/local/drift_snapshot_auxiliary_repair_visibility_test.dart
           flutter test test/data/local/drift_tombstone_publication_interaction_test.dart
           flutter test test/acceptance/c4_offline_restart_consistency_acceptance_test.dart
           flutter test test/acceptance/c4_interrupted_sync_restart_acceptance_test.dart
