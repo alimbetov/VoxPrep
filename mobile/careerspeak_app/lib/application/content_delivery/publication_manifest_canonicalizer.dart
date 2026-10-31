@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 
-import 'catalogue_revision_ref.dart';
 import 'content_manifest.dart';
 
 /// Canonical C4.4 projection used to derive immutable manifest identity.
