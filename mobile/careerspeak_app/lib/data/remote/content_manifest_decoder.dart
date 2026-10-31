@@ -1,9 +1,16 @@
+// ignore_for_file: prefer_initializing_formals
+
 import '../../application/content_delivery/content_manifest.dart';
 import '../../application/result/result.dart';
-import '../../domain/content_identity.dart';
+import 'content_manifest_mapper.dart';
+import 'dto/content_manifest_dto.dart';
 
 final class ContentManifestDecoder {
-  const ContentManifestDecoder();
+  const ContentManifestDecoder({
+    ContentManifestMapper mapper = const ContentManifestMapper(),
+  }) : _mapper = mapper;
+
+  final ContentManifestMapper _mapper;
 
   Result<RootContentManifest> decodeRoot(Object? value) {
     try {
@@ -39,52 +46,47 @@ final class ContentManifestDecoder {
         );
       }
 
-      final packs = <PackRevisionRef>[];
+      final packs = <PackRevisionDto>[];
       final packValues = _list(object, 'packs', r'$.packs');
       for (var index = 0; index < packValues.length; index += 1) {
         final path = '\$.packs[$index]';
         final pack = _object(packValues[index], path);
         packs.add(
-          PackRevisionRef(
-            identity: PackIdentity(
-              code: _string(pack, 'code', '$path.code'),
-              variant: _string(pack, 'variant', '$path.variant'),
-            ),
+          PackRevisionDto(
+            code: _string(pack, 'code', '$path.code'),
+            variant: _string(pack, 'variant', '$path.variant'),
             revision: _integer(pack, 'revision', '$path.revision'),
             checksum: _string(pack, 'checksum', '$path.checksum'),
           ),
         );
       }
 
-      final tombstones = <ContentTombstone>[];
+      final tombstones = <ContentTombstoneDto>[];
       final tombstoneValues = _list(object, 'tombstones', r'$.tombstones');
       for (var index = 0; index < tombstoneValues.length; index += 1) {
         final path = '\$.tombstones[$index]';
         final tombstone = _object(tombstoneValues[index], path);
+        final contentType = _contentType(tombstone, path);
         tombstones.add(
-          ContentTombstone(
-            identity: _contentIdentity(tombstone, path),
+          ContentTombstoneDto(
+            contentCode: _contentCode(tombstone, path),
+            contentType: contentType,
             revision: _integer(tombstone, 'revision', '$path.revision'),
             reason: _string(tombstone, 'reason', '$path.reason'),
           ),
         );
       }
 
-      return Success<RootContentManifest>(
-        RootContentManifest(
-          schemaVersion: schemaVersion,
-          contentVersion: _integer(
-            object,
-            'contentVersion',
-            r'$.contentVersion',
-          ),
-          minimumAppContractVersion: minimumAppContractVersion,
-          publishedAt: _utcDateTime(object, 'publishedAt', r'$.publishedAt'),
-          checksum: _string(object, 'checksum', r'$.checksum'),
-          packs: packs,
-          tombstones: tombstones,
-        ),
+      final dto = RootContentManifestDto(
+        schemaVersion: schemaVersion,
+        contentVersion: _integer(object, 'contentVersion', r'$.contentVersion'),
+        minimumAppContractVersion: minimumAppContractVersion,
+        publishedAt: _utcDateTime(object, 'publishedAt', r'$.publishedAt'),
+        checksum: _string(object, 'checksum', r'$.checksum'),
+        packs: packs,
+        tombstones: tombstones,
       );
+      return Success<RootContentManifest>(_mapper.mapRoot(dto));
     } on _ContractViolation catch (error) {
       return FailureResult<RootContentManifest>(
         _invalidFailure('MANIFEST_INVALID', error),
@@ -112,14 +114,16 @@ final class ContentManifestDecoder {
         return FailureResult<PackContentManifest>(schemaFailure);
       }
 
-      final contents = <PackContentRef>[];
+      final contents = <PackContentRefDto>[];
       final contentValues = _list(object, 'contents', r'$.contents');
       for (var index = 0; index < contentValues.length; index += 1) {
         final path = '\$.contents[$index]';
         final content = _object(contentValues[index], path);
+        final contentType = _contentType(content, path);
         contents.add(
-          PackContentRef(
-            identity: _contentIdentity(content, path),
+          PackContentRefDto(
+            contentCode: _contentCode(content, path),
+            contentType: contentType,
             revision: _integer(content, 'revision', '$path.revision'),
             checksum: _string(content, 'checksum', '$path.checksum'),
             sortOrder: _optionalInteger(
@@ -136,13 +140,13 @@ final class ContentManifestDecoder {
         );
       }
 
-      final assets = <ManifestAssetDescriptor>[];
+      final assets = <ManifestAssetDescriptorDto>[];
       final assetValues = _list(object, 'assets', r'$.assets');
       for (var index = 0; index < assetValues.length; index += 1) {
         final path = '\$.assets[$index]';
         final asset = _object(assetValues[index], path);
         assets.add(
-          ManifestAssetDescriptor(
+          ManifestAssetDescriptorDto(
             assetId: _string(asset, 'assetId', '$path.assetId'),
             checksumSha256: _string(
               asset,
@@ -161,7 +165,7 @@ final class ContentManifestDecoder {
         );
       }
 
-      final contentAssets = <ContentAssetRef>[];
+      final contentAssets = <ContentAssetRefDto>[];
       final contentAssetValues = _list(
         object,
         'contentAssets',
@@ -170,9 +174,11 @@ final class ContentManifestDecoder {
       for (var index = 0; index < contentAssetValues.length; index += 1) {
         final path = '\$.contentAssets[$index]';
         final ref = _object(contentAssetValues[index], path);
+        final contentType = _contentType(ref, path);
         contentAssets.add(
-          ContentAssetRef(
-            contentIdentity: _contentIdentity(ref, path),
+          ContentAssetRefDto(
+            contentCode: _contentCode(ref, path),
+            contentType: contentType,
             contentRevision: _integer(
               ref,
               'contentRevision',
@@ -184,20 +190,17 @@ final class ContentManifestDecoder {
         );
       }
 
-      return Success<PackContentManifest>(
-        PackContentManifest(
-          schemaVersion: schemaVersion,
-          identity: PackIdentity(
-            code: _string(object, 'code', r'$.code'),
-            variant: _string(object, 'variant', r'$.variant'),
-          ),
-          revision: _integer(object, 'revision', r'$.revision'),
-          checksum: _string(object, 'checksum', r'$.checksum'),
-          contents: contents,
-          assets: assets,
-          contentAssets: contentAssets,
-        ),
+      final dto = PackContentManifestDto(
+        schemaVersion: schemaVersion,
+        code: _string(object, 'code', r'$.code'),
+        variant: _string(object, 'variant', r'$.variant'),
+        revision: _integer(object, 'revision', r'$.revision'),
+        checksum: _string(object, 'checksum', r'$.checksum'),
+        contents: contents,
+        assets: assets,
+        contentAssets: contentAssets,
       );
+      return Success<PackContentManifest>(_mapper.mapPack(dto));
     } on _ContractViolation catch (error) {
       return FailureResult<PackContentManifest>(
         _invalidFailure('PACK_MANIFEST_INVALID', error),
@@ -252,7 +255,7 @@ final class ContentManifestDecoder {
     );
   }
 
-  ContentIdentity _contentIdentity(Map<String, Object?> object, String path) {
+  String _contentCode(Map<String, Object?> object, String path) {
     final code = _string(object, 'contentCode', '$path.contentCode');
     if (!_contentCodePattern.hasMatch(code)) {
       throw _ContractViolation(
@@ -260,16 +263,18 @@ final class ContentManifestDecoder {
         'must be a stable business code',
       );
     }
+    return code;
+  }
 
+  String _contentType(Map<String, Object?> object, String path) {
     final typeName = _string(object, 'contentType', '$path.contentType');
-    final type = contentTypeFromWireName(typeName);
-    if (type == null) {
+    if (contentTypeFromWireName(typeName) == null) {
       throw _ContractViolation(
         '$path.contentType',
         'contains an unsupported content type',
       );
     }
-    return ContentIdentity(code: code, type: type);
+    return typeName;
   }
 
   Map<String, Object?> _object(Object? value, String path) {

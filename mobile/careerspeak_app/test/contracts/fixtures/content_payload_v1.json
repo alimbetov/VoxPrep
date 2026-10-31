@@ -1,0 +1,15 @@
+{
+  "contentCode": "JAVA_Q_001",
+  "contentType": "interview",
+  "revision": 3,
+  "checksum": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "title": "Dependency Injection",
+  "subtitle": "Java Backend",
+  "description": "Explain constructor injection and its tradeoffs.",
+  "categoryCode": "JAVA_BACKEND",
+  "categoryLabel": "Java Backend",
+  "levelCode": "SENIOR",
+  "levelLabel": "Senior",
+  "minutes": 6,
+  "hasAudio": true
+}

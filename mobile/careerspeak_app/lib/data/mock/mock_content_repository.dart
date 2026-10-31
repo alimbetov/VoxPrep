@@ -2,6 +2,7 @@ import '../../application/ports/content_repository.dart';
 import '../../application/query/content_query.dart';
 import '../../application/query/page.dart';
 import '../../application/result/result.dart';
+import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
 
 class MockContentRepository implements ContentRepository {
@@ -114,9 +115,11 @@ class MockContentRepository implements ContentRepository {
   }
 
   @override
-  Future<Result<ContentItem?>> getByCode(String code) async {
+  Future<Result<ContentItem?>> getByIdentity(ContentIdentity identity) async {
     for (final item in _items) {
-      if (item.code == code) return Success(item);
+      if (item.code == identity.code && item.type == identity.type) {
+        return Success(item);
+      }
     }
     return const Success(null);
   }

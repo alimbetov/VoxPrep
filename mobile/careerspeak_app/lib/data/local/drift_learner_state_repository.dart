@@ -25,7 +25,8 @@ SELECT
   MAX(is_favorite) AS is_favorite,
   MAX(is_listened) AS is_listened,
   MAX(is_completed) AS is_completed,
-  MAX(last_position_ms) AS last_position_ms
+  MAX(last_position_ms) AS last_position_ms,
+  MAX(last_revision_seen) AS last_revision_seen
 FROM (
   SELECT
     content_code,
@@ -33,7 +34,8 @@ FROM (
     1 AS is_favorite,
     0 AS is_listened,
     0 AS is_completed,
-    NULL AS last_position_ms
+    NULL AS last_position_ms,
+    NULL AS last_revision_seen
   FROM favorites
 
   UNION ALL
@@ -44,7 +46,8 @@ FROM (
     0 AS is_favorite,
     CASE WHEN listened_at IS NULL THEN 0 ELSE 1 END AS is_listened,
     CASE WHEN completed_at IS NULL THEN 0 ELSE 1 END AS is_completed,
-    last_position_ms
+    last_position_ms,
+    last_revision_seen
   FROM content_learning_states
 )
 GROUP BY content_code, content_type
@@ -65,6 +68,7 @@ GROUP BY content_code, content_type
             listened: row.read<int>('is_listened') != 0,
             completed: row.read<int>('is_completed') != 0,
             lastPositionMs: row.readNullable<int>('last_position_ms'),
+            lastRevisionSeen: row.readNullable<int>('last_revision_seen'),
           );
         }
         yield Success(Map.unmodifiable(markers));

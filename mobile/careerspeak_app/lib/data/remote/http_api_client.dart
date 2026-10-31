@@ -7,6 +7,7 @@ import '../../application/ports/api_client.dart';
 import '../../application/ports/installation_credential_store.dart';
 import '../../application/result/result.dart';
 import '../../domain/installation_credentials.dart';
+import 'api_error_decoder.dart';
 
 typedef ApiDelay = Future<void> Function(Duration duration);
 
@@ -29,6 +30,7 @@ final class HttpApiClient implements ApiClient {
     Duration requestTimeout = const Duration(seconds: 10),
     int maxGetAttempts = 3,
     ApiDelay? delay,
+    ApiErrorDecoder errorDecoder = const ApiErrorDecoder(),
   }) {
     return HttpApiClient._(
       client,
@@ -37,6 +39,7 @@ final class HttpApiClient implements ApiClient {
       _validateTimeout(requestTimeout),
       _validateMaxAttempts(maxGetAttempts),
       delay ?? Future<void>.delayed,
+      errorDecoder,
     );
   }
 
@@ -47,6 +50,7 @@ final class HttpApiClient implements ApiClient {
     this._requestTimeout,
     this._maxGetAttempts,
     this._delay,
+    this._errorDecoder,
   );
 
   final http.Client _client;
@@ -55,6 +59,7 @@ final class HttpApiClient implements ApiClient {
   final Duration _requestTimeout;
   final int _maxGetAttempts;
   final ApiDelay _delay;
+  final ApiErrorDecoder _errorDecoder;
 
   @override
   Future<Result<ApiResponse>> send(ApiRequest request) async {
@@ -212,19 +217,16 @@ final class HttpApiClient implements ApiClient {
     required Object? decodedBody,
     required String? traceId,
   }) {
-    final envelope = decodedBody is Map
-        ? decodedBody
-        : const <Object?, Object?>{};
-    final backendCode = _nonBlankString(envelope['code']);
+    final envelope = _errorDecoder.decode(decodedBody);
+    final backendCode = envelope.code;
     final code = switch (statusCode) {
       401 => 'UNAUTHORIZED',
       403 => 'FORBIDDEN',
       _ => backendCode ?? _fallbackCode(statusCode),
     };
-    final message =
-        _nonBlankString(envelope['message']) ?? _fallbackMessage(statusCode);
+    final message = envelope.message ?? _fallbackMessage(statusCode);
     final details = <String, Object?>{
-      ..._details(envelope['details']),
+      ...envelope.details,
       if ((statusCode == 401 || statusCode == 403) &&
           backendCode != null &&
           backendCode != code)
@@ -235,7 +237,7 @@ final class HttpApiClient implements ApiClient {
       code: code,
       message: message,
       retryable: _retryableStatus(statusCode),
-      traceId: traceId,
+      traceId: traceId ?? envelope.traceId,
       details: Map<String, Object?>.unmodifiable(details),
     );
   }
@@ -344,14 +346,5 @@ final class HttpApiClient implements ApiClient {
     }
     final normalized = value.trim();
     return normalized.isEmpty ? null : normalized;
-  }
-
-  static Map<String, Object?> _details(Object? value) {
-    if (value is! Map) {
-      return const <String, Object?>{};
-    }
-    return Map<String, Object?>.unmodifiable(
-      value.map((key, detail) => MapEntry(key.toString(), detail)),
-    );
   }
 }

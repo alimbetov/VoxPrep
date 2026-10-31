@@ -1,7 +1,10 @@
 import 'package:careerspeak_app/app/careerspeak_app.dart';
 import 'package:careerspeak_app/app/learner_state_providers.dart';
 import 'package:careerspeak_app/app/mock_visual_preferences.dart';
+import 'package:careerspeak_app/app/repository_providers.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
+import 'package:careerspeak_app/data/mock/mock_content_repository.dart';
+import 'package:careerspeak_app/data/mock/mock_test_repository.dart';
 import 'package:careerspeak_app/features/tests/test_session_screen.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -89,6 +92,11 @@ void main() {
 
     await tester.pumpWidget(
       ProviderScope(
+        overrides: [
+          practiceTestRepositoryProvider.overrideWithValue(
+            const MockTestRepository(),
+          ),
+        ],
         child: MaterialApp(
           builder: (context, child) {
             final mediaQuery = MediaQuery.of(context);
@@ -139,6 +147,12 @@ Future<void> _pumpApp(
     ProviderScope(
       overrides: [
         careerSpeakDatabaseProvider.overrideWithValue(database),
+        contentRepositoryProvider.overrideWithValue(
+          const MockContentRepository(),
+        ),
+        practiceTestRepositoryProvider.overrideWithValue(
+          const MockTestRepository(),
+        ),
         mockVisualPreferencesProvider.overrideWith(
           () => _AcceptanceVisualPreferencesController(textScale),
         ),

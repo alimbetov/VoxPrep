@@ -79,6 +79,7 @@ final class SyncLocalSnapshot {
     required String? currentManifestChecksum,
     required String? etag,
     required Iterable<PackRevisionRef> currentPacks,
+    Iterable<PackIdentity> contentPayloadRepairPacks = const <PackIdentity>[],
   }) {
     final packs = List<PackRevisionRef>.unmodifiable(currentPacks);
     final identities = <PackIdentity>{};
@@ -92,10 +93,26 @@ final class SyncLocalSnapshot {
       }
     }
 
+    final repairPacks = Set<PackIdentity>.unmodifiable(
+      contentPayloadRepairPacks,
+    );
+    for (final identity in repairPacks) {
+      if (!identities.contains(identity) || identity.variant != 'canonical') {
+        throw ArgumentError.value(
+          identity,
+          'contentPayloadRepairPacks',
+          'must reference a CURRENT canonical pack',
+        );
+      }
+    }
+
     if (currentContentVersion == null) {
-      if (currentManifestChecksum != null || etag != null || packs.isNotEmpty) {
+      if (currentManifestChecksum != null ||
+          etag != null ||
+          packs.isNotEmpty ||
+          repairPacks.isNotEmpty) {
         throw ArgumentError(
-          'A missing CURRENT root cannot carry checksum, ETag, or CURRENT packs.',
+          'A missing CURRENT root cannot carry checksum, ETag, CURRENT packs, or repair work.',
         );
       }
     } else {
@@ -116,6 +133,7 @@ final class SyncLocalSnapshot {
       currentManifestChecksum: currentManifestChecksum,
       etag: etag,
       currentPacks: packs,
+      contentPayloadRepairPacks: repairPacks,
     );
   }
 
@@ -124,12 +142,14 @@ final class SyncLocalSnapshot {
     required this.currentManifestChecksum,
     required this.etag,
     required this.currentPacks,
+    required this.contentPayloadRepairPacks,
   });
 
   final int? currentContentVersion;
   final String? currentManifestChecksum;
   final String? etag;
   final List<PackRevisionRef> currentPacks;
+  final Set<PackIdentity> contentPayloadRepairPacks;
 }
 
 final class SyncPlan {

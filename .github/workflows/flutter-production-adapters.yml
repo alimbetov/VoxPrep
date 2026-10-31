@@ -6,10 +6,12 @@ on:
       - feat/p2-flutter-production-adapters
     paths:
       - 'mobile/careerspeak_app/**'
+      - 'contracts/**'
       - '.github/workflows/flutter-production-adapters.yml'
   pull_request:
     paths:
       - 'mobile/careerspeak_app/**'
+      - 'contracts/**'
       - '.github/workflows/flutter-production-adapters.yml'
 
 jobs:
@@ -39,8 +41,15 @@ jobs:
       - name: Lockfile reproducibility
         run: git diff --exit-code -- pubspec.lock
 
-      - name: Format
-        run: dart format --output=none --set-exit-if-changed lib test
+      - name: Format handwritten Dart
+        run: |
+          mapfile -t dart_files < <(
+            find lib test -type f -name '*.dart' \
+              ! -name '*.g.dart' \
+              ! -path 'test/generated_migrations/*' \
+              -print
+          )
+          dart format --output=none --set-exit-if-changed "${dart_files[@]}"
 
       - name: Drift codegen
         run: dart run build_runner build --delete-conflicting-outputs
@@ -49,7 +58,7 @@ jobs:
         run: |
           dart run drift_dev schema dump \
             lib/data/local/database/careerspeak_database.dart \
-            drift_schemas/drift_schema_v3.json
+            drift_schemas/drift_schema_v4.json
 
       - name: Drift migration test codegen
         run: |
@@ -67,6 +76,7 @@ jobs:
             drift_schemas/drift_schema_v1.json \
             drift_schemas/drift_schema_v2.json \
             drift_schemas/drift_schema_v3.json \
+            drift_schemas/drift_schema_v4.json \
             test/generated_migrations
 
       - name: Analyze
@@ -74,3 +84,12 @@ jobs:
 
       - name: Test
         run: flutter test
+
+      - name: Upload production E2E screenshots
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: careerspeak-production-e2e-${{ github.sha }}
+          path: mobile/careerspeak_app/build/acceptance_screenshots/*.png
+          if-no-files-found: error
+          retention-days: 14

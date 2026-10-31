@@ -9,6 +9,7 @@ import '../features/review/review_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/tests/test_session_screen.dart';
 import '../features/tests/tests_screen.dart';
+import 'content_locations.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -41,9 +42,20 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const SettingsScreen(),
           ),
           GoRoute(
-            path: '/content/:code',
-            builder: (context, state) =>
-                ContentDetailScreen(code: state.pathParameters['code']!),
+            path: '/content/:type/:code',
+            redirect: (context, state) {
+              final identity = contentIdentityFromRoute(
+                typeCode: state.pathParameters['type'],
+                code: state.pathParameters['code'],
+              );
+              return identity == null ? '/learn' : null;
+            },
+            builder: (context, state) => ContentDetailScreen(
+              identity: contentIdentityFromRoute(
+                typeCode: state.pathParameters['type'],
+                code: state.pathParameters['code'],
+              )!,
+            ),
           ),
         ],
       ),

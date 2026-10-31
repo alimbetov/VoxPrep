@@ -40,14 +40,54 @@ final class DriftSyncJournal implements SyncJournal {
       }
 
       final packs = <PackRevisionRef>[];
+      final contentPayloadRepairPacks = <PackIdentity>{};
       for (final row in currentRows) {
+        final identity = PackIdentity(
+          code: row.packCode,
+          variant: row.variantKey,
+        );
         packs.add(
           PackRevisionRef(
-            identity: PackIdentity(code: row.packCode, variant: row.variantKey),
+            identity: identity,
             revision: row.revision,
             checksum: row.checksum,
           ),
         );
+        if (row.variantKey != 'canonical') continue;
+
+        final refs =
+            await (_database.select(_database.packContentRefs)..where(
+                  (ref) =>
+                      ref.packCode.equals(row.packCode) &
+                      ref.variantKey.equals(row.variantKey) &
+                      ref.packRevision.equals(row.revision),
+                ))
+                .get();
+        for (final ref in refs) {
+          final local =
+              await (_database.select(_database.localContentRecords)..where(
+                    (content) =>
+                        content.contentCode.equals(ref.contentCode) &
+                        content.contentType.equals(ref.contentType) &
+                        content.revision.equals(ref.contentRevision),
+                  ))
+                  .getSingleOrNull();
+          final payload =
+              await (_database.select(_database.contentCatalogReads)..where(
+                    (content) =>
+                        content.contentCode.equals(ref.contentCode) &
+                        content.contentType.equals(ref.contentType) &
+                        content.revision.equals(ref.contentRevision),
+                  ))
+                  .getSingleOrNull();
+          if (local == null ||
+              local.snapshotState != 'CURRENT' ||
+              payload == null ||
+              payload.checksum != local.checksum) {
+            contentPayloadRepairPacks.add(identity);
+            break;
+          }
+        }
       }
 
       return Success(
@@ -58,6 +98,7 @@ final class DriftSyncJournal implements SyncJournal {
               : manifest!.currentManifestChecksum,
           etag: currentVersion == null ? null : manifest!.etag,
           currentPacks: packs,
+          contentPayloadRepairPacks: contentPayloadRepairPacks,
         ),
       );
     } on ArgumentError catch (error) {

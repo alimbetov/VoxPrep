@@ -6874,6 +6874,730 @@ class PackAssetRefsCompanion extends UpdateCompanion<PackAssetRef> {
   }
 }
 
+class $ContentCatalogReadsTable extends ContentCatalogReads
+    with TableInfo<$ContentCatalogReadsTable, ContentCatalogRead> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ContentCatalogReadsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _contentCodeMeta = const VerificationMeta(
+    'contentCode',
+  );
+  @override
+  late final GeneratedColumn<String> contentCode = GeneratedColumn<String>(
+    'content_code',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _contentTypeMeta = const VerificationMeta(
+    'contentType',
+  );
+  @override
+  late final GeneratedColumn<String> contentType = GeneratedColumn<String>(
+    'content_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _revisionMeta = const VerificationMeta(
+    'revision',
+  );
+  @override
+  late final GeneratedColumn<int> revision = GeneratedColumn<int>(
+    'revision',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _checksumMeta = const VerificationMeta(
+    'checksum',
+  );
+  @override
+  late final GeneratedColumn<String> checksum = GeneratedColumn<String>(
+    'checksum',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _subtitleMeta = const VerificationMeta(
+    'subtitle',
+  );
+  @override
+  late final GeneratedColumn<String> subtitle = GeneratedColumn<String>(
+    'subtitle',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _categoryMeta = const VerificationMeta(
+    'category',
+  );
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+    'category',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _levelMeta = const VerificationMeta('level');
+  @override
+  late final GeneratedColumn<String> level = GeneratedColumn<String>(
+    'level',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _minutesMeta = const VerificationMeta(
+    'minutes',
+  );
+  @override
+  late final GeneratedColumn<int> minutes = GeneratedColumn<int>(
+    'minutes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _hasAudioMeta = const VerificationMeta(
+    'hasAudio',
+  );
+  @override
+  late final GeneratedColumn<bool> hasAudio = GeneratedColumn<bool>(
+    'has_audio',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("has_audio" IN (0, 1))',
+    ),
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: true,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    contentCode,
+    contentType,
+    revision,
+    checksum,
+    title,
+    subtitle,
+    description,
+    category,
+    level,
+    minutes,
+    hasAudio,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'content_catalog_reads';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ContentCatalogRead> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('content_code')) {
+      context.handle(
+        _contentCodeMeta,
+        contentCode.isAcceptableOrUnknown(
+          data['content_code']!,
+          _contentCodeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentCodeMeta);
+    }
+    if (data.containsKey('content_type')) {
+      context.handle(
+        _contentTypeMeta,
+        contentType.isAcceptableOrUnknown(
+          data['content_type']!,
+          _contentTypeMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_contentTypeMeta);
+    }
+    if (data.containsKey('revision')) {
+      context.handle(
+        _revisionMeta,
+        revision.isAcceptableOrUnknown(data['revision']!, _revisionMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_revisionMeta);
+    }
+    if (data.containsKey('checksum')) {
+      context.handle(
+        _checksumMeta,
+        checksum.isAcceptableOrUnknown(data['checksum']!, _checksumMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_checksumMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('subtitle')) {
+      context.handle(
+        _subtitleMeta,
+        subtitle.isAcceptableOrUnknown(data['subtitle']!, _subtitleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_subtitleMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_descriptionMeta);
+    }
+    if (data.containsKey('category')) {
+      context.handle(
+        _categoryMeta,
+        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_categoryMeta);
+    }
+    if (data.containsKey('level')) {
+      context.handle(
+        _levelMeta,
+        level.isAcceptableOrUnknown(data['level']!, _levelMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_levelMeta);
+    }
+    if (data.containsKey('minutes')) {
+      context.handle(
+        _minutesMeta,
+        minutes.isAcceptableOrUnknown(data['minutes']!, _minutesMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_minutesMeta);
+    }
+    if (data.containsKey('has_audio')) {
+      context.handle(
+        _hasAudioMeta,
+        hasAudio.isAcceptableOrUnknown(data['has_audio']!, _hasAudioMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_hasAudioMeta);
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtMeta);
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {contentCode, contentType, revision};
+  @override
+  ContentCatalogRead map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ContentCatalogRead(
+      contentCode: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_code'],
+      )!,
+      contentType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}content_type'],
+      )!,
+      revision: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}revision'],
+      )!,
+      checksum: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}checksum'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      subtitle: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}subtitle'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      )!,
+      category: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category'],
+      )!,
+      level: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}level'],
+      )!,
+      minutes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}minutes'],
+      )!,
+      hasAudio: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}has_audio'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ContentCatalogReadsTable createAlias(String alias) {
+    return $ContentCatalogReadsTable(attachedDatabase, alias);
+  }
+}
+
+class ContentCatalogRead extends DataClass
+    implements Insertable<ContentCatalogRead> {
+  final String contentCode;
+  final String contentType;
+  final int revision;
+  final String checksum;
+  final String title;
+  final String subtitle;
+  final String description;
+  final String category;
+  final String level;
+  final int minutes;
+  final bool hasAudio;
+  final DateTime createdAt;
+  const ContentCatalogRead({
+    required this.contentCode,
+    required this.contentType,
+    required this.revision,
+    required this.checksum,
+    required this.title,
+    required this.subtitle,
+    required this.description,
+    required this.category,
+    required this.level,
+    required this.minutes,
+    required this.hasAudio,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['content_code'] = Variable<String>(contentCode);
+    map['content_type'] = Variable<String>(contentType);
+    map['revision'] = Variable<int>(revision);
+    map['checksum'] = Variable<String>(checksum);
+    map['title'] = Variable<String>(title);
+    map['subtitle'] = Variable<String>(subtitle);
+    map['description'] = Variable<String>(description);
+    map['category'] = Variable<String>(category);
+    map['level'] = Variable<String>(level);
+    map['minutes'] = Variable<int>(minutes);
+    map['has_audio'] = Variable<bool>(hasAudio);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ContentCatalogReadsCompanion toCompanion(bool nullToAbsent) {
+    return ContentCatalogReadsCompanion(
+      contentCode: Value(contentCode),
+      contentType: Value(contentType),
+      revision: Value(revision),
+      checksum: Value(checksum),
+      title: Value(title),
+      subtitle: Value(subtitle),
+      description: Value(description),
+      category: Value(category),
+      level: Value(level),
+      minutes: Value(minutes),
+      hasAudio: Value(hasAudio),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ContentCatalogRead.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ContentCatalogRead(
+      contentCode: serializer.fromJson<String>(json['contentCode']),
+      contentType: serializer.fromJson<String>(json['contentType']),
+      revision: serializer.fromJson<int>(json['revision']),
+      checksum: serializer.fromJson<String>(json['checksum']),
+      title: serializer.fromJson<String>(json['title']),
+      subtitle: serializer.fromJson<String>(json['subtitle']),
+      description: serializer.fromJson<String>(json['description']),
+      category: serializer.fromJson<String>(json['category']),
+      level: serializer.fromJson<String>(json['level']),
+      minutes: serializer.fromJson<int>(json['minutes']),
+      hasAudio: serializer.fromJson<bool>(json['hasAudio']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'contentCode': serializer.toJson<String>(contentCode),
+      'contentType': serializer.toJson<String>(contentType),
+      'revision': serializer.toJson<int>(revision),
+      'checksum': serializer.toJson<String>(checksum),
+      'title': serializer.toJson<String>(title),
+      'subtitle': serializer.toJson<String>(subtitle),
+      'description': serializer.toJson<String>(description),
+      'category': serializer.toJson<String>(category),
+      'level': serializer.toJson<String>(level),
+      'minutes': serializer.toJson<int>(minutes),
+      'hasAudio': serializer.toJson<bool>(hasAudio),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ContentCatalogRead copyWith({
+    String? contentCode,
+    String? contentType,
+    int? revision,
+    String? checksum,
+    String? title,
+    String? subtitle,
+    String? description,
+    String? category,
+    String? level,
+    int? minutes,
+    bool? hasAudio,
+    DateTime? createdAt,
+  }) => ContentCatalogRead(
+    contentCode: contentCode ?? this.contentCode,
+    contentType: contentType ?? this.contentType,
+    revision: revision ?? this.revision,
+    checksum: checksum ?? this.checksum,
+    title: title ?? this.title,
+    subtitle: subtitle ?? this.subtitle,
+    description: description ?? this.description,
+    category: category ?? this.category,
+    level: level ?? this.level,
+    minutes: minutes ?? this.minutes,
+    hasAudio: hasAudio ?? this.hasAudio,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ContentCatalogRead copyWithCompanion(ContentCatalogReadsCompanion data) {
+    return ContentCatalogRead(
+      contentCode: data.contentCode.present
+          ? data.contentCode.value
+          : this.contentCode,
+      contentType: data.contentType.present
+          ? data.contentType.value
+          : this.contentType,
+      revision: data.revision.present ? data.revision.value : this.revision,
+      checksum: data.checksum.present ? data.checksum.value : this.checksum,
+      title: data.title.present ? data.title.value : this.title,
+      subtitle: data.subtitle.present ? data.subtitle.value : this.subtitle,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      category: data.category.present ? data.category.value : this.category,
+      level: data.level.present ? data.level.value : this.level,
+      minutes: data.minutes.present ? data.minutes.value : this.minutes,
+      hasAudio: data.hasAudio.present ? data.hasAudio.value : this.hasAudio,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ContentCatalogRead(')
+          ..write('contentCode: $contentCode, ')
+          ..write('contentType: $contentType, ')
+          ..write('revision: $revision, ')
+          ..write('checksum: $checksum, ')
+          ..write('title: $title, ')
+          ..write('subtitle: $subtitle, ')
+          ..write('description: $description, ')
+          ..write('category: $category, ')
+          ..write('level: $level, ')
+          ..write('minutes: $minutes, ')
+          ..write('hasAudio: $hasAudio, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    contentCode,
+    contentType,
+    revision,
+    checksum,
+    title,
+    subtitle,
+    description,
+    category,
+    level,
+    minutes,
+    hasAudio,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ContentCatalogRead &&
+          other.contentCode == this.contentCode &&
+          other.contentType == this.contentType &&
+          other.revision == this.revision &&
+          other.checksum == this.checksum &&
+          other.title == this.title &&
+          other.subtitle == this.subtitle &&
+          other.description == this.description &&
+          other.category == this.category &&
+          other.level == this.level &&
+          other.minutes == this.minutes &&
+          other.hasAudio == this.hasAudio &&
+          other.createdAt == this.createdAt);
+}
+
+class ContentCatalogReadsCompanion extends UpdateCompanion<ContentCatalogRead> {
+  final Value<String> contentCode;
+  final Value<String> contentType;
+  final Value<int> revision;
+  final Value<String> checksum;
+  final Value<String> title;
+  final Value<String> subtitle;
+  final Value<String> description;
+  final Value<String> category;
+  final Value<String> level;
+  final Value<int> minutes;
+  final Value<bool> hasAudio;
+  final Value<DateTime> createdAt;
+  final Value<int> rowid;
+  const ContentCatalogReadsCompanion({
+    this.contentCode = const Value.absent(),
+    this.contentType = const Value.absent(),
+    this.revision = const Value.absent(),
+    this.checksum = const Value.absent(),
+    this.title = const Value.absent(),
+    this.subtitle = const Value.absent(),
+    this.description = const Value.absent(),
+    this.category = const Value.absent(),
+    this.level = const Value.absent(),
+    this.minutes = const Value.absent(),
+    this.hasAudio = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  ContentCatalogReadsCompanion.insert({
+    required String contentCode,
+    required String contentType,
+    required int revision,
+    required String checksum,
+    required String title,
+    required String subtitle,
+    required String description,
+    required String category,
+    required String level,
+    required int minutes,
+    required bool hasAudio,
+    required DateTime createdAt,
+    this.rowid = const Value.absent(),
+  }) : contentCode = Value(contentCode),
+       contentType = Value(contentType),
+       revision = Value(revision),
+       checksum = Value(checksum),
+       title = Value(title),
+       subtitle = Value(subtitle),
+       description = Value(description),
+       category = Value(category),
+       level = Value(level),
+       minutes = Value(minutes),
+       hasAudio = Value(hasAudio),
+       createdAt = Value(createdAt);
+  static Insertable<ContentCatalogRead> custom({
+    Expression<String>? contentCode,
+    Expression<String>? contentType,
+    Expression<int>? revision,
+    Expression<String>? checksum,
+    Expression<String>? title,
+    Expression<String>? subtitle,
+    Expression<String>? description,
+    Expression<String>? category,
+    Expression<String>? level,
+    Expression<int>? minutes,
+    Expression<bool>? hasAudio,
+    Expression<DateTime>? createdAt,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (contentCode != null) 'content_code': contentCode,
+      if (contentType != null) 'content_type': contentType,
+      if (revision != null) 'revision': revision,
+      if (checksum != null) 'checksum': checksum,
+      if (title != null) 'title': title,
+      if (subtitle != null) 'subtitle': subtitle,
+      if (description != null) 'description': description,
+      if (category != null) 'category': category,
+      if (level != null) 'level': level,
+      if (minutes != null) 'minutes': minutes,
+      if (hasAudio != null) 'has_audio': hasAudio,
+      if (createdAt != null) 'created_at': createdAt,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  ContentCatalogReadsCompanion copyWith({
+    Value<String>? contentCode,
+    Value<String>? contentType,
+    Value<int>? revision,
+    Value<String>? checksum,
+    Value<String>? title,
+    Value<String>? subtitle,
+    Value<String>? description,
+    Value<String>? category,
+    Value<String>? level,
+    Value<int>? minutes,
+    Value<bool>? hasAudio,
+    Value<DateTime>? createdAt,
+    Value<int>? rowid,
+  }) {
+    return ContentCatalogReadsCompanion(
+      contentCode: contentCode ?? this.contentCode,
+      contentType: contentType ?? this.contentType,
+      revision: revision ?? this.revision,
+      checksum: checksum ?? this.checksum,
+      title: title ?? this.title,
+      subtitle: subtitle ?? this.subtitle,
+      description: description ?? this.description,
+      category: category ?? this.category,
+      level: level ?? this.level,
+      minutes: minutes ?? this.minutes,
+      hasAudio: hasAudio ?? this.hasAudio,
+      createdAt: createdAt ?? this.createdAt,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (contentCode.present) {
+      map['content_code'] = Variable<String>(contentCode.value);
+    }
+    if (contentType.present) {
+      map['content_type'] = Variable<String>(contentType.value);
+    }
+    if (revision.present) {
+      map['revision'] = Variable<int>(revision.value);
+    }
+    if (checksum.present) {
+      map['checksum'] = Variable<String>(checksum.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (subtitle.present) {
+      map['subtitle'] = Variable<String>(subtitle.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
+    }
+    if (level.present) {
+      map['level'] = Variable<String>(level.value);
+    }
+    if (minutes.present) {
+      map['minutes'] = Variable<int>(minutes.value);
+    }
+    if (hasAudio.present) {
+      map['has_audio'] = Variable<bool>(hasAudio.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ContentCatalogReadsCompanion(')
+          ..write('contentCode: $contentCode, ')
+          ..write('contentType: $contentType, ')
+          ..write('revision: $revision, ')
+          ..write('checksum: $checksum, ')
+          ..write('title: $title, ')
+          ..write('subtitle: $subtitle, ')
+          ..write('description: $description, ')
+          ..write('category: $category, ')
+          ..write('level: $level, ')
+          ..write('minutes: $minutes, ')
+          ..write('hasAudio: $hasAudio, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $FavoritesTable extends Favorites
     with TableInfo<$FavoritesTable, Favorite> {
   @override
@@ -7845,6 +8569,8 @@ abstract class _$CareerSpeakDatabase extends GeneratedDatabase {
     this,
   );
   late final $PackAssetRefsTable packAssetRefs = $PackAssetRefsTable(this);
+  late final $ContentCatalogReadsTable contentCatalogReads =
+      $ContentCatalogReadsTable(this);
   late final $FavoritesTable favorites = $FavoritesTable(this);
   late final $ContentLearningStatesTable contentLearningStates =
       $ContentLearningStatesTable(this);
@@ -7865,6 +8591,7 @@ abstract class _$CareerSpeakDatabase extends GeneratedDatabase {
     assetCatalog,
     contentAssetRefs,
     packAssetRefs,
+    contentCatalogReads,
     favorites,
     contentLearningStates,
   ];
@@ -12284,6 +13011,372 @@ typedef $$PackAssetRefsTableProcessedTableManager =
       PackAssetRef,
       PrefetchHooks Function({bool assetId})
     >;
+typedef $$ContentCatalogReadsTableCreateCompanionBuilder =
+    ContentCatalogReadsCompanion Function({
+      required String contentCode,
+      required String contentType,
+      required int revision,
+      required String checksum,
+      required String title,
+      required String subtitle,
+      required String description,
+      required String category,
+      required String level,
+      required int minutes,
+      required bool hasAudio,
+      required DateTime createdAt,
+      Value<int> rowid,
+    });
+typedef $$ContentCatalogReadsTableUpdateCompanionBuilder =
+    ContentCatalogReadsCompanion Function({
+      Value<String> contentCode,
+      Value<String> contentType,
+      Value<int> revision,
+      Value<String> checksum,
+      Value<String> title,
+      Value<String> subtitle,
+      Value<String> description,
+      Value<String> category,
+      Value<String> level,
+      Value<int> minutes,
+      Value<bool> hasAudio,
+      Value<DateTime> createdAt,
+      Value<int> rowid,
+    });
+
+class $$ContentCatalogReadsTableFilterComposer
+    extends Composer<_$CareerSpeakDatabase, $ContentCatalogReadsTable> {
+  $$ContentCatalogReadsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get checksum => $composableBuilder(
+    column: $table.checksum,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get subtitle => $composableBuilder(
+    column: $table.subtitle,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get level => $composableBuilder(
+    column: $table.level,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get minutes => $composableBuilder(
+    column: $table.minutes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get hasAudio => $composableBuilder(
+    column: $table.hasAudio,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$ContentCatalogReadsTableOrderingComposer
+    extends Composer<_$CareerSpeakDatabase, $ContentCatalogReadsTable> {
+  $$ContentCatalogReadsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get revision => $composableBuilder(
+    column: $table.revision,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get checksum => $composableBuilder(
+    column: $table.checksum,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get subtitle => $composableBuilder(
+    column: $table.subtitle,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get level => $composableBuilder(
+    column: $table.level,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get minutes => $composableBuilder(
+    column: $table.minutes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get hasAudio => $composableBuilder(
+    column: $table.hasAudio,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$ContentCatalogReadsTableAnnotationComposer
+    extends Composer<_$CareerSpeakDatabase, $ContentCatalogReadsTable> {
+  $$ContentCatalogReadsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get contentCode => $composableBuilder(
+    column: $table.contentCode,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get contentType => $composableBuilder(
+    column: $table.contentType,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get revision =>
+      $composableBuilder(column: $table.revision, builder: (column) => column);
+
+  GeneratedColumn<String> get checksum =>
+      $composableBuilder(column: $table.checksum, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get subtitle =>
+      $composableBuilder(column: $table.subtitle, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
+
+  GeneratedColumn<String> get level =>
+      $composableBuilder(column: $table.level, builder: (column) => column);
+
+  GeneratedColumn<int> get minutes =>
+      $composableBuilder(column: $table.minutes, builder: (column) => column);
+
+  GeneratedColumn<bool> get hasAudio =>
+      $composableBuilder(column: $table.hasAudio, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+}
+
+class $$ContentCatalogReadsTableTableManager
+    extends
+        RootTableManager<
+          _$CareerSpeakDatabase,
+          $ContentCatalogReadsTable,
+          ContentCatalogRead,
+          $$ContentCatalogReadsTableFilterComposer,
+          $$ContentCatalogReadsTableOrderingComposer,
+          $$ContentCatalogReadsTableAnnotationComposer,
+          $$ContentCatalogReadsTableCreateCompanionBuilder,
+          $$ContentCatalogReadsTableUpdateCompanionBuilder,
+          (
+            ContentCatalogRead,
+            BaseReferences<
+              _$CareerSpeakDatabase,
+              $ContentCatalogReadsTable,
+              ContentCatalogRead
+            >,
+          ),
+          ContentCatalogRead,
+          PrefetchHooks Function()
+        > {
+  $$ContentCatalogReadsTableTableManager(
+    _$CareerSpeakDatabase db,
+    $ContentCatalogReadsTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ContentCatalogReadsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ContentCatalogReadsTableOrderingComposer(
+                $db: db,
+                $table: table,
+              ),
+          createComputedFieldComposer: () =>
+              $$ContentCatalogReadsTableAnnotationComposer(
+                $db: db,
+                $table: table,
+              ),
+          updateCompanionCallback:
+              ({
+                Value<String> contentCode = const Value.absent(),
+                Value<String> contentType = const Value.absent(),
+                Value<int> revision = const Value.absent(),
+                Value<String> checksum = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String> subtitle = const Value.absent(),
+                Value<String> description = const Value.absent(),
+                Value<String> category = const Value.absent(),
+                Value<String> level = const Value.absent(),
+                Value<int> minutes = const Value.absent(),
+                Value<bool> hasAudio = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => ContentCatalogReadsCompanion(
+                contentCode: contentCode,
+                contentType: contentType,
+                revision: revision,
+                checksum: checksum,
+                title: title,
+                subtitle: subtitle,
+                description: description,
+                category: category,
+                level: level,
+                minutes: minutes,
+                hasAudio: hasAudio,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String contentCode,
+                required String contentType,
+                required int revision,
+                required String checksum,
+                required String title,
+                required String subtitle,
+                required String description,
+                required String category,
+                required String level,
+                required int minutes,
+                required bool hasAudio,
+                required DateTime createdAt,
+                Value<int> rowid = const Value.absent(),
+              }) => ContentCatalogReadsCompanion.insert(
+                contentCode: contentCode,
+                contentType: contentType,
+                revision: revision,
+                checksum: checksum,
+                title: title,
+                subtitle: subtitle,
+                description: description,
+                category: category,
+                level: level,
+                minutes: minutes,
+                hasAudio: hasAudio,
+                createdAt: createdAt,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$ContentCatalogReadsTable, ContentCatalogRead>(
+                    table,
+                  ),
+                  BaseReferences<
+                    _$CareerSpeakDatabase,
+                    $ContentCatalogReadsTable,
+                    ContentCatalogRead
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$ContentCatalogReadsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$CareerSpeakDatabase,
+      $ContentCatalogReadsTable,
+      ContentCatalogRead,
+      $$ContentCatalogReadsTableFilterComposer,
+      $$ContentCatalogReadsTableOrderingComposer,
+      $$ContentCatalogReadsTableAnnotationComposer,
+      $$ContentCatalogReadsTableCreateCompanionBuilder,
+      $$ContentCatalogReadsTableUpdateCompanionBuilder,
+      (
+        ContentCatalogRead,
+        BaseReferences<
+          _$CareerSpeakDatabase,
+          $ContentCatalogReadsTable,
+          ContentCatalogRead
+        >,
+      ),
+      ContentCatalogRead,
+      PrefetchHooks Function()
+    >;
 typedef $$FavoritesTableCreateCompanionBuilder =
     FavoritesCompanion Function({
       required String contentCode,
@@ -12834,6 +13927,8 @@ class $CareerSpeakDatabaseManager {
       $$ContentAssetRefsTableTableManager(_db, _db.contentAssetRefs);
   $$PackAssetRefsTableTableManager get packAssetRefs =>
       $$PackAssetRefsTableTableManager(_db, _db.packAssetRefs);
+  $$ContentCatalogReadsTableTableManager get contentCatalogReads =>
+      $$ContentCatalogReadsTableTableManager(_db, _db.contentCatalogReads);
   $$FavoritesTableTableManager get favorites =>
       $$FavoritesTableTableManager(_db, _db.favorites);
   $$ContentLearningStatesTableTableManager get contentLearningStates =>
