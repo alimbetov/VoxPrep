@@ -143,5 +143,9 @@ jobs:
           fi
           git commit -m 'feat(c1): complete localization and retirement lifecycle'
           git fetch origin feat/backend-contract-gap-audit
-          git rebase origin/feat/backend-contract-gap-audit
+          remote_sha="$(git rev-parse origin/feat/backend-contract-gap-audit)"
+          if [ "$remote_sha" != "$GITHUB_SHA" ]; then
+            echo "Branch advanced from $GITHUB_SHA to $remote_sha during qualification; refusing stale push."
+            exit 1
+          fi
           git push origin HEAD:feat/backend-contract-gap-audit
