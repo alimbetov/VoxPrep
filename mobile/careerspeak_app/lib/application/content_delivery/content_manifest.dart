@@ -3,8 +3,8 @@ import '../../domain/content_item.dart';
 import 'catalogue_revision_ref.dart';
 import 'product_catalog.dart';
 
-const supportedContentManifestSchemaVersion = 1;
-const careerSpeakAppContractVersion = 1;
+const supportedContentManifestSchemaVersion = 2;
+const careerSpeakAppContractVersion = 2;
 
 final class PackIdentity {
   factory PackIdentity({required String code, required String variant}) {

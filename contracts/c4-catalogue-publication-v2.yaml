@@ -1,0 +1,91 @@
+openapi: 3.1.0
+info:
+  title: CareerSpeak Catalogue Publication Contract
+  version: 2.0.0
+components:
+  schemas:
+    RootContentManifestV2:
+      type: object
+      additionalProperties: false
+      required:
+        - schemaVersion
+        - contentVersion
+        - minimumAppContractVersion
+        - publishedAt
+        - checksum
+        - packs
+        - practiceTests
+        - catalogues
+        - tombstones
+      properties:
+        schemaVersion:
+          const: 2
+        contentVersion:
+          type: integer
+          minimum: 1
+        minimumAppContractVersion:
+          type: integer
+          minimum: 2
+        publishedAt:
+          type: string
+          format: date-time
+        checksum:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+        packs:
+          type: array
+        practiceTests:
+          type: array
+        catalogues:
+          type: array
+          minItems: 6
+          items:
+            $ref: '#/components/schemas/CatalogueRevisionRefV2'
+        localeFallbacks:
+          type: array
+        tombstones:
+          type: array
+
+    CatalogueRevisionRefV2:
+      type: object
+      additionalProperties: false
+      required: [kind, revision, checksum]
+      properties:
+        kind:
+          type: string
+          enum:
+            - vertical-sections
+            - verticals
+            - vertical-presentation
+            - learning-goals
+            - learning-tracks
+            - learning-collections
+            - categories
+            - levels
+            - skills
+            - supported-locales
+            - tts-voices
+        revision:
+          type: integer
+          minimum: 1
+        checksum:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+
+x-required-universal-catalogue-kinds:
+  - vertical-sections
+  - verticals
+  - vertical-presentation
+  - learning-goals
+  - learning-tracks
+  - learning-collections
+
+x-publication-invariants:
+  - Root schema v1 remains readable by app contract v2 for migration compatibility.
+  - Root schema v2 MUST require minimumAppContractVersion >= 2.
+  - Every required universal catalogue kind MUST occur exactly once in one root snapshot.
+  - Every catalogue member is exact by kind + revision + checksum.
+  - Extra supported catalogue kinds MAY be present but belong to the same immutable snapshot.
+  - Locale projection MUST NOT alter practiceTests or catalogues membership.
+  - A staged or failed root MUST NOT become learner-visible; visibility changes only through the existing atomic CURRENT snapshot switch.
+  - Reordering LearningCollection.members changes catalogue bytes/checksum and therefore requires a new exact catalogue revision.

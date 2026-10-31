@@ -1,6 +1,7 @@
 import '../../application/content_delivery/catalogue_revision_ref.dart';
 import '../../application/content_delivery/content_manifest.dart';
 import '../../application/content_delivery/product_catalog.dart';
+import '../../application/content_delivery/universal_manifest_v2_policy.dart';
 import '../../domain/content_identity.dart';
 import 'dto/content_manifest_dto.dart';
 
@@ -8,7 +9,7 @@ final class ContentManifestMapper {
   const ContentManifestMapper();
 
   RootContentManifest mapRoot(RootContentManifestDto dto) {
-    return RootContentManifest(
+    final root = RootContentManifest(
       schemaVersion: dto.schemaVersion,
       contentVersion: dto.contentVersion,
       minimumAppContractVersion: dto.minimumAppContractVersion,
@@ -57,6 +58,8 @@ final class ContentManifestMapper {
         ),
       ),
     );
+    requireUniversalCatalogueManifestV2(root);
+    return root;
   }
 
   PackContentManifest mapPack(PackContentManifestDto dto) {

@@ -14,37 +14,80 @@ void main() {
 
       expect(result, isA<Success<RootContentManifest>>());
       final manifest = (result as Success<RootContentManifest>).value;
+      expect(manifest.schemaVersion, 1);
       expect(manifest.contentVersion, 108);
       expect(manifest.minimumAppContractVersion, 1);
       expect(manifest.publishedAt, DateTime.utc(2026, 10, 30, 9, 30));
-      expect(
-        manifest.packs.single.identity.toString(),
-        'JAVA_SENIOR/canonical',
-      );
+      expect(manifest.packs.single.identity.toString(), 'JAVA_SENIOR/canonical');
       expect(manifest.practiceTests.single.practiceTestCode, 'JAVA_TEST_001');
       expect(manifest.practiceTests.single.revision, 3);
-      expect(
-        manifest.catalogues.single.kind,
-        CatalogueKind.learningCollections,
-      );
+      expect(manifest.catalogues.single.kind, CatalogueKind.learningCollections);
       expect(manifest.catalogues.single.revision, 7);
       expect(manifest.tombstones.single.identity.type, ContentType.interview);
     });
 
+    test('decodes schema v2 only with complete universal catalogue membership', () {
+      final result = decoder.decodeRoot(_rootManifestV2());
+
+      expect(result, isA<Success<RootContentManifest>>());
+      final manifest = (result as Success<RootContentManifest>).value;
+      expect(manifest.schemaVersion, 2);
+      expect(manifest.minimumAppContractVersion, 2);
+      expect(
+        manifest.catalogues.map((ref) => ref.kind).toSet(),
+        containsAll(<CatalogueKind>{
+          CatalogueKind.verticalSections,
+          CatalogueKind.verticals,
+          CatalogueKind.verticalPresentation,
+          CatalogueKind.learningGoals,
+          CatalogueKind.learningTracks,
+          CatalogueKind.learningCollections,
+        }),
+      );
+    });
+
+    test('schema v2 rejects incomplete universal catalogue membership', () {
+      final manifest = _rootManifestV2();
+      final catalogues = manifest['catalogues'] as List<Object?>;
+      catalogues.removeWhere(
+        (item) =>
+            (item as Map<String, Object?>)['kind'] == 'learning-collections',
+      );
+
+      final result = decoder.decodeRoot(manifest);
+
+      expect(result, isA<FailureResult<RootContentManifest>>());
+      final failure = (result as FailureResult<RootContentManifest>).failure;
+      expect(failure.code, 'MANIFEST_INVALID');
+      expect(failure.details['field'], 'catalogues');
+    });
+
+    test('schema v2 requires application contract version 2', () {
+      final manifest = _rootManifestV2()..['minimumAppContractVersion'] = 1;
+
+      final result = decoder.decodeRoot(manifest);
+
+      expect(result, isA<FailureResult<RootContentManifest>>());
+      expect(
+        (result as FailureResult<RootContentManifest>).failure.code,
+        'MANIFEST_INVALID',
+      );
+    });
+
     test('future schema is classified before deeper payload decoding', () {
       final result = decoder.decodeRoot(<String, Object?>{
-        'schemaVersion': 2,
-        'minimumAppContractVersion': 1,
+        'schemaVersion': 3,
+        'minimumAppContractVersion': 2,
       });
 
       expect(result, isA<FailureResult<RootContentManifest>>());
       final failure = (result as FailureResult<RootContentManifest>).failure;
       expect(failure.code, 'SCHEMA_UNSUPPORTED');
-      expect(failure.details['remoteSchemaVersion'], 2);
+      expect(failure.details['remoteSchemaVersion'], 3);
     });
 
     test('newer app contract requirement fails closed', () {
-      final manifest = _rootManifest()..['minimumAppContractVersion'] = 2;
+      final manifest = _rootManifest()..['minimumAppContractVersion'] = 3;
       final result = decoder.decodeRoot(manifest);
 
       expect(result, isA<FailureResult<RootContentManifest>>());
@@ -56,7 +99,6 @@ void main() {
 
     test('root without exact practice-test membership array is rejected', () {
       final manifest = _rootManifest()..remove('practiceTests');
-
       final result = decoder.decodeRoot(manifest);
 
       expect(result, isA<FailureResult<RootContentManifest>>());
@@ -67,7 +109,6 @@ void main() {
 
     test('root without exact catalogue membership array is rejected', () {
       final manifest = _rootManifest()..remove('catalogues');
-
       final result = decoder.decodeRoot(manifest);
 
       expect(result, isA<FailureResult<RootContentManifest>>());
@@ -166,7 +207,7 @@ void main() {
     });
 
     test('future pack schema fails before deeper pack decoding', () {
-      final result = decoder.decodePack(<String, Object?>{'schemaVersion': 2});
+      final result = decoder.decodePack(<String, Object?>{'schemaVersion': 3});
 
       expect(result, isA<FailureResult<PackContentManifest>>());
       expect(
@@ -256,6 +297,33 @@ Map<String, Object?> _rootManifest() {
         'reason': 'INACTIVE',
       },
     ],
+  };
+}
+
+Map<String, Object?> _rootManifestV2() {
+  final manifest = _rootManifest()
+    ..['schemaVersion'] = 2
+    ..['minimumAppContractVersion'] = 2;
+  manifest['catalogues'] = <Object?>[
+    _catalogue('vertical-sections', 11, _shaA),
+    _catalogue('verticals', 12, _shaB),
+    _catalogue('vertical-presentation', 13, _shaC),
+    _catalogue('learning-goals', 14, _shaD),
+    _catalogue('learning-tracks', 15, _shaA),
+    _catalogue('learning-collections', 16, _shaB),
+  ];
+  return manifest;
+}
+
+Map<String, Object?> _catalogue(
+  String kind,
+  int revision,
+  String checksum,
+) {
+  return <String, Object?>{
+    'kind': kind,
+    'revision': revision,
+    'checksum': checksum,
   };
 }
 
