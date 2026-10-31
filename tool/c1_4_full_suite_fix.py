@@ -12,7 +12,10 @@ def replace_once(path: str, old: str, new: str) -> None:
 replace_once(
     'mobile/careerspeak_app/test/core/motion/careerspeak_motion_test.dart',
     '    expect(find.byType(SlideTransition), findsOneWidget);',
-    '    expect(transition, isA<SlideTransition>());',
+    """    final fade = transition as FadeTransition;
+    final slide = fade.child! as SlideTransition;
+    expect(slide.position.value, const Offset(-0.04, 0));
+""",
 )
 
 replace_once(
