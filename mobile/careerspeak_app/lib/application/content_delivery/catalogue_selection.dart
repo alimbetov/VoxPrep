@@ -67,14 +67,15 @@ final class CatalogueSelectionPolicy {
       }
     }
 
-    final active = snapshot.where((choice) => choice.active).toList()
-      ..sort((left, right) {
-        final order = left.sortOrder.compareTo(right.sortOrder);
-        if (order != 0) {
-          return order;
-        }
-        return left.code.compareTo(right.code);
-      });
+    final active =
+        snapshot.where((choice) => choice.active).toList()
+          ..sort((left, right) {
+            final order = left.sortOrder.compareTo(right.sortOrder);
+            if (order != 0) {
+              return order;
+            }
+            return left.code.compareTo(right.code);
+          });
     return active.firstOrNull?.code;
   }
 }
