@@ -1,4 +1,5 @@
 import 'package:careerspeak_app/application/content_delivery/locale_fallback.dart';
+import 'package:careerspeak_app/application/content_delivery/localized_content_resolution.dart';
 import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_localized_content_repository.dart';
@@ -27,9 +28,9 @@ void main() {
       requestedLocale: 'ru-KZ',
     );
 
-    expect(result, isA<FailureResult>());
+    expect(result, isA<FailureResult<ResolvedLocalizedContent?>>());
     expect(
-      (result as FailureResult).failure.code,
+      (result as FailureResult<ResolvedLocalizedContent?>).failure.code,
       'LOCALIZED_CONTENT_READ_MODEL_INVALID',
     );
   });
