@@ -4,7 +4,7 @@ import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_localized_content_repository.dart';
 import 'package:careerspeak_app/domain/content_identity.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNotNull;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_database_factory.dart';
@@ -143,6 +143,37 @@ void main() {
     );
   });
 
+  test('ambiguous CURRENT localization revisions fail closed', () async {
+    await _seedLocalization(
+      database,
+      locale: 'ru',
+      packCode: 'PACK_RU_A',
+      localizationRevision: 1,
+      title: 'Русский A',
+    );
+    await _seedLocalization(
+      database,
+      locale: 'ru',
+      packCode: 'PACK_RU_B',
+      localizationRevision: 2,
+      payloadChecksum: _otherLocalizedChecksum,
+      refChecksum: _otherLocalizedChecksum,
+      title: 'Русский B',
+    );
+
+    final result = await repository.resolve(
+      identity: _identity,
+      contentRevision: 1,
+      requestedLocale: 'ru',
+    );
+
+    expect(result, isA<FailureResult>());
+    expect(
+      (result as FailureResult).failure.code,
+      'LOCALIZED_CONTENT_READ_MODEL_INVALID',
+    );
+  });
+
   test('invalid requested locale fails before reading localization rows', () async {
     final result = await repository.resolve(
       identity: _identity,
@@ -196,6 +227,9 @@ Future<void> _seedLocalization(
   CareerSpeakDatabase database, {
   required String locale,
   String state = 'CURRENT',
+  String? packCode,
+  int localizationRevision = 1,
+  String payloadChecksum = _localizedChecksum,
   String? title,
   String? subtitle,
   String? description,
@@ -205,12 +239,12 @@ Future<void> _seedLocalization(
   String refChecksum = _localizedChecksum,
 }) async {
   final now = DateTime.utc(2026, 10, 31, 4, 5);
-  final packCode = 'PACK_${locale.replaceAll('-', '_')}';
+  final resolvedPackCode = packCode ?? 'PACK_${locale.replaceAll('-', '_')}';
   await database
       .into(database.contentPackRevisions)
       .insert(
         ContentPackRevisionsCompanion.insert(
-          packCode: packCode,
+          packCode: resolvedPackCode,
           variantKey: 'locale:$locale',
           revision: 1,
           schemaVersion: 1,
@@ -225,7 +259,8 @@ Future<void> _seedLocalization(
   await _insertLocalizedRead(
     database,
     locale: locale,
-    checksum: _localizedChecksum,
+    localizationRevision: localizationRevision,
+    checksum: payloadChecksum,
     title: title,
     subtitle: subtitle,
     description: description,
@@ -237,14 +272,14 @@ Future<void> _seedLocalization(
       .into(database.packLocalizationRefs)
       .insert(
         PackLocalizationRefsCompanion.insert(
-          packCode: packCode,
+          packCode: resolvedPackCode,
           variantKey: 'locale:$locale',
           packRevision: 1,
           contentCode: _identity.code,
           contentType: 'INTERVIEW',
           contentRevision: 1,
           locale: locale,
-          localizationRevision: 1,
+          localizationRevision: localizationRevision,
           checksum: refChecksum,
         ),
       );
@@ -253,6 +288,7 @@ Future<void> _seedLocalization(
 Future<void> _insertLocalizedRead(
   CareerSpeakDatabase database, {
   required String locale,
+  int localizationRevision = 1,
   required String checksum,
   String? title,
   String? subtitle,
@@ -269,7 +305,7 @@ Future<void> _insertLocalizedRead(
           contentType: 'INTERVIEW',
           contentRevision: 1,
           locale: locale,
-          localizationRevision: 1,
+          localizationRevision: localizationRevision,
           checksum: checksum,
           title: Value(title),
           subtitle: Value(subtitle),
