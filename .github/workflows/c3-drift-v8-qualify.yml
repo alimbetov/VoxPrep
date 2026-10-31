@@ -10,6 +10,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: c3-drift-v8-feat-backend-contract-gap-audit
+  cancel-in-progress: true
+
 jobs:
   qualify:
     runs-on: ubuntu-latest
@@ -31,7 +35,7 @@ jobs:
       - name: Generate Drift v8 baseline
         working-directory: mobile/careerspeak_app
         run: |
-          dart run build_runner build --delete-conflicting-outputs
+          dart run build_runner build
           dart run drift_dev schema dump \
             lib/data/local/database/careerspeak_database.dart \
             drift_schemas/drift_schema_v8.json
@@ -46,21 +50,39 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          path = Path('test/data/local/database/careerspeak_database_test.dart')
-          source = path.read_text()
+
+          database_test = Path('test/data/local/database/careerspeak_database_test.dart')
+          source = database_test.read_text()
           source = source.replace(
               "schema version 7 creates the production content foundation",
               "schema version 8 creates the production assessment foundation",
           )
-          source = source.replace('expect(database.schemaVersion, 7);', 'expect(database.schemaVersion, 8);')
-          source = source.replace("expect(userVersion.read<int>('user_version'), 7);", "expect(userVersion.read<int>('user_version'), 8);")
-          path.write_text(source)
+          source = source.replace(
+              'expect(database.schemaVersion, 7);',
+              'expect(database.schemaVersion, 8);',
+          )
+          source = source.replace(
+              "expect(userVersion.read<int>('user_version'), 7);",
+              "expect(userVersion.read<int>('user_version'), 8);",
+          )
+          database_test.write_text(source)
+
+          asset_test = Path('test/acceptance/p2_8_asset_resolution_test.dart')
+          asset_source = asset_test.read_text()
+          asset_source = asset_source.replace(
+              'expect(database.schemaVersion, 7);',
+              'expect(database.schemaVersion, 8);',
+          )
+          asset_test.write_text(asset_source)
           PY
-          dart format test/data/local/database/careerspeak_database_test.dart
+          dart format \
+            test/data/local/database/careerspeak_database_test.dart \
+            test/data/local/database/careerspeak_database_migration_test.dart \
+            test/acceptance/p2_8_asset_resolution_test.dart
       - name: Analyze
         working-directory: mobile/careerspeak_app
         run: flutter analyze
-      - name: Targeted C3 persistence qualification
+      - name: Targeted C3 lifecycle qualification
         working-directory: mobile/careerspeak_app
         run: |
           flutter test test/domain/assessment_contract_test.dart
@@ -69,6 +91,10 @@ jobs:
           flutter test test/data/remote/http_assessment_payload_gateway_test.dart
           flutter test test/data/local/drift_assessment_revision_repository_test.dart
           flutter test test/data/local/database/careerspeak_database_test.dart
+          flutter test test/data/local/database/careerspeak_database_migration_test.dart
+          flutter test test/acceptance/c3_assessment_offline_restart_acceptance_test.dart
+          flutter test test/acceptance/c3_assessment_adversarial_acceptance_test.dart
+          flutter test test/acceptance/p2_8_asset_resolution_test.dart
       - name: Full regression
         working-directory: mobile/careerspeak_app
         run: flutter test
