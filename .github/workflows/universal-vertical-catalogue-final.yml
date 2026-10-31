@@ -1,0 +1,92 @@
+name: Universal Vertical Catalogue Final Qualification
+
+on:
+  push:
+    branches:
+      - feat/universal-vertical-catalogue
+    paths:
+      - 'mobile/careerspeak_app/**'
+      - 'contracts/**'
+      - 'docs/backend/**'
+      - '.github/workflows/universal-vertical-catalogue-final.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: universal-vertical-catalogue-final-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Generated Drift code reproducibility
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          git diff --exit-code -- lib/data/local/database/careerspeak_database.g.dart
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Full Flutter regression
+        run: flutter test
+
+  verification:
+    name: verification
+    needs: quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: V10 full demo graph
+        run: flutter test test/data/mock/demo_full_learning_graph_test.dart
+
+      - name: V11 offline restart
+        run: flutter test test/acceptance/v11_universal_catalogue_offline_restart_acceptance_test.dart
+
+      - name: V12 adversarial qualification
+        run: flutter test test/acceptance/v12_universal_catalogue_adversarial_acceptance_test.dart
+
+      - name: Drift migration v1 through v9
+        run: flutter test test/data/local/database/universal_catalogue_schema_v9_test.dart
+
+      - name: Production E2E
+        run: flutter test test/acceptance/p2_10_7_production_e2e_test.dart
+
+      - name: Exact SHA evidence
+        run: |
+          echo "qualified_sha=${GITHUB_SHA}"
+          test "${GITHUB_SHA}" = "$(git rev-parse HEAD)"
