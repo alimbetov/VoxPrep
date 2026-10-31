@@ -18,9 +18,10 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
     this._database,
     this._manifestGateway,
     this._payloadGateway, {
-    this._localizedPayloadGateway,
+    LocalizedContentPayloadGateway? localizedPayloadGateway,
     DateTime Function()? now,
-  }) : _now = now ?? (() => DateTime.now().toUtc());
+  }) : _localizedPayloadGateway = localizedPayloadGateway,
+       _now = now ?? (() => DateTime.now().toUtc());
 
   final CareerSpeakDatabase _database;
   final ContentManifestGateway _manifestGateway;
