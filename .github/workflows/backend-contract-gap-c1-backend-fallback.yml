@@ -7,6 +7,7 @@ on:
       - '.github/workflows/backend-contract-gap-c1-backend-fallback.yml'
       - 'tool/c1_backend_fallback_v2_patch.py'
       - 'tool/c1_backend_fallback_v2_test_patch.py'
+      - 'tool/c1_schema_v6_retirement_patch.py'
       - 'tool/c1_locale_repair_patch.py'
       - 'tool/c1_acceptance_compile_patch.py'
 
@@ -30,10 +31,11 @@ jobs:
         working-directory: mobile/careerspeak_app
         run: flutter pub get
 
-      - name: Apply unified C1 localization implementation
+      - name: Apply unified C1 localization and retirement implementation
         run: |
           python3 tool/c1_backend_fallback_v2_patch.py
           python3 tool/c1_backend_fallback_v2_test_patch.py
+          python3 tool/c1_schema_v6_retirement_patch.py
           python3 tool/c1_locale_repair_patch.py
           python3 tool/c1_acceptance_compile_patch.py
 
@@ -48,7 +50,7 @@ jobs:
           )
           dart format "${dart_files[@]}"
 
-      - name: Generate Drift v6 baseline
+      - name: Generate final Drift v6 baseline
         working-directory: mobile/careerspeak_app
         run: |
           dart run build_runner build --delete-conflicting-outputs
@@ -66,7 +68,7 @@ jobs:
         working-directory: mobile/careerspeak_app
         run: flutter analyze
 
-      - name: C1 localization lifecycle qualification
+      - name: C1 lifecycle qualification
         working-directory: mobile/careerspeak_app
         run: |
           flutter test test/application/content_delivery/locale_fallback_test.dart
@@ -102,7 +104,7 @@ jobs:
             echo 'No generated or patch-applied changes to commit.'
             exit 0
           fi
-          git commit -m 'feat(c1): complete backend-owned localization lifecycle'
+          git commit -m 'feat(c1): complete localization and retirement lifecycle'
           git fetch origin feat/backend-contract-gap-audit
           git rebase origin/feat/backend-contract-gap-audit
           git push origin HEAD:feat/backend-contract-gap-audit
