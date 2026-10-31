@@ -22,6 +22,48 @@ BGA-006 installation-token lifecycle / 401 recovery
 
 The audit also records P1/P2 hardening for taxonomy, locale/voice catalogs, delivery scalability, media policy, ADMIN security, TTS concurrency, checksum semantics, rate limiting, observability, backup/restore and consumer-driven contract governance.
 
+## Normative multi-locale requirement
+
+The localization contract is now defined by:
+
+- `docs/specification/CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md` v1.1
+
+The system must be designed for arbitrary supported BCP-47 locale identifiers rather than a closed `ru|kk` runtime model.
+
+Required product capability direction:
+
+```text
+Tier 0:
+en / ru / kk
+
+Tier 1:
+uz / tr / ky / uk
+
+Tier 2:
+es / pt-BR / fr / de
+
+Tier 3:
+ar / ur / hi / bn / id / vi
+```
+
+Tier membership is rollout policy only and MUST NOT become protocol logic.
+
+The locale contract requires:
+
+```text
+Backend-owned SupportedLocale catalog
+locale-independent root manifest identity
+same contentVersion => same root checksum
+immutable localized payload delivery
+configured fallback chains
+canonical English/audio reuse
+RTL readiness
+no fixed per-language DB columns
+no hardcoded locale ∈ {ru, kk} assumption
+```
+
+Therefore `BGA-001`, `BGA-002` and the locale-catalog portion of `BGA-008` are mandatory contract-freeze gates, not optional future enhancements.
+
 ## Remediation roadmap
 
 See:
@@ -45,6 +87,8 @@ Backend aggregate/schema freeze
         ↓
 Backend implementation
 ```
+
+C1 is complete only when arbitrary BCP-47 locale variants, localized payload transport, deterministic fallback and root identity semantics are frozen.
 
 TTS contract hardening (`C6`) may proceed in parallel because the Worker-facing boundary is already comparatively mature.
 
@@ -71,6 +115,7 @@ Localization
 PracticeTest / Question
 PublicationSnapshot
 Taxonomy
+SupportedLocale
 learner-facing locale/voice catalogs
 ```
 
