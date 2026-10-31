@@ -197,7 +197,9 @@ void main() {
     expect(find.text('No active learning paths.'), findsOneWidget);
   });
 
-  testWidgets('inactive goal is hidden from an active vertical', (tester) async {
+  testWidgets('inactive goal is hidden from an active vertical', (
+    tester,
+  ) async {
     final snapshot = _snapshot(
       VerticalCataloguePresentationMode.shelves,
       goalActive: false,
