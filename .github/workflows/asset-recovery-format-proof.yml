@@ -1,0 +1,29 @@
+name: Asset Recovery Format Proof
+
+on:
+  push:
+    branches:
+      - feat/universal-vertical-catalogue
+    paths:
+      - 'mobile/careerspeak_app/test/acceptance/audio_asset_token_recovery_acceptance_test.dart'
+      - '.github/workflows/asset-recovery-format-proof.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  format-diff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - name: Show canonical Dart formatter diff
+        working-directory: mobile/careerspeak_app
+        run: |
+          dart format test/acceptance/audio_asset_token_recovery_acceptance_test.dart
+          git diff -- test/acceptance/audio_asset_token_recovery_acceptance_test.dart
+          git diff --quiet -- test/acceptance/audio_asset_token_recovery_acceptance_test.dart
