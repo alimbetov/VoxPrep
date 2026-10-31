@@ -1,0 +1,67 @@
+name: Audio Supersession UI Once
+
+on:
+  push:
+    branches:
+      - feat/universal-vertical-catalogue
+    paths:
+      - '.github/workflows/audio-supersession-ui-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - name: Suppress benign supersession snackbars
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('mobile/careerspeak_app/lib/features/content/content_detail_panel.dart')
+          text = path.read_text()
+
+          import_anchor = "import '../../application/content_delivery/content_audio_policy.dart';\n"
+          import_line = "import '../../application/result/result.dart';\n"
+          if import_line not in text:
+              if import_anchor not in text:
+                  raise SystemExit('import anchor missing')
+              text = text.replace(import_anchor, import_anchor + import_line, 1)
+
+          interview_old = """      } catch (error) {\n        if (!context.mounted) return;\n        ScaffoldMessenger.of(context).showSnackBar(\n          SnackBar(content: Text('Interview audio failed: $error')),\n        );\n      }\n"""
+          interview_new = """      } catch (error) {\n        if (_isBenignAudioSupersession(error) || !context.mounted) return;\n        ScaffoldMessenger.of(context).showSnackBar(\n          SnackBar(content: Text('Interview audio failed: $error')),\n        );\n      }\n"""
+          if interview_old not in text:
+              raise SystemExit('interview catch target missing')
+          text = text.replace(interview_old, interview_new, 1)
+
+          generic_old = """      } catch (error) {\n        if (!context.mounted) return;\n        ScaffoldMessenger.of(context).showSnackBar(\n          SnackBar(content: Text('Audio playback failed: $error')),\n        );\n      }\n"""
+          generic_new = """      } catch (error) {\n        if (_isBenignAudioSupersession(error) || !context.mounted) return;\n        ScaffoldMessenger.of(context).showSnackBar(\n          SnackBar(content: Text('Audio playback failed: $error')),\n        );\n      }\n"""
+          if generic_old not in text:
+              raise SystemExit('generic catch target missing')
+          text = text.replace(generic_old, generic_new, 1)
+
+          helper = """\nbool _isBenignAudioSupersession(Object error) {\n  if (error is! ApplicationFailureException) return false;\n  return error.failure.code == 'PLAYBACK_SUPERSEDED' ||\n      error.failure.code == 'ROLE_AUDIO_REQUEST_SUPERSEDED';\n}\n"""
+          if '_isBenignAudioSupersession(Object error)' not in text:
+              text = text.rstrip() + '\n' + helper
+
+          path.write_text(text)
+          PY
+      - name: Format patched UI
+        working-directory: mobile/careerspeak_app
+        run: dart format lib/features/content/content_detail_panel.dart
+      - name: Commit production UX fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mobile/careerspeak_app/lib/features/content/content_detail_panel.dart
+          git commit -m 'fix(audio): suppress benign supersession errors'
+          git push origin HEAD:${GITHUB_REF_NAME}
