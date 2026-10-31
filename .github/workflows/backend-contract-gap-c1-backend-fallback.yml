@@ -11,6 +11,7 @@ on:
       - 'tool/c1_locale_policy_repair_marker_patch.py'
       - 'tool/c1_locale_repair_patch.py'
       - 'tool/c1_acceptance_compile_patch.py'
+      - 'tool/c1_full_regression_patch.py'
       - 'tool/c1_analyzer_cleanup_patch.py'
       - 'mobile/careerspeak_app/lib/application/content_sync/content_sync_coordinator.dart'
       - 'mobile/careerspeak_app/lib/data/local/database/careerspeak_locale_tables.dart'
@@ -44,6 +45,7 @@ jobs:
           python3 tool/c1_locale_policy_repair_marker_patch.py
           python3 tool/c1_locale_repair_patch.py
           python3 tool/c1_acceptance_compile_patch.py
+          python3 tool/c1_full_regression_patch.py
           python3 tool/c1_analyzer_cleanup_patch.py
 
       - name: Format C1 sources
