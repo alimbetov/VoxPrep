@@ -61,6 +61,42 @@ final class ContentManifestDecoder {
         );
       }
 
+      final practiceTests = <PracticeTestRevisionDto>[];
+      final practiceTestValues = _list(
+        object,
+        'practiceTests',
+        r'$.practiceTests',
+      );
+      for (var index = 0; index < practiceTestValues.length; index += 1) {
+        final path = '\$.practiceTests[$index]';
+        final test = _object(practiceTestValues[index], path);
+        practiceTests.add(
+          PracticeTestRevisionDto(
+            practiceTestCode: _businessCode(
+              test,
+              'practiceTestCode',
+              '$path.practiceTestCode',
+            ),
+            revision: _integer(test, 'revision', '$path.revision'),
+            checksum: _string(test, 'checksum', '$path.checksum'),
+          ),
+        );
+      }
+
+      final catalogues = <CatalogueRevisionDto>[];
+      final catalogueValues = _list(object, 'catalogues', r'$.catalogues');
+      for (var index = 0; index < catalogueValues.length; index += 1) {
+        final path = '\$.catalogues[$index]';
+        final catalogue = _object(catalogueValues[index], path);
+        catalogues.add(
+          CatalogueRevisionDto(
+            kind: _string(catalogue, 'kind', '$path.kind'),
+            revision: _integer(catalogue, 'revision', '$path.revision'),
+            checksum: _string(catalogue, 'checksum', '$path.checksum'),
+          ),
+        );
+      }
+
       final localeFallbacks = <LocaleFallbackRuleDto>[];
       final fallbackValues = object.containsKey('localeFallbacks')
           ? _list(object, 'localeFallbacks', r'$.localeFallbacks')
@@ -116,6 +152,8 @@ final class ContentManifestDecoder {
         publishedAt: _utcDateTime(object, 'publishedAt', r'$.publishedAt'),
         checksum: _string(object, 'checksum', r'$.checksum'),
         packs: packs,
+        practiceTests: practiceTests,
+        catalogues: catalogues,
         localeFallbacks: localeFallbacks,
         tombstones: tombstones,
       );
@@ -318,15 +356,20 @@ final class ContentManifestDecoder {
     );
   }
 
-  String _contentCode(Map<String, Object?> object, String path) {
-    final code = _string(object, 'contentCode', '$path.contentCode');
+  String _businessCode(
+    Map<String, Object?> object,
+    String key,
+    String path,
+  ) {
+    final code = _string(object, key, path);
     if (!_contentCodePattern.hasMatch(code)) {
-      throw _ContractViolation(
-        '$path.contentCode',
-        'must be a stable business code',
-      );
+      throw _ContractViolation(path, 'must be a stable business code');
     }
     return code;
+  }
+
+  String _contentCode(Map<String, Object?> object, String path) {
+    return _businessCode(object, 'contentCode', '$path.contentCode');
   }
 
   String _contentType(Map<String, Object?> object, String path) {
