@@ -54,9 +54,16 @@ void main(List<String> args) {
     return byPercent != 0 ? byPercent : a.path.compareTo(b.path);
   });
 
+  final belowThreshold = files
+      .where((item) => item.percent + 1e-9 < threshold)
+      .toList(growable: false);
+
   stdout.writeln(
     'Production line coverage: ${percent.toStringAsFixed(2)}% '
     '($totalHit/$totalFound), threshold ${threshold.toStringAsFixed(2)}%',
+  );
+  stdout.writeln(
+    'Production files below threshold: ${belowThreshold.length}/${files.length}',
   );
   stdout.writeln('Lowest-covered production files:');
   for (final item in files.take(25)) {
@@ -66,6 +73,15 @@ void main(List<String> args) {
     );
   }
 
+  _writeLedger(
+    threshold: threshold,
+    percent: percent,
+    totalHit: totalHit,
+    totalFound: totalFound,
+    files: files,
+    belowThreshold: belowThreshold,
+  );
+
   if (percent + 1e-9 < threshold) {
     stderr.writeln(
       'Coverage gate failed: ${percent.toStringAsFixed(2)}% < '
@@ -73,6 +89,42 @@ void main(List<String> args) {
     );
     exitCode = 1;
   }
+}
+
+void _writeLedger({
+  required double threshold,
+  required double percent,
+  required int totalHit,
+  required int totalFound,
+  required List<_CoverageFile> files,
+  required List<_CoverageFile> belowThreshold,
+}) {
+  final output = File('coverage/coverage-ledger.md');
+  output.parent.createSync(recursive: true);
+
+  final buffer = StringBuffer()
+    ..writeln('# Production coverage ledger')
+    ..writeln()
+    ..writeln('- Overall: **${percent.toStringAsFixed(2)}%** ($totalHit/$totalFound)')
+    ..writeln('- Gate: **${threshold.toStringAsFixed(2)}%**')
+    ..writeln('- Production files measured: **${files.length}**')
+    ..writeln('- Files below gate: **${belowThreshold.length}**')
+    ..writeln()
+    ..writeln('| Coverage | Hit / Found | Production file |')
+    ..writeln('| ---: | ---: | --- |');
+
+  for (final item in belowThreshold) {
+    buffer.writeln(
+      '| ${item.percent.toStringAsFixed(2)}% | ${item.hit} / ${item.found} | '
+      '`${_relative(item.path)}` |',
+    );
+  }
+
+  if (belowThreshold.isEmpty) {
+    buffer.writeln('| 100.00% | - | All measured production files satisfy the gate. |');
+  }
+
+  output.writeAsStringSync(buffer.toString());
 }
 
 bool _excluded(String path) {
