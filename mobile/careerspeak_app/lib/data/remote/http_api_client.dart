@@ -92,7 +92,9 @@ final class HttpApiClient implements ApiClient {
   Future<Result<ApiResponse>> _sendOnce(ApiRequest request) async {
     final Map<String, String> contextHeaders;
     try {
-      contextHeaders = _validatedContextHeaders(await _contextHeadersProvider());
+      contextHeaders = _validatedContextHeaders(
+        await _contextHeadersProvider(),
+      );
     } on Object {
       return const FailureResult<ApiResponse>(
         ApplicationFailure(
