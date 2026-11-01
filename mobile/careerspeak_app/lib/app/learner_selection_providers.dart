@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/ports/learner_selection_repository.dart';
 import '../application/services/learner_selection_normalizer.dart';
+import '../application/services/learner_selection_service.dart';
 import '../data/local/drift_learner_selection_repository.dart';
 import '../domain/learner_selection.dart';
 import 'learner_state_providers.dart';
@@ -17,6 +18,13 @@ final learnerSelectionRepositoryProvider = Provider<LearnerSelectionRepository>(
 final learnerSelectionNormalizerProvider = Provider<LearnerSelectionNormalizer>(
   (ref) => const LearnerSelectionNormalizer(),
 );
+
+final learnerSelectionServiceProvider = Provider<LearnerSelectionService>((ref) {
+  return LearnerSelectionService(
+    repository: ref.watch(learnerSelectionRepositoryProvider),
+    normalizer: ref.watch(learnerSelectionNormalizerProvider),
+  );
+});
 
 final learnerSelectionProvider = StreamProvider<LearnerSelection>((ref) {
   final repository = ref.watch(learnerSelectionRepositoryProvider);
