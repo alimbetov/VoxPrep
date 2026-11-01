@@ -26,129 +26,142 @@ const _catalogueB =
     'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
 
 void main() {
-  test('C4.9 failed auxiliary fetch leaves zero partial publication membership', () async {
-    final database = createTestDatabase();
-    addTearDown(database.close);
-    await PublicationSnapshotStorage(database).ensureReady();
+  test(
+    'C4.9 failed auxiliary fetch leaves zero partial publication membership',
+    () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      await PublicationSnapshotStorage(database).ensureReady();
 
-    final first = CatalogueRevisionRef(
-      kind: CatalogueKind.categories,
-      revision: 1,
-      checksum: _catalogueA,
-    );
-    final second = CatalogueRevisionRef(
-      kind: CatalogueKind.levels,
-      revision: 1,
-      checksum: _catalogueB,
-    );
-    final stager = _stager(
-      database,
-      _ScriptedCatalogueGateway(<CatalogueKind, Result<CataloguePayload>>{
-        CatalogueKind.categories: Success(_payload(first)),
-        CatalogueKind.levels: const FailureResult<CataloguePayload>(
-          ApplicationFailure(code: 'SYNTHETIC_FAILURE', message: 'stop'),
+      final first = CatalogueRevisionRef(
+        kind: CatalogueKind.categories,
+        revision: 1,
+        checksum: _catalogueA,
+      );
+      final second = CatalogueRevisionRef(
+        kind: CatalogueKind.levels,
+        revision: 1,
+        checksum: _catalogueB,
+      );
+      final stager = _stager(
+        database,
+        _ScriptedCatalogueGateway(<CatalogueKind, Result<CataloguePayload>>{
+          CatalogueKind.categories: Success(_payload(first)),
+          CatalogueKind.levels: const FailureResult<CataloguePayload>(
+            ApplicationFailure(code: 'SYNTHETIC_FAILURE', message: 'stop'),
+          ),
+        }),
+      );
+
+      final result = await stager.stage(
+        _root(109, <CatalogueRevisionRef>[first, second]),
+      );
+
+      expect(result, isA<FailureResult<void>>());
+      expect(await _count(database, 'catalogue_revision_reads'), 0);
+      expect(await _count(database, 'publication_catalogue_refs'), 0);
+      expect(await _count(database, 'publication_practice_test_refs'), 0);
+      expect(await _count(database, 'content_manifest_state'), 0);
+    },
+  );
+
+  test(
+    'C4.9 immutable conflict rolls back and preserves CURRENT membership',
+    () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      await PublicationSnapshotStorage(database).ensureReady();
+
+      final now = DateTime.utc(2026, 10, 31, 19);
+      await database.into(database.contentManifestStates).insert(
+        ContentManifestStatesCompanion.insert(
+          id: const Value(1),
+          schemaVersion: 1,
+          currentContentVersion: 108,
+          currentManifestChecksum: _rootA,
+          updatedAt: now,
         ),
-      }),
-    );
-
-    final result = await stager.stage(_root(109, <CatalogueRevisionRef>[first, second]));
-
-    expect(result, isA<FailureResult<void>>());
-    expect(await _count(database, 'catalogue_revision_reads'), 0);
-    expect(await _count(database, 'publication_catalogue_refs'), 0);
-    expect(await _count(database, 'publication_practice_test_refs'), 0);
-    expect(await _count(database, 'content_manifest_state'), 0);
-  });
-
-  test('C4.9 immutable conflict rolls back and preserves CURRENT membership', () async {
-    final database = createTestDatabase();
-    addTearDown(database.close);
-    await PublicationSnapshotStorage(database).ensureReady();
-
-    final now = DateTime.utc(2026, 10, 31, 19);
-    await database.into(database.contentManifestStates).insert(
-      ContentManifestStatesCompanion.insert(
-        id: const Value(1),
-        schemaVersion: 1,
-        currentContentVersion: 108,
-        currentManifestChecksum: _rootA,
-        updatedAt: now,
-      ),
-    );
-    await database.customStatement(
-      '''
+      );
+      await database.customStatement(
+        '''
       INSERT INTO catalogue_revision_reads (
         catalogue_kind, revision, checksum, payload_json, created_at
       ) VALUES (?, ?, ?, ?, ?)
       ''',
-      <Object?>[
-        CatalogueKind.categories.wireName,
-        1,
-        _catalogueA,
-        '{"revision":1}',
-        now.millisecondsSinceEpoch,
-      ],
-    );
-    await database.customStatement(
-      '''
+        <Object?>[
+          CatalogueKind.categories.wireName,
+          1,
+          _catalogueA,
+          '{"revision":1}',
+          now.millisecondsSinceEpoch,
+        ],
+      );
+      await database.customStatement(
+        '''
       INSERT INTO publication_catalogue_refs (
         content_version, catalogue_kind, revision, checksum
       ) VALUES (?, ?, ?, ?)
       ''',
-      <Object?>[108, CatalogueKind.categories.wireName, 1, _catalogueA],
-    );
+        <Object?>[108, CatalogueKind.categories.wireName, 1, _catalogueA],
+      );
 
-    final conflicting = CatalogueRevisionRef(
-      kind: CatalogueKind.categories,
-      revision: 1,
-      checksum: _catalogueB,
-    );
-    final result = await _stager(
-      database,
-      _ScriptedCatalogueGateway(<CatalogueKind, Result<CataloguePayload>>{
-        CatalogueKind.categories: Success(_payload(conflicting)),
-      }),
-    ).stage(_root(108, <CatalogueRevisionRef>[conflicting]));
+      final conflicting = CatalogueRevisionRef(
+        kind: CatalogueKind.categories,
+        revision: 1,
+        checksum: _catalogueB,
+      );
+      final result = await _stager(
+        database,
+        _ScriptedCatalogueGateway(<CatalogueKind, Result<CataloguePayload>>{
+          CatalogueKind.categories: Success(_payload(conflicting)),
+        }),
+      ).stage(_root(108, <CatalogueRevisionRef>[conflicting]));
 
-    expect(result, isA<FailureResult<void>>());
-    final rows = await database.customSelect(
-      'SELECT revision, checksum FROM publication_catalogue_refs WHERE content_version = 108',
-    ).get();
-    expect(rows, hasLength(1));
-    expect(rows.single.read<int>('revision'), 1);
-    expect(rows.single.read<String>('checksum'), _catalogueA);
+      expect(result, isA<FailureResult<void>>());
+      final rows = await database.customSelect(
+        'SELECT revision, checksum FROM publication_catalogue_refs WHERE content_version = 108',
+      ).get();
+      expect(rows, hasLength(1));
+      expect(rows.single.read<int>('revision'), 1);
+      expect(rows.single.read<String>('checksum'), _catalogueA);
 
-    final current = await database.select(database.contentManifestStates).getSingle();
-    expect(current.currentContentVersion, 108);
-    expect(current.currentManifestChecksum, _rootA);
-    expect(current.updatedAt.millisecondsSinceEpoch, now.millisecondsSinceEpoch);
-  });
+      final current = await database
+          .select(database.contentManifestStates)
+          .getSingle();
+      expect(current.currentContentVersion, 108);
+      expect(current.currentManifestChecksum, _rootA);
+      expect(current.updatedAt.millisecondsSinceEpoch, now.millisecondsSinceEpoch);
+    },
+  );
 
-  test('C4.9 repeated identical stage is idempotent and duplicate-free', () async {
-    final database = createTestDatabase();
-    addTearDown(database.close);
-    await PublicationSnapshotStorage(database).ensureReady();
+  test(
+    'C4.9 repeated identical stage is idempotent and duplicate-free',
+    () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      await PublicationSnapshotStorage(database).ensureReady();
 
-    final ref = CatalogueRevisionRef(
-      kind: CatalogueKind.skills,
-      revision: 3,
-      checksum: _catalogueA,
-    );
-    final target = _root(109, <CatalogueRevisionRef>[ref]);
-    final stager = _stager(
-      database,
-      _ScriptedCatalogueGateway(<CatalogueKind, Result<CataloguePayload>>{
-        CatalogueKind.skills: Success(_payload(ref)),
-      }),
-    );
+      final ref = CatalogueRevisionRef(
+        kind: CatalogueKind.skills,
+        revision: 3,
+        checksum: _catalogueA,
+      );
+      final target = _root(109, <CatalogueRevisionRef>[ref]);
+      final stager = _stager(
+        database,
+        _ScriptedCatalogueGateway(<CatalogueKind, Result<CataloguePayload>>{
+          CatalogueKind.skills: Success(_payload(ref)),
+        }),
+      );
 
-    expect(await stager.stage(target), isA<Success<void>>());
-    expect(await stager.stage(target), isA<Success<void>>());
+      expect(await stager.stage(target), isA<Success<void>>());
+      expect(await stager.stage(target), isA<Success<void>>());
 
-    expect(await _count(database, 'catalogue_revision_reads'), 1);
-    expect(await _count(database, 'publication_catalogue_refs'), 1);
-    expect(await _count(database, 'content_manifest_state'), 0);
-  });
+      expect(await _count(database, 'catalogue_revision_reads'), 1);
+      expect(await _count(database, 'publication_catalogue_refs'), 1);
+      expect(await _count(database, 'content_manifest_state'), 0);
+    },
+  );
 }
 
 DriftPublicationSnapshotStager _stager(
@@ -196,7 +209,9 @@ CataloguePayload _payload(CatalogueRevisionRef ref) {
 }
 
 Future<int> _count(CareerSpeakDatabase database, String table) async {
-  final row = await database.customSelect('SELECT COUNT(*) AS c FROM $table').getSingle();
+  final row = await database
+      .customSelect('SELECT COUNT(*) AS c FROM $table')
+      .getSingle();
   return row.read<int>('c');
 }
 
