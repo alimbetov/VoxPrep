@@ -2,6 +2,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/ports/installation_registration_gateway.dart';
+import '../application/ports/universal_catalogue_repository.dart';
 import '../application/result/result.dart';
 import '../application/services/application_bootstrap_service.dart';
 import '../application/services/installation_bootstrap_service.dart';
@@ -49,11 +50,15 @@ final applicationBootstrapProvider =
         final catalogueResult = await ref
             .read(universalCatalogueRepositoryProvider)
             .readCurrent();
-        final snapshot = switch (catalogueResult) {
-          Success(:final value) => value,
-          FailureResult(:final failure) =>
-            return FailureResult<ApplicationBootstrapOutcome>(failure),
-        };
+        CurrentUniversalCatalogueSnapshot? snapshot;
+        switch (catalogueResult) {
+          case Success<CurrentUniversalCatalogueSnapshot?>(:final value):
+            snapshot = value;
+          case FailureResult<CurrentUniversalCatalogueSnapshot?>(
+            :final failure,
+          ):
+            return FailureResult<ApplicationBootstrapOutcome>(failure);
+        }
         if (snapshot != null) {
           final normalized = await ref
               .read(learnerSelectionServiceProvider)
