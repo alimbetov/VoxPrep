@@ -17,7 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   testWidgets(
-    'rapid double Play supersession is silent and latest request wins',
+    'rapid double Listen supersession is silent and latest request wins',
     (tester) async {
       final resolver = _ControlledResolver();
       final engine = _Engine();
@@ -43,7 +43,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final play = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Play'),
+        find.widgetWithText(FilledButton, 'Listen material'),
       );
       play.onPressed!();
       play.onPressed!();
@@ -52,12 +52,12 @@ void main() {
       resolver.complete(0, _asset('superseded'));
       await tester.pump();
 
-      expect(find.textContaining('Audio playback failed:'), findsNothing);
+      expect(find.text('Audio could not be played.'), findsNothing);
 
       resolver.complete(1, _asset('winner'));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('Audio playback failed:'), findsNothing);
+      expect(find.text('Audio could not be played.'), findsNothing);
       expect(find.text('Pause'), findsOneWidget);
       expect(engine.openedAssetIds, <String>['winner']);
     },
