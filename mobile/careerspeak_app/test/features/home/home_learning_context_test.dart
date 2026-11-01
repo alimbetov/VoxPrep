@@ -2,6 +2,7 @@ import 'package:careerspeak_app/app/continue_learning_providers.dart';
 import 'package:careerspeak_app/app/learner_selection_providers.dart';
 import 'package:careerspeak_app/app/learner_state_providers.dart';
 import 'package:careerspeak_app/app/repository_providers.dart';
+import 'package:careerspeak_app/app/review_schedule_providers.dart';
 import 'package:careerspeak_app/application/continue_learning/continue_learning_resolver.dart';
 import 'package:careerspeak_app/application/query/page.dart' as app_page;
 import 'package:careerspeak_app/domain/content_identity.dart';
@@ -63,6 +64,51 @@ void main() {
     expect(find.text('TECH'), findsOneWidget);
     expect(find.widgetWithText(FilledButton, 'Continue'), findsOneWidget);
   });
+
+  testWidgets('Home Due count uses only explicit due review identities', (
+    tester,
+  ) async {
+    const dueIdentity = ContentIdentity(code: 'DUE', type: ContentType.topic);
+    const notDueIdentity = ContentIdentity(
+      code: 'NOT_DUE',
+      type: ContentType.topic,
+    );
+    await _pumpHome(
+      tester,
+      const AsyncData<LearnerLearningContext?>(null),
+      items: const <ContentItem>[
+        ContentItem(
+          code: 'DUE',
+          type: ContentType.topic,
+          title: 'Due topic',
+          subtitle: 'Due subtitle',
+          description: 'Due description',
+          category: 'JAVA',
+          level: 'B2',
+          minutes: 4,
+          revision: 1,
+          hasAudio: false,
+        ),
+        ContentItem(
+          code: 'NOT_DUE',
+          type: ContentType.topic,
+          title: 'Not due topic',
+          subtitle: 'Not due subtitle',
+          description: 'Not due description',
+          category: 'JAVA',
+          level: 'B2',
+          minutes: 4,
+          revision: 1,
+          hasAudio: false,
+        ),
+      ],
+      dueReviews: const <ContentIdentity>{dueIdentity},
+    );
+
+    expect(find.text('Due'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
+    expect(notDueIdentity, isNot(equals(dueIdentity)));
+  });
 }
 
 Future<void> _pumpHome(
@@ -74,19 +120,24 @@ Future<void> _pumpHome(
     title: 'Resume learning',
     subtitle: 'Your CURRENT learning path',
   ),
+  List<ContentItem> items = const <ContentItem>[],
+  Set<ContentIdentity> dueReviews = const <ContentIdentity>{},
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
         contentPageProvider.overrideWith(
           (ref) => Stream<app_page.Page<ContentItem>>.value(
-            const app_page.Page<ContentItem>(items: [], hasMore: false),
+            app_page.Page<ContentItem>(items: items, hasMore: false),
           ),
         ),
         contentMarkersProvider.overrideWith(
           (ref) => Stream<Map<ContentIdentity, ContentMarkerState>>.value(
             const <ContentIdentity, ContentMarkerState>{},
           ),
+        ),
+        dueReviewIdentitiesProvider.overrideWithValue(
+          AsyncData<Set<ContentIdentity>>(dueReviews),
         ),
         learnerLearningContextProvider.overrideWithValue(learningContext),
         continueLearningHomeTargetProvider.overrideWith(
