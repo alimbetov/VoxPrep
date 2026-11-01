@@ -4,6 +4,7 @@ import 'package:careerspeak_app/application/assessment/assessment_revision_loade
 import 'package:careerspeak_app/application/content_delivery/catalogue_payload.dart';
 import 'package:careerspeak_app/application/content_delivery/catalogue_revision_ref.dart';
 import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
+import 'package:careerspeak_app/application/content_delivery/product_catalog.dart';
 import 'package:careerspeak_app/application/ports/assessment_payload_gateway.dart';
 import 'package:careerspeak_app/application/ports/catalogue_payload_gateway.dart';
 import 'package:careerspeak_app/application/result/result.dart';
