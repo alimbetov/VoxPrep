@@ -55,31 +55,37 @@ void main() {
     expect(preferences.translationLocale.code, 'ru-KZ');
   });
 
-  test('BCP-47 legacy locale updates remain available before onboarding', () async {
-    await repository.setUiLocale(AppUiLocale.arabic);
-    await repository.setTranslationLocale(
-      AppTranslationLocale.brazilianPortuguese,
-    );
-    await repository.setPreferredAccent(PreferredEnglishAccent.uk);
-    await repository.setTheme(AppThemePreference.dark);
-    await repository.setFocusMode(true);
-    await repository.setStorageQuotaBytes(1024 * 1024);
-    await repository.setTranslationLocale(
-      AppTranslationLocale.brazilianPortuguese,
-    );
+  test(
+    'BCP-47 legacy locale updates remain available before onboarding',
+    () async {
+      await repository.setUiLocale(AppUiLocale.arabic);
+      await repository.setTranslationLocale(
+        AppTranslationLocale.brazilianPortuguese,
+      );
+      await repository.setPreferredAccent(PreferredEnglishAccent.uk);
+      await repository.setTheme(AppThemePreference.dark);
+      await repository.setFocusMode(true);
+      await repository.setStorageQuotaBytes(1024 * 1024);
+      await repository.setTranslationLocale(
+        AppTranslationLocale.brazilianPortuguese,
+      );
 
-    final preferences = await repository.watchPreferences().first;
-    final value = preferences.getOrThrow();
+      final preferences = await repository.watchPreferences().first;
+      final value = preferences.getOrThrow();
 
-    expect(value.uiLocale, AppUiLocale.arabic);
-    expect(value.uiLocale.isRtl, isTrue);
-    expect(value.translationLocale.code, 'pt-BR');
-    expect(value.preferredAccent, PreferredEnglishAccent.uk);
-    expect(value.theme, AppThemePreference.dark);
-    expect(value.focusMode, isTrue);
-    expect(value.storageQuotaBytes, 1024 * 1024);
-    expect(await database.select(database.appPreferences).get(), hasLength(1));
-  });
+      expect(value.uiLocale, AppUiLocale.arabic);
+      expect(value.uiLocale.isRtl, isTrue);
+      expect(value.translationLocale.code, 'pt-BR');
+      expect(value.preferredAccent, PreferredEnglishAccent.uk);
+      expect(value.theme, AppThemePreference.dark);
+      expect(value.focusMode, isTrue);
+      expect(value.storageQuotaBytes, 1024 * 1024);
+      expect(
+        await database.select(database.appPreferences).get(),
+        hasLength(1),
+      );
+    },
+  );
 
   test('future valid locale is restored without client enum release', () async {
     final swahili = AppTranslationLocale('sw');
@@ -129,41 +135,46 @@ void main() {
     );
   });
 
-  test('selected country and locale survive database close and reopen', () async {
-    await database.close();
+  test(
+    'selected country and locale survive database close and reopen',
+    () async {
+      await database.close();
 
-    final directory = await Directory.systemTemp.createTemp(
-      'careerspeak-locale-preferences-',
-    );
-    addTearDown(() => directory.delete(recursive: true));
-    final file = File('${directory.path}/careerspeak.sqlite');
+      final directory = await Directory.systemTemp.createTemp(
+        'careerspeak-locale-preferences-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final file = File('${directory.path}/careerspeak.sqlite');
 
-    final firstDatabase = CareerSpeakDatabase(NativeDatabase(file));
-    final firstRepository = DriftAppPreferencesRepository(firstDatabase);
-    (await firstRepository.setLocaleSelection(
-      countryCode: 'KZ',
-      locale: AppTranslationLocale('ru-KZ'),
-    )).getOrThrow();
-    (await firstRepository.setPreferredAccent(
-      PreferredEnglishAccent.australian,
-    )).getOrThrow();
-    (await firstRepository.setTheme(AppThemePreference.light)).getOrThrow();
-    await firstDatabase.close();
+      final firstDatabase = CareerSpeakDatabase(NativeDatabase(file));
+      final firstRepository = DriftAppPreferencesRepository(firstDatabase);
+      (await firstRepository.setLocaleSelection(
+        countryCode: 'KZ',
+        locale: AppTranslationLocale('ru-KZ'),
+      )).getOrThrow();
+      (await firstRepository.setPreferredAccent(
+        PreferredEnglishAccent.australian,
+      )).getOrThrow();
+      (await firstRepository.setTheme(AppThemePreference.light)).getOrThrow();
+      await firstDatabase.close();
 
-    final reopenedDatabase = CareerSpeakDatabase(NativeDatabase(file));
-    final reopenedRepository = DriftAppPreferencesRepository(reopenedDatabase);
-    final restored = (await reopenedRepository.getPreferences()).getOrThrow();
+      final reopenedDatabase = CareerSpeakDatabase(NativeDatabase(file));
+      final reopenedRepository = DriftAppPreferencesRepository(
+        reopenedDatabase,
+      );
+      final restored = (await reopenedRepository.getPreferences()).getOrThrow();
 
-    expect(restored.countryCode, 'KZ');
-    expect(restored.selectedLocale.code, 'ru-KZ');
-    expect(restored.uiLocale.code, 'ru-KZ');
-    expect(restored.translationLocale.code, 'ru-KZ');
-    expect(restored.preferredAccent, PreferredEnglishAccent.australian);
-    expect(restored.theme, AppThemePreference.light);
+      expect(restored.countryCode, 'KZ');
+      expect(restored.selectedLocale.code, 'ru-KZ');
+      expect(restored.uiLocale.code, 'ru-KZ');
+      expect(restored.translationLocale.code, 'ru-KZ');
+      expect(restored.preferredAccent, PreferredEnglishAccent.australian);
+      expect(restored.theme, AppThemePreference.light);
 
-    await reopenedDatabase.close();
+      await reopenedDatabase.close();
 
-    database = createTestDatabase();
-    repository = DriftAppPreferencesRepository(database);
-  });
+      database = createTestDatabase();
+      repository = DriftAppPreferencesRepository(database);
+    },
+  );
 }
