@@ -6,11 +6,13 @@ import '../data/remote/http_locale_configuration_gateway.dart';
 import '../domain/locale_configuration.dart';
 import 'api_client_providers.dart';
 
-final localeConfigurationGatewayProvider = Provider<LocaleConfigurationGateway>((
-  ref,
-) {
-  return HttpLocaleConfigurationGateway(apiClient: ref.watch(apiClientProvider));
-});
+final localeConfigurationGatewayProvider = Provider<LocaleConfigurationGateway>(
+  (ref) {
+    return HttpLocaleConfigurationGateway(
+      apiClient: ref.watch(apiClientProvider),
+    );
+  },
+);
 
 final countryLocaleConfigurationProvider =
     FutureProvider.family<CountryLocaleConfiguration, String>((
