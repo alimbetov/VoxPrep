@@ -1,33 +1,14 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../application/ports/installation_registration_gateway.dart';
 import '../application/ports/universal_catalogue_repository.dart';
 import '../application/result/result.dart';
 import '../application/services/application_bootstrap_service.dart';
-import '../application/services/installation_bootstrap_service.dart';
-import '../data/remote/http_installation_registration_gateway.dart';
 import 'api_client_providers.dart';
 import 'asset_cache_retention_providers.dart';
 import 'catalogue_payload_providers.dart';
 import 'content_sync_providers.dart';
-import 'installation_identity_providers.dart';
 import 'learner_selection_providers.dart';
-
-final installationRegistrationGatewayProvider =
-    Provider<InstallationRegistrationGateway>((ref) {
-      return HttpInstallationRegistrationGateway(
-        apiClient: ref.watch(apiClientProvider),
-      );
-    });
-
-final installationBootstrapServiceProvider =
-    Provider<InstallationBootstrapService>((ref) {
-      return InstallationBootstrapService(
-        identityService: ref.watch(installationIdentityServiceProvider),
-        registrationGateway: ref.watch(installationRegistrationGatewayProvider),
-      );
-    });
 
 final applicationBootstrapServiceProvider =
     Provider<ApplicationBootstrapService>((ref) {
