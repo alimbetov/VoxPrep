@@ -8,8 +8,8 @@ final class ReviewScheduler {
   const ReviewScheduler({
     required this._repository,
     this._policy = const ReviewSchedulingPolicy(),
-    DateTime Function()? now,
-  }) : _now = now;
+    this._now,
+  });
 
   final ReviewScheduleRepository _repository;
   final ReviewSchedulingPolicy _policy;
