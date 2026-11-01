@@ -9,6 +9,7 @@ import '../features/catalogue/catalogue_screen.dart';
 import '../features/content/content_detail_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/learn/learn_screen.dart';
+import '../features/learning_direction/learning_direction_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/review/review_screen.dart';
 import '../features/settings/settings_screen.dart';
@@ -114,6 +115,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/learn',
             pageBuilder: (context, state) =>
                 _page(state: state, child: const LearnScreen()),
+          ),
+          GoRoute(
+            path: '/learn/direction',
+            pageBuilder: (context, state) => _page(
+              state: state,
+              hierarchical: true,
+              child: const LearningDirectionScreen(),
+            ),
           ),
           GoRoute(
             path: '/tests',
