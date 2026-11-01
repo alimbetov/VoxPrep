@@ -33,7 +33,8 @@ final apiClientProvider = Provider<ApiClient>((ref) {
       final result = await preferencesRepository.getPreferences();
       final preferences = switch (result) {
         Success<ApplicationPreferences>(:final value) => value,
-        FailureResult<ApplicationPreferences>() => ApplicationPreferences.defaults,
+        FailureResult<ApplicationPreferences>() =>
+          ApplicationPreferences.defaults,
       };
       return <String, String>{
         'accept-language': preferences.selectedLocale.code,
