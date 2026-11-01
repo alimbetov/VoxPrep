@@ -118,8 +118,8 @@ void main() {
         ),
         graph: _graph(),
         selection: _selection(),
-        markers: const <ContentIdentity, ContentMarkerState>{
-          contentIdentity: ContentMarkerState(
+        markers: <ContentIdentity, ContentMarkerState>{
+          contentIdentity: const ContentMarkerState(
             completed: true,
             lastRevisionSeen: 7,
           ),
@@ -148,8 +148,8 @@ void main() {
         ),
         graph: _graph(),
         selection: _selection(),
-        markers: const <ContentIdentity, ContentMarkerState>{
-          contentIdentity: ContentMarkerState(
+        markers: <ContentIdentity, ContentMarkerState>{
+          contentIdentity: const ContentMarkerState(
             completed: true,
             lastRevisionSeen: 6,
           ),
@@ -213,8 +213,11 @@ void main() {
         graph: _graph(),
         selection: _selection(),
         markers: const <ContentIdentity, ContentMarkerState>{},
-        completedPracticeTests: const <PracticeTestCompletionKey>{
-          PracticeTestCompletionKey(practiceTestCode: 'TEST_A', revision: 5),
+        completedPracticeTests: <PracticeTestCompletionKey>{
+          const PracticeTestCompletionKey(
+            practiceTestCode: 'TEST_A',
+            revision: 5,
+          ),
         },
       );
       expect(exact.incompleteMembers, isEmpty);
@@ -224,8 +227,11 @@ void main() {
         graph: _graph(),
         selection: _selection(),
         markers: const <ContentIdentity, ContentMarkerState>{},
-        completedPracticeTests: const <PracticeTestCompletionKey>{
-          PracticeTestCompletionKey(practiceTestCode: 'TEST_A', revision: 4),
+        completedPracticeTests: <PracticeTestCompletionKey>{
+          const PracticeTestCompletionKey(
+            practiceTestCode: 'TEST_A',
+            revision: 4,
+          ),
         },
       );
       expect(older.incompleteMembers, hasLength(1));
