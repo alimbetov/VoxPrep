@@ -66,6 +66,8 @@ final class ContinueLearningCurrentRevalidator {
                   candidate,
                   graph,
                   activeHierarchy,
+                  markers,
+                  completedPracticeTests,
                 ),
               )
               .toList(growable: false);
@@ -147,14 +149,53 @@ final class ContinueLearningCurrentRevalidator {
     ContinueLearningCollectionCandidate candidate,
     UniversalCatalogueGraph graph,
     _ActiveHierarchy hierarchy,
+    Map<ContentIdentity, ContentMarkerState> markers,
+    Set<PracticeTestCompletionKey> completedPracticeTests,
   ) {
     for (final collection in graph.collections) {
-      if (collection.code == candidate.collectionCode) {
-        return collection.active &&
-            collection.trackCode == hierarchy.trackCode &&
-            collection.verticalCode == hierarchy.verticalCode &&
-            collection.trackCode == candidate.trackCode &&
-            collection.sortOrder == candidate.sortOrder;
+      if (collection.code != candidate.collectionCode) continue;
+      if (!collection.active ||
+          collection.trackCode != hierarchy.trackCode ||
+          collection.verticalCode != hierarchy.verticalCode ||
+          collection.trackCode != candidate.trackCode ||
+          collection.sortOrder != candidate.sortOrder) {
+        return false;
+      }
+      return _collectionHasIncompleteMember(
+        collection,
+        markers,
+        completedPracticeTests,
+      );
+    }
+    return false;
+  }
+
+  static bool _collectionHasIncompleteMember(
+    LearningCollectionProjection collection,
+    Map<ContentIdentity, ContentMarkerState> markers,
+    Set<PracticeTestCompletionKey> completedPracticeTests,
+  ) {
+    for (final member in collection.members) {
+      if (member.type == LearningCollectionMemberType.content) {
+        final ref = member.contentRef!;
+        final identity = ContentIdentity(
+          code: ref.contentCode,
+          type: ref.contentType,
+        );
+        if (!_isCompletedAtRevision(markers[identity], ref.revision)) {
+          return true;
+        }
+        continue;
+      }
+
+      final ref = member.practiceTestRef!;
+      if (!completedPracticeTests.contains(
+        PracticeTestCompletionKey(
+          practiceTestCode: ref.practiceTestCode,
+          revision: ref.revision,
+        ),
+      )) {
+        return true;
       }
     }
     return false;
