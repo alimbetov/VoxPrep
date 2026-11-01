@@ -9,38 +9,42 @@ import '../features/catalogue/catalogue_screen.dart';
 import '../features/content/content_detail_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/learn/learn_screen.dart';
-import '../features/onboarding/locale_onboarding_screen.dart';
+import '../features/onboarding/onboarding_screen.dart';
 import '../features/review/review_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/tests/test_session_screen.dart';
 import '../features/tests/tests_screen.dart';
-import 'app_preferences_providers.dart';
 import 'content_locations.dart';
+import 'onboarding_providers.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final needsLocaleOnboarding = ref.watch(
-    applicationPreferencesProvider.select(
-      (preferences) => preferences.asData?.value.needsLocaleOnboarding,
+  final onboardingCompleted = ref.watch(
+    onboardingStateProvider.select(
+      (state) => state.asData?.value.completed,
     ),
   );
 
   return GoRouter(
     initialLocation: '/',
     redirect: (context, state) {
-      if (needsLocaleOnboarding == null) return null;
-      final onboarding = state.matchedLocation == '/onboarding/locale';
-      if (needsLocaleOnboarding && !onboarding) {
-        return '/onboarding/locale';
+      if (onboardingCompleted == null) return null;
+      final onboarding = state.matchedLocation == '/onboarding';
+      if (!onboardingCompleted && !onboarding) {
+        return '/onboarding';
       }
-      if (!needsLocaleOnboarding && onboarding) {
+      if (onboardingCompleted && onboarding) {
         return '/';
       }
       return null;
     },
     routes: [
       GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
         path: '/onboarding/locale',
-        builder: (context, state) => const LocaleOnboardingScreen(),
+        redirect: (context, state) => '/onboarding',
       ),
       ShellRoute(
         builder: (context, state, child) =>
