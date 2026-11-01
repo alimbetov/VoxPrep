@@ -25,7 +25,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   Widget build(BuildContext context) {
     final contentPage = ref.watch(contentPageProvider);
     final markers = ref.watch(contentMarkersProvider);
-    final dueReviews = ref.watch(dueReviewIdentitiesProvider);
+    final dueReviewItems = ref.watch(dueReviewItemsProvider);
 
     return contentPage.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -44,7 +44,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           ),
         ),
         data: (values) {
-          final due = dueReviews.asData?.value ?? const <ContentIdentity>{};
+          final due = dueReviewItems.asData?.value ?? const <ContentItem>[];
           final items = _itemsFor(page.items, values, due);
           return ListView(
             padding: const EdgeInsets.all(24),
@@ -85,10 +85,15 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
-              if (filter == _ReviewFilter.due && dueReviews.isLoading)
+              if (filter == _ReviewFilter.due && dueReviewItems.isLoading)
                 const Padding(
                   padding: EdgeInsets.only(bottom: 12),
                   child: LinearProgressIndicator(),
+                ),
+              if (filter == _ReviewFilter.due && dueReviewItems.hasError)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: Text('Due review state is temporarily unavailable.'),
                 ),
               if (items.isEmpty)
                 const Padding(
@@ -109,14 +114,17 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   List<ContentItem> _itemsFor(
     List<ContentItem> all,
     Map<ContentIdentity, ContentMarkerState> markers,
-    Set<ContentIdentity> dueReviews,
+    List<ContentItem> dueReviewItems,
   ) {
+    if (filter == _ReviewFilter.due) {
+      return dueReviewItems;
+    }
     return all
         .where((item) {
           final identity = ContentIdentity.fromItem(item);
           final state = markers[identity] ?? const ContentMarkerState();
           return switch (filter) {
-            _ReviewFilter.due => dueReviews.contains(identity),
+            _ReviewFilter.due => false,
             _ReviewFilter.favorites => state.favorite,
             _ReviewFilter.notListened => item.hasAudio && !state.listened,
           };
