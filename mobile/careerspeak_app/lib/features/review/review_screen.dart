@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/learner_state_providers.dart';
 import '../../app/repository_providers.dart';
+import '../../app/review_policy_providers.dart';
 import '../../app/review_schedule_providers.dart';
 import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
 import '../../domain/content_marker_state.dart';
+import '../../domain/content_review_state.dart';
 import '../shared/content_card.dart';
 
 enum _ReviewFilter { due, favorites, notListened }
@@ -20,12 +22,14 @@ class ReviewScreen extends ConsumerStatefulWidget {
 
 class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   _ReviewFilter filter = _ReviewFilter.due;
+  final Set<ContentIdentity> _submitting = <ContentIdentity>{};
 
   @override
   Widget build(BuildContext context) {
     final contentPage = ref.watch(contentPageProvider);
     final markers = ref.watch(contentMarkersProvider);
     final dueReviewItems = ref.watch(dueReviewItemsProvider);
+    final schedules = ref.watch(reviewSchedulesProvider);
 
     return contentPage.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -45,6 +49,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         ),
         data: (values) {
           final due = dueReviewItems.asData?.value ?? const <ContentItem>[];
+          final scheduleValues =
+              schedules.asData?.value ?? const <ContentIdentity, ContentReviewState>{};
           final items = _itemsFor(page.items, values, due);
           return ListView(
             padding: const EdgeInsets.all(24),
@@ -102,6 +108,14 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                     child: Text('Nothing matches this review filter.'),
                   ),
                 )
+              else if (filter == _ReviewFilter.due)
+                for (final item in items)
+                  _DueReviewItem(
+                    item: item,
+                    schedule: scheduleValues[ContentIdentity.fromItem(item)],
+                    submitting: _submitting.contains(ContentIdentity.fromItem(item)),
+                    onOutcome: (outcome) => _recordOutcome(item, outcome),
+                  )
               else
                 for (final item in items) ContentCard(item: item),
             ],
@@ -109,6 +123,34 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         },
       ),
     );
+  }
+
+  Future<void> _recordOutcome(ContentItem item, ReviewOutcome outcome) async {
+    final identity = ContentIdentity.fromItem(item);
+    final schedules = ref.read(reviewSchedulesProvider).asData?.value;
+    final schedule = schedules?[identity];
+    if (schedule == null || _submitting.contains(identity)) return;
+
+    setState(() => _submitting.add(identity));
+    try {
+      final result = await ref.read(reviewSchedulerProvider).recordOutcome(
+            identity: identity,
+            currentStage: schedule.reviewStage,
+            outcome: outcome,
+          );
+      result.getOrThrow();
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to save review result. Please try again.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _submitting.remove(identity));
+      }
+    }
   }
 
   List<ContentItem> _itemsFor(
@@ -130,5 +172,63 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           };
         })
         .toList(growable: false);
+  }
+}
+
+class _DueReviewItem extends StatelessWidget {
+  const _DueReviewItem({
+    required this.item,
+    required this.schedule,
+    required this.submitting,
+    required this.onOutcome,
+  });
+
+  final ContentItem item;
+  final ContentReviewState? schedule;
+  final bool submitting;
+  final ValueChanged<ReviewOutcome> onOutcome;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = schedule != null && !submitting;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ContentCard(item: item),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            OutlinedButton(
+              onPressed: enabled
+                  ? () => onOutcome(ReviewOutcome.incorrect)
+                  : null,
+              child: const Text('Incorrect'),
+            ),
+            OutlinedButton(
+              onPressed: enabled ? () => onOutcome(ReviewOutcome.hard) : null,
+              child: const Text('Hard'),
+            ),
+            FilledButton.tonal(
+              onPressed: enabled
+                  ? () => onOutcome(ReviewOutcome.correct)
+                  : null,
+              child: const Text('Correct'),
+            ),
+            FilledButton(
+              onPressed: enabled ? () => onOutcome(ReviewOutcome.known) : null,
+              child: const Text('Known'),
+            ),
+          ],
+        ),
+        if (submitting)
+          const Padding(
+            padding: EdgeInsets.only(top: 8),
+            child: LinearProgressIndicator(),
+          ),
+        const SizedBox(height: 20),
+      ],
+    );
   }
 }
