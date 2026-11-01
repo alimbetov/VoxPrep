@@ -554,10 +554,7 @@ class _AudioPlaybackControls extends ConsumerWidget {
             ),
             if (phase == AudioPlaybackPhase.completed) ...[
               const SizedBox(height: 12),
-              const Semantics(
-                label: 'Audio listened',
-                child: Text('Listened'),
-              ),
+              const Semantics(label: 'Audio listened', child: Text('Listened')),
             ],
             if (failure != null) ...[
               const SizedBox(height: 12),
@@ -610,16 +607,17 @@ String _formatDuration(int milliseconds) {
 
 String _audioFailureMessage(ApplicationFailure failure) {
   return switch (failure.code) {
-    'ASSET_OFFLINE' || 'ASSET_SOURCE_UNAVAILABLE' || 'ASSET_TIMEOUT' =>
-      'Audio is not available offline yet.',
+    'ASSET_OFFLINE' ||
+    'ASSET_SOURCE_UNAVAILABLE' ||
+    'ASSET_TIMEOUT' => 'Audio is not available offline yet.',
     'ASSET_NOT_READY' => 'Audio is not ready yet. Please try again.',
     'ASSET_NOT_FOUND' ||
     'MEDIA_ACCESS_FORBIDDEN' ||
     'ASSET_NOT_AUDIO' ||
     'ASSET_CHECKSUM_MISMATCH' ||
     'ASSET_SIZE_MISMATCH' => 'Audio is unavailable for this material.',
-    'INSTALLATION_UNAUTHORIZED' || 'UNAUTHORIZED' =>
-      'Audio authorization could not be refreshed.',
+    'INSTALLATION_UNAUTHORIZED' ||
+    'UNAUTHORIZED' => 'Audio authorization could not be refreshed.',
     _ when failure.retryable => 'Audio could not be loaded. Please try again.',
     _ => 'Audio is unavailable for this material.',
   };
