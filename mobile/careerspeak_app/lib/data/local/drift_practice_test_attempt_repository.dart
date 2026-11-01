@@ -5,6 +5,7 @@ import 'package:drift/drift.dart';
 import '../../application/ports/practice_test_attempt_repository.dart';
 import '../../application/result/result.dart';
 import '../../domain/practice_test_attempt.dart';
+import '../../domain/practice_test_completion_key.dart';
 import 'database/careerspeak_database.dart';
 import 'publication_snapshot_storage.dart';
 
@@ -193,6 +194,101 @@ final class DriftPracticeTestAttemptRepository
     } on Object catch (error) {
       return FailureResult<PracticeTestAttempt>(
         _failure('PRACTICE_TEST_ATTEMPT_WRITE_FAILED', error),
+      );
+    }
+  }
+
+  @override
+  Future<Result<Set<PracticeTestCompletionKey>>>
+  getCompletedPracticeTests() async {
+    try {
+      final rows = await _database.customSelect('''
+        SELECT practice_test_code, practice_test_revision
+        FROM practice_test_completions
+        ORDER BY practice_test_code, practice_test_revision
+      ''').get();
+      final completed = <PracticeTestCompletionKey>{};
+      for (final row in rows) {
+        final code = row.read<String>('practice_test_code').trim();
+        final revision = row.read<int>('practice_test_revision');
+        if (code.isEmpty || revision <= 0) {
+          throw const FormatException('invalid practice-test completion row');
+        }
+        completed.add(
+          PracticeTestCompletionKey(
+            practiceTestCode: code,
+            revision: revision,
+          ),
+        );
+      }
+      return Success<Set<PracticeTestCompletionKey>>(
+        Set<PracticeTestCompletionKey>.unmodifiable(completed),
+      );
+    } on Object catch (error) {
+      return FailureResult<Set<PracticeTestCompletionKey>>(
+        _failure('PRACTICE_TEST_COMPLETION_READ_FAILED', error),
+      );
+    }
+  }
+
+  @override
+  Future<Result<void>> completeActiveAttempt() async {
+    try {
+      return await _database.transaction<Result<void>>(() async {
+        final rows = await _database.customSelect('''
+          SELECT practice_test_code, practice_test_revision
+          FROM practice_test_active_attempt
+          WHERE id = 1
+        ''').get();
+        if (rows.isEmpty) return const Success<void>(null);
+        if (rows.length != 1) {
+          return FailureResult<void>(
+            _failure(
+              'PRACTICE_TEST_ATTEMPT_INVALID',
+              StateError('multiple active attempts'),
+            ),
+          );
+        }
+
+        final row = rows.single;
+        final code = row.read<String>('practice_test_code');
+        final revision = row.read<int>('practice_test_revision');
+        final completedAt = _now().toUtc().millisecondsSinceEpoch;
+        if (completedAt <= 0) {
+          return FailureResult<void>(
+            _failure(
+              'PRACTICE_TEST_COMPLETION_WRITE_FAILED',
+              StateError('invalid completion timestamp'),
+            ),
+          );
+        }
+
+        await _database.customStatement(
+          '''
+          INSERT INTO practice_test_completions (
+            practice_test_code,
+            practice_test_revision,
+            completed_at
+          ) VALUES (?, ?, ?)
+          ON CONFLICT(practice_test_code, practice_test_revision)
+          DO UPDATE SET completed_at = excluded.completed_at
+          ''',
+          <Object?>[code, revision, completedAt],
+        );
+        await _database.customStatement(
+          '''
+          DELETE FROM practice_test_active_attempt
+          WHERE id = 1
+            AND practice_test_code = ?
+            AND practice_test_revision = ?
+          ''',
+          <Object?>[code, revision],
+        );
+        return const Success<void>(null);
+      });
+    } on Object catch (error) {
+      return FailureResult<void>(
+        _failure('PRACTICE_TEST_COMPLETION_WRITE_FAILED', error),
       );
     }
   }

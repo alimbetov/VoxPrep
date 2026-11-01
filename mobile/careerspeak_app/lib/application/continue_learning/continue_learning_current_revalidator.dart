@@ -1,6 +1,7 @@
 import '../../domain/content_identity.dart';
 import '../../domain/content_marker_state.dart';
 import '../../domain/learner_selection.dart';
+import '../../domain/practice_test_completion_key.dart';
 import '../content_delivery/product_catalog.dart';
 import '../content_delivery/universal_catalogue_graph.dart';
 import 'continue_learning_resolver.dart';
@@ -13,6 +14,8 @@ final class ContinueLearningCurrentRevalidator {
     required UniversalCatalogueGraph graph,
     required LearnerSelection selection,
     required Map<ContentIdentity, ContentMarkerState> markers,
+    Set<PracticeTestCompletionKey> completedPracticeTests =
+        const <PracticeTestCompletionKey>{},
   }) {
     final activeHierarchy = _ActiveHierarchy.tryCreate(graph, selection);
     final activeCollections = _activeCollections(graph);
@@ -50,6 +53,7 @@ final class ContinueLearningCurrentRevalidator {
                   graph,
                   activeHierarchy,
                   markers,
+                  completedPracticeTests,
                 ),
               )
               .toList(growable: false);
@@ -80,6 +84,7 @@ final class ContinueLearningCurrentRevalidator {
     UniversalCatalogueGraph graph,
     _ActiveHierarchy hierarchy,
     Map<ContentIdentity, ContentMarkerState> markers,
+    Set<PracticeTestCompletionKey> completedPracticeTests,
   ) {
     LearningCollectionProjection? collection;
     for (final current in graph.collections) {
@@ -119,9 +124,22 @@ final class ContinueLearningCurrentRevalidator {
       return !_isCompletedAtRevision(markers[target.identity], target.revision);
     }
 
-    // There is no durable PracticeTest completion/result state yet. A proposed
-    // test member therefore cannot be proven incomplete and is rejected here.
-    // Active attempts are validated separately above and remain priority #1.
+    if (target is ContinueLearningPracticeTestTarget) {
+      final ref = member.practiceTestRef;
+      if (member.type != LearningCollectionMemberType.practiceTest ||
+          ref == null ||
+          ref.practiceTestCode != target.practiceTestCode ||
+          ref.revision != target.revision) {
+        return false;
+      }
+      return !completedPracticeTests.contains(
+        PracticeTestCompletionKey(
+          practiceTestCode: target.practiceTestCode,
+          revision: target.revision,
+        ),
+      );
+    }
+
     return false;
   }
 

@@ -38,10 +38,10 @@ final continueLearningHomeTargetProvider =
       final selection = await ref.watch(learnerSelectionProvider.future);
       final snapshot = await ref.watch(currentUniversalCatalogueProvider.future);
       final markers = await ref.watch(contentMarkersProvider.future);
-      final attempt = (await ref
-              .watch(practiceTestAttemptRepositoryProvider)
-              .getActiveAttempt())
-          .getOrThrow();
+      final attemptRepository = ref.watch(practiceTestAttemptRepositoryProvider);
+      final attempt = (await attemptRepository.getActiveAttempt()).getOrThrow();
+      final completedPracticeTests =
+          (await attemptRepository.getCompletedPracticeTests()).getOrThrow();
       final lastOpened = (await ref
               .watch(lastOpenedContentRepositoryProvider)
               .getLastOpenedContent())
@@ -102,6 +102,7 @@ final continueLearningHomeTargetProvider =
             graph: graph,
             selection: selection,
             markers: markers,
+            completedPracticeTests: completedPracticeTests,
           );
       final decision = ref
           .watch(continueLearningResolverProvider)

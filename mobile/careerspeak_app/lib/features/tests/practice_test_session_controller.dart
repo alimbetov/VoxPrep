@@ -127,7 +127,7 @@ class PracticeTestSessionController extends Notifier<PracticeTestSessionState> {
     return _enqueue(() async {
       final result = await ref
           .read(practiceTestAttemptRepositoryProvider)
-          .clearActiveAttempt();
+          .completeActiveAttempt();
       result.getOrThrow();
     });
   }
