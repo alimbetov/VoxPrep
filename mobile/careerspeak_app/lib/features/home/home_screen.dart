@@ -19,7 +19,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final contentPage = ref.watch(contentPageProvider);
     final markers = ref.watch(contentMarkersProvider);
-    final dueReviews = ref.watch(dueReviewIdentitiesProvider);
+    final dueReviewItems = ref.watch(dueReviewItemsProvider);
     final learningContext = ref.watch(learnerLearningContextProvider);
     final continueLearning = ref.watch(continueLearningHomeTargetProvider);
 
@@ -32,7 +32,7 @@ class HomeScreen extends ConsumerWidget {
         data: (values) => _HomeContent(
           items: page.items,
           markers: values,
-          dueReviews: dueReviews,
+          dueReviewItems: dueReviewItems,
           learningContext: learningContext,
           continueLearning: continueLearning,
         ),
@@ -45,14 +45,14 @@ class _HomeContent extends StatelessWidget {
   const _HomeContent({
     required this.items,
     required this.markers,
-    required this.dueReviews,
+    required this.dueReviewItems,
     required this.learningContext,
     required this.continueLearning,
   });
 
   final List<ContentItem> items;
   final Map<ContentIdentity, ContentMarkerState> markers;
-  final AsyncValue<Set<ContentIdentity>> dueReviews;
+  final AsyncValue<List<ContentItem>> dueReviewItems;
   final AsyncValue<LearnerLearningContext?> learningContext;
   final AsyncValue<ContinueLearningHomeTarget> continueLearning;
 
@@ -64,11 +64,8 @@ class _HomeContent extends StatelessWidget {
     final completed = items.where((item) => markerFor(item).completed).length;
     final listened = items.where((item) => markerFor(item).listened).length;
     final favorites = items.where((item) => markerFor(item).favorite).length;
-    final visibleIdentities = <ContentIdentity>{
-      for (final item in items) ContentIdentity.fromItem(item),
-    };
-    final dueValue = dueReviews.when(
-      data: (due) => '${due.intersection(visibleIdentities).length}',
+    final dueValue = dueReviewItems.when(
+      data: (due) => '${due.length}',
       loading: () => '—',
       error: (error, stackTrace) => '—',
     );
