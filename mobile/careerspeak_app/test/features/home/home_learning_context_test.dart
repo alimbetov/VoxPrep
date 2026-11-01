@@ -65,49 +65,30 @@ void main() {
     expect(find.widgetWithText(FilledButton, 'Continue'), findsOneWidget);
   });
 
-  testWidgets('Home Due count uses only explicit due review identities', (
+  testWidgets('Home Due count uses all CURRENT resolved due items', (
     tester,
   ) async {
-    const dueIdentity = ContentIdentity(code: 'DUE', type: ContentType.topic);
-    const notDueIdentity = ContentIdentity(
-      code: 'NOT_DUE',
+    const dueItem = ContentItem(
+      code: 'DUE',
       type: ContentType.topic,
+      title: 'Due topic',
+      subtitle: 'Due subtitle',
+      description: 'Due description',
+      category: 'JAVA',
+      level: 'B2',
+      minutes: 4,
+      revision: 1,
+      hasAudio: false,
     );
     await _pumpHome(
       tester,
       const AsyncData<LearnerLearningContext?>(null),
-      items: const <ContentItem>[
-        ContentItem(
-          code: 'DUE',
-          type: ContentType.topic,
-          title: 'Due topic',
-          subtitle: 'Due subtitle',
-          description: 'Due description',
-          category: 'JAVA',
-          level: 'B2',
-          minutes: 4,
-          revision: 1,
-          hasAudio: false,
-        ),
-        ContentItem(
-          code: 'NOT_DUE',
-          type: ContentType.topic,
-          title: 'Not due topic',
-          subtitle: 'Not due subtitle',
-          description: 'Not due description',
-          category: 'JAVA',
-          level: 'B2',
-          minutes: 4,
-          revision: 1,
-          hasAudio: false,
-        ),
-      ],
-      dueReviews: const <ContentIdentity>{dueIdentity},
+      items: const <ContentItem>[],
+      dueItems: const <ContentItem>[dueItem],
     );
 
     expect(find.text('Due'), findsOneWidget);
     expect(find.text('1'), findsOneWidget);
-    expect(notDueIdentity, isNot(equals(dueIdentity)));
   });
 }
 
@@ -121,7 +102,7 @@ Future<void> _pumpHome(
     subtitle: 'Your CURRENT learning path',
   ),
   List<ContentItem> items = const <ContentItem>[],
-  Set<ContentIdentity> dueReviews = const <ContentIdentity>{},
+  List<ContentItem> dueItems = const <ContentItem>[],
 }) async {
   await tester.pumpWidget(
     ProviderScope(
@@ -136,9 +117,7 @@ Future<void> _pumpHome(
             const <ContentIdentity, ContentMarkerState>{},
           ),
         ),
-        dueReviewIdentitiesProvider.overrideWithValue(
-          AsyncData<Set<ContentIdentity>>(dueReviews),
-        ),
+        dueReviewItemsProvider.overrideWith((ref) async => dueItems),
         learnerLearningContextProvider.overrideWithValue(learningContext),
         continueLearningHomeTargetProvider.overrideWith(
           (ref) async => continueTarget,
