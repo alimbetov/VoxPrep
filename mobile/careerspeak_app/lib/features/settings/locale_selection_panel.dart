@@ -102,10 +102,12 @@ class _LocaleSelectionPanelState extends ConsumerState<LocaleSelectionPanel> {
   ) async {
     if (_saving) return;
     setState(() => _saving = true);
-    final result = await ref.read(appPreferencesControllerProvider).setLocaleSelection(
-      countryCode: configuration.countryCode,
-      locale: locale,
-    );
+    final result = await ref
+        .read(appPreferencesControllerProvider)
+        .setLocaleSelection(
+          countryCode: configuration.countryCode,
+          locale: locale,
+        );
     if (!mounted) return;
     setState(() => _saving = false);
     switch (result) {
@@ -172,9 +174,7 @@ class _LocaleConfigurationView extends ConsumerWidget {
             (persisted != null && configuration.supports(persisted)
                 ? persisted.code
                 : configuration.defaultLocale.code);
-        final selected = configuration.locales
-            .where((option) => option.locale.code == selectedCode)
-            .firstOrNull;
+        final selected = _findOption(configuration.locales, selectedCode);
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -216,4 +216,14 @@ class _LocaleConfigurationView extends ConsumerWidget {
       },
     );
   }
+}
+
+SupportedLocaleOption? _findOption(
+  List<SupportedLocaleOption> options,
+  String code,
+) {
+  for (final option in options) {
+    if (option.locale.code == code) return option;
+  }
+  return null;
 }
