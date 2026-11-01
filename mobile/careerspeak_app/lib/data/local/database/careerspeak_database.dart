@@ -8,6 +8,7 @@ import 'careerspeak_locale_tables.dart';
 import 'careerspeak_retirement_tables.dart';
 import 'careerspeak_sync_metadata_tables.dart';
 import 'careerspeak_tables.dart';
+import 'learner_selection_schema_v12.dart';
 import 'universal_catalogue_schema_v9.dart';
 
 part 'careerspeak_database.g.dart';
@@ -44,7 +45,7 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
     : super(executor ?? driftDatabase(name: 'careerspeak'));
 
   @override
-  int get schemaVersion => 11;
+  int get schemaVersion => 12;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -53,6 +54,7 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
       await _createUniversalCatalogueSchemaV9();
       await _createAssetCacheRetentionSchemaV10();
       await _createLocaleSelectionSchemaV11();
+      await _createLearnerSelectionSchemaV12();
     },
     onUpgrade: (migrator, from, to) async {
       if (from < 2) {
@@ -177,6 +179,9 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
       if (from < 11 && to >= 11) {
         await _createLocaleSelectionSchemaV11();
       }
+      if (from < 12 && to >= 12) {
+        await _createLearnerSelectionSchemaV12();
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -206,6 +211,12 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
       await customStatement(
         'ALTER TABLE app_preferences ADD COLUMN country_code TEXT NULL',
       );
+    }
+  }
+
+  Future<void> _createLearnerSelectionSchemaV12() async {
+    for (final statement in learnerSelectionSchemaV12Statements) {
+      await customStatement(statement);
     }
   }
 }
