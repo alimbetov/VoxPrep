@@ -27,6 +27,22 @@ void main() {
     );
   });
 
+  test('token replacement preserves stable installation identity', () async {
+    final store = FlutterSecureInstallationCredentialStore(
+      const FlutterSecureStorage(),
+    );
+
+    await store.writeInstallationId(InstallationId('install-1'));
+    await store.writeInstallationToken(InstallationToken('token-old'));
+    await store.writeInstallationToken(InstallationToken('token-new'));
+
+    expect(await store.readInstallationId(), InstallationId('install-1'));
+    expect(
+      await store.readInstallationToken(),
+      InstallationToken('token-new'),
+    );
+  });
+
   test('clearing token does not rotate installation identity', () async {
     final store = FlutterSecureInstallationCredentialStore(
       const FlutterSecureStorage(),
