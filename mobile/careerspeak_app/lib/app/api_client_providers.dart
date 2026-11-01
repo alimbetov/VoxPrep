@@ -71,6 +71,8 @@ final apiClientProvider = Provider<ApiClient>((ref) {
   return InstallationAuthRecoveryApiClient(
     delegate: ref.watch(rawApiClientProvider),
     credentialStore: ref.watch(installationCredentialStoreProvider),
-    renewCredentials: ref.watch(installationBootstrapServiceProvider).ensureCredentials,
+    renewCredentials: ref
+        .watch(installationBootstrapServiceProvider)
+        .ensureCredentials,
   );
 });
