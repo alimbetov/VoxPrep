@@ -73,15 +73,17 @@ void main() {
       await PublicationSnapshotStorage(database).ensureReady();
 
       final now = DateTime.utc(2026, 10, 31, 19);
-      await database.into(database.contentManifestStates).insert(
-        ContentManifestStatesCompanion.insert(
-          id: const Value(1),
-          schemaVersion: 1,
-          currentContentVersion: 108,
-          currentManifestChecksum: _rootA,
-          updatedAt: now,
-        ),
-      );
+      await database
+          .into(database.contentManifestStates)
+          .insert(
+            ContentManifestStatesCompanion.insert(
+              id: const Value(1),
+              schemaVersion: 1,
+              currentContentVersion: 108,
+              currentManifestChecksum: _rootA,
+              updatedAt: now,
+            ),
+          );
       await database.customStatement(
         '''
       INSERT INTO catalogue_revision_reads (
@@ -118,9 +120,11 @@ void main() {
       ).stage(_root(108, <CatalogueRevisionRef>[conflicting]));
 
       expect(result, isA<FailureResult<void>>());
-      final rows = await database.customSelect(
-        'SELECT revision, checksum FROM publication_catalogue_refs WHERE content_version = 108',
-      ).get();
+      final rows = await database
+          .customSelect(
+            'SELECT revision, checksum FROM publication_catalogue_refs WHERE content_version = 108',
+          )
+          .get();
       expect(rows, hasLength(1));
       expect(rows.single.read<int>('revision'), 1);
       expect(rows.single.read<String>('checksum'), _catalogueA);
