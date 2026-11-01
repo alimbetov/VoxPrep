@@ -23,11 +23,13 @@ void main() {
     await database.close();
   });
 
-  test('materializes deterministic singleton defaults', () async {
+  test('materializes neutral pre-onboarding singleton defaults', () async {
     final preferences = (await repository.getPreferences()).getOrThrow();
 
+    expect(preferences.countryCode, isNull);
+    expect(preferences.needsLocaleOnboarding, isTrue);
     expect(preferences.uiLocale, AppUiLocale.english);
-    expect(preferences.translationLocale, AppTranslationLocale.russian);
+    expect(preferences.translationLocale, AppTranslationLocale.english);
     expect(preferences.preferredAccent, PreferredEnglishAccent.us);
     expect(preferences.theme, AppThemePreference.system);
     expect(preferences.focusMode, isFalse);
@@ -38,7 +40,22 @@ void main() {
     expect(rows.single.id, 1);
   });
 
-  test('BCP-47 locale updates are reactive and idempotent', () async {
+  test('country and selected locale are persisted atomically', () async {
+    final result = await repository.setLocaleSelection(
+      countryCode: 'kz',
+      locale: AppTranslationLocale('ru-KZ'),
+    );
+
+    expect(result, isA<Success<void>>());
+    final preferences = (await repository.getPreferences()).getOrThrow();
+    expect(preferences.countryCode, 'KZ');
+    expect(preferences.needsLocaleOnboarding, isFalse);
+    expect(preferences.selectedLocale.code, 'ru-KZ');
+    expect(preferences.uiLocale.code, 'ru-KZ');
+    expect(preferences.translationLocale.code, 'ru-KZ');
+  });
+
+  test('BCP-47 legacy locale updates remain available before onboarding', () async {
     await repository.setUiLocale(AppUiLocale.arabic);
     await repository.setTranslationLocale(
       AppTranslationLocale.brazilianPortuguese,
@@ -112,7 +129,7 @@ void main() {
     );
   });
 
-  test('multi-locale preferences survive database close and reopen', () async {
+  test('selected country and locale survive database close and reopen', () async {
     await database.close();
 
     final directory = await Directory.systemTemp.createTemp(
@@ -123,9 +140,9 @@ void main() {
 
     final firstDatabase = CareerSpeakDatabase(NativeDatabase(file));
     final firstRepository = DriftAppPreferencesRepository(firstDatabase);
-    (await firstRepository.setUiLocale(AppUiLocale.turkish)).getOrThrow();
-    (await firstRepository.setTranslationLocale(
-      AppTranslationLocale.brazilianPortuguese,
+    (await firstRepository.setLocaleSelection(
+      countryCode: 'KZ',
+      locale: AppTranslationLocale('ru-KZ'),
     )).getOrThrow();
     (await firstRepository.setPreferredAccent(
       PreferredEnglishAccent.australian,
@@ -137,11 +154,10 @@ void main() {
     final reopenedRepository = DriftAppPreferencesRepository(reopenedDatabase);
     final restored = (await reopenedRepository.getPreferences()).getOrThrow();
 
-    expect(restored.uiLocale, AppUiLocale.turkish);
-    expect(
-      restored.translationLocale,
-      AppTranslationLocale.brazilianPortuguese,
-    );
+    expect(restored.countryCode, 'KZ');
+    expect(restored.selectedLocale.code, 'ru-KZ');
+    expect(restored.uiLocale.code, 'ru-KZ');
+    expect(restored.translationLocale.code, 'ru-KZ');
     expect(restored.preferredAccent, PreferredEnglishAccent.australian);
     expect(restored.theme, AppThemePreference.light);
 
