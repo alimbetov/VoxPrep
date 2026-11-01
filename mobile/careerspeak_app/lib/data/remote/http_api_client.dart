@@ -22,13 +22,11 @@ const _managedRequestHeaders = <String>{
   'cookie',
   'host',
   'transfer-encoding',
-  'x-country-code',
 };
 
 final _localeHeaderPattern = RegExp(
   r'^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$',
 );
-final _countryHeaderPattern = RegExp(r'^[A-Z]{2}$');
 
 final class HttpApiClient implements ApiClient {
   factory HttpApiClient({
@@ -289,17 +287,12 @@ final class HttpApiClient implements ApiClient {
     for (final entry in values.entries) {
       final name = entry.key.trim().toLowerCase();
       final value = entry.value.trim();
-      if ((name != 'accept-language' && name != 'x-country-code') ||
+      if (name != 'accept-language' ||
           value.isEmpty ||
           value.contains('\r') ||
-          value.contains('\n')) {
-        throw const FormatException('Invalid managed request context header.');
-      }
-      if (name == 'accept-language' && !_localeHeaderPattern.hasMatch(value)) {
-        throw const FormatException('Invalid Accept-Language locale.');
-      }
-      if (name == 'x-country-code' && !_countryHeaderPattern.hasMatch(value)) {
-        throw const FormatException('Invalid X-Country-Code value.');
+          value.contains('\n') ||
+          !_localeHeaderPattern.hasMatch(value)) {
+        throw const FormatException('Invalid managed request locale header.');
       }
       headers[name] = value;
     }
