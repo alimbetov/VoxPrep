@@ -3,16 +3,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/audio_playback_providers.dart';
 import '../../app/learner_state_providers.dart';
+import '../../application/content_delivery/content_audio_policy.dart';
+import '../../application/result/result.dart';
 import '../../application/services/audio_playback_controller.dart';
+import '../../application/services/role_audio_clip_controller.dart'
+    as role_audio;
 import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
 import '../../domain/content_marker_state.dart';
 import '../shared/content_marker_chips.dart';
 
 class ContentDetailPanel extends ConsumerWidget {
-  const ContentDetailPanel({required this.item, super.key});
+  const ContentDetailPanel({required this.item, this.localizedHint, super.key});
 
   final ContentItem item;
+  final String? localizedHint;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -88,7 +93,10 @@ class ContentDetailPanel extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         ContentMarkerChips(state: marker),
-        if (item.hasAudio) ...[
+        if (item.type == ContentType.interview) ...[
+          const SizedBox(height: 24),
+          _InterviewAudioControls(item: item),
+        ] else if (item.hasAudio) ...[
           const SizedBox(height: 24),
           _AudioPlaybackControls(item: item, marker: marker),
         ],
@@ -114,7 +122,8 @@ class ContentDetailPanel extends ConsumerWidget {
             ),
           ],
         ),
-        if (marker.lastPositionMs case final position?) ...[
+        if (marker.lastPositionMs case final position?
+            when item.type != ContentType.interview) ...[
           const SizedBox(height: 12),
           Text(
             marker.lastRevisionSeen == item.revision
@@ -123,7 +132,22 @@ class ContentDetailPanel extends ConsumerWidget {
           ),
         ],
         const SizedBox(height: 32),
-        Text('Overview', style: Theme.of(context).textTheme.titleLarge),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Overview',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            if (localizedHint case final hint?)
+              IconButton.filledTonal(
+                tooltip: 'Hint',
+                onPressed: () => _showLocalizedHint(context, hint),
+                icon: const Icon(Icons.lightbulb_outline),
+              ),
+          ],
+        ),
         const SizedBox(height: 8),
         Text(item.description, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 24),
@@ -138,14 +162,195 @@ class ContentDetailPanel extends ConsumerWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 12),
-                const Text(
-                  'Audio playback uses the verified local asset pipeline. Completion of audio marks the item as listened; learning completion remains a separate learner action.',
+                Text(
+                  item.type == ContentType.interview
+                      ? 'Interview audio has independent question and sample-answer roles. Role clips use one active session and do not share a persisted resume position.'
+                      : 'Audio playback uses the verified local asset pipeline. Completion of audio marks the item as listened; learning completion remains a separate learner action.',
                 ),
               ],
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _InterviewAudioControls extends ConsumerWidget {
+  const _InterviewAudioControls({required this.item});
+
+  final ContentItem item;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final roles = ref.watch(
+      interviewAudioAvailableRolesProvider((
+        content: ContentIdentity.fromItem(item),
+        revision: item.revision,
+      )),
+    );
+
+    return roles.when(
+      loading: () => const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: LinearProgressIndicator(value: 0),
+        ),
+      ),
+      error: (error, stackTrace) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text('Interview audio metadata unavailable: $error'),
+        ),
+      ),
+      data: (availableRoles) {
+        if (availableRoles.isEmpty) {
+          return const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Text('No interview audio is published for this revision.'),
+            ),
+          );
+        }
+
+        final playback = ref.watch(interviewAudioClipStateProvider);
+        return playback.when(
+          loading: () => const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: LinearProgressIndicator(value: 0),
+            ),
+          ),
+          error: (error, stackTrace) => Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text('Interview audio unavailable: $error'),
+            ),
+          ),
+          data: (state) => _buildControls(context, ref, state, availableRoles),
+        );
+      },
+    );
+  }
+
+  Widget _buildControls(
+    BuildContext context,
+    WidgetRef ref,
+    role_audio.RoleAudioClipState state,
+    Set<ContentAudioRole> availableRoles,
+  ) {
+    final controller = ref.read(interviewAudioClipControllerProvider);
+    final activeRole = state.role;
+    final isResolving = state.phase == role_audio.AudioPlaybackPhase.resolving;
+    final isPlaying = state.phase == role_audio.AudioPlaybackPhase.playing;
+    final duration = state.durationMs;
+    final position = state.positionMs;
+    final progress = duration != null && duration > 0
+        ? (position.clamp(0, duration) / duration).toDouble()
+        : 0.0;
+
+    Future<void> toggle(ContentAudioRole role) async {
+      try {
+        if (activeRole == role && isPlaying) {
+          (await controller.pause()).getOrThrow();
+        } else if (activeRole == role &&
+            state.phase == role_audio.AudioPlaybackPhase.paused) {
+          (await controller.resume()).getOrThrow();
+        } else {
+          (await controller.play(item, role)).getOrThrow();
+        }
+      } catch (error) {
+        if (_isBenignAudioSupersession(error) || !context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Interview audio failed: $error')),
+        );
+      }
+    }
+
+    Widget roleButton(ContentAudioRole role, String label, IconData icon) {
+      final active = activeRole == role;
+      final playing = active && isPlaying;
+      return FilledButton.tonalIcon(
+        onPressed: isResolving ? null : () => toggle(role),
+        icon: Icon(playing ? Icons.pause : icon),
+        label: Text(playing ? 'Pause $label' : label),
+      );
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.record_voice_over),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Interview audio',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                Text(
+                  duration == null
+                      ? _formatDuration(position)
+                      : '${_formatDuration(position)} / ${_formatDuration(duration)}',
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            LinearProgressIndicator(value: progress),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (availableRoles.contains(ContentAudioRole.question))
+                  roleButton(
+                    ContentAudioRole.question,
+                    'Question',
+                    Icons.help_outline,
+                  ),
+                if (availableRoles.contains(ContentAudioRole.sampleAnswer))
+                  roleButton(
+                    ContentAudioRole.sampleAnswer,
+                    'Sample answer',
+                    Icons.chat_bubble_outline,
+                  ),
+                OutlinedButton.icon(
+                  onPressed:
+                      state.phase == role_audio.AudioPlaybackPhase.idle ||
+                          state.phase == role_audio.AudioPlaybackPhase.stopped
+                      ? null
+                      : () async {
+                          try {
+                            (await controller.stop()).getOrThrow();
+                          } catch (error) {
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Interview audio failed: $error'),
+                              ),
+                            );
+                          }
+                        },
+                  icon: const Icon(Icons.stop),
+                  label: const Text('Stop'),
+                ),
+              ],
+            ),
+            if (state.failure case final failure?) ...[
+              const SizedBox(height: 12),
+              Text(
+                failure.message,
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
@@ -203,7 +408,7 @@ class _AudioPlaybackControls extends ConsumerWidget {
         final controller = ref.read(audioPlaybackControllerProvider);
         await operation(controller);
       } catch (error) {
-        if (!context.mounted) return;
+        if (_isBenignAudioSupersession(error) || !context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Audio playback failed: $error')),
         );
@@ -329,9 +534,31 @@ class _AudioPlaybackControls extends ConsumerWidget {
   }
 }
 
+Future<void> _showLocalizedHint(BuildContext context, String hint) {
+  return showDialog<void>(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Hint'),
+      content: SelectableText(hint),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        ),
+      ],
+    ),
+  );
+}
+
 String _formatDuration(int milliseconds) {
   final totalSeconds = milliseconds.clamp(0, 1 << 31) ~/ 1000;
   final minutes = totalSeconds ~/ 60;
   final seconds = totalSeconds % 60;
   return '$minutes:${seconds.toString().padLeft(2, '0')}';
+}
+
+bool _isBenignAudioSupersession(Object error) {
+  if (error is! ApplicationFailureException) return false;
+  return error.failure.code == 'PLAYBACK_SUPERSEDED' ||
+      error.failure.code == 'ROLE_AUDIO_REQUEST_SUPERSEDED';
 }

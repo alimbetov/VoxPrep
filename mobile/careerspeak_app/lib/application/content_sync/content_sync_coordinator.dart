@@ -5,6 +5,7 @@ import '../ports/sync_journal.dart';
 import '../ports/sync_plan_executor.dart';
 import '../result/result.dart';
 import 'content_sync_planner.dart';
+import 'required_offline_asset_prefetcher.dart';
 import 'root_manifest_materializer.dart';
 import 'sync_models.dart';
 
@@ -32,6 +33,7 @@ final class ContentSyncCoordinator {
     required ContentSyncPlanner planner,
     required SyncPlanExecutor executor,
     PublicationSnapshotStager? snapshotStager,
+    RequiredOfflineAssetPrefetcher? requiredOfflinePrefetcher,
   }) {
     return ContentSyncCoordinator._(
       journal,
@@ -39,6 +41,7 @@ final class ContentSyncCoordinator {
       planner,
       executor,
       snapshotStager,
+      requiredOfflinePrefetcher,
     );
   }
 
@@ -48,6 +51,7 @@ final class ContentSyncCoordinator {
     this._planner,
     this._executor,
     this._snapshotStager,
+    this._requiredOfflinePrefetcher,
   );
 
   final SyncJournal _journal;
@@ -55,6 +59,7 @@ final class ContentSyncCoordinator {
   final ContentSyncPlanner _planner;
   final SyncPlanExecutor _executor;
   final PublicationSnapshotStager? _snapshotStager;
+  final RequiredOfflineAssetPrefetcher? _requiredOfflinePrefetcher;
 
   Future<Result<ContentSyncOutcome>> synchronize({
     required String runId,
@@ -173,9 +178,30 @@ final class ContentSyncCoordinator {
       }
     }
 
+    // Publication-required offline assets are commit-readiness data. Run this
+    // even for a pack-level no-op so an interrupted download can be repaired
+    // without changing the immutable CURRENT snapshot identity.
+    final requiredOfflinePrefetcher = _requiredOfflinePrefetcher;
+    if (requiredOfflinePrefetcher != null) {
+      if (!stagingEntered) {
+        final stagingTransition = await _transition(
+          activeRunId,
+          SyncRunState.staging,
+        );
+        if (stagingTransition != null) return FailureResult(stagingTransition);
+        stagingEntered = true;
+      }
+      final prefetched = await requiredOfflinePrefetcher.prefetch(
+        targetRoot.packs,
+      );
+      if (prefetched is FailureResult<void>) {
+        return _finishFailure(activeRunId, prefetched.failure);
+      }
+    }
+
     // A pack-level no-op can still require idempotent auxiliary repair after an
-    // app upgrade or interrupted previous run. Only finish after exact tests and
-    // catalogues for the CURRENT root have been staged successfully.
+    // app upgrade or interrupted previous run. Only finish after exact tests,
+    // catalogues and required-offline bytes for CURRENT are ready.
     if (plan.isNoOp) {
       final successTransition = await _transition(
         activeRunId,

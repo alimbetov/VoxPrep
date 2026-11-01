@@ -3,10 +3,12 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 
 import '../../application/content_delivery/content_manifest.dart';
+import '../../application/ports/asset_cache_eviction_store.dart';
 import '../../application/ports/asset_file_store.dart';
 import '../../application/result/result.dart';
 
-final class FileSystemAssetStore implements AssetFileStore {
+final class FileSystemAssetStore
+    implements AssetFileStore, AssetCacheEvictionStore {
   FileSystemAssetStore(this._rootDirectory, {DateTime Function()? now})
     : _now = now ?? (() => DateTime.now().toUtc());
 
@@ -101,6 +103,18 @@ final class FileSystemAssetStore implements AssetFileStore {
           details: <String, Object?>{'errorType': error.runtimeType.toString()},
         ),
       );
+    }
+  }
+
+  @override
+  Future<Result<bool>> evict(ManifestAssetDescriptor asset) async {
+    try {
+      final file = _finalFile(asset);
+      if (!await file.exists()) return const Success(false);
+      await file.delete();
+      return const Success(true);
+    } on FileSystemException catch (error) {
+      return FailureResult(_fileFailure('ASSET_LOCAL_EVICTION_FAILED', error));
     }
   }
 

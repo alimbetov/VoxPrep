@@ -1,9 +1,9 @@
 # CareerSpeak — Cross-System Contract Standard
 
-**Document version:** 1.0  
+**Document version:** 1.1  
 **Status:** Normative P0 integration standard  
 **Applies to:** CareerSpeak v0.9+  
-**Branch:** `feat/p0-domain-contracts`
+**Branch:** `feat/universal-vertical-catalogue`
 
 ---
 
@@ -15,7 +15,7 @@ This document standardizes integration semantics between:
 Spring Boot Backend
 Flutter App
 TTS Worker
-RustFS / CDN delivery
+Backend-owned object storage (RustFS)
 ```
 
 It defines shared terminology, identifiers, state ownership, version semantics, security boundaries, media identity, error semantics and recovery rules.
@@ -65,7 +65,7 @@ Learner progress is local-first and is not joined to installation identity on th
 
 Machine actor with a dedicated rotatable token.
 
-No ADMIN credential, learner token, direct PostgreSQL credential or permanent RustFS credential.
+No ADMIN credential, learner token, direct PostgreSQL credential or object-storage credential.
 
 ---
 
@@ -81,12 +81,11 @@ No ADMIN credential, learner token, direct PostgreSQL credential or permanent Ru
 /internal/v1/tts/**
 → worker machine token
 
-RustFS private model/draft operations
-→ presigned GET/PUT
-
-Published learner media
-→ CDN/edge → RustFS origin
+Backend storage adapters
+→ RustFS private storage credentials
 ```
+
+Flutter and Worker network I/O terminates at Spring Boot. RustFS is not a client-facing security zone.
 
 Authentication mechanisms SHALL remain separate.
 
@@ -128,7 +127,7 @@ checksumSha256
 deliveryKey
 ```
 
-`deliveryKey` is a relative immutable delivery/object key, not a permanent CDN hostname.
+`deliveryKey` is immutable Backend storage metadata. Flutter and Worker MUST NOT use it as a URL, remote HTTP path, authorization input or object-storage locator.
 
 ### TTS job
 
@@ -189,7 +188,7 @@ means:
 visible to learner API where applicable
 included in applicable manifest/pack snapshot
 deliverable to Flutter
-published assets available for stream/download
+published assets available through Backend media API
 ```
 
 `PUBLISHED + INACTIVE` remains auditable but SHALL NOT be offered to new learner delivery.
@@ -262,14 +261,14 @@ Backend PUBLISHED + ACTIVE
 → Flutter STAGING
 → verify metadata
 → Flutter CURRENT
-→ media may stream/cache on demand
+→ media may be downloaded/cache on demand through Backend
 ```
 
 Explicit offline download:
 
 ```text
 CURRENT metadata
-→ DownloadManager downloads required_offline assets
+→ DownloadManager requests required_offline assets from Backend
 → checksum verification
 → offline READY
 ```
@@ -415,13 +414,29 @@ Published learner bytes flow:
 Flutter
 → AssetResolver
 → verified local file if present
-→ otherwise CDN/edge
-→ RustFS published origin
+→ otherwise GET /api/v1/media/assets/{assetId}/content
+→ Spring Boot validates installation + publication eligibility
+→ Backend resolves FileAsset + deliveryKey internally
+→ Backend storage adapter reads RustFS
+→ Spring Boot streams bytes
+→ Flutter verifies size + SHA-256
+→ trusted local file
 ```
 
-Spring Boot does not proxy normal learner MP3/image payloads.
+Spring Boot is the sole remote media boundary for Flutter.
 
-Backend/API provides stable asset metadata; environment-specific delivery host resolution belongs to delivery configuration.
+Flutter SHALL NOT receive or construct:
+
+```text
+RustFS/S3 endpoint
+bucket
+object key URL
+storage credentials
+signed/presigned URL
+CDN/media-origin URL
+```
+
+Backend SHALL NOT redirect learner media requests to object storage.
 
 ---
 
@@ -434,7 +449,8 @@ exact voice_model_id selection
 TTS job lifecycle
 lease state
 fingerprint expectation
-presigned RustFS authorization
+model artifact delivery API
+RustFS persistence
 final FileAsset association
 ADMIN review/publication
 ```
@@ -443,15 +459,15 @@ Worker owns:
 
 ```text
 claim
-model cache/download
+model cache/download through Backend
 Piper synthesis
 FFmpeg processing
 technical QC
-upload
+Backend output upload
 complete/fail reporting
 ```
 
-Worker never publishes learner content.
+Worker never publishes learner content and never connects directly to RustFS.
 
 ---
 
@@ -504,7 +520,7 @@ details = optional structured context
 traceId = operational correlation
 ```
 
-Flutter maps backend/transport errors to mobile domain failures and SHALL NOT display raw HTTP/SQL exceptions.
+Flutter maps backend/transport errors to mobile domain failures and SHALL NOT display raw HTTP/SQL/storage exceptions.
 
 Worker uses stable machine error codes in fail callbacks.
 
@@ -522,6 +538,7 @@ Mandatory idempotent/replay-safe areas:
 manifest reads
 pack reads
 sync staging of immutable revision
+Backend media reads
 worker heartbeat
 worker complete/fail handling of duplicate callback
 asset upload identity by immutable object/fingerprint policy
@@ -583,6 +600,7 @@ manifest/pack snapshot
 localization content
 asset metadata
 TTS jobs/models
+RustFS access and storage topology
 ```
 
 ### Flutter
@@ -599,13 +617,15 @@ local CURRENT metadata snapshot
 UI settings
 ```
 
+Flutter has no direct object-storage boundary.
+
 ### Worker
 
-No durable learner/content source of truth. Worker is an execution agent.
+No durable learner/content source of truth. Worker is an execution agent and has no direct object-storage boundary.
 
 ### RustFS
 
-Binary object store; not source of business lifecycle state.
+Backend-internal binary object store; not a client actor and not source of business lifecycle state.
 
 ---
 
@@ -615,14 +635,15 @@ Backend unavailable:
 
 ```text
 Flutter uses valid local CURRENT metadata and READY/local media
-Worker cannot claim new work
+Worker cannot claim new work or access model/output APIs
 ```
 
-CDN/RustFS learner delivery unavailable:
+Backend media/storage path unavailable:
 
 ```text
 local verified files still work
-remote-only assets fail gracefully/retry
+remote-only assets fail gracefully/retry through Backend
+storage-specific failures do not leak to Flutter
 ```
 
 TTS Worker unavailable:
@@ -654,7 +675,7 @@ Before P0 architecture freeze, prove contracts for at least:
 ```text
 1. ADMIN publishes + activates content → appears in manifest
 2. Flutter upgrades metadata N→N+1 atomically
-3. Flutter streaming media works without explicit offline download
+3. Flutter media download works through Backend without direct storage access
 4. offline pack retains old READY revision while new revision updates
 5. deactivation publishes tombstone and removes learner delivery
 6. learner progress survives tombstone/cache eviction
@@ -664,6 +685,8 @@ Before P0 architecture freeze, prove contracts for at least:
 10. stale worker completion is rejected
 11. published TTS asset becomes learner-deliverable only after backend review/publication
 12. adaptive UI resize preserves route/test/audio state
+13. deleted local media is restored through Backend using current installation token
+14. Flutter/Worker cannot follow Backend redirects to object storage
 ```
 
 ---
@@ -699,8 +722,8 @@ Do not use one term for two different ownership domains.
 ## 24. Final invariant
 
 ```text
-Backend controls what may be delivered.
+Backend controls what may be delivered and owns all RustFS access.
 Flutter controls what is currently installed and locally retained.
-Worker only produces backend-requested assets.
-RustFS stores bytes; it does not decide business state.
+Worker only produces backend-requested assets through Backend APIs.
+RustFS stores bytes behind Backend; it is never addressed by Flutter or Worker.
 ```

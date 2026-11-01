@@ -1,0 +1,60 @@
+name: Generate Learner UI Goldens
+
+on:
+  push:
+    branches:
+      - feat/universal-vertical-catalogue
+    paths:
+      - 'mobile/careerspeak_app/test/goldens/learner_ui_golden_test.dart'
+      - 'mobile/careerspeak_app/test/support/golden_fixtures.dart'
+      - '.github/workflows/generate-learner-ui-goldens.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: learner-ui-golden-generation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  generate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - name: Dependencies
+        run: flutter pub get
+      - name: Generate deterministic baselines
+        run: flutter test test/goldens/learner_ui_golden_test.dart --update-goldens
+      - name: Commit golden baselines
+        working-directory: .
+        run: |
+          if [ -z "$(git status --porcelain --untracked-files=all -- mobile/careerspeak_app/test/goldens/baselines)" ]; then
+            echo 'Golden baselines are unchanged.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mobile/careerspeak_app/test/goldens/baselines
+          git commit -m 'test(ui): update learner golden baselines'
+          for attempt in 1 2 3; do
+            git fetch origin "${GITHUB_REF_NAME}"
+            git rebase "origin/${GITHUB_REF_NAME}"
+            if git push origin "HEAD:${GITHUB_REF_NAME}"; then
+              exit 0
+            fi
+            sleep $((attempt * 2))
+          done
+          echo 'Golden generator could not publish after 3 attempts.' >&2
+          exit 1

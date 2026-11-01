@@ -9,7 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
   audioplayers: 6.8.1
+  country_picker: ^2.0.28
   crypto: 3.0.8
   drift: 2.35.3
   drift_flutter: 0.3.1

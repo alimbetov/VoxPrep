@@ -4,31 +4,52 @@ import 'package:http/http.dart' as http;
 
 import '../../application/content_delivery/content_manifest.dart';
 import '../../application/ports/asset_byte_source.dart';
+import '../../application/ports/installation_credential_store.dart';
 import '../../application/result/result.dart';
 
+/// Streams learner assets exclusively through the authenticated Backend API.
+///
+/// Flutter never receives or resolves object-storage URLs. Storage topology,
+/// deliveryKey resolution and storage credentials remain Backend-internal.
 final class HttpAssetByteSource implements AssetByteSource {
   factory HttpAssetByteSource({
     required http.Client client,
+    required InstallationCredentialStore credentialStore,
     required Uri baseUri,
     Duration timeout = const Duration(seconds: 20),
   }) {
     return HttpAssetByteSource._(
       client,
+      credentialStore,
       _validateBaseUri(baseUri),
       _validateTimeout(timeout),
     );
   }
 
-  const HttpAssetByteSource._(this._client, this._baseUri, this._timeout);
+  const HttpAssetByteSource._(
+    this._client,
+    this._credentialStore,
+    this._baseUri,
+    this._timeout,
+  );
 
   final http.Client _client;
+  final InstallationCredentialStore _credentialStore;
   final Uri _baseUri;
   final Duration _timeout;
 
   @override
   Future<Result<AssetByteStream>> open(ManifestAssetDescriptor asset) async {
-    final request = http.Request('GET', _resolve(asset.deliveryKey))
-      ..headers['accept'] = '*/*';
+    final tokenResult = await _readToken();
+    if (tokenResult case FailureResult<String>(:final failure)) {
+      return FailureResult(failure);
+    }
+    final token = (tokenResult as Success<String>).value;
+
+    final request = http.Request('GET', _assetUri(asset.assetId))
+      ..headers['accept'] = asset.mediaType
+      ..headers['authorization'] = 'Bearer $token'
+      ..followRedirects = false;
 
     try {
       final response = await _client.send(request).timeout(_timeout);
@@ -47,7 +68,7 @@ final class HttpAssetByteSource implements AssetByteSource {
       return const FailureResult(
         ApplicationFailure(
           code: 'ASSET_TIMEOUT',
-          message: 'The asset request timed out.',
+          message: 'The Backend asset request timed out.',
           retryable: true,
         ),
       );
@@ -55,18 +76,44 @@ final class HttpAssetByteSource implements AssetByteSource {
       return const FailureResult(
         ApplicationFailure(
           code: 'ASSET_OFFLINE',
-          message: 'The asset request could not be completed.',
+          message: 'The Backend asset request could not be completed.',
           retryable: true,
         ),
       );
     }
   }
 
-  Uri _resolve(String deliveryKey) {
-    final path = _baseUri.path.endsWith('/')
+  Future<Result<String>> _readToken() async {
+    try {
+      final token = await _credentialStore.readInstallationToken();
+      if (token == null) {
+        return const FailureResult(
+          ApplicationFailure(
+            code: 'UNAUTHORIZED',
+            message: 'Installation credential is unavailable.',
+          ),
+        );
+      }
+      return Success(token.value);
+    } on Object {
+      return const FailureResult(
+        ApplicationFailure(
+          code: 'CREDENTIAL_STORE_ERROR',
+          message: 'Installation credential could not be read.',
+        ),
+      );
+    }
+  }
+
+  Uri _assetUri(String assetId) {
+    final basePath = _baseUri.path.endsWith('/')
         ? _baseUri.path
         : '${_baseUri.path}/';
-    return _baseUri.replace(path: path).resolve(deliveryKey);
+    final normalizedBase = _baseUri.replace(path: basePath);
+    final encodedAssetId = Uri.encodeComponent(assetId);
+    return normalizedBase.resolve(
+      'api/v1/media/assets/$encodedAssetId/content',
+    );
   }
 
   static Uri _validateBaseUri(Uri value) {
@@ -79,7 +126,7 @@ final class HttpAssetByteSource implements AssetByteSource {
       throw ArgumentError.value(
         value,
         'baseUri',
-        'must be an absolute HTTP(S) URI without credentials, query, or fragment',
+        'must be an absolute HTTP(S) Backend URI without credentials, query, or fragment',
       );
     }
     return value;
@@ -93,29 +140,35 @@ final class HttpAssetByteSource implements AssetByteSource {
   }
 
   static ApplicationFailure _httpFailure(int statusCode) {
-    if (statusCode == 404) {
-      return const ApplicationFailure(
+    return switch (statusCode) {
+      401 => const ApplicationFailure(
+        code: 'INSTALLATION_UNAUTHORIZED',
+        message: 'The Backend rejected the installation credential.',
+      ),
+      403 => const ApplicationFailure(
+        code: 'MEDIA_ACCESS_FORBIDDEN',
+        message: 'The Backend denied access to the requested media asset.',
+      ),
+      404 => const ApplicationFailure(
         code: 'ASSET_NOT_FOUND',
-        message: 'The published asset was not found.',
-      );
-    }
-    if (statusCode == 408 ||
-        statusCode == 429 ||
-        statusCode == 500 ||
-        statusCode == 502 ||
-        statusCode == 503 ||
-        statusCode == 504) {
-      return ApplicationFailure(
+        message: 'The requested published asset was not found.',
+      ),
+      409 => const ApplicationFailure(
+        code: 'ASSET_NOT_READY',
+        message: 'The requested asset is not ready for delivery.',
+        retryable: true,
+      ),
+      408 || 429 || 500 || 502 || 503 || 504 => ApplicationFailure(
         code: 'ASSET_SOURCE_UNAVAILABLE',
-        message: 'The asset source is temporarily unavailable.',
+        message: 'The Backend asset source is temporarily unavailable.',
         retryable: true,
         details: <String, Object?>{'statusCode': statusCode},
-      );
-    }
-    return ApplicationFailure(
-      code: 'ASSET_DOWNLOAD_REJECTED',
-      message: 'The asset source rejected the request.',
-      details: <String, Object?>{'statusCode': statusCode},
-    );
+      ),
+      _ => ApplicationFailure(
+        code: 'ASSET_DOWNLOAD_REJECTED',
+        message: 'The Backend rejected the asset request.',
+        details: <String, Object?>{'statusCode': statusCode},
+      ),
+    };
   }
 }

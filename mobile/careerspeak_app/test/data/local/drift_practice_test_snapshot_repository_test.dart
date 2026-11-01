@@ -6,7 +6,7 @@ import 'package:careerspeak_app/data/local/drift_practice_test_repository.dart';
 import 'package:careerspeak_app/data/local/publication_snapshot_storage.dart';
 import 'package:careerspeak_app/domain/assessment.dart';
 import 'package:careerspeak_app/domain/assessment_bundle.dart';
-import 'package:drift/drift.dart' hide isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_database_factory.dart';

@@ -53,13 +53,19 @@ void main() {
       );
       final projection = LearningCollectionProjection(
         code: 'JAVA_INTERVIEW_CORE',
+        verticalCode: 'JAVA_INTERVIEW',
         trackCode: 'JAVA_SENIOR',
         title: 'Java interview core',
         description: 'Exact publication-owned learning sequence.',
         sortOrder: 0,
         active: true,
-        contentRefs: <ContentRevisionRef>[content],
-        practiceTestRefs: <PracticeTestRevisionRef>[practiceTest],
+        members: <LearningCollectionMember>[
+          LearningCollectionMember.content(position: 0, content: content),
+          LearningCollectionMember.practiceTest(
+            position: 1,
+            practiceTest: practiceTest,
+          ),
+        ],
       );
 
       final membership = projection.bindToPublication(
@@ -84,13 +90,19 @@ void main() {
     );
     final projection = LearningCollectionProjection(
       code: 'JAVA_INTERVIEW_CORE',
+      verticalCode: 'JAVA_INTERVIEW',
       trackCode: 'JAVA_SENIOR',
       title: 'Java interview core',
       description: 'Exact publication-owned learning sequence.',
       sortOrder: 0,
       active: true,
-      contentRefs: <ContentRevisionRef>[content],
-      practiceTestRefs: <PracticeTestRevisionRef>[practiceTest],
+      members: <LearningCollectionMember>[
+        LearningCollectionMember.content(position: 0, content: content),
+        LearningCollectionMember.practiceTest(
+          position: 1,
+          practiceTest: practiceTest,
+        ),
+      ],
     );
 
     expect(

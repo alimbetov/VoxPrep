@@ -16,20 +16,23 @@ CareerSpeak teaches English only. Other languages support UI, translations, hint
 
 ```text
 Flutter App
-  ├── installation token ──► Spring Boot REST API ──► PostgreSQL
-  └── media ───────────────► CDN/Edge ─────────────► RustFS
+  └── installation token + JSON/media ──► Spring Boot REST API
+                                              ├── PostgreSQL
+                                              └── RustFS
 
 ADMIN Browser
-  └── session ─────────────► Spring MVC Content Studio
-                                ├── PostgreSQL
-                                └── RustFS
+  └── session ─────────────────────────► Spring MVC Content Studio
+                                              ├── PostgreSQL
+                                              └── RustFS
 
 TTS Worker
-  ├── machine token ───────► Backend Job API
-  ├── exact Piper model ◄── RustFS/local cache
+  ├── machine token ───────────────────► Backend Job API
+  ├── exact Piper model ◄────────────── Backend Model API / local cache
   ├── Piper + FFmpeg
-  └── generated audio ─────► RustFS
+  └── generated audio ─────────────────► Backend Job API ──► RustFS
 ```
+
+**Spring Boot is the sole network boundary for Flutter and TTS Worker.** RustFS is Backend-internal infrastructure: clients never receive RustFS/S3 credentials, object URLs, presigned URLs, buckets or storage paths.
 
 Backend is one **Spring Boot modular monolith**.
 
@@ -56,6 +59,19 @@ random installationId
 
 No personal learner account. Progress/favorites/test history remain local-first.
 
+Remote media uses the same Backend security boundary:
+
+```text
+assetId
+→ GET /api/v1/media/assets/{assetId}/content
+→ Backend resolves FileAsset/deliveryKey
+→ Backend reads RustFS
+→ Flutter verifies size + SHA-256
+→ local managed file
+```
+
+Flutter never addresses RustFS/S3/CDN directly.
+
 ### TTS Worker
 
 Server-managed long-running Python process/container:
@@ -67,7 +83,7 @@ auto-start/restart
 local exact-model cache
 ```
 
-No direct PostgreSQL credentials and no permanent RustFS credentials.
+No direct PostgreSQL credentials and no RustFS credentials. Models are downloaded through Backend Model API and generated audio is uploaded through Backend Job API; Backend owns durable RustFS I/O.
 
 ## Standard lifecycle vocabulary
 
@@ -290,6 +306,8 @@ Elasticsearch/OpenSearch
 ```
 
 ## Normative specifications
+
+- [Universal Vertical Catalogue — implementation requirements v1.0](docs/backend/UNIVERSAL_VERTICAL_CATALOGUE.md)
 
 - [System Requirements & Architecture Specification v0.10](docs/specification/CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
 - [Cross-System Contract Standard v1.0](docs/architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md)

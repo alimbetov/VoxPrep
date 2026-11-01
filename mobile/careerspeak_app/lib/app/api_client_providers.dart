@@ -2,7 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import '../application/ports/api_client.dart';
+import '../application/result/result.dart';
 import '../data/remote/http_api_client.dart';
+import '../domain/application_preferences.dart';
+import 'app_preferences_providers.dart';
 import 'installation_identity_providers.dart';
 
 const _apiBaseUrl = String.fromEnvironment(
@@ -21,9 +24,20 @@ final httpClientProvider = Provider<http.Client>((ref) {
 });
 
 final apiClientProvider = Provider<ApiClient>((ref) {
+  final preferencesRepository = ref.watch(appPreferencesRepositoryProvider);
   return HttpApiClient(
     client: ref.watch(httpClientProvider),
     credentialStore: ref.watch(installationCredentialStoreProvider),
     baseUri: ref.watch(apiBaseUriProvider),
+    contextHeadersProvider: () async {
+      final result = await preferencesRepository.getPreferences();
+      if (result case FailureResult<ApplicationPreferences>(:final failure)) {
+        throw StateError('${failure.code}: ${failure.message}');
+      }
+      final preferences = (result as Success<ApplicationPreferences>).value;
+      return <String, String>{
+        'accept-language': preferences.selectedLocale.code,
+      };
+    },
   );
 });

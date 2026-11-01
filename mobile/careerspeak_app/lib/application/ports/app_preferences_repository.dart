@@ -6,6 +6,11 @@ abstract interface class AppPreferencesRepository {
 
   Future<Result<ApplicationPreferences>> getPreferences();
 
+  Future<Result<void>> setLocaleSelection({
+    required String countryCode,
+    required AppTranslationLocale locale,
+  });
+
   Future<Result<void>> setUiLocale(AppUiLocale locale);
 
   Future<Result<void>> setTranslationLocale(AppTranslationLocale locale);

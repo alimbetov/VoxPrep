@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../application/content_sync/content_sync_coordinator.dart';
 import '../application/content_sync/content_sync_planner.dart';
 import '../application/content_sync/preference_aware_content_sync.dart';
+import '../application/content_sync/required_offline_asset_prefetcher.dart';
 import '../application/ports/publication_snapshot_stager.dart';
 import '../application/ports/sync_journal.dart';
 import '../application/ports/sync_plan_executor.dart';
@@ -11,6 +12,7 @@ import '../data/local/drift_sync_journal.dart';
 import '../data/local/drift_sync_plan_executor.dart';
 import 'app_preferences_providers.dart';
 import 'assessment_providers.dart';
+import 'asset_download_providers.dart';
 import 'catalogue_payload_providers.dart';
 import 'content_manifest_providers.dart';
 import 'content_payload_providers.dart';
@@ -44,6 +46,17 @@ final publicationSnapshotStagerProvider = Provider<PublicationSnapshotStager>((
   );
 });
 
+final requiredOfflineAssetPrefetcherProvider =
+    Provider<RequiredOfflineAssetPrefetcher>((ref) {
+      return RequiredOfflineAssetPrefetcher(
+        manifestGateway: ref.watch(contentManifestGatewayProvider),
+        ensureLocal: (asset) async {
+          final downloads = await ref.read(assetDownloadManagerProvider.future);
+          return downloads.ensureLocal(asset);
+        },
+      );
+    });
+
 final contentSyncCoordinatorProvider = Provider<ContentSyncCoordinator>((ref) {
   return ContentSyncCoordinator(
     journal: ref.watch(syncJournalProvider),
@@ -51,6 +64,9 @@ final contentSyncCoordinatorProvider = Provider<ContentSyncCoordinator>((ref) {
     planner: ref.watch(contentSyncPlannerProvider),
     executor: ref.watch(syncPlanExecutorProvider),
     snapshotStager: ref.watch(publicationSnapshotStagerProvider),
+    requiredOfflinePrefetcher: ref.watch(
+      requiredOfflineAssetPrefetcherProvider,
+    ),
   );
 });
 

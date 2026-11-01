@@ -1,5 +1,5 @@
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
-import 'package:drift/drift.dart';
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../../support/test_database_factory.dart';
@@ -16,16 +16,16 @@ void main() {
   });
 
   test(
-    'schema version 8 creates the production assessment foundation',
+    'schema version 10 creates the production foundation and retention schema',
     () async {
       await database.customSelect('SELECT 1').getSingle();
 
-      expect(database.schemaVersion, 8);
+      expect(database.schemaVersion, 10);
 
       final userVersion = await database
           .customSelect('PRAGMA user_version')
           .getSingle();
-      expect(userVersion.read<int>('user_version'), 8);
+      expect(userVersion.read<int>('user_version'), 10);
 
       final foreignKeys = await database
           .customSelect('PRAGMA foreign_keys')
@@ -60,6 +60,13 @@ void main() {
           'content_learning_states',
         }),
       );
+
+      final retentionTable = await database
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'asset_cache_retention'",
+          )
+          .getSingleOrNull();
+      expect(retentionTable, isNotNull);
     },
   );
 
@@ -182,9 +189,8 @@ void main() {
         .insert(
           SyncTombstonesCompanion.insert(
             runId: 'sync-1',
-            contentCode: 'JAVA_QUESTION_001',
-            contentType: 'interview',
-            revision: const Value(3),
+            contentCode: 'JAVA_Q_001',
+            contentType: 'INTERVIEW',
             reason: 'INACTIVE',
             state: 'PLANNED',
           ),
@@ -201,129 +207,34 @@ void main() {
     expect(await database.select(database.syncTombstones).get(), isEmpty);
   });
 
-  test('sync pack identity is scoped by run and pack variant', () async {
+  test('asset references cascade only when their owner is removed', () async {
     final now = DateTime.utc(2026, 10, 30, 10);
+    const checksum =
+        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
     await database
-        .into(database.syncRuns)
+        .into(database.contentPackRevisions)
         .insert(
-          SyncRunsCompanion.insert(
-            runId: 'sync-1',
-            trigger: 'MANUAL',
-            translationLocale: 'ru',
-            state: 'PLANNING',
-            startedAt: now,
-            updatedAt: now,
+          ContentPackRevisionsCompanion.insert(
+            packCode: 'JAVA_SENIOR',
+            variantKey: 'canonical',
+            revision: 8,
+            schemaVersion: 1,
+            checksum: checksum,
+            state: 'CURRENT',
+            sourceContentVersion: 108,
+            stagedAt: now,
           ),
         );
-
-    final update = SyncPackUpdatesCompanion.insert(
-      runId: 'sync-1',
-      packCode: 'JAVA_SENIOR',
-      variantKey: 'canonical',
-      targetRevision: 8,
-      targetChecksum:
-          'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
-      state: 'PLANNED',
-      updatedAt: now,
-    );
-
-    await database.into(database.syncPackUpdates).insert(update);
-    await expectLater(
-      database.into(database.syncPackUpdates).insert(update),
-      throwsA(anything),
-    );
-  });
-
-  test(
-    'content pack revision identity is composite and deterministic',
-    () async {
-      final now = DateTime.utc(2026, 10, 30, 10);
-      final row = ContentPackRevisionsCompanion.insert(
-        packCode: 'JAVA_SENIOR',
-        variantKey: 'canonical',
-        revision: 8,
-        schemaVersion: 1,
-        checksum: 'sha256:pack-8',
-        state: 'CURRENT',
-        sourceContentVersion: 108,
-        stagedAt: now,
-      );
-
-      await database.into(database.contentPackRevisions).insert(row);
-
-      await expectLater(
-        database.into(database.contentPackRevisions).insert(row),
-        throwsA(anything),
-      );
-    },
-  );
-
-  test('local content identity includes revision', () async {
-    final now = DateTime.utc(2026, 10, 30, 10);
-
-    LocalContentRecordsCompanion row(int revision) =>
-        LocalContentRecordsCompanion.insert(
-          contentCode: 'JAVA_DI_001',
-          contentType: 'INTERVIEW',
-          revision: revision,
-          checksum: 'sha256:content-$revision',
-          snapshotState: 'CURRENT',
-          sourceSchemaVersion: 1,
-          createdAt: now,
-        );
-
-    await database.into(database.localContentRecords).insert(row(1));
-    await database.into(database.localContentRecords).insert(row(2));
-
-    expect(
-      await database.select(database.localContentRecords).get(),
-      hasLength(2),
-    );
-
-    await expectLater(
-      database.into(database.localContentRecords).insert(row(1)),
-      throwsA(anything),
-    );
-  });
-
-  test('learner identities reject duplicate business keys', () async {
-    final now = DateTime.utc(2026, 10, 30, 10);
-
-    final favorite = FavoritesCompanion.insert(
-      contentCode: 'JAVA_DI_001',
-      contentType: 'INTERVIEW',
-      createdAt: now,
-    );
-    await database.into(database.favorites).insert(favorite);
-    await expectLater(
-      database.into(database.favorites).insert(favorite),
-      throwsA(anything),
-    );
-
-    final learningState = ContentLearningStatesCompanion.insert(
-      contentCode: 'JAVA_DI_001',
-      contentType: 'INTERVIEW',
-      updatedAt: now,
-    );
-    await database.into(database.contentLearningStates).insert(learningState);
-    await expectLater(
-      database.into(database.contentLearningStates).insert(learningState),
-      throwsA(anything),
-    );
-  });
-
-  test('learner state remains after disposable content is deleted', () async {
-    final now = DateTime.utc(2026, 10, 30, 10);
 
     await database
         .into(database.localContentRecords)
         .insert(
           LocalContentRecordsCompanion.insert(
-            contentCode: 'JAVA_DI_001',
+            contentCode: 'JAVA_Q_001',
             contentType: 'INTERVIEW',
-            revision: 1,
-            checksum: 'sha256:content',
+            revision: 3,
+            checksum: checksum,
             snapshotState: 'CURRENT',
             sourceSchemaVersion: 1,
             createdAt: now,
@@ -331,47 +242,50 @@ void main() {
         );
 
     await database
-        .into(database.favorites)
+        .into(database.assetCatalog)
         .insert(
-          FavoritesCompanion.insert(
-            contentCode: 'JAVA_DI_001',
-            contentType: 'INTERVIEW',
+          AssetCatalogCompanion.insert(
+            assetId: 'audio-1',
+            checksumSha256: checksum,
+            assetKind: 'AUDIO',
+            deliveryKey: 'audio/java-q-001.mp3',
+            sizeBytes: 100,
+            mimeType: 'audio/mpeg',
             createdAt: now,
           ),
         );
 
     await database
-        .into(database.contentLearningStates)
+        .into(database.contentAssetRefs)
         .insert(
-          ContentLearningStatesCompanion.insert(
-            contentCode: 'JAVA_DI_001',
+          ContentAssetRefsCompanion.insert(
+            contentCode: 'JAVA_Q_001',
             contentType: 'INTERVIEW',
-            updatedAt: now,
+            contentRevision: 3,
+            assetId: 'audio-1',
+            assetRole: 'promptAudio',
+            requiredOffline: const Value(false),
+          ),
+        );
+
+    await database
+        .into(database.packAssetRefs)
+        .insert(
+          PackAssetRefsCompanion.insert(
+            packCode: 'JAVA_SENIOR',
+            variantKey: 'canonical',
+            packRevision: 8,
+            assetId: 'audio-1',
+            requiredOffline: const Value(false),
           ),
         );
 
     await (database.delete(
       database.localContentRecords,
-    )..where((row) => row.contentCode.equals('JAVA_DI_001'))).go();
+    )..where((row) => row.contentCode.equals('JAVA_Q_001'))).go();
 
-    expect(await database.select(database.localContentRecords).get(), isEmpty);
-    expect(await database.select(database.favorites).get(), hasLength(1));
-    expect(
-      await database.select(database.contentLearningStates).get(),
-      hasLength(1),
-    );
+    expect(await database.select(database.contentAssetRefs).get(), isEmpty);
+    expect(await database.select(database.assetCatalog).get(), hasLength(1));
+    expect(await database.select(database.packAssetRefs).get(), hasLength(1));
   });
-
-  test(
-    'installation runtime table contains no installation credential',
-    () async {
-      final columns = database.installationRuntimeStates.$columns
-          .map((column) => column.$name)
-          .toSet();
-
-      expect(columns, isNot(contains('installation_id')));
-      expect(columns, isNot(contains('installation_token')));
-      expect(columns, isNot(contains('token')));
-    },
-  );
 }

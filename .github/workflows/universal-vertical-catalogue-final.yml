@@ -1,0 +1,242 @@
+name: Universal Vertical Catalogue Final Qualification
+
+on:
+  push:
+    branches:
+      - feat/universal-vertical-catalogue
+    paths:
+      - 'mobile/careerspeak_app/**'
+      - 'contracts/**'
+      - 'docs/**'
+      - '.github/workflows/universal-vertical-catalogue-final.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: universal-vertical-catalogue-final-${{ github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed lib test tool
+
+      - name: Generated Drift code reproducibility
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          git diff --exit-code -- lib/data/local/database/careerspeak_database.g.dart
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Full Flutter regression
+        run: flutter test
+
+  coverage:
+    name: coverage-90
+    needs: quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Production coverage
+        run: flutter test --coverage
+
+      - name: Enforce 90 percent line coverage
+        run: dart run tool/coverage_gate.dart 90
+
+      - name: Publish coverage evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-coverage-${{ github.sha }}
+          path: |
+            mobile/careerspeak_app/coverage/lcov.info
+            mobile/careerspeak_app/coverage/coverage-ledger.md
+          if-no-files-found: warn
+          retention-days: 14
+
+  verification:
+    name: verification
+    needs: quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: UI adversarial qualification
+        run: |
+          flutter test test/features/catalogue/catalogue_screen_test.dart
+          flutter test test/features/catalogue/catalogue_parent_activity_test.dart
+          flutter test test/features/catalogue/catalogue_adaptive_visual_boundary_test.dart
+          flutter test test/application/content_delivery/universal_catalogue_presentation_order_test.dart
+          flutter test test/core/adaptive/careerspeak_adaptive_scaffold_test.dart
+          flutter test test/features/content/content_detail_panel_adversarial_test.dart
+          flutter test test/features/content/interview_audio_role_source_of_truth_test.dart
+          flutter test test/features/content/content_detail_learner_state_interaction_test.dart
+          flutter test test/features/content/content_detail_supersession_ui_test.dart
+          flutter test test/features/content/content_detail_localized_hint_test.dart
+          flutter test test/features/content/content_detail_adaptive_visual_boundary_test.dart
+
+      - name: Learner UI visual-boundary qualification
+        run: |
+          flutter test test/features/catalogue/catalogue_adaptive_visual_boundary_test.dart
+          flutter test test/features/content/content_detail_adaptive_visual_boundary_test.dart
+          flutter test test/features/settings/settings_adaptive_visual_boundary_test.dart
+          flutter test test/features/tests/test_session_adaptive_visual_boundary_test.dart
+          flutter test test/features/shared/learner_surfaces_adaptive_visual_boundary_test.dart
+          flutter test test/core/adaptive/careerspeak_adaptive_scaffold_test.dart
+
+      - name: Golden baseline completeness
+        run: |
+          test -f test/goldens/baselines/catalogue_grid.png
+          test -f test/goldens/baselines/content_detail.png
+          test -f test/goldens/baselines/interview_two_audio_roles.png
+          test -f test/goldens/baselines/practice_question.png
+          test -f test/goldens/baselines/practice_result.png
+          test -f test/goldens/baselines/settings_rtl.png
+          test -f test/goldens/baselines/home_small_phone.png
+          test "$(find test/goldens/baselines -maxdepth 1 -type f -name '*.png' | wc -l)" -eq 7
+
+      - name: Targeted learner UI goldens
+        run: flutter test test/goldens/learner_ui_golden_test.dart
+
+      - name: C1 exhaustive contract matrices
+        run: flutter test test/application/content_delivery/combinatorial_contract_matrix_test.dart
+
+      - name: C2 cross-layer cache network policy matrix
+        run: flutter test test/application/cross_layer_asset_resolution_pairwise_test.dart
+
+      - name: C3-C5 positive negative adversarial catalogue scenarios
+        run: flutter test test/application/content_delivery/catalogue_scenario_qualification_test.dart
+
+      - name: T3 critical-domain qualification
+        run: |
+          flutter test test/application/content_delivery/content_audio_policy_test.dart
+          flutter test test/application/content_delivery/content_audio_publication_membership_test.dart
+          flutter test test/application/content_delivery/learning_collection_membership_test.dart
+          flutter test test/application/content_delivery/product_catalog_test.dart
+          flutter test test/application/content_delivery/universal_vertical_catalogue_graph_test.dart
+          flutter test test/application/content_sync/root_manifest_v2_membership_test.dart
+
+      - name: T4 repository and storage qualification
+        run: |
+          flutter test test/architecture/asset_download_boundary_test.dart
+          flutter test test/application/typed_asset_resolution_test.dart
+          flutter test test/data/remote/http_asset_byte_source_test.dart
+          flutter test test/data/local/drift_universal_catalogue_repository_test.dart
+          flutter test test/data/local/drift_universal_catalogue_graph_materializer_test.dart
+          flutter test test/data/local/drift_catalogue_snapshot_repository_test.dart
+          flutter test test/data/local/drift_practice_test_snapshot_repository_test.dart
+          flutter test test/data/local/drift_atomic_snapshot_visibility_test.dart
+          flutter test test/data/local/drift_tombstone_publication_interaction_test.dart
+          flutter test test/data/local/database/careerspeak_database_test.dart
+
+      - name: T5 controller and state qualification
+        run: |
+          flutter test test/application/asset_cache_retention_manager_test.dart
+          flutter test test/application/asset_resolver_concurrency_adversarial_test.dart
+          flutter test test/application/audio_playback_controller_test.dart
+          flutter test test/application/audio_playback_concurrency_adversarial_test.dart
+          flutter test test/application/role_audio_clip_controller_test.dart
+          flutter test test/application/role_audio_clip_concurrency_adversarial_test.dart
+          flutter test test/app/audio_playback_providers_test.dart
+
+      - name: T6 learner UI state qualification
+        run: |
+          flutter test test/features/catalogue/catalogue_screen_test.dart
+          flutter test test/features/catalogue/catalogue_parent_activity_test.dart
+          flutter test test/features/content/content_detail_learner_state_interaction_test.dart
+          flutter test test/features/content/content_detail_supersession_ui_test.dart
+          flutter test test/features/content/content_detail_localized_hint_test.dart
+          flutter test test/features/settings/settings_adaptive_visual_boundary_test.dart
+          flutter test test/features/tests/test_session_adaptive_visual_boundary_test.dart
+          flutter test test/features/shared/learner_surfaces_adaptive_visual_boundary_test.dart
+          flutter test test/goldens/learner_ui_golden_test.dart
+
+      - name: Content Detail audio E2E
+        run: |
+          flutter test test/acceptance/content_detail_audio_redownload_e2e_test.dart
+          flutter test test/acceptance/content_detail_audio_adversarial_e2e_test.dart
+
+      - name: Audio concurrency adversarial qualification
+        run: |
+          flutter test test/application/audio_playback_concurrency_adversarial_test.dart
+          flutter test test/application/role_audio_clip_concurrency_adversarial_test.dart
+          flutter test test/application/asset_resolver_concurrency_adversarial_test.dart
+
+      - name: V10 full demo graph
+        run: flutter test test/data/mock/demo_full_learning_graph_test.dart
+
+      - name: V11 offline restart
+        run: flutter test test/acceptance/v11_universal_catalogue_offline_restart_acceptance_test.dart
+
+      - name: V12 adversarial qualification
+        run: flutter test test/acceptance/v12_universal_catalogue_adversarial_acceptance_test.dart
+
+      - name: Drift migration v1 through v10
+        run: flutter test test/data/local/database/universal_catalogue_schema_v9_test.dart
+
+      - name: Audio retention unit qualification
+        run: |
+          flutter test test/application/asset_cache_retention_manager_test.dart
+          flutter test test/data/local/drift_asset_cache_retention_repository_test.dart
+
+      - name: Audio deletion token recovery qualification
+        run: flutter test test/acceptance/audio_asset_token_recovery_acceptance_test.dart
+
+      - name: Audio eviction redownload acceptance
+        run: flutter test test/acceptance/audio_cache_eviction_redownload_acceptance_test.dart
+
+      - name: Production E2E
+        run: flutter test test/acceptance/p2_10_7_production_e2e_test.dart
+
+      - name: Exact SHA evidence
+        run: |
+          echo "qualified_sha=${GITHUB_SHA}"
+          test "${GITHUB_SHA}" = "$(git rev-parse HEAD)"

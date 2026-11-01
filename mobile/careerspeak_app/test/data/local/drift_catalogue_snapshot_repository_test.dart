@@ -4,7 +4,7 @@ import 'package:careerspeak_app/application/content_delivery/catalogue_revision_
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_catalogue_snapshot_repository.dart';
 import 'package:careerspeak_app/data/local/publication_snapshot_storage.dart';
-import 'package:drift/drift.dart' hide isNotNull;
+import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/test_database_factory.dart';

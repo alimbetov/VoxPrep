@@ -10,9 +10,11 @@ import '../../domain/installation_credentials.dart';
 import 'api_error_decoder.dart';
 
 typedef ApiDelay = Future<void> Function(Duration duration);
+typedef ApiContextHeadersProvider = Future<Map<String, String>> Function();
 
 const _managedRequestHeaders = <String>{
   'accept',
+  'accept-language',
   'authorization',
   'connection',
   'content-length',
@@ -22,11 +24,14 @@ const _managedRequestHeaders = <String>{
   'transfer-encoding',
 };
 
+final _localeHeaderPattern = RegExp(r'^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$');
+
 final class HttpApiClient implements ApiClient {
   factory HttpApiClient({
     required http.Client client,
     required InstallationCredentialStore credentialStore,
     required Uri baseUri,
+    ApiContextHeadersProvider? contextHeadersProvider,
     Duration requestTimeout = const Duration(seconds: 10),
     int maxGetAttempts = 3,
     ApiDelay? delay,
@@ -36,6 +41,7 @@ final class HttpApiClient implements ApiClient {
       client,
       credentialStore,
       _validateBaseUri(baseUri),
+      contextHeadersProvider ?? _emptyContextHeaders,
       _validateTimeout(requestTimeout),
       _validateMaxAttempts(maxGetAttempts),
       delay ?? Future<void>.delayed,
@@ -47,6 +53,7 @@ final class HttpApiClient implements ApiClient {
     this._client,
     this._credentialStore,
     this._baseUri,
+    this._contextHeadersProvider,
     this._requestTimeout,
     this._maxGetAttempts,
     this._delay,
@@ -56,6 +63,7 @@ final class HttpApiClient implements ApiClient {
   final http.Client _client;
   final InstallationCredentialStore _credentialStore;
   final Uri _baseUri;
+  final ApiContextHeadersProvider _contextHeadersProvider;
   final Duration _requestTimeout;
   final int _maxGetAttempts;
   final ApiDelay _delay;
@@ -83,10 +91,25 @@ final class HttpApiClient implements ApiClient {
   }
 
   Future<Result<ApiResponse>> _sendOnce(ApiRequest request) async {
+    final Map<String, String> contextHeaders;
+    try {
+      contextHeaders = _validatedContextHeaders(
+        await _contextHeadersProvider(),
+      );
+    } on Object {
+      return const FailureResult<ApiResponse>(
+        ApplicationFailure(
+          code: 'REQUEST_CONTEXT_UNAVAILABLE',
+          message: 'Request locale context could not be resolved.',
+        ),
+      );
+    }
+
     final headers = <String, String>{
       'accept': 'application/json',
+      ...contextHeaders,
       for (final entry in request.headers.entries)
-        if (!_managedRequestHeaders.contains(entry.key)) entry.key: entry.value,
+        if (!_isManagedRequestHeader(entry.key)) entry.key: entry.value,
     };
 
     if (request.authentication == ApiAuthentication.installation) {
@@ -255,6 +278,28 @@ final class HttpApiClient implements ApiClient {
     return resolved.replace(queryParameters: request.queryParameters);
   }
 
+  static Map<String, String> _validatedContextHeaders(
+    Map<String, String> values,
+  ) {
+    final headers = <String, String>{};
+    for (final entry in values.entries) {
+      final name = entry.key.trim().toLowerCase();
+      final value = entry.value.trim();
+      if (name != 'accept-language' ||
+          value.isEmpty ||
+          value.contains('\r') ||
+          value.contains('\n') ||
+          !_localeHeaderPattern.hasMatch(value)) {
+        throw const FormatException('Invalid managed request locale header.');
+      }
+      headers[name] = value;
+    }
+    return headers;
+  }
+
+  static bool _isManagedRequestHeader(String name) =>
+      _managedRequestHeaders.contains(name.trim().toLowerCase());
+
   static Uri _validateBaseUri(Uri value) {
     if (!value.isAbsolute ||
         (value.scheme != 'http' && value.scheme != 'https') ||
@@ -348,3 +393,6 @@ final class HttpApiClient implements ApiClient {
     return normalized.isEmpty ? null : normalized;
   }
 }
+
+Future<Map<String, String>> _emptyContextHeaders() async =>
+    const <String, String>{};

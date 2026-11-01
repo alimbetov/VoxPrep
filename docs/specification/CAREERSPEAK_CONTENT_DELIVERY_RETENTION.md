@@ -1,6 +1,6 @@
 # CareerSpeak — Content Delivery, Availability & Local Retention Requirements
 
-**Document version:** 2.0  
+**Document version:** 2.1  
 **Status:** Normative specification  
 **Applies to:** CareerSpeak v0.9+
 
@@ -23,7 +23,7 @@ cursor pagination
 tombstones
 metadata CURRENT state
 offline READY state
-stream/cache behavior
+backend media delivery
 explicit offline download
 TTL/LRU/quota retention
 shared asset references
@@ -55,7 +55,7 @@ Meaning:
 visible in learner contracts where applicable
 included in applicable manifest snapshot
 available for stream/download
-associated published assets deliverable
+associated published assets deliverable through Backend
 ```
 
 `PUBLISHED + INACTIVE` is retained for audit/history but not offered for new learner delivery.
@@ -200,7 +200,7 @@ Revision 7 remains usable offline until rev 8 verifies successfully.
 
 ---
 
-## 8. Stream/cache vs explicit download
+## 8. Cache vs explicit download
 
 Normal learner behavior:
 
@@ -208,7 +208,9 @@ Normal learner behavior:
 CURRENT metadata
 → asset requested
 → local verified copy if present
-→ otherwise CDN stream/download
+→ otherwise authenticated Backend media endpoint
+→ verify size/checksum
+→ managed local cache
 ```
 
 Normal metadata sync SHALL NOT download every audio/image file.
@@ -217,7 +219,7 @@ Explicit offline behavior:
 
 ```text
 user requests Download/Pin
-→ DownloadManager obtains required_offline assets
+→ DownloadManager obtains required_offline assets from Backend
 → checksum/size verification
 → atomic local placement
 → offline READY
@@ -354,13 +356,21 @@ Published learner media path:
 ```text
 Flutter
 → AssetResolver
-→ local verified file OR CDN/edge
-→ RustFS published origin
+→ local verified file if present
+→ otherwise GET /api/v1/media/assets/{assetId}/content
+→ Spring Boot validates installation + asset eligibility
+→ Backend resolves deliveryKey internally
+→ Backend storage adapter reads RustFS
+→ Spring Boot streams bytes to Flutter
+→ Flutter verifies size + SHA-256
+→ managed local file
 ```
 
-Spring Boot does not proxy normal learner MP3/image bytes.
+Flutter never addresses RustFS/S3/CDN directly, never receives a presigned URL and never uses `deliveryKey` as a remote path.
 
-Database/domain identity does not persist environment-specific CDN hostnames.
+Backend media responses MUST NOT redirect to object storage.
+
+Database/domain identity does not persist environment-specific public storage hostnames.
 
 ---
 
@@ -402,8 +412,8 @@ user-triggered Free space
 May use:
 
 ```text
-ETag / If-None-Match
-immutable CDN caching
+ETag / If-None-Match on Backend APIs
+Backend-controlled HTTP caching
 local Drift/filesystem cache
 ```
 
@@ -420,7 +430,7 @@ cursor traversal without duplicate/skip corruption
 PUBLISHED + INACTIVE absent from learner delivery
 deactivation produces tombstone/current removal
 metadata N→N+1 atomic CURRENT transition
-streaming works without full offline bundle
+media download works through Backend without direct storage access
 offline READY rev N survives update to CURRENT rev N+1
 offline READY switches only after verification
 progress survives tombstone/cache eviction
@@ -428,6 +438,8 @@ favorites do not force permanent media retention
 quota cleanup removes LRU auto-cache
 shared file survives while another reference exists
 locale change reuses English audio
+deleted local media is re-downloaded through Backend using current token
+Backend redirect to storage is rejected
 ```
 
 ---

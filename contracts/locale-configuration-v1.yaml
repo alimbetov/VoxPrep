@@ -1,0 +1,129 @@
+openapi: 3.1.0
+info:
+  title: CareerSpeak Locale Configuration API
+  version: 1.0.0
+  description: >-
+    Public onboarding contract used by Flutter to resolve Backend-owned locale
+    availability for a user-selected ISO country. Country selection does not
+    itself choose a locale.
+
+paths:
+  /api/v1/configuration/locales:
+    get:
+      operationId: getCountryLocaleConfiguration
+      security: []
+      description: >-
+        Returns the exact set of learner-support locales currently enabled for
+        one country. Flutter must persist the user's selected locale and use it
+        for Accept-Language on subsequent Backend requests. countryCode is used
+        only to resolve this configuration and is not a substitute for locale.
+      parameters:
+        - name: countryCode
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/CountryCode'
+      responses:
+        '200':
+          description: Locale configuration for the requested country.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountryLocaleConfiguration'
+        '400':
+          $ref: '#/components/responses/ApiError'
+        '404':
+          $ref: '#/components/responses/ApiError'
+        '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
+          $ref: '#/components/responses/ApiError'
+
+components:
+  responses:
+    ApiError:
+      description: Typed API failure.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+
+  schemas:
+    CountryCode:
+      type: string
+      pattern: '^[A-Z]{2}$'
+      description: ISO-3166 alpha-2 country code selected by the user.
+
+    LocaleCode:
+      type: string
+      pattern: '^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$'
+      description: Canonical BCP-47 locale code.
+
+    SupportedLocaleOption:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - label
+      properties:
+        code:
+          $ref: '#/components/schemas/LocaleCode'
+        label:
+          type: string
+          minLength: 1
+
+    CountryLocaleConfiguration:
+      type: object
+      additionalProperties: false
+      required:
+        - countryCode
+        - defaultLocale
+        - locales
+      properties:
+        countryCode:
+          $ref: '#/components/schemas/CountryCode'
+        defaultLocale:
+          $ref: '#/components/schemas/LocaleCode'
+          description: >-
+            Backend recommendation for the selected country. It must also be
+            present in locales. Flutter may present it as the initial selection
+            but must persist the user's explicit choice.
+        locales:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/SupportedLocaleOption'
+
+    ApiError:
+      type: object
+      additionalProperties: true
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 1
+        traceId:
+          type:
+            - string
+            - 'null'
+        details:
+          type: object
+          additionalProperties: true
+          default: {}
+
+x-careerspeak-request-context:
+  description: >-
+    Flutter centrally sends Accept-Language with the persisted selected BCP-47
+    locale on Backend requests. Before onboarding the neutral value is en.
+    Feature code must not override this managed header. Country remains an
+    onboarding/configuration preference and is not sent as a generic locale
+    header.
+  headers:
+    Accept-Language:
+      required: true
+      example: ru-KZ

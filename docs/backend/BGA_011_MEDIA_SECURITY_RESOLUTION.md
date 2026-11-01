@@ -10,9 +10,7 @@
 
 ## Resolution
 
-BGA-011 is closed by selecting **authenticated media resolution with short-lived signed/presigned delivery URLs** for MVP.
-
-The project does not use public learner media as the default delivery policy.
+BGA-011 is closed by selecting **authenticated Backend-proxied learner media** for MVP.
 
 The stable publication contract remains:
 
@@ -25,7 +23,7 @@ mediaType
 requiredOffline
 ```
 
-Flutter never treats a signed URL as durable content identity.
+`deliveryKey` remains immutable metadata used by Backend storage infrastructure. It is not a client network locator.
 
 The delivery boundary is:
 
@@ -33,62 +31,62 @@ The delivery boundary is:
 Flutter
   stable assetId from C4
         ↓
-Authenticated learner API
-  Authorization: Bearer <current installation token>
+GET /api/v1/media/assets/{assetId}/content
+Authorization: Bearer <current installation token>
         ↓
-POST /api/v1/media/access
+Spring Boot validates installation + asset eligibility
         ↓
-Backend validates installation + asset eligibility
+Spring Boot resolves assetId → FileAsset → deliveryKey
         ↓
-short-lived RustFS/edge signed URL
+Backend storage adapter reads RustFS
         ↓
-Flutter downloads directly from media origin/edge
+Spring Boot streams bytes to Flutter
         ↓
-checksum verification
+Flutter verifies size + SHA-256
         ↓
-trusted local offline asset
+trusted local asset
 ```
 
 ## Security consequences
 
-- RustFS credentials never reach Flutter.
-- The client cannot submit arbitrary RustFS object keys for signing.
-- Revoked installations cannot mint new media access grants.
-- Existing grants expire quickly and are disposable.
+- Flutter has no RustFS/S3/CDN URL or credentials.
+- Worker has no RustFS/S3 credentials and addresses Backend APIs only.
+- The client cannot submit arbitrary RustFS object keys.
+- Backend is the single authorization, audit and error boundary.
+- Revoked installations cannot download new media.
 - Token rotation does not change asset identity.
-- URL expiry does not trigger publication resynchronization.
-- Media bytes do not need to be proxied through Spring Boot.
-
-## MVP grant lifetime
-
-```text
-default: 5 minutes
-maximum: 15 minutes
-```
-
-The TTL is server-owned and may change without changing C4 checksums, revisions or Flutter durable state.
+- Local cache eviction does not remove publication identity.
+- Deleting local bytes causes a Backend-only re-download of the same immutable asset.
 
 ## Explicitly rejected alternatives
 
-For MVP the project does not choose:
+For MVP the project does not use:
 
 ```text
-public RustFS bucket as the default learner-media policy
+Flutter → RustFS/S3/CDN
+Worker → RustFS/S3
+public RustFS bucket
 public stable media URL embedded in manifests
-long-lived signed URL persisted in Drift
-RustFS credentials in Flutter
-Spring Boot byte proxy for normal media delivery
-signed URL as part of PublicationSnapshot identity
+signed/presigned URL returned to Flutter
+storage URL persisted in Drift
+RustFS credentials in Flutter or Worker
+Backend redirect to object storage
+client-supplied deliveryKey for download
 ```
 
 ## Acceptance
 
 BGA-011 is considered resolved when implementation/contract tests prove:
 
-1. valid installation token + learner-deliverable assetId yields a short-lived access grant;
-2. revoked installation cannot obtain a new grant;
-3. unknown/raw storage key cannot be signed;
-4. same immutable asset may resolve to different URLs without changing `assetId`, `deliveryKey` or checksum;
-5. expired grant can be re-resolved without publication resync;
-6. downloaded bytes must pass C4 checksum verification before local promotion;
-7. signed URLs and their signatures are not logged or stored as durable learner content state.
+1. valid installation token + learner-deliverable `assetId` yields binary media from the Backend endpoint;
+2. revoked/missing installation credentials fail closed;
+3. Flutter never uses `deliveryKey` as a URL/path for remote access;
+4. Backend redirects to RustFS/S3/CDN are rejected by Flutter;
+5. deleting a verified local asset causes re-download through Backend with the current token;
+6. downloaded bytes must pass C4 size and SHA-256 verification before local promotion;
+7. production Flutter code contains no RustFS/S3/CDN client boundary;
+8. TTS Worker continues to download models and upload output through Backend internal APIs only.
+
+## Frozen rule
+
+> All Flutter and Worker network I/O terminates at Spring Boot. RustFS is Backend-internal storage and may be accessed only by Backend infrastructure adapters.

@@ -1,6 +1,7 @@
 import '../../domain/application_preferences.dart';
 import '../content_delivery/content_manifest.dart';
 import '../content_delivery/locale_fallback.dart';
+import '../content_delivery/universal_manifest_v2_policy.dart';
 import '../result/result.dart';
 
 /// Builds the device-local pack projection from one locale-independent backend
@@ -17,6 +18,21 @@ final class RootManifestMaterializer {
     required RootContentManifest root,
     required String translationLocale,
   }) {
+    try {
+      requireUniversalCatalogueManifestV2(root);
+    } on ArgumentError catch (error) {
+      return FailureResult<RootContentManifest>(
+        ApplicationFailure(
+          code: 'MANIFEST_INVALID',
+          message: 'The root manifest violates universal catalogue membership.',
+          details: <String, Object?>{
+            if (error.name != null) 'field': error.name,
+            if (error.message != null) 'reason': error.message.toString(),
+          },
+        ),
+      );
+    }
+
     final locale = AppTranslationLocale.fromCode(translationLocale);
     if (locale == null) {
       return const FailureResult<RootContentManifest>(

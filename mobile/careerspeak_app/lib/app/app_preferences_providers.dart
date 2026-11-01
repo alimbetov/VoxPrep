@@ -27,16 +27,28 @@ final appPreferencesControllerProvider = Provider<AppPreferencesController>((
   return AppPreferencesController(ref.watch(appPreferencesRepositoryProvider));
 });
 
-final translationLocaleProvider = Provider<AsyncValue<String>>((ref) {
+final selectedLocaleProvider = Provider<AsyncValue<String>>((ref) {
   return ref
       .watch(applicationPreferencesProvider)
-      .whenData((preferences) => preferences.translationLocale.code);
+      .whenData((preferences) => preferences.selectedLocale.code);
 });
+
+final translationLocaleProvider = selectedLocaleProvider;
 
 final class AppPreferencesController {
   const AppPreferencesController(this._repository);
 
   final AppPreferencesRepository _repository;
+
+  Future<Result<void>> setLocaleSelection({
+    required String countryCode,
+    required AppTranslationLocale locale,
+  }) {
+    return _repository.setLocaleSelection(
+      countryCode: countryCode,
+      locale: locale,
+    );
+  }
 
   Future<Result<void>> setUiLocale(AppUiLocale locale) {
     return _repository.setUiLocale(locale);

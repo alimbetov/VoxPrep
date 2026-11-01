@@ -272,7 +272,18 @@ final class AudioPlaybackController {
 
   Future<Result<void>> stop() async {
     if (_disposed) return _closedFailure();
-    if (_session == null) return const Success<void>(null);
+    if (_session == null) {
+      if (_state.phase == AudioPlaybackPhase.resolving) {
+        ++_generation;
+        _emit(
+          _state.copyWith(
+            phase: AudioPlaybackPhase.stopped,
+            clearFailure: true,
+          ),
+        );
+      }
+      return const Success<void>(null);
+    }
 
     final position = _state.positionMs;
     final content = _state.content;

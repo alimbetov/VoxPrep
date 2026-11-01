@@ -12,12 +12,12 @@ sealed class LocaleCode {
 
   String get label => switch (code) {
     'en' => 'English',
-    'ru' => 'Русский',
-    'kk' => 'Қазақша',
-    'uz' => 'O‘zbekcha',
-    'ky' => 'Кыргызча',
-    'tr' => 'Türkçe',
-    'uk' => 'Українська',
+    'ru' || 'ru-KZ' => 'Русский',
+    'kk' || 'kk-KZ' => 'Қазақша',
+    'uz' || 'uz-UZ' => 'O‘zbekcha',
+    'ky' || 'ky-KG' => 'Кыргызча',
+    'tr' || 'tr-TR' => 'Türkçe',
+    'uk' || 'uk-UA' => 'Українська',
     'es' => 'Español',
     'pt-BR' => 'Português (Brasil)',
     'fr' => 'Français',
@@ -79,8 +79,6 @@ final class AppUiLocale extends LocaleCode {
   static const turkish = AppUiLocale._('tr');
   static const arabic = AppUiLocale._('ar');
 
-  /// Release-qualified UI locales. This list is intentionally not the storage
-  /// validation boundary; any valid BCP-47 value can be represented.
   static const values = <AppUiLocale>[
     english,
     russian,
@@ -123,8 +121,6 @@ final class AppTranslationLocale extends LocaleCode {
   static const indonesian = AppTranslationLocale._('id');
   static const vietnamese = AppTranslationLocale._('vi');
 
-  /// Initial launch catalog. Backend SupportedLocale is authoritative at
-  /// runtime and can add future valid BCP-47 locales without a model release.
   static const values = <AppTranslationLocale>[
     english,
     russian,
@@ -195,6 +191,7 @@ enum AppThemePreference {
 
 final class ApplicationPreferences {
   const ApplicationPreferences({
+    this.countryCode,
     required this.uiLocale,
     required this.translationLocale,
     required this.preferredAccent,
@@ -205,13 +202,14 @@ final class ApplicationPreferences {
 
   static const defaults = ApplicationPreferences(
     uiLocale: AppUiLocale.english,
-    translationLocale: AppTranslationLocale.russian,
+    translationLocale: AppTranslationLocale.english,
     preferredAccent: PreferredEnglishAccent.us,
     theme: AppThemePreference.system,
     focusMode: false,
     storageQuotaBytes: null,
   );
 
+  final String? countryCode;
   final AppUiLocale uiLocale;
   final AppTranslationLocale translationLocale;
   final PreferredEnglishAccent? preferredAccent;
@@ -219,7 +217,13 @@ final class ApplicationPreferences {
   final bool focusMode;
   final int? storageQuotaBytes;
 
+  AppTranslationLocale get selectedLocale => translationLocale;
+
+  bool get needsLocaleOnboarding => countryCode == null;
+
   ApplicationPreferences copyWith({
+    String? countryCode,
+    bool clearCountryCode = false,
     AppUiLocale? uiLocale,
     AppTranslationLocale? translationLocale,
     PreferredEnglishAccent? preferredAccent,
@@ -230,6 +234,7 @@ final class ApplicationPreferences {
     bool clearStorageQuota = false,
   }) {
     return ApplicationPreferences(
+      countryCode: clearCountryCode ? null : countryCode ?? this.countryCode,
       uiLocale: uiLocale ?? this.uiLocale,
       translationLocale: translationLocale ?? this.translationLocale,
       preferredAccent: clearPreferredAccent

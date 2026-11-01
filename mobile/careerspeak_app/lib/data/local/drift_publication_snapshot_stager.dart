@@ -9,6 +9,7 @@ import '../../application/ports/catalogue_payload_gateway.dart';
 import '../../application/ports/publication_snapshot_stager.dart';
 import '../../application/result/result.dart';
 import 'database/careerspeak_database.dart';
+import 'drift_universal_catalogue_graph_materializer.dart';
 import 'publication_snapshot_storage.dart';
 
 final class DriftPublicationSnapshotStager
@@ -169,7 +170,6 @@ final class DriftPublicationSnapshotStager
               .write(ContentManifestStatesCompanion(updatedAt: Value(now)));
         }
       });
-      return const Success(null);
     } catch (error) {
       return FailureResult<void>(
         ApplicationFailure(
@@ -180,5 +180,18 @@ final class DriftPublicationSnapshotStager
         ),
       );
     }
+
+    // Schema v1 remains supported by the legacy publication path. Schema v2+
+    // additionally requires a fully decoded and graph-closed local projection.
+    if (target.schemaVersion >= 2) {
+      final materialized = await DriftUniversalCatalogueGraphMaterializer(
+        _database,
+      ).materialize(root: target, payloads: cataloguePayloads);
+      if (materialized case FailureResult<void>(:final failure)) {
+        return FailureResult<void>(failure);
+      }
+    }
+
+    return const Success(null);
   }
 }

@@ -9,18 +9,13 @@ import '../application/services/asset_download_manager.dart';
 import '../data/local/file_system_asset_store.dart';
 import '../data/remote/http_asset_byte_source.dart';
 import 'api_client_providers.dart';
-
-const _cdnBaseUrl = String.fromEnvironment(
-  'CAREERSPEAK_CDN_BASE_URL',
-  defaultValue: 'https://cdn.careerspeak.invalid/',
-);
-
-final cdnBaseUriProvider = Provider<Uri>((ref) => Uri.parse(_cdnBaseUrl));
+import 'installation_identity_providers.dart';
 
 final assetByteSourceProvider = Provider<AssetByteSource>((ref) {
   return HttpAssetByteSource(
     client: ref.watch(httpClientProvider),
-    baseUri: ref.watch(cdnBaseUriProvider),
+    credentialStore: ref.watch(installationCredentialStoreProvider),
+    baseUri: ref.watch(apiBaseUriProvider),
   );
 });
 

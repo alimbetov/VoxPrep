@@ -1,7 +1,7 @@
 # C5 — Media Security Contract
 
 **Status:** FROZEN MVP CONTRACT  
-**Scope:** learner media authorization and delivery resolution for immutable C4 assets.  
+**Scope:** learner media authorization and delivery for immutable C4 assets.  
 **Related contracts:**
 
 - `docs/backend/C4_ATOMIC_PUBLICATION_CONTRACT.md`
@@ -10,40 +10,43 @@
 
 ## 1. Decision
 
-Learner media is **not public by default**.
+Learner media is private and **all Flutter media traffic terminates at Spring Boot**.
 
-C4 publishes only stable media identity:
-
-```text
-assetId
-checksumSha256
-deliveryKey
-sizeBytes
-mediaType
-requiredOffline
-```
-
-C5 authorizes an installation to resolve that stable identity into a short-lived media access grant.
+RustFS/S3-compatible storage is Backend-internal infrastructure. Flutter MUST NOT receive, construct, persist, follow or resolve RustFS/S3/CDN URLs, presigned URLs, bucket names, object paths or storage credentials.
 
 ```text
 C4 stable asset descriptor
         ↓
-Flutter authenticated API client
+Flutter AssetResolver
         ↓
-C5 media access endpoint
+authenticated Backend media endpoint
         ↓
 validate current installation token
         ↓
-validate asset is learner-deliverable
+validate exact learner-deliverable assetId
         ↓
-issue short-lived signed/presigned URL
+Backend resolves FileAsset + deliveryKey internally
         ↓
-Flutter downloads bytes directly from media origin/edge
+Backend reads/streams bytes from RustFS
         ↓
-C4 checksum validation
+Flutter receives bytes from Backend only
+        ↓
+C4 size + SHA-256 validation
+        ↓
+atomic local promotion
 ```
 
-The signed URL is transport material only. It is never part of `PublicationSnapshot`, manifest checksum, ETag, asset checksum, or durable Flutter content identity.
+The public learner boundary is therefore:
+
+```text
+Flutter ↔ Spring Boot
+```
+
+not:
+
+```text
+Flutter ↔ RustFS / S3 / CDN
+```
 
 ---
 
@@ -62,68 +65,73 @@ publication membership
 immutable asset identity
 ```
 
+`deliveryKey` is immutable publication/storage metadata but is never a client-authority input and never a Flutter network locator.
+
 ### C5 owns
 
 ```text
-whether the installation may resolve the asset
-current learner token validation
-media access grant issuance
-grant lifetime
+installation authorization
+learner media endpoint
+asset eligibility validation
 rate limiting / abuse controls
 revocation behavior
+Backend streaming semantics
 ```
 
-### Infrastructure owns
+### Backend storage adapter owns
 
 ```text
-RustFS/S3-compatible presigning implementation
-media origin/edge hostname
-TLS
+RustFS endpoint
+bucket
+object key resolution from deliveryKey
+S3-compatible credentials
+TLS/storage client
 object retrieval
-HTTP Range support where required
+storage retries/timeouts
 ```
 
-No layer may move ephemeral access material into C4 publication identity.
+No RustFS/S3 credential or storage URL crosses the Backend boundary.
 
 ---
 
-## 3. Resolution API
+## 3. Learner media API
 
-Normative learner boundary:
+Normative endpoint:
 
 ```http
-POST /api/v1/media/access
+GET /api/v1/media/assets/{assetId}/content
 Authorization: Bearer <current-installation-token>
-Content-Type: application/json
+Accept: <expected media type>
 ```
 
-Request:
+Example:
 
-```json
-{
-  "assetId": "asset-123"
-}
+```http
+GET /api/v1/media/assets/audio-java-001/content
+Authorization: Bearer eyJ...
+Accept: audio/mpeg
 ```
 
-Response:
+Successful response:
 
-```json
-{
-  "assetId": "asset-123",
-  "url": "https://media.example/...signed...",
-  "expiresAt": "2026-10-31T14:20:00Z"
-}
+```http
+HTTP/1.1 200 OK
+Content-Type: audio/mpeg
+Content-Length: 153822
+ETag: "<sha256>"
+
+<binary bytes>
 ```
 
-The backend MAY derive the object location from `deliveryKey` internally, but Flutter MUST NOT submit arbitrary storage keys or object-store paths for signing.
+The Backend MAY use `deliveryKey` internally to locate the RustFS object. Flutter MUST NOT submit `deliveryKey`, bucket, object key, storage path, signed URL or storage hostname.
 
-`assetId` is the authorization input because it allows the backend to validate that the requested object is a known learner-deliverable `FileAsset`.
+`assetId` is the only learner-facing storage identity because Backend can validate it against authoritative `FileAsset` and publication membership.
 
 ---
 
 ## 4. Authorization rules
 
-A media access grant is issued only when all of the following are true:
+The Backend streams media only when all are true:
 
 ```text
 installation token is current and valid
@@ -131,178 +139,204 @@ installation status is ACTIVE
 assetId exists
 asset is READY/published
 asset is learner-deliverable
-asset belongs to a retained/current publication graph as permitted by retention policy
+asset belongs to an allowed retained/current publication graph
 ```
 
-The backend MUST NOT create signed URLs for arbitrary RustFS keys supplied by the client.
+Backend MUST NOT proxy arbitrary storage keys supplied by clients.
 
-A revoked installation cannot obtain new media grants.
+A revoked installation cannot download new media.
 
-An already-issued signed URL may remain usable until its short expiration unless the selected storage/edge supports active revocation. MVP does not require per-URL active revocation.
+Already verified local offline media remains usable without a network token until local retention removes it or publication semantics retire it.
 
 ---
 
-## 5. Grant lifetime
+## 5. Backend-only storage rule
 
-Media grants are deliberately short-lived.
-
-MVP policy:
+The following are explicitly forbidden in Flutter production code:
 
 ```text
-default TTL: 5 minutes
-maximum TTL: 15 minutes
+RustFS hostnames
+S3 SDKs
+MinIO SDKs
+bucket names
+object-store access key / secret key
+presigned URL generation
+presigned URL consumption
+CDN/media-origin URLs
+redirects from Backend media endpoint to storage
+using deliveryKey as an HTTP path or URL
 ```
 
-The exact configured TTL is server-owned and MAY change without changing C4 publication identity or Flutter persisted content state.
+The Backend media endpoint MUST return bytes itself. A `3xx` redirect to RustFS/S3/CDN is not a valid learner response.
 
-Flutter MUST treat the URL as disposable and MUST NOT persist it as the durable asset locator.
-
-Durable identity remains:
-
-```text
-assetId + checksumSha256 + deliveryKey
-```
+Worker follows the same infrastructure boundary: it downloads models and uploads output through Backend internal APIs only. Worker has no permanent RustFS credentials and does not address RustFS directly.
 
 ---
 
 ## 6. Flutter download behavior
 
-The download path is:
-
 ```text
-AssetDescriptor
+ManifestAssetDescriptor
       ↓
-request media grant using assetId
+AssetResolver
       ↓
-signed URL
+verified local file?
+  ├─ yes → use local file
+  └─ no
       ↓
-HTTP download to staging file
+GET Backend /media/assets/{assetId}/content
       ↓
-verify size/checksum
+stream to staging file
+      ↓
+verify sizeBytes
+      ↓
+verify checksumSha256
       ↓
 atomic local promotion
 ```
 
 Rules:
 
-1. signed URL is never stored as durable content metadata;
-2. expiry before/during download causes a fresh access-grant request, not publication resync;
-3. token `401` on the access endpoint uses normal bounded C5 renewal (`reissue once + retry once`);
-4. a storage-origin `403` caused by expired signed URL causes at most one fresh grant resolution for that logical download attempt;
-5. checksum mismatch is a C4 integrity failure and MUST NOT be solved by repeatedly minting URLs;
-6. successful local offline media remains usable after token or URL expiry.
+1. local file is authoritative only after size + SHA-256 verification;
+2. missing local bytes are a recoverable cache miss;
+3. corrupted local bytes are removed and recovered through Backend;
+4. token `401` follows bounded installation-token recovery policy;
+5. storage failures remain hidden behind Backend error semantics;
+6. Flutter never retries against a storage origin because no storage origin is exposed;
+7. `deliveryKey` never participates in Flutter URL construction;
+8. successful verified local media remains usable offline.
 
 ---
 
-## 7. Publication independence
+## 7. Deleted-file recovery
 
-For one immutable asset:
+Required behavior:
 
 ```text
-assetId          = constant
-checksumSha256   = constant
-deliveryKey      = constant
-signed URL       = variable / ephemeral
+CURRENT publication metadata retained
++ local MP3 deleted
+        ↓
+next Play
+        ↓
+AssetResolver finds exact CURRENT assetId
+        ↓
+GET Backend media endpoint with current installation token
+        ↓
+Backend resolves assetId → FileAsset → deliveryKey
+        ↓
+Backend reads RustFS
+        ↓
+Flutter verifies size + SHA-256
+        ↓
+local file restored
+        ↓
+playback
 ```
 
-Therefore:
+Token rotation does not change immutable asset identity.
+
+---
+
+## 8. Integrity boundary
+
+Backend authorization does not replace C4 integrity validation.
+
+Flutter still validates:
 
 ```text
-URL1 != URL2
+response byte count == sizeBytes
+SHA-256(bytes) == checksumSha256
 ```
 
-does **not** imply a new asset revision or new publication.
+An HTTP `200` with invalid bytes MUST never be promoted to trusted local storage.
 
-Token rotation, grant expiry, presigning parameters and host changes MUST NOT alter the publication checksum.
-
----
-
-## 8. Range requests and audio
-
-Because learner media includes audio, the media origin/edge SHOULD support HTTP Range requests.
-
-A signed/presigned grant SHOULD remain valid for normal range retrieval during its TTL.
-
-Flutter must still validate the complete downloaded offline artifact against the C4 checksum before promoting it to trusted local storage.
-
-Streaming behavior does not weaken offline-file integrity requirements.
+The Backend MAY also expose checksum as `ETag`, but publication metadata remains the integrity source of truth.
 
 ---
 
-## 9. Rate limiting and abuse controls
+## 9. Range support
 
-The access endpoint MUST be rate-limited independently from content manifest reads.
+MVP Flutter downloads the complete artifact before trusted local playback, so HTTP Range is not required for the first production release.
 
-MVP controls SHOULD include:
+Backend endpoint MAY add standards-compliant `Range` support later for large media/streaming without exposing RustFS. The public endpoint remains the same Backend URL.
+
+---
+
+## 10. Rate limiting and observability
+
+Backend media reads SHOULD support:
 
 ```text
-per-installation request rate
+per-installation rate limit
 burst limit
-server-side asset eligibility validation
-traceable grant issuance event without logging signed URL query secrets
+asset eligibility checks
+traceId
+safe assetId logging
+latency / byte metrics
 ```
 
-Do not log full presigned URLs because query parameters may contain credentials/signatures.
+Do not log installation bearer tokens or storage credentials.
 
-Operational metrics SHOULD record only safe identifiers such as `assetId`, installation hash/reference, result code and latency.
+RustFS-specific exceptions and paths are mapped to Backend error semantics before crossing the API boundary.
 
 ---
 
-## 10. Error semantics
+## 11. Error semantics
 
-Recommended stable error classes:
+Stable learner errors:
 
 ```text
 401 INSTALLATION_UNAUTHORIZED
-403 INSTALLATION_REVOKED / MEDIA_ACCESS_FORBIDDEN
+403 MEDIA_ACCESS_FORBIDDEN / INSTALLATION_REVOKED
 404 ASSET_NOT_FOUND
 409 ASSET_NOT_READY
 429 RATE_LIMITED
-500/503 MEDIA_ACCESS_UNAVAILABLE
+500/502/503/504 MEDIA_ACCESS_UNAVAILABLE
 ```
 
-`429` SHOULD expose `Retry-After` according to the general C5 reliability contract.
-
-Storage-origin failures after grant issuance are transport/download failures and do not mutate publication state.
+Flutter never sees RustFS/S3-specific error classes.
 
 ---
 
-## 11. Explicitly rejected MVP models
+## 12. Explicitly rejected MVP models
 
 C5 does not use:
 
 ```text
 public RustFS bucket
+Flutter → RustFS
+Worker → RustFS
 public stable object URL embedded in publication
-RustFS credentials in Flutter
-client-supplied storage key signing
-long-lived signed URLs stored in Drift
-signed URL inside manifest checksum
-user account / DRM platform
-per-byte proxying through Spring Boot
+RustFS/S3 credentials in Flutter or Worker
+client-supplied storage key lookup
+signed/presigned URL returned to Flutter
+long-lived storage URLs stored in Drift
+redirect from Backend to object storage
 ```
 
-Spring Boot authorizes and issues access; media bytes flow directly from RustFS/edge to Flutter.
+Spring Boot is the sole network boundary for Flutter and Worker.
 
 ---
 
-## 12. Acceptance scenarios
+## 13. Acceptance scenarios
 
-### C5-M01 — Valid installation obtains media access
+### C5-M01 — valid installation streams media through Backend
 
 ```text
 valid token
 + learner-deliverable assetId
-→ 200 access grant
-→ short-lived URL
+→ GET Backend media endpoint
+→ 200 binary bytes
+→ size/checksum valid
 ```
 
-### C5-M02 — Token rotation does not change asset identity
+### C5-M02 — token rotation preserves asset identity
 
 ```text
-T1 resolves asset A → URL1
-cold bootstrap → T2
-T2 resolves asset A → URL2
+T1 downloads asset A
+local A removed
+T2 becomes current token
+T2 downloads asset A again through Backend
 ```
 
 Required:
@@ -310,42 +344,52 @@ Required:
 ```text
 assetId unchanged
 checksum unchanged
-deliveryKey unchanged
-URL may differ
+deliveryKey unchanged in publication metadata
+storage URL never exposed
 ```
 
-### C5-M03 — Expired URL is re-resolved without publication resync
-
-```text
-URL1 expires
-→ request new grant for same assetId
-→ URL2
-→ download
-→ same checksum
-```
-
-### C5-M04 — Revoked installation cannot mint new grants
+### C5-M03 — revoked installation fails closed
 
 ```text
 installation REVOKED
-→ media access request
-→ fail closed
+→ Backend media GET
+→ 401/403
+→ no storage request from Flutter
 ```
 
-### C5-M05 — Arbitrary object-key signing is impossible
+### C5-M04 — arbitrary storage access is impossible
 
-Supplying an unknown `assetId` or attempting to provide a raw storage path MUST NOT produce a signed URL.
+Flutter cannot submit bucket, deliveryKey, object path or URL. Unknown `assetId` returns `404`/typed failure.
 
-### C5-M06 — Integrity remains C4-owned
+### C5-M05 — integrity remains C4-owned
 
-A successful signed URL download whose bytes do not match `checksumSha256` is rejected and never promoted to trusted local media.
+Backend streams bytes whose checksum does not match publication metadata:
 
-### C5-M07 — Signed URL is not durable state
+```text
+→ Flutter rejects
+→ temp bytes removed
+→ never promoted to trusted local media
+```
 
-Restarting Flutter after URL expiry still resolves the media from stable `assetId`/`deliveryKey`; no persisted signed URL is required.
+### C5-M06 — Backend never redirects to storage
+
+```text
+Backend 3xx Location: RustFS/S3/CDN
+→ Flutter rejects response
+→ no redirect followed
+```
+
+### C5-M07 — local deletion is recoverable
+
+```text
+verified local file deleted
+→ next resolve(downloadIfMissing)
+→ Backend-only GET
+→ same immutable asset restored
+```
 
 ---
 
-## 13. Frozen rule
+## 14. Frozen rule
 
-> C4 publishes stable media identity. C5 authorizes access to that identity and may issue short-lived delivery grants. RustFS/edge serves the bytes. Ephemeral delivery credentials never become publication state.
+> Flutter and TTS Worker communicate only with Spring Boot. RustFS is Backend-internal infrastructure. Backend resolves `assetId`/`deliveryKey`, accesses RustFS and streams or accepts bytes. No storage URL, presigned grant or object-store credential crosses into Flutter or Worker.

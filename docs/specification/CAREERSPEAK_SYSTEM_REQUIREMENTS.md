@@ -1,6 +1,6 @@
 # CareerSpeak / VoxPrep — System Requirements
 
-**Document version:** 0.14  
+**Document version:** 0.15  
 **Status:** Normative MVP baseline  
 **Target:** Android + iOS learner app, Spring Boot backend, TTS Worker
 
@@ -161,6 +161,8 @@ Use native SQL only where useful, notably TTS claim/lease concurrency.
 
 Do not mirror Flutter DTOs directly into JPA entities.
 
+Spring Boot is the sole remote network boundary for Flutter and TTS Worker. RustFS is Backend-internal storage and is accessed only by Backend storage adapters.
+
 ---
 
 ## 5. Flutter architecture
@@ -188,6 +190,8 @@ ReviewScheduler
 StorageRetentionManager
 LearnerContentStateRepository
 ```
+
+Widgets do not issue raw HTTP/SQL calls.
 
 ---
 
@@ -372,7 +376,7 @@ Root identity is locale-independent; locale changes only the downloaded support 
 
 ## 13. Audio / media
 
-RustFS stores binary objects; PostgreSQL stores metadata.
+RustFS stores binary objects behind Backend; PostgreSQL stores metadata.
 
 Published media identity:
 
@@ -382,9 +386,22 @@ checksumSha256
 deliveryKey
 ```
 
-Flutter verifies downloaded bytes before local use.
+Learner media path:
 
-Media authorization/public-CDN policy must be explicit; do not imply the installation token protects CDN bytes if it does not.
+```text
+Flutter
+→ GET /api/v1/media/assets/{assetId}/content
+→ Spring Boot validates installation + publication eligibility
+→ Backend resolves FileAsset/deliveryKey
+→ Backend reads RustFS
+→ Backend streams bytes
+→ Flutter verifies size + SHA-256
+→ managed local file
+```
+
+Flutter MUST NOT receive RustFS/S3/CDN credentials, storage URLs, signed/presigned URLs, buckets or object paths, and MUST NOT use `deliveryKey` as a remote network locator.
+
+Backend MUST NOT redirect learner media to object storage.
 
 ---
 
@@ -402,12 +419,12 @@ TtsWorker
 Worker flow:
 
 ```text
-claim
-→ exact model/config
+claim through Backend
+→ exact model/config through Backend
 → Piper
 → FFmpeg
 → technical QC
-→ backend upload/finalization
+→ Backend upload/finalization
 ```
 
 Queue:
@@ -418,7 +435,7 @@ FOR UPDATE SKIP LOCKED
 
 with lease token, expiry, heartbeat, bounded retry and stale-result rejection.
 
-Worker never receives direct PostgreSQL or permanent RustFS credentials.
+Worker never receives direct PostgreSQL or RustFS credentials and never addresses RustFS directly.
 
 ---
 
@@ -466,9 +483,10 @@ Eviction never erases learner progress/preferences/review state.
 ## 17. Security zones
 
 ```text
-/admin/**       → ADMIN session
-/api/v1/**      → installation token
+/admin/**           → ADMIN session
+/api/v1/**          → installation token
 /internal/v1/tts/** → worker token
+Backend storage     → private RustFS credentials
 ```
 
 Installation-token lifecycle must define re-registration, rejection/revocation and one bounded credential recovery attempt.
@@ -478,12 +496,14 @@ Installation-token lifecycle must define re-registration, rejection/revocation a
 ## 18. Failure isolation
 
 ```text
-Backend down     → existing local learning continues
-TTS Worker down  → jobs wait; published content unaffected
-CDN/RustFS issue → verified local assets continue
-sync crash       → last CURRENT snapshot remains
-worker crash     → lease expires/reclaim
+Backend down               → existing local learning continues
+TTS Worker down            → jobs wait; published content unaffected
+Backend media/storage down → verified local assets continue
+sync crash                 → last CURRENT snapshot remains
+worker crash               → lease expires/reclaim
 ```
+
+Storage-specific failures are translated by Backend and never require Flutter/Worker to contact RustFS directly.
 
 ---
 
@@ -526,6 +546,8 @@ localized payload delivery
 Category/Level/Skill/SupportedLocale/TtsVoice ownership
 atomic publication snapshot
 installation-token recovery
+Backend-only learner media delivery
+Backend-only Worker model/output delivery
 Drift ERD
 learner + worker OpenAPI
 TTS lease/recovery

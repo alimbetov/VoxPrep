@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/app_preferences_providers.dart';
 import '../../app/mock_visual_preferences.dart';
 import '../../domain/application_preferences.dart';
+import 'catalogue_source_settings_tile.dart';
+import 'locale_selection_panel.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -23,6 +25,13 @@ class SettingsScreen extends ConsumerWidget {
       children: [
         Text('Settings', style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 24),
+        Text(
+          'Catalogue source',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        const CatalogueSourceSettingsTile(),
+        const SizedBox(height: 28),
         Text('Appearance', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 12),
         Wrap(
@@ -60,67 +69,30 @@ class SettingsScreen extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 28),
-        Text('Language', style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'Country and language',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 16,
-          runSpacing: 16,
-          children: [
-            SizedBox(
-              width: 280,
-              child: DropdownMenu<AppUiLocale>(
-                initialSelection: preferences.uiLocale,
-                enabled: preferencesReady,
-                label: const Text('UI language'),
-                expandedInsets: EdgeInsets.zero,
-                dropdownMenuEntries: [
-                  for (final value in AppUiLocale.values)
-                    DropdownMenuEntry(value: value, label: value.label),
-                ],
-                onSelected: (value) {
-                  if (value != null) {
-                    preferencesController.setUiLocale(value);
-                  }
-                },
-              ),
-            ),
-            SizedBox(
-              width: 280,
-              child: DropdownMenu<AppTranslationLocale>(
-                initialSelection: preferences.translationLocale,
-                enabled: preferencesReady,
-                label: const Text('Translation language'),
-                expandedInsets: EdgeInsets.zero,
-                dropdownMenuEntries: [
-                  for (final value in AppTranslationLocale.values)
-                    DropdownMenuEntry(value: value, label: value.label),
-                ],
-                onSelected: (value) {
-                  if (value != null) {
-                    preferencesController.setTranslationLocale(value);
-                  }
-                },
-              ),
-            ),
-            SizedBox(
-              width: 280,
-              child: DropdownMenu<PreferredEnglishAccent>(
-                initialSelection: preferences.preferredAccent,
-                enabled: preferencesReady,
-                label: const Text('Preferred accent'),
-                expandedInsets: EdgeInsets.zero,
-                dropdownMenuEntries: [
-                  for (final value in PreferredEnglishAccent.values)
-                    DropdownMenuEntry(value: value, label: value.label),
-                ],
-                onSelected: preferencesController.setPreferredAccent,
-              ),
-            ),
-          ],
+        const LocaleSelectionPanel(),
+        const SizedBox(height: 20),
+        SizedBox(
+          width: 280,
+          child: DropdownMenu<PreferredEnglishAccent>(
+            initialSelection: preferences.preferredAccent,
+            enabled: preferencesReady,
+            label: const Text('Preferred English accent'),
+            expandedInsets: EdgeInsets.zero,
+            dropdownMenuEntries: [
+              for (final value in PreferredEnglishAccent.values)
+                DropdownMenuEntry(value: value, label: value.label),
+            ],
+            onSelected: preferencesController.setPreferredAccent,
+          ),
         ),
         const SizedBox(height: 8),
         Text(
-          'Locale preferences persist BCP-47 codes. English remains the learning language; the backend SupportedLocale catalog is authoritative for translation availability.',
+          'Country controls which locales Backend offers. The selected locale is the single source of truth for hints, explanations, API Accept-Language and localized UI where available.',
           style: Theme.of(context).textTheme.bodySmall,
         ),
         if (preferencesAsync.hasError) ...[
@@ -185,14 +157,12 @@ class SettingsScreen extends ConsumerWidget {
               children: [
                 Text('Current', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
+                Text('Country: ${preferences.countryCode ?? 'Not selected'}'),
                 Text(
-                  'UI: ${preferences.uiLocale.label} (${preferences.uiLocale.code})',
+                  'Language: ${preferences.selectedLocale.label} (${preferences.selectedLocale.code})',
                 ),
                 Text(
-                  'Translation: ${preferences.translationLocale.label} (${preferences.translationLocale.code})',
-                ),
-                Text(
-                  'Direction: ${preferences.uiLocale.isRtl ? 'RTL' : 'LTR'}',
+                  'Direction: ${preferences.selectedLocale.isRtl ? 'RTL' : 'LTR'}',
                 ),
                 Text(
                   'Accent: ${preferences.preferredAccent?.label ?? 'Default'}',

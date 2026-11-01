@@ -62,9 +62,71 @@ final class PracticeTestRevisionRef {
   String get identityKey => '$practiceTestCode|$revision';
 }
 
+enum LearningCollectionMemberType {
+  content('CONTENT'),
+  practiceTest('PRACTICE_TEST');
+
+  const LearningCollectionMemberType(this.wireName);
+
+  final String wireName;
+
+  static LearningCollectionMemberType fromWireName(String value) {
+    for (final type in values) {
+      if (type.wireName == value) return type;
+    }
+    throw FormatException('Unsupported collection member type: $value');
+  }
+}
+
+final class LearningCollectionMember {
+  factory LearningCollectionMember.content({
+    required int position,
+    required ContentRevisionRef content,
+  }) {
+    return LearningCollectionMember._(
+      position: _position(position),
+      type: LearningCollectionMemberType.content,
+      contentRef: content,
+      practiceTestRef: null,
+    );
+  }
+
+  factory LearningCollectionMember.practiceTest({
+    required int position,
+    required PracticeTestRevisionRef practiceTest,
+  }) {
+    return LearningCollectionMember._(
+      position: _position(position),
+      type: LearningCollectionMemberType.practiceTest,
+      contentRef: null,
+      practiceTestRef: practiceTest,
+    );
+  }
+
+  const LearningCollectionMember._({
+    required this.position,
+    required this.type,
+    required this.contentRef,
+    required this.practiceTestRef,
+  });
+
+  final int position;
+  final LearningCollectionMemberType type;
+  final ContentRevisionRef? contentRef;
+  final PracticeTestRevisionRef? practiceTestRef;
+
+  String get identityKey => switch (type) {
+    LearningCollectionMemberType.content =>
+      '${type.wireName}|${contentRef!.identityKey}',
+    LearningCollectionMemberType.practiceTest =>
+      '${type.wireName}|${practiceTestRef!.identityKey}',
+  };
+}
+
 final class LearningGoalProjection {
   factory LearningGoalProjection({
     required String code,
+    required String verticalCode,
     required String title,
     required String description,
     required int sortOrder,
@@ -72,6 +134,7 @@ final class LearningGoalProjection {
   }) {
     return LearningGoalProjection._(
       code: _stableCode(code, 'code'),
+      verticalCode: _stableCode(verticalCode, 'verticalCode'),
       title: _nonBlank(title, 'title'),
       description: _nonBlank(description, 'description'),
       sortOrder: _sortOrder(sortOrder),
@@ -81,6 +144,7 @@ final class LearningGoalProjection {
 
   const LearningGoalProjection._({
     required this.code,
+    required this.verticalCode,
     required this.title,
     required this.description,
     required this.sortOrder,
@@ -88,6 +152,7 @@ final class LearningGoalProjection {
   });
 
   final String code;
+  final String verticalCode;
   final String title;
   final String description;
   final int sortOrder;
@@ -97,6 +162,7 @@ final class LearningGoalProjection {
 final class LearningTrackProjection {
   factory LearningTrackProjection({
     required String code,
+    required String verticalCode,
     required String goalCode,
     required String title,
     required String description,
@@ -107,6 +173,7 @@ final class LearningTrackProjection {
   }) {
     return LearningTrackProjection._(
       code: _stableCode(code, 'code'),
+      verticalCode: _stableCode(verticalCode, 'verticalCode'),
       goalCode: _stableCode(goalCode, 'goalCode'),
       title: _nonBlank(title, 'title'),
       description: _nonBlank(description, 'description'),
@@ -119,6 +186,7 @@ final class LearningTrackProjection {
 
   const LearningTrackProjection._({
     required this.code,
+    required this.verticalCode,
     required this.goalCode,
     required this.title,
     required this.description,
@@ -129,6 +197,7 @@ final class LearningTrackProjection {
   });
 
   final String code;
+  final String verticalCode;
   final String goalCode;
   final String title;
   final String description;
@@ -141,57 +210,60 @@ final class LearningTrackProjection {
 final class LearningCollectionProjection {
   factory LearningCollectionProjection({
     required String code,
+    required String verticalCode,
     required String trackCode,
     required String title,
     required String description,
     required int sortOrder,
     required bool active,
-    required List<ContentRevisionRef> contentRefs,
-    required List<PracticeTestRevisionRef> practiceTestRefs,
+    required List<LearningCollectionMember> members,
   }) {
-    if (contentRefs.isEmpty && practiceTestRefs.isEmpty) {
+    if (members.isEmpty) {
       throw ArgumentError(
-        'a learning collection must contain content or a practice test',
+        'a learning collection must contain at least one member',
       );
     }
-    _requireUnique(contentRefs.map((ref) => ref.identityKey), 'contentRefs');
-    _requireUnique(
-      practiceTestRefs.map((ref) => ref.identityKey),
-      'practiceTestRefs',
-    );
+    for (var index = 0; index < members.length; index++) {
+      if (members[index].position != index) {
+        throw ArgumentError.value(
+          members[index].position,
+          'members',
+          'positions must be contiguous and start at zero',
+        );
+      }
+    }
+    _requireUnique(members.map((member) => member.identityKey), 'members');
     return LearningCollectionProjection._(
       code: _stableCode(code, 'code'),
+      verticalCode: _stableCode(verticalCode, 'verticalCode'),
       trackCode: _stableCode(trackCode, 'trackCode'),
       title: _nonBlank(title, 'title'),
       description: _nonBlank(description, 'description'),
       sortOrder: _sortOrder(sortOrder),
       active: active,
-      contentRefs: List<ContentRevisionRef>.unmodifiable(contentRefs),
-      practiceTestRefs: List<PracticeTestRevisionRef>.unmodifiable(
-        practiceTestRefs,
-      ),
+      members: List<LearningCollectionMember>.unmodifiable(members),
     );
   }
 
   const LearningCollectionProjection._({
     required this.code,
+    required this.verticalCode,
     required this.trackCode,
     required this.title,
     required this.description,
     required this.sortOrder,
     required this.active,
-    required this.contentRefs,
-    required this.practiceTestRefs,
+    required this.members,
   });
 
   final String code;
+  final String verticalCode;
   final String trackCode;
   final String title;
   final String description;
   final int sortOrder;
   final bool active;
-  final List<ContentRevisionRef> contentRefs;
-  final List<PracticeTestRevisionRef> practiceTestRefs;
+  final List<LearningCollectionMember> members;
 }
 
 final class TaxonomyProjection {
@@ -327,15 +399,20 @@ String _stableCode(String value, String fieldName) {
 }
 
 String? _optionalStableCode(String? value, String fieldName) {
-  if (value == null) {
-    return null;
-  }
+  if (value == null) return null;
   return _stableCode(value, fieldName);
 }
 
 int _sortOrder(int value) {
   if (value < 0) {
     throw ArgumentError.value(value, 'sortOrder', 'must be non-negative');
+  }
+  return value;
+}
+
+int _position(int value) {
+  if (value < 0) {
+    throw ArgumentError.value(value, 'position', 'must be non-negative');
   }
   return value;
 }
