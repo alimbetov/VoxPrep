@@ -46,6 +46,11 @@ final class DriftContentRepository implements ContentRepository {
     try {
       await for (final rows in select.watch()) {
         try {
+          final integrityFailure = await _currentPublicationIntegrityFailure();
+          if (integrityFailure != null) {
+            yield FailureResult<Page<ContentItem>>(integrityFailure);
+            continue;
+          }
           yield Success<Page<ContentItem>>(
             _pageFromRows(rows, query.page.limit),
           );
@@ -63,6 +68,11 @@ final class DriftContentRepository implements ContentRepository {
   @override
   Future<Result<ContentItem?>> getByIdentity(ContentIdentity identity) async {
     try {
+      final integrityFailure = await _currentPublicationIntegrityFailure();
+      if (integrityFailure != null) {
+        return FailureResult<ContentItem?>(integrityFailure);
+      }
+
       final rows = await _database
           .customSelect(
             _identitySql,
@@ -104,6 +114,24 @@ final class DriftContentRepository implements ContentRepository {
     } on Object catch (error) {
       return FailureResult<ContentItem?>(_readFailure(error));
     }
+  }
+
+  Future<ApplicationFailure?> _currentPublicationIntegrityFailure() async {
+    final rows = await _database.customSelect(
+      _danglingCurrentMembershipSql,
+      readsFrom: _publicationReadDependencies,
+    ).get();
+    final danglingCount = rows.single.read<int>('dangling_count');
+    if (danglingCount == 0) return null;
+
+    return ApplicationFailure(
+      code: 'CONTENT_READ_MODEL_INVALID',
+      message: 'The local content read model is inconsistent.',
+      details: <String, Object?>{
+        'reason': 'CURRENT publication contains dangling content membership',
+        'danglingCount': danglingCount,
+      },
+    );
   }
 
   Selectable<QueryRow> _buildCatalogSelect(
@@ -420,6 +448,33 @@ const _snapshotVisibilityPredicate = '''
         AND member.content_revision = l.revision
     )
   )''';
+
+const _danglingCurrentMembershipSql = '''
+SELECT count(*) AS dangling_count
+FROM content_manifest_states root
+INNER JOIN content_pack_revisions pack
+  ON pack.source_content_version = root.current_content_version
+ AND pack.state = 'CURRENT'
+INNER JOIN pack_content_refs member
+  ON member.pack_code = pack.pack_code
+ AND member.variant_key = pack.variant_key
+ AND member.pack_revision = pack.revision
+LEFT JOIN local_content_records local
+  ON local.content_code = member.content_code
+ AND local.content_type = member.content_type
+ AND local.revision = member.content_revision
+ AND local.snapshot_state = 'CURRENT'
+LEFT JOIN content_catalog_reads payload
+  ON payload.content_code = member.content_code
+ AND payload.content_type = member.content_type
+ AND payload.revision = member.content_revision
+WHERE root.id = 1
+  AND (
+    local.content_code IS NULL
+    OR payload.content_code IS NULL
+    OR payload.checksum <> local.checksum
+  )
+''';
 
 const _catalogSelectPrefix =
     '''
