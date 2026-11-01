@@ -24,9 +24,7 @@ const _managedRequestHeaders = <String>{
   'transfer-encoding',
 };
 
-final _localeHeaderPattern = RegExp(
-  r'^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$',
-);
+final _localeHeaderPattern = RegExp(r'^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$');
 
 final class HttpApiClient implements ApiClient {
   factory HttpApiClient({
