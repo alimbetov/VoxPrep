@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/learner_state_providers.dart';
 import '../../app/repository_providers.dart';
+import '../../app/review_schedule_providers.dart';
 import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
 import '../../domain/content_marker_state.dart';
@@ -24,6 +25,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   Widget build(BuildContext context) {
     final contentPage = ref.watch(contentPageProvider);
     final markers = ref.watch(contentMarkersProvider);
+    final dueReviews = ref.watch(dueReviewIdentitiesProvider);
 
     return contentPage.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -42,14 +44,15 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
           ),
         ),
         data: (values) {
-          final items = _itemsFor(page.items, values);
+          final due = dueReviews.asData?.value ?? const <ContentIdentity>{};
+          final items = _itemsFor(page.items, values, due);
           return ListView(
             padding: const EdgeInsets.all(24),
             children: [
               Text('Review', style: Theme.of(context).textTheme.headlineMedium),
               const SizedBox(height: 8),
               const Text(
-                'Use learner markers to return to material that needs attention.',
+                'Use learner markers and scheduled review dates to return to material that needs attention.',
               ),
               const SizedBox(height: 16),
               Wrap(
@@ -82,6 +85,11 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 8),
+              if (filter == _ReviewFilter.due && dueReviews.isLoading)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 12),
+                  child: LinearProgressIndicator(),
+                ),
               if (items.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 48),
@@ -101,14 +109,14 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
   List<ContentItem> _itemsFor(
     List<ContentItem> all,
     Map<ContentIdentity, ContentMarkerState> markers,
+    Set<ContentIdentity> dueReviews,
   ) {
     return all
         .where((item) {
-          final state =
-              markers[ContentIdentity.fromItem(item)] ??
-              const ContentMarkerState();
+          final identity = ContentIdentity.fromItem(item);
+          final state = markers[identity] ?? const ContentMarkerState();
           return switch (filter) {
-            _ReviewFilter.due => !state.completed,
+            _ReviewFilter.due => dueReviews.contains(identity),
             _ReviewFilter.favorites => state.favorite,
             _ReviewFilter.notListened => item.hasAudio && !state.listened,
           };
