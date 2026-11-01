@@ -1,16 +1,34 @@
 # CareerSpeak / VoxPrep — BA Product Contract Remediation Roadmap
 
-**Status:** Proposed remediation baseline  
+**Status:** Reconciled / implementation-complete for Flutter BA scope  
 **Branch:** `feat/ba-product-contract-remediation`  
-**Purpose:** Close product/business-analysis gaps discovered after merging the universal vertical catalogue foundation into `main`.
+**Purpose:** Historical traceability of the product/business-analysis remediation that established the CareerSpeak v1 learner contract.
+
+Normative current sources:
+
+- [`CAREERSPEAK_PRODUCT_REQUIREMENTS.md`](CAREERSPEAK_PRODUCT_REQUIREMENTS.md)
+- [`CAREERSPEAK_MVP_DELIVERY_SCOPE.md`](CAREERSPEAK_MVP_DELIVERY_SCOPE.md)
+- [`CAREERSPEAK_MVP_FUNCTIONAL_BUSINESS_AUDIT_2026-11-01.md`](CAREERSPEAK_MVP_FUNCTIONAL_BUSINESS_AUDIT_2026-11-01.md)
+
+This roadmap no longer re-opens feature scope. If any historical item below conflicts with those normative documents, the normative documents win.
 
 ---
 
-## 1. Objective
+## 1. Remediation objective
 
-The technical foundation is already strong: universal backend-owned catalogue, offline-first content delivery, immutable publication snapshots, localized payloads, audio/TTS boundaries, adaptive UI and adversarial qualification.
+The remediation stream removed product ambiguity around:
 
-This remediation stream does **not** introduce a new product architecture. Its purpose is to remove remaining product ambiguity before the next large implementation phase.
+```text
+Vertical ownership
+3-step onboarding
+learner selection ownership
+Continue Learning
+exact revision completion
+PracticeTest lifecycle
+Review / Due
+learner media boundary
+MVP scope freeze
+```
 
 Primary rule:
 
@@ -24,9 +42,7 @@ one business rule
 
 ---
 
-## 2. Current product model to freeze
-
-The learner catalogue hierarchy is:
+## 2. Frozen product model
 
 ```text
 Vertical
@@ -42,699 +58,253 @@ Ordered CollectionMember
  └─ exact PracticeTestRevision
 ```
 
-Definitions:
-
-- `Vertical` = subject/professional learning domain, e.g. `JAVA`, `DEVOPS`, `MEDICAL_ENGLISH`.
-- `LearningGoal` = learner intention/result within one Vertical.
-- `LearningTrack` = concrete learning path within one Goal.
-- `LearningCollection` = ordered learner unit/topic.
-- `CollectionMember` = exact immutable content or assessment revision.
-
-Backend owns catalogue/product truth. Flutter owns local learner state and current local projections.
+Backend owns catalogue/product truth. Flutter owns device-local learner state and synchronized CURRENT projections.
 
 ---
 
-## 3. Priority model
+## 3. Remediation decisions
 
-### P0 — contract inconsistencies / blockers
+### BA-01 — Vertical normative hierarchy — ACCEPTED
 
-Must be resolved before the next product-domain freeze.
+`Vertical` is the learner-facing root of every Goal/Track/Collection chain. A Goal belongs to exactly one Vertical. Adding a Vertical requires backend catalogue data, not a permanent Flutter enum or dedicated code path.
 
-### P1 — important learner-journey gaps
+### BA-02 — Onboarding — ACCEPTED
 
-Must be resolved before MVP production acceptance.
-
-### P2 — product maturity / measurement
-
-May be implemented after core learner journeys are stable, but decisions should be recorded now.
-
----
-
-# 4. P0 remediation backlog
-
-## BA-01 — Make Vertical normative everywhere
-
-### Problem
-
-The Universal Vertical Catalogue uses:
+Exactly three learner decisions:
 
 ```text
-Vertical → Goal → Track → Collection
+1. Vertical + LearningGoal
+2. B1 / B2 / C1 / Not sure
+3. support language
 ```
 
-while older Product/System/Mobile requirements still describe:
+Skippable, account-free, restart-safe, CURRENT-validated. Skip preserves explicit choices and never fabricates a learning direction.
+
+### BA-03 — Learner selection ownership — ACCEPTED
+
+Persist:
 
 ```text
-Goal → Track → Collection
+selectedGoalCode?
+selectedTrackCode?
 ```
 
-### Decision
+Current Vertical derives from the selected CURRENT Goal.
 
-`Vertical` becomes the normative top-level catalogue dimension for all learner journeys and contracts.
-
-### Required updates
-
-- Product Requirements
-- System Requirements
-- Mobile Application Requirements
-- Cross-system documentation where hierarchy is described
-- onboarding stories
-- Home/Learn discovery stories
-- analytics/event vocabulary
-
-### Acceptance criteria
-
-- no normative document defines Goal as the top-level catalogue root;
-- Goal has exactly one Vertical;
-- route/backend/catalogue ownership semantics are consistent;
-- adding a new Vertical requires no Flutter enum or dedicated screen.
-
----
-
-## BA-02 — Freeze final onboarding flow
-
-### Problem
-
-Existing normative requirements define three steps as Goal → Level → Support Language, while current Flutter only has locale onboarding and the product now has Vertical.
-
-### Decision
-
-MVP onboarding remains three-step and account-free:
+The previously proposed automatic sibling fallback is **cancelled**. Normative fail-closed behavior is:
 
 ```text
-1. Learning direction
-   → user-facing Vertical/Goal selection
-2. Approximate English level
-   → B1 / B2 / C1 / Not sure
-3. Support / translation language
-   → active backend-published SupportedLocale
+Track inactive/missing
+→ clear Track
+→ preserve active Goal
+
+Goal inactive/missing
+→ clear Goal + Track
+→ current Vertical unset
+→ Choose learning direction
+
+Vertical inactive/missing
+→ selected Goal invalid
+→ same Goal rule
 ```
 
-The first screen may visually combine Vertical and Goal; the persisted business identities remain explicit.
+Never select the first active Track/Goal automatically and never cross to another Vertical silently.
 
-### Rules
+### BA-04 — Continue Learning — ACCEPTED / IMPLEMENTED
 
-- skippable;
-- restart-safe;
-- no mandatory account;
-- inactive selections fall back deterministically;
-- browsing is never blocked if onboarding is skipped;
-- accent/voice/download preferences remain outside onboarding.
-
-### Acceptance criteria
-
-Positive:
-
-- complete all three steps;
-- skip from each step;
-- resume after process restart;
-- select arbitrary backend-published Vertical/Goal;
-- choose `Not sure` level.
-
-Negative/adversarial:
-
-- selected Vertical/Goal becomes inactive between steps;
-- locale catalogue unavailable but existing local catalogue exists;
-- backend offline after first launch with staged/local values.
-
----
-
-## BA-03 — Define current learner selection ownership
-
-### Problem
-
-Existing state references `selectedGoalCode` / `selectedTrackCode`, but the product now has Vertical.
-
-### Decision
-
-Do **not** maintain `selectedVerticalCode` as an independent durable source of truth when Goal has exactly one Vertical.
-
-Normative relation:
-
-```text
-selectedGoalCode
-→ Goal.verticalCode
-→ current Vertical
-```
-
-`selectedTrackCode` must belong to `selectedGoalCode`.
-
-### Invariants
-
-Invalid states must never persist:
-
-```text
-selectedGoal.vertical != displayed/current Vertical
-selectedTrack.goal != selectedGoal
-```
-
-### Deterministic fallback
-
-```text
-Track inactive
-→ first active Track of same Goal
-
-Goal inactive
-→ first active Goal of same Vertical
-
-Vertical inactive / no active Goal
-→ clear current learning selection
-→ show Choose learning direction
-```
-
-Never silently switch the learner to an unrelated Vertical.
-
----
-
-## BA-04 — Freeze Continue Learning algorithm
-
-### Goal
-
-Home must deterministically answer: **What should I do next?**
-
-### Priority
+Priority:
 
 ```text
 1. resumable active PracticeTest attempt
-2. unfinished last-opened Content item
-3. next incomplete member in current Collection
-4. next Collection in current Track
+2. unfinished last-opened Content
+3. next incomplete current-Collection member
+4. next eligible Collection in current Track
 5. current Track / current Vertical browse entry
 6. Choose learning direction
 ```
 
-### Invalid target handling
+Every candidate is revalidated against CURRENT. Tombstoned, inactive, dangling and revision-mismatched targets are skipped, not repaired by guessing.
 
-If the previous target is:
+### BA-05 — Completion/revision semantics — ACCEPTED / IMPLEMENTED
 
-- tombstoned;
-- inactive;
-- no longer a member of the current publication;
-- incompatible with the current app contract;
+Ordinary Content completion is explicit learner intent. `LISTENED` never implies `COMPLETED`.
 
-then skip it and continue down the priority chain.
+PracticeTest completion occurs on valid submit.
 
-### Acceptance criteria
-
-- deterministic after restart;
-- no stale/dead deep links;
-- no cross-Vertical fallback;
-- updated content revision does not corrupt historical completion state.
-
----
-
-## BA-05 — Define completion semantics
-
-### Content
-
-For MVP, content completion is explicit learner intent:
+Completion is exact-revision aware:
 
 ```text
-Vocabulary → manual Complete
-Phrase     → manual Complete
-Topic      → manual Complete
-Interview  → manual Complete
-Shadowing  → manual Complete
+Completed revision N
+!=
+automatically Completed revision N+1
 ```
 
-`LISTENED` never implies `COMPLETED`.
+Historical learner state is not rewritten by publication updates.
 
-### Assessment
+### BA-06 — Assessment — ACCEPTED AT MVP CONTRACT LEVEL
 
-`PracticeTest` is completed automatically when a valid attempt is submitted.
+PracticeTest attempts are restart-safe and revision-pinned. Submitted completion/history preserves exact test revision identity.
 
-### Revision semantics
+No recommendation service, universal pass threshold or AI dependency is required by the v1 product contract.
 
-If the learner completed revision N and revision N+1 becomes current:
+Any richer LEARN/EXAM/QUICK presentation behavior that is not already implemented is not a reason to reopen the Flutter learner-domain architecture before C4/C5/B1/A1.
 
-```text
-historical state: Completed revision N
-current content: Updated revision N+1 available
-```
+### BA-07 — Review policy — ACCEPTED / IMPLEMENTED
 
-Do not rewrite historical completion.
-
-Suggested UI state:
-
-```text
-Completed
-Updated
-[Review updated version]
-```
-
----
-
-## BA-06 — Freeze assessment product rules
-
-### Supported modes
-
-```text
-LEARN
-EXAM
-QUICK
-```
-
-### LEARN
-
-- answer can be changed before confirmation;
-- feedback/explanation appears after confirming the question;
-- learner may continue after incorrect answer;
-- no global pass threshold required.
-
-### EXAM
-
-- answers may be changed until final Submit;
-- correctness/explanations hidden until Submit;
-- no timer in MVP unless explicitly configured later;
-- exact immutable question revisions are retained with attempt history.
-
-### QUICK
-
-- small deterministic subset from the selected Collection/Track;
-- selection rule must be deterministic and revision-stable;
-- no AI/recommendation dependency.
-
-### Retake
-
-- multiple attempts allowed;
-- attempts are immutable history;
-- latest and best score may both be displayed, but one must not overwrite history.
-
-### Open decisions to implement/freeze
-
-- percentage scoring formula;
-- treatment of unanswered questions;
-- pass threshold, if any;
-- whether all MVP questions have equal weight.
-
-Recommended MVP:
-
-```text
-score = correct / answerable questions × 100
-unanswered = incorrect
-all questions equal weight
-no universal pass threshold
-```
-
----
-
-## BA-07 — Freeze review scheduling policy
-
-### Existing invariant
+Strict Due semantics:
 
 ```text
 Due = nextReviewAt <= now
 Due != !Completed
 ```
 
-### Required deterministic MVP policy
+Normative deterministic v1 outcome policy is defined in [`CAREERSPEAK_REVIEW_POLICY.md`](CAREERSPEAK_REVIEW_POLICY.md).
 
-Suggested initial stages:
-
-| Outcome | Stage effect | Next review |
-|---|---:|---:|
-| incorrect | reset / 0 | +10 minutes |
-| hard | max(stage, 1) | +1 day |
-| correct | stage +1 | 1d / 3d / 7d / 14d / 30d |
-| known | stage +2, capped | 7d / 14d / 30d |
-
-The exact table must become normative before implementation acceptance.
-
-### Rules
-
-- scheduler is local and deterministic;
-- survives restart and cache cleanup;
-- clock/timezone changes must not create duplicate reviews;
-- content tombstone preserves historical review state but removes impossible active targets.
-
----
-
-## BA-08 — Complete Favorites and Downloads journeys
-
-### Favorites
-
-User story:
-
-> As a learner, I can save content and later open a dedicated Favorites view.
-
-Required journey:
+Review state:
 
 ```text
-Content → Favorite
- ↓
-Favorites screen
- ↓
-filter/open/remove
+nextReviewAt
+reviewStage
+lastReviewOutcome
 ```
 
-Empty state:
+The scheduler is local, deterministic, UTC-based and restart-safe.
+
+### BA-08 — Favorites / Downloads — RECONCILED, NO NEW FEATURE STREAM
+
+The older roadmap proposed dedicated Favorites and Downloads screens. That scope is superseded.
+
+CareerSpeak v1 requires:
 
 ```text
-No favorites yet
-[Browse learning content]
+FAVORITE durable local marker/filter
+verified offline asset download/cache infrastructure
+AssetResolver offline use
+learner state preserved across cache/media cleanup
 ```
 
-### Downloads
-
-User story:
-
-> As a learner, I can make a Collection available offline and later remove the downloaded media without losing progress.
-
-Preferred UX scope:
+CareerSpeak v1 does **not** require:
 
 ```text
-Collection
-[Download for offline]
+standalone Favorites screen/area
+user-managed Downloads dashboard
+collection download library/storage dashboard
 ```
 
-not arbitrary low-level assets.
+Those convenience surfaces are post-MVP.
 
-Downloads view must expose:
+### BA-09 — Device-local learner state — ACCEPTED
 
-- downloaded Collections;
-- size where available;
-- download/update state;
-- remove offline copy;
-- storage used;
-- retry failure.
-
-Deleting offline media must not delete learner state.
-
----
-
-# 5. P1 remediation backlog
-
-## BA-09 — Explicit device-local learner-state policy
-
-MVP intentionally has no learner account.
-
-Normative product consequence:
+MVP intentionally has no learner account/cloud learner profile.
 
 ```text
-uninstall / device loss / app data reset
-→ local learner progress can be lost
+uninstall / device loss / app-data reset
+→ local learner state may be lost
 ```
 
-This must be documented and communicated honestly.
+Cloud sync is a future capability, not an implicit v1 promise.
 
-Future cloud sync is a separate post-MVP feature, not an implicit promise.
+### BA-10 — Collection continuation/completion — ACCEPTED FOR MVP CONTINUATION
 
----
+Continue Learning only proposes a Collection when it has at least one exact incomplete CURRENT member. A fully completed Collection cannot create a continuation loop.
 
-## BA-10 — Define Collection completion
+No optional-member curriculum engine is introduced in v1.
 
-Recommended MVP rule:
+### BA-11 — Search scope — ACCEPTED
 
-```text
-Collection completed
-= all required CollectionMembers completed
-```
+Search defaults to current Vertical when a current direction exists. Cross-Vertical expansion must be explicit and search results retain enough hierarchy context to explain ownership.
 
-For MVP either:
+### BA-12 — Empty/error states — ACCEPTED AS UX POLICY
 
-1. every member is required; or
-2. add explicit `requiredForCompletion` to CollectionMember contract.
+Normal learner states include no Review due, no search results, unavailable optional audio/translation and empty hierarchy levels. UI must use learner-safe copy and avoid raw engineering terminology/exceptions.
 
-Prefer option 1 unless product evidence requires optional members.
+### BA-13 — Admin workflow — ACCEPTED
 
-PracticeTest member completion = submitted attempt, not passing score unless a future track explicitly defines a threshold.
+One ADMIN is sufficient. `READY_FOR_REVIEW` is a content process state, not a security role. A single admin may author, prepare/review audio and publish, subject to publication validation.
 
----
+### BA-14 / BA-15 — Metrics and telemetry — DEFERRED
 
-## BA-11 — Define Search scope
+Success metrics may be defined for product validation, but no analytics platform/domain is an MVP architectural dependency until telemetry/privacy requirements are explicitly approved.
 
-Default search scope:
+### BA-16 — Commercial mode — DEFERRED / NO ENTITLEMENT CONTRACT
 
-```text
-current Vertical
-```
+Payments/subscriptions/marketplace are outside CareerSpeak v1. No entitlement behavior may be invented inside learner/backend implementation.
 
-Optional user filter:
+### BA-17 — Learner media delivery — ACCEPTED
+
+The earlier A/B decision is resolved for v1.
+
+Normative path:
 
 ```text
-All learning areas
-```
-
-Search must not silently mix unrelated domains unless the learner explicitly expands the scope.
-
-Search result must preserve enough hierarchy context to explain where the result belongs.
-
----
-
-## BA-12 — Define normal empty states
-
-These are product states, not technical failures:
-
-- Vertical with no active Goal;
-- Goal with no active Track;
-- Track with no active Collection;
-- no Favorites;
-- no Review due;
-- optional audio missing;
-- optional localized hint/translation missing;
-- offline asset not downloaded;
-- no search results.
-
-Every empty state must define:
-
-```text
-message
-+ optional explanation
-+ safe next action
-```
-
-No raw engineering terminology.
-
----
-
-## BA-13 — Admin workflow semantics
-
-One ADMIN remains sufficient for MVP.
-
-`READY_FOR_REVIEW` is a **content process state**, not a security role.
-
-Same Admin may perform:
-
-```text
-author
-→ request/generate audio
-→ preview
-→ review
-→ publish
-```
-
-Required business validation before publish:
-
-- valid Vertical ownership;
-- required localized/canonical fields according to policy;
-- required audio roles present;
-- exact immutable refs/checksums valid;
-- no inactive/mismatched parent graph;
-- preview succeeds.
-
----
-
-# 6. P2 product maturity backlog
-
-## BA-14 — Define MVP success metrics
-
-Recommended minimal KPIs:
-
-```text
-Activation
-= onboarding complete or skipped + first content opened
-
-First value
-= first content completed or first test submitted
-
-D7 retention
-
-Learning sessions/week
-
-Audio adoption
-= content sessions with audio playback / eligible sessions
-
-Assessment conversion
-= test started/completed after Collection use
-
-Offline success
-= offline-open sessions completed without remote dependency
-```
-
-Targets are a product decision and are not invented by implementation.
-
----
-
-## BA-15 — Minimal anonymous telemetry taxonomy
-
-No large analytics domain is required.
-
-Recommended anonymous events:
-
-```text
-app_open
-onboarding_completed
-onboarding_skipped
-vertical_selected
-goal_selected
-track_selected
-collection_opened
-content_opened
-audio_started
-audio_completed
-content_completed
-favorite_changed
-offline_download_started
-offline_download_completed
-test_started
-test_submitted
-review_completed
+Flutter installation token
+→ authenticated Backend learner media API
+→ Backend-controlled byte delivery
+→ Flutter size/checksum verification
+→ verified local asset
 ```
 
 Rules:
 
-- no learner PII;
-- no raw free text;
-- stable business codes allowed where privacy policy approves;
-- telemetry failure never blocks learning.
+```text
+Flutter receives no RustFS/object-storage credentials
+Flutter does not treat deliveryKey as a remote URL
+Backend owns learner media authorization
+verified local files remain usable offline
+```
+
+A direct/signed object-storage grant is not part of v1 and would require a separate versioned future contract.
 
 ---
 
-## BA-16 — Declare MVP commercial mode
+## 4. Traceability expectations
 
-Payments/subscriptions/marketplace remain outside this remediation stream.
+Every active MVP capability should map to:
 
-Until a monetization contract exists, record MVP as:
-
-```text
-free pilot / product validation release
-```
-
-This prevents accidental assumptions that entitlement/payment behavior already exists.
-
----
-
-# 7. Cross-system contract issue requiring explicit resolution
-
-## BA-17 — Choose one learner media delivery model
-
-There must be exactly one normative model.
-
-Two incompatible models have appeared in project documentation/implementation history:
-
-### Model A — Backend streaming
-
-```text
-Flutter
-→ authenticated Backend media endpoint
-→ Backend streams bytes
-→ Flutter verifies checksum
-```
-
-### Model B — Backend-issued temporary media access grant
-
-```text
-Flutter
-→ authenticated access request
-→ Backend returns temporary signed grant URL
-→ Flutter downloads bytes
-→ Flutter verifies checksum
-```
-
-### Required decision
-
-Before backend/media contract freeze, choose one and update **all** of:
-
-- learner OpenAPI;
-- cross-system contract;
-- mobile requirements;
-- media security specification;
-- Flutter production adapter;
-- acceptance tests.
-
-No document may say signed URLs are forbidden while production code depends on them, or vice versa.
-
-Decision criteria:
-
-- object-storage credentials must never be exposed;
-- grants must be short-lived and scope-bound if Model B is selected;
-- redirects/storage topology must be explicitly allowed or forbidden;
-- offline/local checksum verification remains mandatory;
-- token/grant recovery semantics must be defined.
-
-Priority: **P0 architecture/business contract consistency**.
-
----
-
-# 8. Traceability matrix required for closure
-
-Every remediation item must eventually map as follows:
-
-| Layer | Required evidence |
+| Layer | Evidence |
 |---|---|
-| Epic | learner/business outcome |
-| User Story | user value statement |
-| Business Rule | deterministic normative rule |
-| Acceptance Criteria | Given/When/Then positive + negative |
-| Backend Contract | ownership/API/publication effect |
-| Flutter | screen/state/navigation effect |
-| Persistence | durable/local data impact |
+| Business outcome | learner/system value |
+| Business rule | deterministic normative rule |
+| Acceptance | positive + negative/adversarial behavior |
+| Backend contract | ownership/API/publication impact |
+| Flutter | state/navigation/application impact |
+| Persistence | durable/restart impact |
 | Tests | unit/integration/widget/E2E as appropriate |
 
-A high line-coverage number is not considered proof that a business story is complete.
+Line coverage alone is not proof of business completeness.
 
 ---
 
-# 9. Recommended implementation order
+## 5. Final remediation closure
+
+Business/functional remediation is sufficient when:
 
 ```text
-BA-01 Vertical normative hierarchy
- ↓
-BA-02 onboarding
- ↓
-BA-03 learner selection/fallback
- ↓
-BA-04 Continue algorithm
- ↓
-BA-05 completion/revision semantics
- ↓
-BA-06 assessment rules
- ↓
-BA-07 review policy
- ↓
-BA-08 Favorites + Downloads
- ↓
-BA-17 media delivery contract reconciliation
- ↓
-BA-09..BA-13 remaining MVP UX/operations
- ↓
-BA-14..BA-16 telemetry/KPI/commercial declaration
+[✓] Vertical → Goal → Track → Collection is normative everywhere
+[✓] onboarding has one final 3-decision definition
+[✓] current learner selection is fail-closed and deterministic
+[✓] Continue Learning priority is deterministic and CURRENT-revalidated
+[✓] completion/test semantics preserve exact revision identity
+[✓] Review/Due policy is deterministic and restart-safe
+[✓] Favorites/Downloads no longer create mandatory feature streams
+[✓] device-local state limitation is explicit
+[✓] learner media uses one Backend-authorized contract
+[✓] telemetry/commercial work is explicitly deferred rather than implied
+[✓] remaining delivery gates are explicit
 ```
 
-`BA-17` may be moved earlier and should be resolved before backend media implementation freezes.
-
----
-
-# 10. Definition of Done for BA remediation
-
-The remediation stream is accepted when:
+The remaining active MVP delivery sequence is not another BA feature backlog:
 
 ```text
-[ ] Vertical → Goal → Track → Collection is normative everywhere
-[ ] onboarding has one final three-step definition and matching implementation plan
-[ ] current learner selection and inactive fallback are deterministic
-[ ] Continue Learning priority is deterministic
-[ ] content/test/collection completion semantics are explicit
-[ ] assessment modes/scoring/retake rules are frozen
-[ ] review scheduling intervals are frozen
-[ ] Favorites and Downloads have complete learner journeys
-[ ] device-local progress loss policy is explicit
-[ ] Search and normal empty states are specified
-[ ] ADMIN review state semantics are explicit
-[ ] learner media delivery uses one non-conflicting contract
-[ ] MVP success metrics and minimal telemetry are approved or explicitly deferred
-[ ] commercial mode is declared
-[ ] every P0/P1 story has traceability to acceptance tests
+R1 exact-revision engineering qualification
+ ↓
+C4 Atomic Publication
+ ↓
+C5 Installation / Security
+ ↓
+B1 Backend schema + modular-monolith implementation
+ ↓
+A1 Backend ↔ Flutter cross-system acceptance
 ```
 
-After this point, implementation may proceed without inventing product behavior inside Flutter/backend code.
+No new Flutter learner-domain stream should be created before these gates unless required to correct a demonstrated defect in an accepted contract.
