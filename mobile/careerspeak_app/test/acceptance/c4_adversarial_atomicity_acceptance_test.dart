@@ -2,6 +2,7 @@ import 'package:careerspeak_app/application/assessment/assessment_revision_loade
 import 'package:careerspeak_app/application/content_delivery/catalogue_payload.dart';
 import 'package:careerspeak_app/application/content_delivery/catalogue_revision_ref.dart';
 import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
+import 'package:careerspeak_app/application/content_delivery/product_catalog.dart';
 import 'package:careerspeak_app/application/ports/assessment_payload_gateway.dart';
 import 'package:careerspeak_app/application/ports/catalogue_payload_gateway.dart';
 import 'package:careerspeak_app/application/result/result.dart';
@@ -10,7 +11,6 @@ import 'package:careerspeak_app/data/local/drift_assessment_revision_repository.
 import 'package:careerspeak_app/data/local/drift_publication_snapshot_stager.dart';
 import 'package:careerspeak_app/data/local/publication_snapshot_storage.dart';
 import 'package:careerspeak_app/domain/assessment.dart';
-import 'package:careerspeak_app/domain/practice_test.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -240,22 +240,9 @@ final class _UnusedAssessmentGateway implements AssessmentPayloadGateway {
   const _UnusedAssessmentGateway();
 
   @override
-  Future<Result<PracticeTestRevision>> fetchPracticeTestRevision({
-    required String practiceTestCode,
-    required int revision,
-    required String checksum,
-  }) async {
-    return const FailureResult<PracticeTestRevision>(
-      ApplicationFailure(code: 'NOT_USED', message: 'not used'),
-    );
-  }
-
-  @override
-  Future<Result<AssessmentQuestionRevision>> fetchQuestionRevision(
-    QuestionRevisionId target,
-  ) async {
-    return const FailureResult<AssessmentQuestionRevision>(
-      ApplicationFailure(code: 'NOT_USED', message: 'not used'),
+  Future<Result<AssessmentPayload>> fetch(AssessmentRevisionTarget target) async {
+    return const FailureResult<AssessmentPayload>(
+      ApplicationFailure(code: 'UNUSED', message: 'unused'),
     );
   }
 }
