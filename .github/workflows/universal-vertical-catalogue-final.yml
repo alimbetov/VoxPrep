@@ -7,7 +7,7 @@ on:
     paths:
       - 'mobile/careerspeak_app/**'
       - 'contracts/**'
-      - 'docs/backend/**'
+      - 'docs/**'
       - '.github/workflows/universal-vertical-catalogue-final.yml'
   workflow_dispatch:
 
