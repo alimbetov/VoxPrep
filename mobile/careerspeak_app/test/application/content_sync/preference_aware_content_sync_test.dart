@@ -17,6 +17,8 @@ void main() {
     () async {
       final preferencesRepository = _FakePreferencesRepository(
         ApplicationPreferences.defaults.copyWith(
+          countryCode: 'BR',
+          uiLocale: AppUiLocale('pt-BR'),
           translationLocale: AppTranslationLocale.brazilianPortuguese,
         ),
       );
@@ -51,6 +53,33 @@ void main() {
       expect(gateway.etags.single, isNull);
     },
   );
+
+  test('onboarding state defers localized remote sync', () async {
+    final preferencesRepository = _FakePreferencesRepository(
+      ApplicationPreferences.defaults,
+    );
+    final gateway = FakeGateway(
+      Success(RootManifestChanged(manifest: manifest(108), etag: 'etag')),
+    );
+    final sync = PreferenceAwareContentSync(
+      preferencesRepository: preferencesRepository,
+      coordinator: ContentSyncCoordinator(
+        journal: FakeJournal(Success(emptySnapshot())),
+        manifestGateway: gateway,
+        planner: const ContentSyncPlanner(),
+        executor: FakeExecutor(),
+      ),
+    );
+
+    final result = await sync.synchronize(
+      runId: 'run-onboarding',
+      trigger: SyncTrigger.startup,
+    );
+
+    expect(result, isA<Success<ContentSyncOutcome>>());
+    expect((result as Success<ContentSyncOutcome>).value, isA<ContentSyncNoOp>());
+    expect(gateway.calls, 0);
+  });
 
   test('preference read failure prevents remote sync', () async {
     final preferencesRepository = _FakePreferencesRepository.failure(
@@ -103,6 +132,12 @@ final class _FakePreferencesRepository implements AppPreferencesRepository {
   @override
   Stream<Result<ApplicationPreferences>> watchPreferences() =>
       Stream<Result<ApplicationPreferences>>.value(_result);
+
+  @override
+  Future<Result<void>> setLocaleSelection({
+    required String countryCode,
+    required AppTranslationLocale locale,
+  }) async => const Success(null);
 
   @override
   Future<Result<void>> setFocusMode(bool enabled) async => const Success(null);
