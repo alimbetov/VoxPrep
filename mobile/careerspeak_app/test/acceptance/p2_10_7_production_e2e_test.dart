@@ -75,7 +75,11 @@ void main() {
 
       expect(secondBootstrap.credentials.installationId.value, _installationId);
       expect(secondBootstrap.credentials.installationToken.value, _token);
-      expect(backend.registrationCalls, 1);
+      expect(
+        backend.registrationCalls,
+        2,
+        reason: 'Every cold bootstrap must rotate the installation token.',
+      );
       expect(backend.rootManifestCalls, 2);
       expect(backend.packManifestCalls, 1);
       expect(backend.contentPayloadCalls, 1);
@@ -116,7 +120,7 @@ void main() {
   });
 
   testWidgets(
-    'production app syncs from mock backend across renderer snapshots',
+    'production app owns bootstrap and renders synchronized content',
     (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 844));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -132,39 +136,26 @@ void main() {
       addTearDown(client.close);
 
       const screenshotKey = Key('production-e2e-screenshot');
-      ProviderScope buildApp({required bool bootstrap}) => ProviderScope(
-        overrides: [
-          careerSpeakDatabaseProvider.overrideWithValue(database),
-          installationCredentialStoreProvider.overrideWithValue(
-            credentialStore,
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            careerSpeakDatabaseProvider.overrideWithValue(database),
+            installationCredentialStoreProvider.overrideWithValue(
+              credentialStore,
+            ),
+            httpClientProvider.overrideWithValue(client),
+            apiBaseUriProvider.overrideWithValue(
+              Uri.parse('https://api.careerspeak.test'),
+            ),
+          ],
+          child: const RepaintBoundary(
+            key: screenshotKey,
+            child: CareerSpeakApp(),
           ),
-          httpClientProvider.overrideWithValue(client),
-          apiBaseUriProvider.overrideWithValue(
-            Uri.parse('https://api.careerspeak.test'),
-          ),
-        ],
-        child: RepaintBoundary(
-          key: screenshotKey,
-          child: bootstrap
-              ? const ProductionBootstrapHost(child: CareerSpeakApp())
-              : const CareerSpeakApp(),
         ),
       );
 
-      await tester.pumpWidget(buildApp(bootstrap: false));
       expect(find.byKey(screenshotKey), findsOneWidget);
-      expect(find.text('Dependency Injection'), findsNothing);
-      expect(backend.registrationCalls, 0);
-      expect(backend.rootManifestCalls, 0);
-      expect(backend.packManifestCalls, 0);
-      expect(backend.contentPayloadCalls, 0);
-      await _captureScreenshot(
-        tester,
-        screenshotKey,
-        '01-home-before-sync.png',
-      );
-
-      await tester.pumpWidget(buildApp(bootstrap: true));
       final container = ProviderScope.containerOf(
         tester.element(find.byKey(screenshotKey)),
       );
@@ -178,7 +169,7 @@ void main() {
       expect(backend.packManifestCalls, 1);
       expect(backend.contentPayloadCalls, 1);
       await tester.pump();
-      await _captureScreenshot(tester, screenshotKey, '02-home-after-sync.png');
+      await _captureScreenshot(tester, screenshotKey, '01-home-after-sync.png');
 
       container.read(routerProvider).go('/learn');
       await tester.pump();
@@ -188,7 +179,7 @@ void main() {
       await _captureScreenshot(
         tester,
         screenshotKey,
-        '03-learn-after-sync.png',
+        '02-learn-after-sync.png',
       );
 
       await tester.tap(find.text('Dependency Injection'));
@@ -200,7 +191,7 @@ void main() {
       await _captureScreenshot(
         tester,
         screenshotKey,
-        '04-detail-after-sync.png',
+        '03-detail-after-sync.png',
       );
 
       // Dispose ProviderScope and its Drift subscriptions before closing the
