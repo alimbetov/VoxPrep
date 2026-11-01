@@ -9,10 +9,10 @@ import '../../support/test_database_factory.dart';
 
 void main() {
   group('DriftPracticeTestAttemptRepository', () {
-    test('schema v13 persists active attempt across repository reopen', () async {
+    test('v13 capability persists active attempt across repository reopen', () async {
       final database = createTestDatabase();
       addTearDown(database.close);
-      expect(database.schemaVersion, 13);
+      expect(database.schemaVersion, greaterThanOrEqualTo(13));
 
       await _publishPracticeTest(database, code: 'JAVA_CORE', revision: 7);
       final clock = DateTime.utc(2026, 11, 1, 10);
