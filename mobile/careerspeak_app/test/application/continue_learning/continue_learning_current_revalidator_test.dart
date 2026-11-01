@@ -10,6 +10,7 @@ import 'package:careerspeak_app/domain/content_marker_state.dart';
 import 'package:careerspeak_app/domain/last_opened_content.dart';
 import 'package:careerspeak_app/domain/learner_selection.dart';
 import 'package:careerspeak_app/domain/practice_test_attempt.dart';
+import 'package:careerspeak_app/domain/practice_test_completion_key.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -191,29 +192,61 @@ void main() {
       expect(result.browse, isNull);
     });
 
-    test('practice-test member is rejected without durable completion proof', () {
+    test('practice-test member is eligible without exact completion', () {
       final result = revalidator.revalidate(
-        proposed: const ContinueLearningInput(
-          incompleteMembers: <ContinueLearningMemberCandidate>[
-            ContinueLearningMemberCandidate(
-              collectionCode: 'COLLECTION_A',
-              collectionSortOrder: 0,
-              position: 1,
-              target: ContinueLearningPracticeTestTarget(
-                practiceTestCode: 'TEST_A',
-                revision: 5,
-              ),
-            ),
-          ],
-        ),
+        proposed: _practiceTestOnlyInput(),
         graph: _graph(),
         selection: _selection(),
         markers: const <ContentIdentity, ContentMarkerState>{},
       );
 
-      expect(result.incompleteMembers, isEmpty);
+      expect(result.incompleteMembers, hasLength(1));
+      expect(
+        result.incompleteMembers.single.target,
+        isA<ContinueLearningPracticeTestTarget>(),
+      );
+    });
+
+    test('exact practice-test completion suppresses only that revision', () {
+      final exact = revalidator.revalidate(
+        proposed: _practiceTestOnlyInput(),
+        graph: _graph(),
+        selection: _selection(),
+        markers: const <ContentIdentity, ContentMarkerState>{},
+        completedPracticeTests: const <PracticeTestCompletionKey>{
+          PracticeTestCompletionKey(practiceTestCode: 'TEST_A', revision: 5),
+        },
+      );
+      expect(exact.incompleteMembers, isEmpty);
+
+      final older = revalidator.revalidate(
+        proposed: _practiceTestOnlyInput(),
+        graph: _graph(),
+        selection: _selection(),
+        markers: const <ContentIdentity, ContentMarkerState>{},
+        completedPracticeTests: const <PracticeTestCompletionKey>{
+          PracticeTestCompletionKey(practiceTestCode: 'TEST_A', revision: 4),
+        },
+      );
+      expect(older.incompleteMembers, hasLength(1));
     });
   });
+}
+
+ContinueLearningInput _practiceTestOnlyInput() {
+  return const ContinueLearningInput(
+    incompleteMembers: <ContinueLearningMemberCandidate>[
+      ContinueLearningMemberCandidate(
+        collectionCode: 'COLLECTION_A',
+        collectionSortOrder: 0,
+        position: 1,
+        target: ContinueLearningPracticeTestTarget(
+          practiceTestCode: 'TEST_A',
+          revision: 5,
+        ),
+      ),
+    ],
+  );
 }
 
 LearnerSelection _selection() => LearnerSelection(
