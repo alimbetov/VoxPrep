@@ -114,23 +114,25 @@ class _LocaleSelectionPanelState extends ConsumerState<LocaleSelectionPanel> {
 
     switch (result) {
       case Success<void>():
-        final sync = await ref.read(preferenceAwareContentSyncProvider).synchronize(
-          runId: 'locale-${DateTime.now().toUtc().microsecondsSinceEpoch}',
-          trigger: SyncTrigger.localeChange,
-        );
+        final sync = await ref
+            .read(preferenceAwareContentSyncProvider)
+            .synchronize(
+              runId: 'locale-${DateTime.now().toUtc().microsecondsSinceEpoch}',
+              trigger: SyncTrigger.localeChange,
+            );
         if (!mounted) return;
         setState(() => _saving = false);
         if (sync case FailureResult(:final failure)) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(failure.message)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(failure.message)));
         }
         widget.onSaved?.call();
       case FailureResult<void>(:final failure):
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(failure.message)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(failure.message)));
     }
   }
 }
@@ -155,7 +157,8 @@ class _LocaleConfigurationView extends ConsumerWidget {
   final Future<void> Function(
     CountryLocaleConfiguration configuration,
     AppTranslationLocale locale,
-  ) onSave;
+  )
+  onSave;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -174,9 +177,8 @@ class _LocaleConfigurationView extends ConsumerWidget {
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
-            onPressed: () => ref.invalidate(
-              countryLocaleConfigurationProvider(countryCode),
-            ),
+            onPressed: () =>
+                ref.invalidate(countryLocaleConfigurationProvider(countryCode)),
             icon: const Icon(Icons.refresh),
             label: const Text('Retry'),
           ),
@@ -184,7 +186,8 @@ class _LocaleConfigurationView extends ConsumerWidget {
       ),
       data: (configuration) {
         final persisted = persistedLocale;
-        final selectedCode = requestedLocaleCode ??
+        final selectedCode =
+            requestedLocaleCode ??
             (persisted != null && configuration.supports(persisted)
                 ? persisted.code
                 : configuration.defaultLocale.code);
