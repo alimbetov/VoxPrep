@@ -1,3 +1,4 @@
+import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
 import 'package:careerspeak_app/application/content_delivery/product_catalog.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_coordinator.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_planner.dart';
@@ -21,7 +22,7 @@ void main() {
         RootManifestChanged(
           manifest: manifest(
             109,
-            packs: <dynamic>[pack()].cast(),
+            packs: <PackRevisionRef>[pack()],
             practiceTests: <PracticeTestRevisionRef>[exactTest],
           ),
           etag: 'root-109',
