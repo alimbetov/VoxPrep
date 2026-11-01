@@ -29,13 +29,13 @@ class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.identity != widget.identity) {
       _recordedRevision = null;
-      unawaited(ref.read(audioPlaybackControllerProvider).stop());
+      _stopContentAudio();
     }
   }
 
   @override
   void dispose() {
-    unawaited(ref.read(audioPlaybackControllerProvider).stop());
+    _stopContentAudio();
     super.dispose();
   }
 
@@ -70,6 +70,11 @@ class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> {
         return ContentDetailPanel(item: value, localizedHint: localizedHint);
       },
     );
+  }
+
+  void _stopContentAudio() {
+    unawaited(ref.read(audioPlaybackControllerProvider).stop());
+    unawaited(ref.read(interviewAudioClipControllerProvider).stop());
   }
 
   void _recordOpened(ContentItem item) {
