@@ -16,6 +16,7 @@ import 'package:careerspeak_app/domain/content_marker_state.dart';
 import 'package:careerspeak_app/domain/last_opened_content.dart';
 import 'package:careerspeak_app/domain/learner_selection.dart';
 import 'package:careerspeak_app/domain/practice_test_attempt.dart';
+import 'package:careerspeak_app/domain/practice_test_completion_key.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -28,8 +29,11 @@ void main() {
     final openedAt = DateTime.utc(2026, 11, 1, 9, 30);
 
     var database = CareerSpeakDatabase(NativeDatabase(file));
-    expect(database.schemaVersion, 14);
-    final attemptRepository = DriftPracticeTestAttemptRepository(database);
+    expect(database.schemaVersion, greaterThanOrEqualTo(15));
+    final attemptRepository = DriftPracticeTestAttemptRepository(
+      database,
+      now: () => startedAt.add(const Duration(minutes: 10)),
+    );
     final lastOpenedRepository = DriftLastOpenedContentRepository(
       database,
       now: () => openedAt,
@@ -57,7 +61,10 @@ void main() {
     await database.close();
 
     database = CareerSpeakDatabase(NativeDatabase(file));
-    final reopenedAttemptRepository = DriftPracticeTestAttemptRepository(database);
+    final reopenedAttemptRepository = DriftPracticeTestAttemptRepository(
+      database,
+      now: () => startedAt.add(const Duration(minutes: 10)),
+    );
     final reopenedLastOpenedRepository = DriftLastOpenedContentRepository(database);
     final restoredAttempt =
         (await reopenedAttemptRepository.getActiveAttempt()
@@ -96,6 +103,15 @@ void main() {
             revision: 7,
           ),
         ),
+        ContinueLearningMemberCandidate(
+          collectionCode: 'COLLECTION_A',
+          collectionSortOrder: 0,
+          position: 1,
+          target: ContinueLearningPracticeTestTarget(
+            practiceTestCode: 'TEST_A',
+            revision: 5,
+          ),
+        ),
       ],
       nextCollections: const <ContinueLearningCollectionCandidate>[
         ContinueLearningCollectionCandidate(
@@ -114,22 +130,37 @@ void main() {
     expect(resolver.resolve(current), isA<ResumePracticeTestDecision>());
 
     expect(
-      await reopenedAttemptRepository.clearActiveAttempt(),
+      await reopenedAttemptRepository.completeActiveAttempt(),
       isA<Success<void>>(),
     );
     await database.close();
 
     database = CareerSpeakDatabase(NativeDatabase(file));
     addTearDown(database.close);
+    final thirdAttemptRepository = DriftPracticeTestAttemptRepository(database);
     final thirdAttempt =
-        (await DriftPracticeTestAttemptRepository(database).getActiveAttempt()
+        (await thirdAttemptRepository.getActiveAttempt()
                 as Success<PracticeTestAttempt?>)
+            .value;
+    final completedPracticeTests =
+        (await thirdAttemptRepository.getCompletedPracticeTests()
+                as Success<Set<PracticeTestCompletionKey>>)
             .value;
     final thirdLastOpened =
         (await DriftLastOpenedContentRepository(database).getLastOpenedContent()
                 as Success<LastOpenedContent?>)
             .value;
+
     expect(thirdAttempt, isNull);
+    expect(
+      completedPracticeTests,
+      contains(
+        const PracticeTestCompletionKey(
+          practiceTestCode: 'TEST_A',
+          revision: 5,
+        ),
+      ),
+    );
     expect(thirdLastOpened?.identity, _contentIdentity);
 
     final afterSubmit = revalidator.revalidate(
@@ -141,6 +172,14 @@ void main() {
       graph: graph,
       selection: selection,
       markers: const <ContentIdentity, ContentMarkerState>{},
+      completedPracticeTests: completedPracticeTests,
+    );
+    expect(
+      afterSubmit.incompleteMembers.where(
+        (candidate) =>
+            candidate.target is ContinueLearningPracticeTestTarget,
+      ),
+      isEmpty,
     );
     expect(resolver.resolve(afterSubmit), isA<ResumeContentDecision>());
   });
