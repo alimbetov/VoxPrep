@@ -1,6 +1,6 @@
 # CareerSpeak / VoxPrep — System Requirements
 
-**Document version:** 0.15  
+**Document version:** 0.16  
 **Status:** Normative MVP baseline  
 **Target:** Android + iOS learner app, Spring Boot backend, TTS Worker
 
@@ -8,6 +8,7 @@ Normative documents:
 
 - [`CAREERSPEAK_PRODUCT_REQUIREMENTS.md`](CAREERSPEAK_PRODUCT_REQUIREMENTS.md)
 - [`CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md`](CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md)
+- [`CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md`](CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md)
 - [`CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md`](CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
 - [`CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md`](CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md)
 - [`../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md`](../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md)
@@ -23,7 +24,7 @@ CareerSpeak is an offline-first English practice application focused on:
 ```text
 international job interviews
 professional / technical English
-IELTS as a separate goal
+IELTS as a supported learning direction/goal
 ```
 
 Primary learning loop:
@@ -72,6 +73,7 @@ Server-managed process/container using a dedicated machine token.
 Backend owns mutable product truth:
 
 ```text
+Vertical
 LearningGoal
 LearningTrack
 LearningCollection
@@ -83,9 +85,11 @@ TtsVoice learner-facing catalogue
 published content/test revisions
 ```
 
-Minimal learner hierarchy:
+Normative learner hierarchy:
 
 ```text
+Vertical
+    ↓
 LearningGoal
     ↓
 LearningTrack
@@ -95,11 +99,14 @@ LearningCollection
 Content / PracticeTest
 ```
 
+Each learner-deliverable Goal belongs to exactly one Vertical. `Vertical` is the top-level subject/professional scope; `LearningGoal` is a learner intention inside that scope.
+
 Important distinction:
 
 ```text
 CareerTrack = professional taxonomy
 LearningTrack = learning path
+Vertical = learner-facing product scope
 ```
 
 No backend `LearningActivity` aggregate is required in MVP.
@@ -116,6 +123,8 @@ review schedule
 test history
 playback progress
 ```
+
+Current Vertical is derived from selected Goal and the CURRENT catalogue projection. Flutter does not persist a conflicting independent selected Vertical preference.
 
 ---
 
@@ -202,10 +211,16 @@ Widgets do not issue raw HTTP/SQL calls.
 Three-step, skippable, restart-safe:
 
 ```text
-1. LearningGoal
+1. Learning direction → Vertical + LearningGoal
 2. approximate level / Not sure
 3. support language
 ```
+
+Step 1 may use two visual panes/subselections but remains one onboarding decision. Only active Verticals with at least one active Goal are selectable.
+
+Skip does not invent a Vertical/Goal. It preserves explicit choices already made and opens browse/home mode.
+
+After restart, onboarding resumes at the next incomplete decision. If a saved Goal becomes inactive/missing, Goal and Track are cleared; the learner is asked to choose a new learning direction. There is no silent fallback to another Vertical.
 
 ### Home
 
@@ -213,9 +228,9 @@ Priority:
 
 ```text
 Continue
-Current goal/track
+Current Vertical / Goal / Track
 Review due
-Browse current track/collections
+Browse current track/collections or choose learning direction
 Secondary statistics
 ```
 
@@ -224,7 +239,8 @@ No recommendation engine is required. Editorial sort order + local progress is e
 ### Learn
 
 ```text
-Current track
+Current Vertical / Goal / Track
+Verticals
 Collections
 Categories
 Browse / Search
@@ -332,7 +348,7 @@ Backend publishes one locale-independent root:
 contentVersion
 ```
 
-Root references exact pack variants/revisions/checksums.
+Root references exact pack variants/revisions/checksums and exact catalogue revisions, including Vertical/Goal/Track/Collection catalogues.
 
 Variants:
 
@@ -386,22 +402,16 @@ checksumSha256
 deliveryKey
 ```
 
-Learner media path:
+Learner media contract is frozen separately under BA-17. Until BA-17 is resolved, no conflicting media-delivery model may be treated as final merely because an implementation path exists.
+
+The non-negotiable invariant is:
 
 ```text
-Flutter
-→ GET /api/v1/media/assets/{assetId}/content
-→ Spring Boot validates installation + publication eligibility
-→ Backend resolves FileAsset/deliveryKey
-→ Backend reads RustFS
-→ Backend streams bytes
-→ Flutter verifies size + SHA-256
-→ managed local file
+Flutter never receives storage credentials
+Flutter never treats deliveryKey as a remote locator
+all learner media authorization is controlled by Backend
+Flutter verifies downloaded bytes before trusting local files
 ```
-
-Flutter MUST NOT receive RustFS/S3/CDN credentials, storage URLs, signed/presigned URLs, buckets or object paths, and MUST NOT use `deliveryKey` as a remote network locator.
-
-Backend MUST NOT redirect learner media to object storage.
 
 ---
 
@@ -503,7 +513,7 @@ sync crash                 → last CURRENT snapshot remains
 worker crash               → lease expires/reclaim
 ```
 
-Storage-specific failures are translated by Backend and never require Flutter/Worker to contact RustFS directly.
+Storage-specific failures are translated/controlled through Backend policy and never expose storage credentials to Flutter/Worker.
 
 ---
 
@@ -535,9 +545,11 @@ Before backend content/schema freeze, accept:
 
 ```text
 Product Requirements
-Goal → Track → Collection → Content/Test ownership
-CareerTrack != LearningTrack
-three-step onboarding ownership
+Vertical → Goal → Track → Collection → Content/Test ownership
+CareerTrack != LearningTrack != Vertical
+three-step onboarding with Vertical + Goal at Step 1
+selected Vertical derived from selected Goal
+skip/restart/inactive-selection onboarding rules
 real Due semantics
 typed content bodies
 assessment production contract
@@ -546,7 +558,7 @@ localized payload delivery
 Category/Level/Skill/SupportedLocale/TtsVoice ownership
 atomic publication snapshot
 installation-token recovery
-Backend-only learner media delivery
+one reconciled learner-media delivery contract (BA-17)
 Backend-only Worker model/output delivery
 Drift ERD
 learner + worker OpenAPI
