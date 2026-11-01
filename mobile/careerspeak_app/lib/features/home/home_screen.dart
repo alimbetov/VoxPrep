@@ -6,6 +6,7 @@ import '../../app/continue_learning_providers.dart';
 import '../../app/learner_selection_providers.dart';
 import '../../app/learner_state_providers.dart';
 import '../../app/repository_providers.dart';
+import '../../app/review_schedule_providers.dart';
 import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
 import '../../domain/content_marker_state.dart';
@@ -18,6 +19,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final contentPage = ref.watch(contentPageProvider);
     final markers = ref.watch(contentMarkersProvider);
+    final dueReviews = ref.watch(dueReviewIdentitiesProvider);
     final learningContext = ref.watch(learnerLearningContextProvider);
     final continueLearning = ref.watch(continueLearningHomeTargetProvider);
 
@@ -30,6 +32,7 @@ class HomeScreen extends ConsumerWidget {
         data: (values) => _HomeContent(
           items: page.items,
           markers: values,
+          dueReviews: dueReviews,
           learningContext: learningContext,
           continueLearning: continueLearning,
         ),
@@ -42,12 +45,14 @@ class _HomeContent extends StatelessWidget {
   const _HomeContent({
     required this.items,
     required this.markers,
+    required this.dueReviews,
     required this.learningContext,
     required this.continueLearning,
   });
 
   final List<ContentItem> items;
   final Map<ContentIdentity, ContentMarkerState> markers;
+  final AsyncValue<Set<ContentIdentity>> dueReviews;
   final AsyncValue<LearnerLearningContext?> learningContext;
   final AsyncValue<ContinueLearningHomeTarget> continueLearning;
 
@@ -59,7 +64,14 @@ class _HomeContent extends StatelessWidget {
     final completed = items.where((item) => markerFor(item).completed).length;
     final listened = items.where((item) => markerFor(item).listened).length;
     final favorites = items.where((item) => markerFor(item).favorite).length;
-    final due = items.length - completed;
+    final visibleIdentities = <ContentIdentity>{
+      for (final item in items) ContentIdentity.fromItem(item),
+    };
+    final dueValue = dueReviews.when(
+      data: (due) => '${due.intersection(visibleIdentities).length}',
+      loading: () => '—',
+      error: (error, stackTrace) => '—',
+    );
 
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -94,7 +106,11 @@ class _HomeContent extends StatelessWidget {
               label: 'Favorites',
               value: '$favorites',
             ),
-            _StatCard(icon: Icons.replay_outlined, label: 'Due', value: '$due'),
+            _StatCard(
+              icon: Icons.replay_outlined,
+              label: 'Due',
+              value: dueValue,
+            ),
           ],
         ),
         const SizedBox(height: 28),
