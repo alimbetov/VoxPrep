@@ -203,7 +203,7 @@ final class ApplicationPreferences {
   static const defaults = ApplicationPreferences(
     countryCode: null,
     uiLocale: AppUiLocale.english,
-    translationLocale: AppTranslationLocale.russian,
+    translationLocale: AppTranslationLocale.english,
     preferredAccent: PreferredEnglishAccent.us,
     theme: AppThemePreference.system,
     focusMode: false,
