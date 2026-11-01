@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/app_preferences_providers.dart';
+import '../../app/content_sync_providers.dart';
 import '../../app/locale_configuration_providers.dart';
+import '../../application/content_sync/sync_models.dart';
 import '../../application/result/result.dart';
 import '../../domain/application_preferences.dart';
 import '../../domain/locale_configuration.dart';
@@ -109,11 +111,23 @@ class _LocaleSelectionPanelState extends ConsumerState<LocaleSelectionPanel> {
           locale: locale,
         );
     if (!mounted) return;
-    setState(() => _saving = false);
+
     switch (result) {
       case Success<void>():
+        final sync = await ref.read(preferenceAwareContentSyncProvider).synchronize(
+          runId: 'locale-${DateTime.now().toUtc().microsecondsSinceEpoch}',
+          trigger: SyncTrigger.localeChange,
+        );
+        if (!mounted) return;
+        setState(() => _saving = false);
+        if (sync case FailureResult(:final failure)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(failure.message)),
+          );
+        }
         widget.onSaved?.call();
       case FailureResult<void>(:final failure):
+        setState(() => _saving = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(failure.message)),
         );
