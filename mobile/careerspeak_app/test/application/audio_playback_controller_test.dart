@@ -81,13 +81,49 @@ void main() {
     expect(controller.state.phase, AudioPlaybackPhase.paused);
   });
 
+  test('seek persists position but never marks listened', () async {
+    final item = _item('SEEK_ONLY', revision: 4);
+    (await controller.play(
+      item,
+      learnerState: const ContentMarkerState(),
+    )).getOrThrow();
+
+    (await controller.seek(60000)).getOrThrow();
+
+    expect(engine.sessions.single.seekPositions.last, 60000);
+    expect(learner.positions.last.positionMs, 60000);
+    expect(learner.positions.last.revision, 4);
+    expect(learner.listened, isEmpty);
+    expect(learner.completedCalls, 0);
+  });
+
+  test('stop persists current position and disposes the session', () async {
+    final item = _item('STOP_AND_LEAVE', revision: 9);
+    (await controller.play(
+      item,
+      learnerState: const ContentMarkerState(),
+    )).getOrThrow();
+
+    final session = engine.sessions.single;
+    session.emit(const AudioPositionChanged(Duration(milliseconds: 27123)));
+    await Future<void>.delayed(Duration.zero);
+
+    (await controller.stop()).getOrThrow();
+
+    expect(learner.positions.last.positionMs, 27123);
+    expect(learner.positions.last.revision, 9);
+    expect(session.stopCalls, 1);
+    expect(session.disposed, isTrue);
+    expect(controller.state.phase, AudioPlaybackPhase.stopped);
+  });
+
   test(
-    'natural completion marks listened once and never marks completed',
+    'natural completion marks listened once and never changes other markers',
     () async {
       final item = _item('BEHAVIORAL', revision: 5);
       (await controller.play(
         item,
-        learnerState: const ContentMarkerState(),
+        learnerState: const ContentMarkerState(favorite: true),
       )).getOrThrow();
 
       final session = engine.sessions.single;
@@ -99,12 +135,43 @@ void main() {
 
       expect(learner.listened, hasLength(1));
       expect(learner.listened.single.revision, 5);
+      expect(learner.listened.single.listened, isTrue);
       expect(learner.completedCalls, 0);
+      expect(learner.favoriteCalls, 0);
       expect(learner.positions.last.positionMs, 0);
       expect(learner.positions.last.revision, 5);
       expect(controller.state.phase, AudioPlaybackPhase.completed);
     },
   );
+
+  test('explicit play after completion restarts from zero', () async {
+    final item = _item('REPLAY', revision: 2);
+    (await controller.play(
+      item,
+      learnerState: const ContentMarkerState(
+        lastPositionMs: 15000,
+        lastRevisionSeen: 2,
+      ),
+    )).getOrThrow();
+
+    final first = engine.sessions.single;
+    expect(first.seekPositions, <int>[15000]);
+    first.emit(const AudioPlaybackCompleted());
+    await pumpEventQueue();
+
+    (await controller.play(
+      item,
+      learnerState: const ContentMarkerState(
+        listened: true,
+        lastPositionMs: 0,
+        lastRevisionSeen: 2,
+      ),
+    )).getOrThrow();
+
+    expect(engine.sessions, hasLength(2));
+    expect(engine.sessions.last.seekPositions, isEmpty);
+    expect(engine.sessions.last.playCalls, 1);
+  });
 
   test('late events from the previous track are ignored', () async {
     final first = _item('FIRST', revision: 1);
@@ -221,6 +288,7 @@ final class _FakeLearnerStateRepository implements LearnerStateRepository {
   final List<_PositionWrite> positions = <_PositionWrite>[];
   final List<_ListenedWrite> listened = <_ListenedWrite>[];
   int completedCalls = 0;
+  int favoriteCalls = 0;
 
   @override
   Stream<Result<Map<ContentIdentity, ContentMarkerState>>> watchMarkers() =>
@@ -230,7 +298,10 @@ final class _FakeLearnerStateRepository implements LearnerStateRepository {
   Future<Result<void>> setFavorite(
     ContentIdentity identity, {
     required bool favorite,
-  }) async => const Success<void>(null);
+  }) async {
+    favoriteCalls += 1;
+    return const Success<void>(null);
+  }
 
   @override
   Future<Result<void>> setListened(
