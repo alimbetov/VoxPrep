@@ -9,16 +9,35 @@ import '../features/catalogue/catalogue_screen.dart';
 import '../features/content/content_detail_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/learn/learn_screen.dart';
+import '../features/onboarding/locale_onboarding_screen.dart';
 import '../features/review/review_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/tests/test_session_screen.dart';
 import '../features/tests/tests_screen.dart';
+import 'app_preferences_providers.dart';
 import 'content_locations.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
+  final preferences = ref.watch(applicationPreferencesProvider).asData?.value;
+
   return GoRouter(
     initialLocation: '/',
+    redirect: (context, state) {
+      if (preferences == null) return null;
+      final onboarding = state.matchedLocation == '/onboarding/locale';
+      if (preferences.needsLocaleOnboarding && !onboarding) {
+        return '/onboarding/locale';
+      }
+      if (!preferences.needsLocaleOnboarding && onboarding) {
+        return '/';
+      }
+      return null;
+    },
     routes: [
+      GoRoute(
+        path: '/onboarding/locale',
+        builder: (context, state) => const LocaleOnboardingScreen(),
+      ),
       ShellRoute(
         builder: (context, state, child) =>
             CareerSpeakAdaptiveScaffold(location: state.uri.path, child: child),
