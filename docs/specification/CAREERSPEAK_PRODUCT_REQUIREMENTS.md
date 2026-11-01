@@ -1,19 +1,23 @@
 # CareerSpeak — Product Requirements Specification
 
-**Document version:** 1.2  
+**Document version:** 1.3  
 **Status:** Normative MVP product baseline  
 **Applies to:** CareerSpeak v1  
 **Target platforms:** Android, iOS
 
 Related normative documents:
 
+- [`CAREERSPEAK_MVP_DELIVERY_SCOPE.md`](CAREERSPEAK_MVP_DELIVERY_SCOPE.md)
+- [`CAREERSPEAK_MVP_FUNCTIONAL_BUSINESS_AUDIT_2026-11-01.md`](CAREERSPEAK_MVP_FUNCTIONAL_BUSINESS_AUDIT_2026-11-01.md)
 - [`CAREERSPEAK_SYSTEM_REQUIREMENTS.md`](CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
 - [`CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md`](CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md)
 - [`CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md`](CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
 - [`CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md`](CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md)
+- [`CAREERSPEAK_CONTINUE_LEARNING_PRODUCT_CONTRACT.md`](CAREERSPEAK_CONTINUE_LEARNING_PRODUCT_CONTRACT.md)
+- [`CAREERSPEAK_REVIEW_POLICY.md`](CAREERSPEAK_REVIEW_POLICY.md)
 - [`../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md`](../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md)
 
-The expert review in [`../product/MARKETING_DESIGN_EXPERT_PANEL_REVIEW.md`](../product/MARKETING_DESIGN_EXPERT_PANEL_REVIEW.md) is design input. This document contains only the decisions needed for MVP.
+This document defines product intent and ownership. The MVP delivery boundary defines which accepted capabilities are release gates for v1. Historical roadmaps do not override these documents.
 
 ---
 
@@ -34,7 +38,7 @@ The product is goal-driven but grouped by backend-owned learning Verticals. MVP 
 
 ---
 
-## 2. Target learner
+## 2. Target learner and jobs-to-be-done
 
 Primary learner:
 
@@ -58,7 +62,7 @@ review weak material
 
 ---
 
-## 3. MVP product principles
+## 3. MVP principles
 
 ```text
 simple direction + goal-based navigation
@@ -71,14 +75,16 @@ READ → LISTEN → REPEAT → TEST → REVIEW
 Material Design 3
 backend owns mutable product/content catalogues
 Flutter owns learner preferences/progress
+fail closed rather than invent learner intent
+exact immutable revision identity
 no unnecessary infrastructure or domain layers
 ```
 
 ---
 
-## 4. Minimal product hierarchy
+## 4. Normative learner hierarchy
 
-The normative MVP hierarchy is:
+The only normative MVP hierarchy is:
 
 ```text
 Vertical
@@ -89,130 +95,53 @@ LearningTrack
     ↓
 LearningCollection
     ↓
-Content / PracticeTest
+ordered CollectionMember
+    ├─ exact ContentRevision
+    └─ exact PracticeTestRevision
 ```
 
-`Vertical` is the backend-owned subject/professional learning area. Examples include Java, DevOps, Medical English, Workplace English and IELTS-oriented English.
+`Vertical` is the backend-owned subject/professional learning area. `LearningGoal` is the learner intention inside exactly one Vertical. `LearningTrack` is a learning path. `LearningCollection` is an ordered practical unit/topic.
 
-`LearningGoal` is the learner intention inside exactly one Vertical, for example job interview, patient communication or workplace meetings.
+No backend `LearningActivity` aggregate or workflow engine is required.
 
-No separate backend `LearningActivity` aggregate is required in MVP.
-
-The learning loop:
+Keep taxonomy distinct:
 
 ```text
-READ → LISTEN → REPEAT → TEST → REVIEW
+CareerTrack = professional taxonomy
+LearningTrack = learning path
+Vertical = top-level learner-facing product scope
 ```
-
-is implemented by Flutter using content/test capabilities and local learner state. Backend does not need a workflow engine to describe every pedagogical step.
-
-### Career taxonomy vs learner path
-
-Keep the distinction:
-
-```text
-CareerTrack
-= professional taxonomy, e.g. JAVA_BACKEND
-
-LearningTrack
-= learning path, e.g. JAVA_SENIOR_INTERVIEW
-```
-
-Do not merge them into one entity. `Vertical` is also not a replacement for either concept: it is the top-level learner-facing product scope.
 
 ---
 
 ## 5. Backend-owned product catalogues
 
-### 5.1 Vertical
-
-Minimum fields:
+Backend owns mutable product truth for:
 
 ```text
-code
-title
-description
-iconAssetId?
-sortOrder
-active
-```
-
-Vertical codes are backend data, not permanent Flutter enums.
-
-### 5.2 LearningGoal
-
-Minimum fields:
-
-```text
-code
-verticalCode
-title
-description
-sortOrder
-active
-```
-
-A Goal belongs to exactly one Vertical.
-
-### 5.3 LearningTrack
-
-Minimum fields:
-
-```text
-code
-goalCode
-verticalCode
-title
-description
-levelCode
-sortOrder
-active
-```
-
-A track MAY reference career/profession/seniority taxonomy where useful.
-
-### 5.4 LearningCollection
-
-A collection packages content around one practical topic.
-
-Examples:
-
-```text
-Tell me about yourself
-Behavioural interview
-System design English
-Meetings and status updates
-IELTS Speaking Part 2
-```
-
-Minimum fields:
-
-```text
-code
-trackCode
-verticalCode
-title
-description
-sortOrder
-active
-ordered members[]
-```
-
-Members reference exact Content or PracticeTest revisions. A collection does not need its own workflow/state machine.
-
-### 5.5 Existing catalogues
-
-Backend also owns:
-
-```text
+Vertical
+LearningGoal
+LearningTrack
+LearningCollection
 Category
 Level
 Skill
 SupportedLocale
 TtsVoice learner-facing projection
+published Content revisions
+published PracticeTest revisions
+asset/audio descriptors
 ```
 
-Stable code is identity; labels are presentation.
+Core ownership invariants:
+
+- a Goal belongs to exactly one Vertical;
+- a Track belongs to exactly one Goal;
+- a Collection belongs to exactly one Track;
+- Collection members reference exact immutable content/test revisions;
+- stable business code is identity; labels are presentation;
+- active/inactive and publication status are backend-owned;
+- Flutter does not invent mutable catalogue values.
 
 ---
 
@@ -221,7 +150,7 @@ Stable code is identity; labels are presentation.
 Flutter stores locally:
 
 ```text
-onboardingCompleted
+onboardingCompleted / onboarding progress
 selectedGoalCode?
 selectedTrackCode?
 selfAssessedLevelCode?
@@ -231,24 +160,48 @@ preferredAccent / preferredVoiceCode?
 favorites
 listened/completed markers
 review schedule
-test history
+test attempt/history
+playback progress
 ```
 
-`selectedVerticalCode` is not an independent durable preference when a Goal is selected. Current Vertical is derived from `selectedGoalCode → CURRENT Goal.verticalCode`.
+`selectedVerticalCode` is not an independent durable source of truth. Current Vertical is derived from:
 
-No server learner profile is required in MVP.
+```text
+selectedGoalCode
+→ CURRENT Goal.verticalCode
+→ CURRENT Vertical
+```
 
-Cache cleanup must not erase learner preferences/progress.
+Invalid selection is **fail-closed**:
 
-If a selected Track becomes inactive/missing, Flutter clears Track and preserves an active selected Goal. If the selected Goal or its parent Vertical becomes inactive/missing, Flutter clears Goal and Track and asks the learner to choose a learning direction. Flutter MUST NOT silently jump to another Vertical.
+```text
+Track inactive/missing
+→ clear Track
+→ preserve active Goal
+
+Goal inactive/missing
+→ clear Goal + Track
+→ current Vertical unset
+→ show Choose learning direction
+
+Vertical inactive/missing
+→ its Goal is invalid
+→ apply the same Goal rule
+```
+
+Flutter MUST NOT silently select the first sibling Track/Goal or switch the learner to another Vertical.
+
+No server learner profile is required in MVP. Cache cleanup must not erase learner preferences/progress.
+
+Device uninstall, app-data reset or device loss may remove local learner state in v1; cloud learner-state sync is post-MVP.
 
 ---
 
 ## 7. First-run onboarding
 
-Onboarding SHALL be short, skippable, account-free and restart-safe.
+Onboarding is short, skippable, account-free and restart-safe.
 
-MVP has exactly three learner decisions:
+Exactly three learner decisions:
 
 ```text
 1. Learning direction        → Vertical + LearningGoal
@@ -256,66 +209,99 @@ MVP has exactly three learner decisions:
 3. Support language          → published SupportedLocale
 ```
 
-Step 1 may visually present Vertical cards followed by Goals inside the selected Vertical, but this remains one onboarding step and one product decision.
+Step 1 may visually present Vertical then Goal, but remains one logical product step.
 
-Only active Verticals with at least one active Goal are selectable. Only active Goals of the selected Vertical are selectable.
+Rules:
 
-Skipping onboarding preserves explicit decisions already made, leaves missing Goal/Track/Level unset, never invents an arbitrary career direction, and opens browse/home mode.
-
-Onboarding progress is persisted after each explicit decision and resumes at the next incomplete step after restart.
-
-Accent/voice and offline download choices belong in normal Settings/Download flows and do not lengthen onboarding.
-
-The detailed normative rules are defined in [`CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md`](CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md).
+- only active CURRENT Vertical/Goal chains are selectable;
+- skip preserves explicit choices already made;
+- skip leaves missing choices unset and never fabricates a direction;
+- onboarding progress persists after each explicit decision;
+- restart resumes at the next incomplete decision;
+- browsing is not blocked after skip;
+- accent/voice and storage/offline management are outside onboarding.
 
 ---
 
-## 8. Home
+## 8. Home and Continue Learning
 
-Home must answer one question first:
+Home answers first: **What should I do next?**
 
-> What should I do next?
-
-MVP hierarchy:
+Priority:
 
 ```text
-1. Continue last/current item
-2. Current Vertical / Goal / Track context
-3. Review due
-4. Browse current track / collections or choose learning direction
-5. Secondary statistics
+1. resumable active PracticeTest attempt
+2. unfinished last-opened Content item
+3. next incomplete member in the current Collection
+4. next eligible Collection in the current Track
+5. current Track / current Vertical browse entry
+6. Choose learning direction
 ```
 
-If no Goal is selected, Home shows a clear `Choose learning direction` action and does not manufacture a default Vertical.
+Every candidate is revalidated against CURRENT publication before navigation. Tombstoned, inactive, dangling or revision-mismatched candidates are skipped; they are never repaired by guessing another entity.
 
-No AI/recommendation service is required.
+Home presentation order:
 
-A `Recommended` label is allowed only when it means simple deterministic editorial ordering or continuation based on local progress.
+```text
+Continue
+Current Vertical / Goal / Track
+Review due
+Browse current track/collections or Choose learning direction
+Secondary statistics
+```
+
+No recommendation service is required. `Recommended` may only mean deterministic editorial/local continuation ordering.
 
 ---
 
 ## 9. Learn / discovery
 
-MVP discovery:
+MVP discovery supports:
 
 ```text
-Learn
-├── Current Vertical / Goal / Track
-├── Verticals
-├── Collections
-├── Categories
-└── Browse / Search
+Current Vertical / Goal / Track
+Verticals
+Collections
+Categories
+Browse / Search
 ```
 
-Vertical/Goal/Track may be changed from Learn or Settings.
+Hierarchy navigation validates full parent ownership and fails closed on a mismatched parent chain.
 
-Technical content types remain internal classifications; they do not have to dominate learner navigation.
+Search should default to current Vertical where that context exists; expanding to all learning areas must be explicit.
 
 ---
 
-## 10. Review semantics
+## 10. Completion and learner markers
 
-`Due` has one strict meaning:
+Independent durable marker concepts:
+
+```text
+FAVORITE
+LISTENED
+COMPLETED
+```
+
+Rules:
+
+```text
+Favorite does not imply or pin completion
+Listened does not imply Completed
+Completed does not erase review/test history
+cache/media eviction does not erase markers
+```
+
+Content completion is explicit learner intent for ordinary content. PracticeTest completion occurs when a valid attempt is submitted.
+
+Completion is revision-aware: completing revision N does not rewrite or automatically complete revision N+1.
+
+`FAVORITE` is required as a durable local marker/filter. A standalone Favorites screen is not an MVP release gate.
+
+---
+
+## 11. Review semantics
+
+`Due` has exactly one meaning:
 
 ```text
 Due = nextReviewAt <= now
@@ -323,7 +309,7 @@ Due = nextReviewAt <= now
 
 `Not completed` is not `Due`.
 
-Minimal local review state:
+Minimal local state:
 
 ```text
 nextReviewAt
@@ -331,7 +317,7 @@ reviewStage
 lastReviewOutcome
 ```
 
-Possible outcomes:
+Outcomes:
 
 ```text
 incorrect
@@ -340,32 +326,33 @@ correct
 known
 ```
 
-The interval policy is deterministic and local. No ML/AI scheduler is required.
+Scheduling is local, deterministic, UTC-based and restart-safe. The exact v1 interval policy is normative in `CAREERSPEAK_REVIEW_POLICY.md`. No ML/AI review scheduler is required.
 
 ---
 
-## 11. Assessment
+## 12. Assessment
 
-Tests provide:
+Practice tests preserve exact immutable test/question revision identity.
+
+MVP behavior may expose:
 
 ```text
 score
 correct/incorrect answers
 explanations
 skillCode where useful
+simple next-practice link
 ```
 
-A complex recommendation engine based on weak skills is not required for MVP.
+An active attempt is restart-safe. Submitted completion/history must not be inferred from a newer revision.
 
-Flutter may use `skillCode` and current Vertical/Goal/Track/Collection context to show a simple next-practice link.
-
-Historical attempts remain reproducible against exact immutable test/question revisions.
+No complex weak-skill recommendation engine is required.
 
 ---
 
-## 12. Audio and speaking practice
+## 13. Audio, media and offline
 
-MVP supports:
+MVP learner audio supports:
 
 ```text
 listen
@@ -374,14 +361,28 @@ seek
 speed
 repeat
 repeat aloud
-segment repeat where content provides segments
+segment repeat where metadata exists
 ```
 
-Runtime STT, pronunciation scoring, learner audio upload and runtime TTS remain non-goals.
+Runtime STT, pronunciation scoring, learner audio upload and runtime mobile TTS remain non-goals.
+
+Flutter-facing media contract for v1:
+
+```text
+installation-authenticated Backend media API
+→ Backend-controlled byte delivery
+→ size/checksum verification
+→ atomic verified local asset
+→ offline playback
+```
+
+Flutter receives no RustFS/object-storage credentials and never interprets `deliveryKey` as a remote locator.
+
+Offline-first is a release requirement. A dedicated user-managed Downloads dashboard is not. Download/cache/AssetResolver infrastructure may manage verified assets without creating a separate Downloads feature stream.
 
 ---
 
-## 13. Learner-facing copy
+## 14. Learner-facing copy and visual direction
 
 Production learner UI SHALL NOT expose implementation terminology such as:
 
@@ -396,31 +397,9 @@ Drift
 RustFS
 ```
 
-Use simple learner language.
+Raw HTTP/database/storage exceptions are not shown directly. Empty/error states explain the learner problem and safe next action where possible.
 
-Raw HTTP/database exceptions SHALL NOT be shown directly.
-
-Empty/error states should explain the problem and provide a safe next action when possible.
-
----
-
-## 14. Visual direction
-
-Material Design 3 remains the only design system.
-
-Do not create a large custom component framework before it is needed.
-
-MVP may define a small reusable set:
-
-```text
-Learning Direction Card
-Goal / Track / Collection Card
-Audio controls
-Review state
-Empty state
-```
-
-Desired tone:
+Material Design 3 remains the only design system. Desired tone:
 
 ```text
 professional
@@ -429,11 +408,11 @@ clear
 focused
 ```
 
-Avoid childish gamification and visual noise.
+Avoid childish gamification and unnecessary visual framework work.
 
 ---
 
-## 15. Explicit non-goals for product-domain design
+## 15. Explicit non-goals
 
 Do NOT add in MVP:
 
@@ -443,59 +422,65 @@ workflow/rules engine
 recommendation microservice
 AI personalization
 server learner profile
+mandatory learner account/login
 remote UI JSON schema
 generic EAV content model
 complex achievement/badge economy
 social graph
 leaderboards
-analytics domain model before telemetry is approved
+analytics platform before telemetry is approved
+advanced SRS / FSRS / SM-2
+runtime STT/pronunciation scoring
+standalone Favorites feature stream
+user-managed Downloads feature stream
+microservice decomposition
+Kafka/RabbitMQ/Redis/Keycloak for learner-domain flows
 ```
 
-If future evidence requires one of these, add it as a separate versioned requirement.
+Future evidence may reintroduce an item only through a separate versioned requirement.
 
 ---
 
 ## 16. Product acceptance
 
-MVP product contract is ready when:
+The product/business contract is sufficient when:
 
 ```text
-[ ] career/interview is primary focus; IELTS remains a supported learning direction/goal
-[ ] Vertical → Goal → Track → Collection → Content/Test is the only normative learner hierarchy
-[ ] every Goal belongs to exactly one Vertical
-[ ] CareerTrack, LearningTrack and Vertical are not conflated
-[ ] backend owns Vertical/Goal/Track/Collection and mutable catalogues
-[ ] Flutter owns local learner preferences/progress/review
-[ ] current Vertical is derived from selected Goal, not a conflicting durable preference
-[ ] onboarding is 3-step, skippable and restart-safe
-[ ] onboarding Step 1 selects Vertical + Goal
-[ ] skip never silently chooses a career direction
-[ ] inactive Goal/Vertical clears the selection rather than switching across Verticals
-[ ] Home starts with Continue/current learning context rather than dashboard counters
-[ ] Due means nextReviewAt <= now
-[ ] assessment revisions/answers/explanations are deterministic
-[ ] learner UI contains no engineering implementation language
-[ ] no extra domain/infrastructure layer is introduced without a concrete MVP use case
+[✓] Vertical → Goal → Track → Collection → exact Content/Test revision is normative
+[✓] every Goal belongs to exactly one Vertical
+[✓] CareerTrack, LearningTrack and Vertical are distinct
+[✓] backend owns mutable catalogue/publication truth
+[✓] Flutter owns local learner state
+[✓] current Vertical derives from selected Goal
+[✓] invalid selection clears fail-closed rather than guessing a sibling
+[✓] onboarding is exactly 3 decisions, skippable and restart-safe
+[✓] Continue Learning priority is deterministic and CURRENT-revalidated
+[✓] Due means nextReviewAt <= now
+[✓] review policy is deterministic/restart-safe
+[✓] assessment/completion is exact-revision aware
+[✓] learner media is Backend-authorized and storage credentials are hidden
+[✓] Favorites/Downloads convenience surfaces do not reopen MVP feature streams
+[✓] learner UI contains no engineering implementation language
 ```
 
 ---
 
-## 17. Delivery order
+## 17. Remaining MVP delivery order
+
+The historical PR0–PR6 contract-design sequence is complete/superseded as a planning mechanism. Remaining implementation is strictly:
 
 ```text
-PR0  Product ownership + Vertical hierarchy
+R1  Review policy exact-revision qualification
  ↓
-PR1  Vertical / Goal / Track / Collection contracts
+C4  Atomic Publication
  ↓
-PR2  typed Content + Assessment contracts
+C5  Installation / Security
  ↓
-PR3  localization / taxonomy / voice catalogues
+B1  Backend schema + modular-monolith implementation
  ↓
-PR4  publication snapshot + learner OpenAPI
+A1  real Backend ↔ Flutter cross-system acceptance
  ↓
-PR5  backend aggregate/schema freeze
- ↓
-PR6  Flutter UX alignment and cross-system acceptance
+MVP release hardening
 ```
 
-Backend JPA/schema is derived after these contracts are frozen. It must not mirror Flutter DTOs blindly.
+Backend JPA/schema is derived from accepted domain invariants; it must not mirror Flutter DTOs blindly.
