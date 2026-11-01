@@ -85,7 +85,7 @@ final class InstallationAuthRecoveryApiClient implements ApiClient {
     final existing = _recoveryInFlight;
     if (existing != null) return existing;
 
-    final operation = _renewCredentials();
+    final operation = _renewCredentialsFailClosed();
     _recoveryInFlight = operation;
     operation.whenComplete(() {
       if (identical(_recoveryInFlight, operation)) {
@@ -93,6 +93,20 @@ final class InstallationAuthRecoveryApiClient implements ApiClient {
       }
     });
     return operation;
+  }
+
+  Future<Result<InstallationCredentials>> _renewCredentialsFailClosed() async {
+    try {
+      return await _renewCredentials();
+    } on Object {
+      return const FailureResult<InstallationCredentials>(
+        ApplicationFailure(
+          code: 'CREDENTIAL_RENEWAL_ERROR',
+          message: 'Installation credential could not be renewed.',
+          retryable: true,
+        ),
+      );
+    }
   }
 
   static bool _isUnauthorized(Result<ApiResponse> result) {
