@@ -6,6 +6,8 @@ on:
       - feat/universal-vertical-catalogue
     paths:
       - 'mobile/careerspeak_app/test/acceptance/audio_asset_token_recovery_acceptance_test.dart'
+      - 'mobile/careerspeak_app/test/architecture/asset_download_boundary_test.dart'
+      - 'mobile/careerspeak_app/test/data/remote/http_asset_byte_source_test.dart'
       - '.github/workflows/asset-recovery-format-proof.yml'
 
 permissions:
@@ -24,6 +26,15 @@ jobs:
       - name: Show canonical Dart formatter diff
         working-directory: mobile/careerspeak_app
         run: |
-          dart format test/acceptance/audio_asset_token_recovery_acceptance_test.dart
-          git diff -- test/acceptance/audio_asset_token_recovery_acceptance_test.dart
-          git diff --quiet -- test/acceptance/audio_asset_token_recovery_acceptance_test.dart
+          dart format \
+            test/acceptance/audio_asset_token_recovery_acceptance_test.dart \
+            test/architecture/asset_download_boundary_test.dart \
+            test/data/remote/http_asset_byte_source_test.dart
+          git diff -- \
+            test/acceptance/audio_asset_token_recovery_acceptance_test.dart \
+            test/architecture/asset_download_boundary_test.dart \
+            test/data/remote/http_asset_byte_source_test.dart
+          git diff --quiet -- \
+            test/acceptance/audio_asset_token_recovery_acceptance_test.dart \
+            test/architecture/asset_download_boundary_test.dart \
+            test/data/remote/http_asset_byte_source_test.dart
