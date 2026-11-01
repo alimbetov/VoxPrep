@@ -63,7 +63,15 @@ final class InstallationAuthRecoveryApiClient implements ApiClient {
       );
     }
 
-    if (currentToken == null || currentToken == tokenBefore) {
+    // A credential cleared locally is not a backend rejection and must not
+    // trigger an implicit re-registration. Return the original unauthorized
+    // result fail-closed. If another request already rotated the credential,
+    // replay once with that new token without starting another rotation.
+    if (currentToken == null) {
+      return first;
+    }
+
+    if (currentToken == tokenBefore) {
       final renewed = await _recoverSingleFlight();
       if (renewed is FailureResult<InstallationCredentials>) {
         return FailureResult<ApiResponse>(renewed.failure);
