@@ -10,61 +10,70 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('derives selected Goal and owning Vertical from CURRENT graph', () async {
-    final container = _container(
-      selection: LearnerSelection(selectedGoalCode: 'GOAL_A'),
-      graph: _graph(),
-    );
-    addTearDown(container.dispose);
+  test(
+    'derives selected Goal and owning Vertical from CURRENT graph',
+    () async {
+      final container = _container(
+        selection: LearnerSelection(selectedGoalCode: 'GOAL_A'),
+        graph: _graph(),
+      );
+      addTearDown(container.dispose);
 
-    await _settle(container);
+      await _settle(container);
 
-    expect(
-      container.read(learnerLearningContextProvider).value,
-      (
+      expect(container.read(learnerLearningContextProvider).value, (
         verticalCode: 'VERT_A',
         verticalTitle: 'Vertical A',
         goalCode: 'GOAL_A',
         goalTitle: 'Goal A',
-      ),
-    );
-  });
+      ));
+    },
+  );
 
-  test('returns null when persisted Goal is absent from CURRENT graph', () async {
-    final container = _container(
-      selection: LearnerSelection(selectedGoalCode: 'STALE_GOAL'),
-      graph: _graph(),
-    );
-    addTearDown(container.dispose);
+  test(
+    'returns null when persisted Goal is absent from CURRENT graph',
+    () async {
+      final container = _container(
+        selection: LearnerSelection(selectedGoalCode: 'STALE_GOAL'),
+        graph: _graph(),
+      );
+      addTearDown(container.dispose);
 
-    await _settle(container);
+      await _settle(container);
 
-    expect(container.read(learnerLearningContextProvider).value, isNull);
-  });
+      expect(container.read(learnerLearningContextProvider).value, isNull);
+    },
+  );
 
-  test('returns null when selected Goal is inactive in CURRENT graph', () async {
-    final container = _container(
-      selection: LearnerSelection(selectedGoalCode: 'GOAL_A'),
-      graph: _graph(goalActive: false),
-    );
-    addTearDown(container.dispose);
+  test(
+    'returns null when selected Goal is inactive in CURRENT graph',
+    () async {
+      final container = _container(
+        selection: LearnerSelection(selectedGoalCode: 'GOAL_A'),
+        graph: _graph(goalActive: false),
+      );
+      addTearDown(container.dispose);
 
-    await _settle(container);
+      await _settle(container);
 
-    expect(container.read(learnerLearningContextProvider).value, isNull);
-  });
+      expect(container.read(learnerLearningContextProvider).value, isNull);
+    },
+  );
 
-  test('returns null when owning Vertical is inactive in CURRENT graph', () async {
-    final container = _container(
-      selection: LearnerSelection(selectedGoalCode: 'GOAL_A'),
-      graph: _graph(verticalActive: false),
-    );
-    addTearDown(container.dispose);
+  test(
+    'returns null when owning Vertical is inactive in CURRENT graph',
+    () async {
+      final container = _container(
+        selection: LearnerSelection(selectedGoalCode: 'GOAL_A'),
+        graph: _graph(verticalActive: false),
+      );
+      addTearDown(container.dispose);
 
-    await _settle(container);
+      await _settle(container);
 
-    expect(container.read(learnerLearningContextProvider).value, isNull);
-  });
+      expect(container.read(learnerLearningContextProvider).value, isNull);
+    },
+  );
 }
 
 ProviderContainer _container({
@@ -77,10 +86,8 @@ ProviderContainer _container({
         (ref) => Stream<LearnerSelection>.value(selection),
       ),
       currentUniversalCatalogueProvider.overrideWith(
-        (ref) async => CurrentUniversalCatalogueSnapshot(
-          contentVersion: 1,
-          graph: graph,
-        ),
+        (ref) async =>
+            CurrentUniversalCatalogueSnapshot(contentVersion: 1, graph: graph),
       ),
     ],
   );

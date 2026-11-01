@@ -15,34 +15,37 @@ void main() {
       type: ContentType.topic,
     );
 
-    test('schema v16 persists explicit review schedule across reopen', () async {
-      final database = createTestDatabase();
-      addTearDown(database.close);
-      expect(database.schemaVersion, greaterThanOrEqualTo(16));
-      final now = DateTime.utc(2026, 11, 1, 10);
-      final repository = DriftReviewScheduleRepository(
-        database,
-        now: () => now,
-      );
+    test(
+      'schema v16 persists explicit review schedule across reopen',
+      () async {
+        final database = createTestDatabase();
+        addTearDown(database.close);
+        expect(database.schemaVersion, greaterThanOrEqualTo(16));
+        final now = DateTime.utc(2026, 11, 1, 10);
+        final repository = DriftReviewScheduleRepository(
+          database,
+          now: () => now,
+        );
 
-      final write = await repository.upsertSchedule(
-        identity: identity,
-        nextReviewAt: now.add(const Duration(days: 2)),
-        reviewStage: 3,
-        lastReviewOutcome: ReviewOutcome.correct,
-      );
-      expect(write, isA<Success<ContentReviewState>>());
+        final write = await repository.upsertSchedule(
+          identity: identity,
+          nextReviewAt: now.add(const Duration(days: 2)),
+          reviewStage: 3,
+          lastReviewOutcome: ReviewOutcome.correct,
+        );
+        expect(write, isA<Success<ContentReviewState>>());
 
-      final reopened = DriftReviewScheduleRepository(database);
-      final read = await reopened.getSchedules();
-      final state =
-          (read as Success<Map<ContentIdentity, ContentReviewState>>)
-              .value[identity]!;
+        final reopened = DriftReviewScheduleRepository(database);
+        final read = await reopened.getSchedules();
+        final state =
+            (read as Success<Map<ContentIdentity, ContentReviewState>>)
+                .value[identity]!;
 
-      expect(state.nextReviewAt, now.add(const Duration(days: 2)));
-      expect(state.reviewStage, 3);
-      expect(state.lastReviewOutcome, ReviewOutcome.correct);
-    });
+        expect(state.nextReviewAt, now.add(const Duration(days: 2)));
+        expect(state.reviewStage, 3);
+        expect(state.lastReviewOutcome, ReviewOutcome.correct);
+      },
+    );
 
     test('R1 scheduler decision survives repository reopen', () async {
       final database = createTestDatabase();
@@ -68,9 +71,8 @@ void main() {
 
       final reopened = DriftReviewScheduleRepository(database);
       final read = await reopened.getSchedules();
-      final state =
-          (read as Success<Map<ContentIdentity, ContentReviewState>>)
-              .value[identity]!;
+      final state = (read as Success<Map<ContentIdentity, ContentReviewState>>)
+          .value[identity]!;
 
       expect(state.reviewStage, 2);
       expect(state.lastReviewOutcome, ReviewOutcome.correct);

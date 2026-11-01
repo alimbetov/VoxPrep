@@ -11,57 +11,66 @@ void main() {
     addTearDown(database.close);
     final now = DateTime.utc(2026, 11, 1, 10);
 
-    await database.into(database.contentManifestStates).insert(
-      ContentManifestStatesCompanion.insert(
-        id: const Value(1),
-        schemaVersion: 1,
-        currentContentVersion: 1,
-        currentManifestChecksum: _rootV1,
-        updatedAt: now,
-      ),
-    );
-    await database.into(database.contentPackRevisions).insert(
-      ContentPackRevisionsCompanion.insert(
-        packCode: 'PACK_FUTURE',
-        variantKey: 'canonical',
-        revision: 1,
-        schemaVersion: 1,
-        checksum: _packChecksum,
-        state: 'CURRENT',
-        sourceContentVersion: 2,
-        stagedAt: now,
-        currentAt: Value(now),
-      ),
-    );
-    await database.into(database.assetCatalog).insert(
-      AssetCatalogCompanion.insert(
-        assetId: 'audio.future.1',
-        checksumSha256: _assetChecksum,
-        assetKind: 'AUDIO',
-        mimeType: 'audio/mpeg',
-        sizeBytes: 128,
-        deliveryKey: 'audio/future-1.mp3',
-        createdAt: now,
-      ),
-    );
-    await database.into(database.packAssetRefs).insert(
-      PackAssetRefsCompanion.insert(
-        packCode: 'PACK_FUTURE',
-        variantKey: 'canonical',
-        packRevision: 1,
-        assetId: 'audio.future.1',
-        requiredOffline: const Value(true),
-      ),
-    );
+    await database
+        .into(database.contentManifestStates)
+        .insert(
+          ContentManifestStatesCompanion.insert(
+            id: const Value(1),
+            schemaVersion: 1,
+            currentContentVersion: 1,
+            currentManifestChecksum: _rootV1,
+            updatedAt: now,
+          ),
+        );
+    await database
+        .into(database.contentPackRevisions)
+        .insert(
+          ContentPackRevisionsCompanion.insert(
+            packCode: 'PACK_FUTURE',
+            variantKey: 'canonical',
+            revision: 1,
+            schemaVersion: 1,
+            checksum: _packChecksum,
+            state: 'CURRENT',
+            sourceContentVersion: 2,
+            stagedAt: now,
+            currentAt: Value(now),
+          ),
+        );
+    await database
+        .into(database.assetCatalog)
+        .insert(
+          AssetCatalogCompanion.insert(
+            assetId: 'audio.future.1',
+            checksumSha256: _assetChecksum,
+            assetKind: 'AUDIO',
+            mimeType: 'audio/mpeg',
+            sizeBytes: 128,
+            deliveryKey: 'audio/future-1.mp3',
+            createdAt: now,
+          ),
+        );
+    await database
+        .into(database.packAssetRefs)
+        .insert(
+          PackAssetRefsCompanion.insert(
+            packCode: 'PACK_FUTURE',
+            variantKey: 'canonical',
+            packRevision: 1,
+            assetId: 'audio.future.1',
+            requiredOffline: const Value(true),
+          ),
+        );
 
     final repository = DriftAssetCatalogRepository(database);
-    final before = (await repository.findCurrentById('audio.future.1'))
-        .getOrThrow();
+    final before = (await repository.findCurrentById(
+      'audio.future.1',
+    )).getOrThrow();
     expect(before, isNull);
 
-    await (database.update(database.contentManifestStates)
-          ..where((row) => row.id.equals(1)))
-        .write(
+    await (database.update(
+      database.contentManifestStates,
+    )..where((row) => row.id.equals(1))).write(
       ContentManifestStatesCompanion(
         currentContentVersion: const Value(2),
         currentManifestChecksum: const Value(_rootV2),
@@ -69,8 +78,9 @@ void main() {
       ),
     );
 
-    final asset = (await repository.findCurrentById('audio.future.1'))
-        .getOrThrow();
+    final asset = (await repository.findCurrentById(
+      'audio.future.1',
+    )).getOrThrow();
     expect(asset, isNotNull);
     expect(asset!.assetId, 'audio.future.1');
     expect(asset.requiredOffline, isTrue);

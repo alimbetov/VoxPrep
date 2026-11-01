@@ -57,7 +57,9 @@ final class LearnerSelectionService {
     required UniversalCatalogueGraph graph,
     required String goalCode,
   }) async {
-    final goal = _firstOrNull(graph.goals.where((item) => item.code == goalCode));
+    final goal = _firstOrNull(
+      graph.goals.where((item) => item.code == goalCode),
+    );
     if (goal == null || !goal.active) {
       return _invalidSelection('LEARNER_SELECTION_GOAL_UNAVAILABLE');
     }
@@ -115,10 +117,8 @@ final class LearnerSelectionService {
 
   Future<Result<LearnerSelection>> clearLearningDirection() {
     return _mutate(
-      (current) => current.copyWith(
-        clearSelectedGoal: true,
-        clearSelectedTrack: true,
-      ),
+      (current) =>
+          current.copyWith(clearSelectedGoal: true, clearSelectedTrack: true),
     );
   }
 

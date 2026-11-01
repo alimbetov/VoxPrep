@@ -39,7 +39,8 @@ class BootstrapStatusFrame extends ConsumerWidget {
                     ),
                   ),
                   TextButton(
-                    onPressed: () => ref.invalidate(applicationBootstrapProvider),
+                    onPressed: () =>
+                        ref.invalidate(applicationBootstrapProvider),
                     child: const Text('Retry'),
                   ),
                 ],

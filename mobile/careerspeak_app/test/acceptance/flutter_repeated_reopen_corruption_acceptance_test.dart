@@ -39,10 +39,7 @@ void main() {
         final initialPractice = DriftPracticeTestAttemptRepository(database);
 
         expect(
-          await lastOpened.recordOpened(
-            identity: identity,
-            contentRevision: 7,
-          ),
+          await lastOpened.recordOpened(identity: identity, contentRevision: 7),
           isA<Success>(),
         );
         expect(
@@ -90,8 +87,9 @@ void main() {
         database = null;
 
         database = CareerSpeakDatabase(NativeDatabase(file));
-        final corruptPractice =
-            await DriftPracticeTestAttemptRepository(database).getActiveAttempt();
+        final corruptPractice = await DriftPracticeTestAttemptRepository(
+          database,
+        ).getActiveAttempt();
         expect(corruptPractice, isA<FailureResult<PracticeTestAttempt?>>());
         expect(
           (corruptPractice as FailureResult<PracticeTestAttempt?>).failure.code,
@@ -159,9 +157,9 @@ Future<void> _expectHealthyState(
     reviewAt: reviewAt,
   );
 
-  final attempt =
-      (await DriftPracticeTestAttemptRepository(database).getActiveAttempt())
-          .getOrThrow();
+  final attempt = (await DriftPracticeTestAttemptRepository(
+    database,
+  ).getActiveAttempt()).getOrThrow();
   expect(attempt, isNotNull);
   expect(attempt!.practiceTestCode, 'TEST_REOPEN_1');
   expect(attempt.practiceTestRevision, 5);
@@ -174,15 +172,16 @@ Future<void> _expectDurableNeighbourState(
   required ContentIdentity identity,
   required DateTime reviewAt,
 }) async {
-  final opened =
-      (await DriftLastOpenedContentRepository(database).getLastOpenedContent())
-          .getOrThrow();
+  final opened = (await DriftLastOpenedContentRepository(
+    database,
+  ).getLastOpenedContent()).getOrThrow();
   expect(opened, isNotNull);
   expect(opened!.identity, identity);
   expect(opened.contentRevision, 7);
 
-  final schedules =
-      (await DriftReviewScheduleRepository(database).getSchedules()).getOrThrow();
+  final schedules = (await DriftReviewScheduleRepository(
+    database,
+  ).getSchedules()).getOrThrow();
   expect(schedules.keys, contains(identity));
   final state = schedules[identity]!;
   expect(state.nextReviewAt, reviewAt);

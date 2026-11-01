@@ -9,44 +9,47 @@ import '../../support/test_database_factory.dart';
 
 void main() {
   group('DriftPracticeTestAttemptRepository', () {
-    test('v13 capability persists active attempt across repository reopen', () async {
-      final database = createTestDatabase();
-      addTearDown(database.close);
-      expect(database.schemaVersion, greaterThanOrEqualTo(13));
+    test(
+      'v13 capability persists active attempt across repository reopen',
+      () async {
+        final database = createTestDatabase();
+        addTearDown(database.close);
+        expect(database.schemaVersion, greaterThanOrEqualTo(13));
 
-      await _publishPracticeTest(database, code: 'JAVA_CORE', revision: 7);
-      final clock = DateTime.utc(2026, 11, 1, 10);
-      final repository = DriftPracticeTestAttemptRepository(
-        database,
-        now: () => clock,
-      );
+        await _publishPracticeTest(database, code: 'JAVA_CORE', revision: 7);
+        final clock = DateTime.utc(2026, 11, 1, 10);
+        final repository = DriftPracticeTestAttemptRepository(
+          database,
+          now: () => clock,
+        );
 
-      final started = await repository.startActiveAttempt('JAVA_CORE');
-      final active = (started as Success<PracticeTestAttempt>).value;
-      expect(active.practiceTestCode, 'JAVA_CORE');
-      expect(active.practiceTestRevision, 7);
-      expect(active.currentIndex, 0);
-      expect(active.answers, isEmpty);
+        final started = await repository.startActiveAttempt('JAVA_CORE');
+        final active = (started as Success<PracticeTestAttempt>).value;
+        expect(active.practiceTestCode, 'JAVA_CORE');
+        expect(active.practiceTestRevision, 7);
+        expect(active.currentIndex, 0);
+        expect(active.answers, isEmpty);
 
-      final progressed = active.copyWith(
-        currentIndex: 3,
-        answers: const <int, int>{0: 2, 1: 1, 3: 0},
-        updatedAt: clock.add(const Duration(minutes: 2)),
-      );
-      final saved = await repository.saveActiveAttempt(progressed);
-      expect(saved, isA<Success<PracticeTestAttempt>>());
+        final progressed = active.copyWith(
+          currentIndex: 3,
+          answers: const <int, int>{0: 2, 1: 1, 3: 0},
+          updatedAt: clock.add(const Duration(minutes: 2)),
+        );
+        final saved = await repository.saveActiveAttempt(progressed);
+        expect(saved, isA<Success<PracticeTestAttempt>>());
 
-      final reopenedRepository = DriftPracticeTestAttemptRepository(database);
-      final reopened = await reopenedRepository.getActiveAttempt();
-      final restored = (reopened as Success<PracticeTestAttempt?>).value!;
+        final reopenedRepository = DriftPracticeTestAttemptRepository(database);
+        final reopened = await reopenedRepository.getActiveAttempt();
+        final restored = (reopened as Success<PracticeTestAttempt?>).value!;
 
-      expect(restored.practiceTestCode, progressed.practiceTestCode);
-      expect(restored.practiceTestRevision, progressed.practiceTestRevision);
-      expect(restored.currentIndex, progressed.currentIndex);
-      expect(restored.answers, progressed.answers);
-      expect(restored.startedAt, progressed.startedAt);
-      expect(restored.updatedAt, progressed.updatedAt);
-    });
+        expect(restored.practiceTestCode, progressed.practiceTestCode);
+        expect(restored.practiceTestRevision, progressed.practiceTestRevision);
+        expect(restored.currentIndex, progressed.currentIndex);
+        expect(restored.answers, progressed.answers);
+        expect(restored.startedAt, progressed.startedAt);
+        expect(restored.updatedAt, progressed.updatedAt);
+      },
+    );
 
     test('start pins only the revision from CURRENT publication', () async {
       final database = createTestDatabase();

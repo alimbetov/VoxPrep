@@ -77,43 +77,46 @@ void main() {
     );
   });
 
-  test('collection remains a valid fallback while any exact member is incomplete', () {
-    const contentIdentity = ContentIdentity(
-      code: 'CONTENT_A',
-      type: ContentType.topic,
-    );
-    const proposed = ContinueLearningInput(
-      nextCollections: <ContinueLearningCollectionCandidate>[
-        ContinueLearningCollectionCandidate(
-          collectionCode: 'COLLECTION_A',
-          trackCode: 'TRACK_A',
-          sortOrder: 0,
-        ),
-      ],
-    );
+  test(
+    'collection remains a valid fallback while any exact member is incomplete',
+    () {
+      const contentIdentity = ContentIdentity(
+        code: 'CONTENT_A',
+        type: ContentType.topic,
+      );
+      const proposed = ContinueLearningInput(
+        nextCollections: <ContinueLearningCollectionCandidate>[
+          ContinueLearningCollectionCandidate(
+            collectionCode: 'COLLECTION_A',
+            trackCode: 'TRACK_A',
+            sortOrder: 0,
+          ),
+        ],
+      );
 
-    final current = const ContinueLearningCurrentRevalidator().revalidate(
-      proposed: proposed,
-      graph: _graph(),
-      selection: LearnerSelection(
-        selectedGoalCode: 'GOAL_A',
-        selectedTrackCode: 'TRACK_A',
-      ),
-      markers: <ContentIdentity, ContentMarkerState>{
-        contentIdentity: const ContentMarkerState(
-          completed: true,
-          lastRevisionSeen: 7,
+      final current = const ContinueLearningCurrentRevalidator().revalidate(
+        proposed: proposed,
+        graph: _graph(),
+        selection: LearnerSelection(
+          selectedGoalCode: 'GOAL_A',
+          selectedTrackCode: 'TRACK_A',
         ),
-      },
-      completedPracticeTests: const <PracticeTestCompletionKey>{},
-    );
+        markers: <ContentIdentity, ContentMarkerState>{
+          contentIdentity: const ContentMarkerState(
+            completed: true,
+            lastRevisionSeen: 7,
+          ),
+        },
+        completedPracticeTests: const <PracticeTestCompletionKey>{},
+      );
 
-    expect(current.nextCollections, hasLength(1));
-    expect(
-      const ContinueLearningResolver().resolve(current),
-      isA<OpenCollectionDecision>(),
-    );
-  });
+      expect(current.nextCollections, hasLength(1));
+      expect(
+        const ContinueLearningResolver().resolve(current),
+        isA<OpenCollectionDecision>(),
+      );
+    },
+  );
 }
 
 UniversalCatalogueGraph _graph() {

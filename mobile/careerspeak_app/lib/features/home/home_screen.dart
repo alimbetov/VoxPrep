@@ -176,10 +176,7 @@ class _ContinueLearningCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                value.title,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
+              Text(value.title, style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 6),
               Text(value.subtitle),
               const SizedBox(height: 14),

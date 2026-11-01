@@ -7,10 +7,8 @@ import 'database/careerspeak_database.dart';
 
 final class DriftLearnerSelectionRepository
     implements LearnerSelectionRepository {
-  DriftLearnerSelectionRepository(
-    this._database, {
-    DateTime Function()? now,
-  }) : _now = now ?? (() => DateTime.now().toUtc());
+  DriftLearnerSelectionRepository(this._database, {DateTime Function()? now})
+    : _now = now ?? (() => DateTime.now().toUtc());
 
   final CareerSpeakDatabase _database;
   final DateTime Function() _now;
@@ -89,9 +87,9 @@ final class DriftLearnerSelectionRepository
               expectedGeneration,
             ],
           );
-          final changesRow = await _database.customSelect(
-            'SELECT changes() AS affected_rows',
-          ).getSingle();
+          final changesRow = await _database
+              .customSelect('SELECT changes() AS affected_rows')
+              .getSingle();
           if (changesRow.read<int>('affected_rows') != 1) {
             return FailureResult<LearnerSelection>(
               const ApplicationFailure(
@@ -117,8 +115,7 @@ final class DriftLearnerSelectionRepository
   }
 
   Future<LearnerSelection> _readSelection() async {
-    final row = await _database.customSelect(
-      '''
+    final row = await _database.customSelect('''
       SELECT
         selected_goal_code,
         selected_track_code,
@@ -127,8 +124,7 @@ final class DriftLearnerSelectionRepository
         generation
       FROM learner_selection
       WHERE id = 1
-      ''',
-    ).getSingle();
+      ''').getSingle();
 
     return LearnerSelection(
       selectedGoalCode: row.readNullable<String>('selected_goal_code'),

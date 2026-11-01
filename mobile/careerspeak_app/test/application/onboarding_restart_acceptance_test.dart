@@ -17,125 +17,137 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('onboarding restart acceptance', () {
-    test('O1 resumes at English level after goal survives real DB reopen', () async {
-      final harness = await _RestartHarness.create();
-      addTearDown(harness.dispose);
+    test(
+      'O1 resumes at English level after goal survives real DB reopen',
+      () async {
+        final harness = await _RestartHarness.create();
+        addTearDown(harness.dispose);
 
-      final first = harness.open();
-      final service = LearnerSelectionService(
-        repository: DriftLearnerSelectionRepository(first),
-        normalizer: const LearnerSelectionNormalizer(),
-      );
-      final selected = await service.selectGoal(
-        graph: _graph(),
-        goalCode: 'JOB_INTERVIEW',
-      );
-      expect(selected, isA<Success<LearnerSelection>>());
-      await first.close();
+        final first = harness.open();
+        final service = LearnerSelectionService(
+          repository: DriftLearnerSelectionRepository(first),
+          normalizer: const LearnerSelectionNormalizer(),
+        );
+        final selected = await service.selectGoal(
+          graph: _graph(),
+          goalCode: 'JOB_INTERVIEW',
+        );
+        expect(selected, isA<Success<LearnerSelection>>());
+        await first.close();
 
-      final reopened = harness.open();
-      final selection = _selection(
-        await DriftLearnerSelectionRepository(reopened).getSelection(),
-      );
-      final onboarding = _onboarding(
-        await DriftOnboardingStateRepository(reopened).getState(),
-      );
+        final reopened = harness.open();
+        final selection = _selection(
+          await DriftLearnerSelectionRepository(reopened).getSelection(),
+        );
+        final onboarding = _onboarding(
+          await DriftOnboardingStateRepository(reopened).getState(),
+        );
 
-      expect(selection.selectedGoalCode, 'JOB_INTERVIEW');
-      expect(onboarding.nextStep(selection), OnboardingStep.englishLevel);
-      await reopened.close();
-    });
+        expect(selection.selectedGoalCode, 'JOB_INTERVIEW');
+        expect(onboarding.nextStep(selection), OnboardingStep.englishLevel);
+        await reopened.close();
+      },
+    );
 
-    test('O1 resumes at Support language after Not sure survives reopen', () async {
-      final harness = await _RestartHarness.create();
-      addTearDown(harness.dispose);
+    test(
+      'O1 resumes at Support language after Not sure survives reopen',
+      () async {
+        final harness = await _RestartHarness.create();
+        addTearDown(harness.dispose);
 
-      final first = harness.open();
-      final service = LearnerSelectionService(
-        repository: DriftLearnerSelectionRepository(first),
-        normalizer: const LearnerSelectionNormalizer(),
-      );
-      await service.selectGoal(graph: _graph(), goalCode: 'JOB_INTERVIEW');
-      final level = await service.setLevelDecision(null);
-      expect(level, isA<Success<LearnerSelection>>());
-      await first.close();
+        final first = harness.open();
+        final service = LearnerSelectionService(
+          repository: DriftLearnerSelectionRepository(first),
+          normalizer: const LearnerSelectionNormalizer(),
+        );
+        await service.selectGoal(graph: _graph(), goalCode: 'JOB_INTERVIEW');
+        final level = await service.setLevelDecision(null);
+        expect(level, isA<Success<LearnerSelection>>());
+        await first.close();
 
-      final reopened = harness.open();
-      final selection = _selection(
-        await DriftLearnerSelectionRepository(reopened).getSelection(),
-      );
-      final onboarding = _onboarding(
-        await DriftOnboardingStateRepository(reopened).getState(),
-      );
+        final reopened = harness.open();
+        final selection = _selection(
+          await DriftLearnerSelectionRepository(reopened).getSelection(),
+        );
+        final onboarding = _onboarding(
+          await DriftOnboardingStateRepository(reopened).getState(),
+        );
 
-      expect(selection.levelDecisionMade, isTrue);
-      expect(selection.selfAssessedLevelCode, isNull);
-      expect(onboarding.nextStep(selection), OnboardingStep.supportLanguage);
-      await reopened.close();
-    });
+        expect(selection.levelDecisionMade, isTrue);
+        expect(selection.selfAssessedLevelCode, isNull);
+        expect(onboarding.nextStep(selection), OnboardingStep.supportLanguage);
+        await reopened.close();
+      },
+    );
 
-    test('O2 skip survives restart without fabricating learning direction', () async {
-      final harness = await _RestartHarness.create();
-      addTearDown(harness.dispose);
+    test(
+      'O2 skip survives restart without fabricating learning direction',
+      () async {
+        final harness = await _RestartHarness.create();
+        addTearDown(harness.dispose);
 
-      final first = harness.open();
-      final onboardingRepository = DriftOnboardingStateRepository(first);
-      final skipped = await onboardingRepository.compareAndSet(
-        expectedGeneration: 0,
-        completed: true,
-      );
-      expect(skipped, isA<Success<OnboardingState>>());
-      await first.close();
+        final first = harness.open();
+        final onboardingRepository = DriftOnboardingStateRepository(first);
+        final skipped = await onboardingRepository.compareAndSet(
+          expectedGeneration: 0,
+          completed: true,
+        );
+        expect(skipped, isA<Success<OnboardingState>>());
+        await first.close();
 
-      final reopened = harness.open();
-      final onboarding = _onboarding(
-        await DriftOnboardingStateRepository(reopened).getState(),
-      );
-      final selection = _selection(
-        await DriftLearnerSelectionRepository(reopened).getSelection(),
-      );
+        final reopened = harness.open();
+        final onboarding = _onboarding(
+          await DriftOnboardingStateRepository(reopened).getState(),
+        );
+        final selection = _selection(
+          await DriftLearnerSelectionRepository(reopened).getSelection(),
+        );
 
-      expect(onboarding.completed, isTrue);
-      expect(onboarding.nextStep(selection), OnboardingStep.complete);
-      expect(selection.selectedGoalCode, isNull);
-      expect(selection.selectedTrackCode, isNull);
-      expect(selection.levelDecisionMade, isFalse);
-      await reopened.close();
-    });
+        expect(onboarding.completed, isTrue);
+        expect(onboarding.nextStep(selection), OnboardingStep.complete);
+        expect(selection.selectedGoalCode, isNull);
+        expect(selection.selectedTrackCode, isNull);
+        expect(selection.levelDecisionMade, isFalse);
+        await reopened.close();
+      },
+    );
 
-    test('O3 new CURRENT graph invalidates inactive goal and track durably', () async {
-      final harness = await _RestartHarness.create();
-      addTearDown(harness.dispose);
+    test(
+      'O3 new CURRENT graph invalidates inactive goal and track durably',
+      () async {
+        final harness = await _RestartHarness.create();
+        addTearDown(harness.dispose);
 
-      final first = harness.open();
-      final repository = DriftLearnerSelectionRepository(first);
-      final service = LearnerSelectionService(
-        repository: repository,
-        normalizer: const LearnerSelectionNormalizer(),
-      );
-      await service.selectGoal(graph: _graph(), goalCode: 'JOB_INTERVIEW');
-      final track = await service.selectTrack(
-        graph: _graph(),
-        trackCode: 'JAVA_SENIOR',
-      );
-      expect(track, isA<Success<LearnerSelection>>());
+        final first = harness.open();
+        final repository = DriftLearnerSelectionRepository(first);
+        final service = LearnerSelectionService(
+          repository: repository,
+          normalizer: const LearnerSelectionNormalizer(),
+        );
+        await service.selectGoal(graph: _graph(), goalCode: 'JOB_INTERVIEW');
+        final track = await service.selectTrack(
+          graph: _graph(),
+          trackCode: 'JAVA_SENIOR',
+        );
+        expect(track, isA<Success<LearnerSelection>>());
 
-      final normalized = await service.normalizeAgainst(
-        _graph(goalActive: false),
-      );
-      final normalizedSelection = _selection(normalized);
-      expect(normalizedSelection.selectedGoalCode, isNull);
-      expect(normalizedSelection.selectedTrackCode, isNull);
-      await first.close();
+        final normalized = await service.normalizeAgainst(
+          _graph(goalActive: false),
+        );
+        final normalizedSelection = _selection(normalized);
+        expect(normalizedSelection.selectedGoalCode, isNull);
+        expect(normalizedSelection.selectedTrackCode, isNull);
+        await first.close();
 
-      final reopened = harness.open();
-      final persisted = _selection(
-        await DriftLearnerSelectionRepository(reopened).getSelection(),
-      );
-      expect(persisted.selectedGoalCode, isNull);
-      expect(persisted.selectedTrackCode, isNull);
-      await reopened.close();
-    });
+        final reopened = harness.open();
+        final persisted = _selection(
+          await DriftLearnerSelectionRepository(reopened).getSelection(),
+        );
+        expect(persisted.selectedGoalCode, isNull);
+        expect(persisted.selectedTrackCode, isNull);
+        await reopened.close();
+      },
+    );
   });
 }
 

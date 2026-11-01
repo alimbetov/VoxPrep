@@ -16,7 +16,8 @@ class ContentDetailScreen extends ConsumerStatefulWidget {
   final ContentIdentity identity;
 
   @override
-  ConsumerState<ContentDetailScreen> createState() => _ContentDetailScreenState();
+  ConsumerState<ContentDetailScreen> createState() =>
+      _ContentDetailScreenState();
 }
 
 class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> {

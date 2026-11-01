@@ -131,39 +131,42 @@ void main() {
     expect(registration.calls, 1);
   });
 
-  test('concurrent callers share one complete fresh startup pipeline', () async {
-    final store = _MemoryCredentialStore(
-      installationId: InstallationId('installation-1'),
-      installationToken: InstallationToken('token-old'),
-    );
-    final registration = _RegistrationGateway(
-      Success<InstallationToken>(InstallationToken('token-fresh')),
-    );
-    final gate = Completer<void>();
-    var syncCalls = 0;
-    final service = _service(
-      store: store,
-      registration: registration,
-      synchronize: ({required runId, required trigger}) async {
-        syncCalls += 1;
-        expect((await store.readInstallationToken())?.value, 'token-fresh');
-        await gate.future;
-        return Success<ContentSyncOutcome>(ContentSyncNoOp(runId));
-      },
-    );
+  test(
+    'concurrent callers share one complete fresh startup pipeline',
+    () async {
+      final store = _MemoryCredentialStore(
+        installationId: InstallationId('installation-1'),
+        installationToken: InstallationToken('token-old'),
+      );
+      final registration = _RegistrationGateway(
+        Success<InstallationToken>(InstallationToken('token-fresh')),
+      );
+      final gate = Completer<void>();
+      var syncCalls = 0;
+      final service = _service(
+        store: store,
+        registration: registration,
+        synchronize: ({required runId, required trigger}) async {
+          syncCalls += 1;
+          expect((await store.readInstallationToken())?.value, 'token-fresh');
+          await gate.future;
+          return Success<ContentSyncOutcome>(ContentSyncNoOp(runId));
+        },
+      );
 
-    final first = service.bootstrap();
-    final second = service.bootstrap();
+      final first = service.bootstrap();
+      final second = service.bootstrap();
 
-    expect(identical(first, second), isTrue);
-    gate.complete();
-    await Future.wait(<Future<Result<ApplicationBootstrapOutcome>>>[
-      first,
-      second,
-    ]);
-    expect(registration.calls, 1);
-    expect(syncCalls, 1);
-  });
+      expect(identical(first, second), isTrue);
+      gate.complete();
+      await Future.wait(<Future<Result<ApplicationBootstrapOutcome>>>[
+        first,
+        second,
+      ]);
+      expect(registration.calls, 1);
+      expect(syncCalls, 1);
+    },
+  );
 }
 
 ApplicationBootstrapService _service({

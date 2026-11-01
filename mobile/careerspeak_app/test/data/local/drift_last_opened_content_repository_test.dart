@@ -9,70 +9,76 @@ import '../../support/test_database_factory.dart';
 
 void main() {
   group('DriftLastOpenedContentRepository', () {
-    test('v14 capability starts empty and survives repository reopen', () async {
-      final database = createTestDatabase();
-      addTearDown(database.close);
-      expect(database.schemaVersion, greaterThanOrEqualTo(14));
+    test(
+      'v14 capability starts empty and survives repository reopen',
+      () async {
+        final database = createTestDatabase();
+        addTearDown(database.close);
+        expect(database.schemaVersion, greaterThanOrEqualTo(14));
 
-      final openedAt = DateTime.utc(2026, 11, 1, 10, 15);
-      final repository = DriftLastOpenedContentRepository(
-        database,
-        now: () => openedAt,
-      );
+        final openedAt = DateTime.utc(2026, 11, 1, 10, 15);
+        final repository = DriftLastOpenedContentRepository(
+          database,
+          now: () => openedAt,
+        );
 
-      final initial = await repository.getLastOpenedContent();
-      expect((initial as Success<LastOpenedContent?>).value, isNull);
+        final initial = await repository.getLastOpenedContent();
+        expect((initial as Success<LastOpenedContent?>).value, isNull);
 
-      final write = await repository.recordOpened(
-        identity: const ContentIdentity(
-          code: 'JAVA_STREAMS_01',
-          type: ContentType.topic,
-        ),
-        contentRevision: 6,
-      );
-      final persisted = (write as Success<LastOpenedContent>).value;
-      expect(persisted.identity.code, 'JAVA_STREAMS_01');
-      expect(persisted.identity.type, ContentType.topic);
-      expect(persisted.contentRevision, 6);
-      expect(persisted.openedAt, openedAt);
+        final write = await repository.recordOpened(
+          identity: const ContentIdentity(
+            code: 'JAVA_STREAMS_01',
+            type: ContentType.topic,
+          ),
+          contentRevision: 6,
+        );
+        final persisted = (write as Success<LastOpenedContent>).value;
+        expect(persisted.identity.code, 'JAVA_STREAMS_01');
+        expect(persisted.identity.type, ContentType.topic);
+        expect(persisted.contentRevision, 6);
+        expect(persisted.openedAt, openedAt);
 
-      final reopenedRepository = DriftLastOpenedContentRepository(database);
-      final reopened = await reopenedRepository.getLastOpenedContent();
-      expect((reopened as Success<LastOpenedContent?>).value, persisted);
-    });
+        final reopenedRepository = DriftLastOpenedContentRepository(database);
+        final reopened = await reopenedRepository.getLastOpenedContent();
+        expect((reopened as Success<LastOpenedContent?>).value, persisted);
+      },
+    );
 
-    test('newer open replaces previous content identity and revision', () async {
-      final database = createTestDatabase();
-      addTearDown(database.close);
-      var clock = DateTime.utc(2026, 11, 1, 10);
-      final repository = DriftLastOpenedContentRepository(
-        database,
-        now: () => clock,
-      );
+    test(
+      'newer open replaces previous content identity and revision',
+      () async {
+        final database = createTestDatabase();
+        addTearDown(database.close);
+        var clock = DateTime.utc(2026, 11, 1, 10);
+        final repository = DriftLastOpenedContentRepository(
+          database,
+          now: () => clock,
+        );
 
-      await repository.recordOpened(
-        identity: const ContentIdentity(
-          code: 'FIRST',
-          type: ContentType.vocabulary,
-        ),
-        contentRevision: 1,
-      );
-      clock = clock.add(const Duration(minutes: 5));
-      await repository.recordOpened(
-        identity: const ContentIdentity(
-          code: 'SECOND',
-          type: ContentType.interview,
-        ),
-        contentRevision: 9,
-      );
+        await repository.recordOpened(
+          identity: const ContentIdentity(
+            code: 'FIRST',
+            type: ContentType.vocabulary,
+          ),
+          contentRevision: 1,
+        );
+        clock = clock.add(const Duration(minutes: 5));
+        await repository.recordOpened(
+          identity: const ContentIdentity(
+            code: 'SECOND',
+            type: ContentType.interview,
+          ),
+          contentRevision: 9,
+        );
 
-      final read = await repository.getLastOpenedContent();
-      final value = (read as Success<LastOpenedContent?>).value!;
-      expect(value.identity.code, 'SECOND');
-      expect(value.identity.type, ContentType.interview);
-      expect(value.contentRevision, 9);
-      expect(value.openedAt, clock);
-    });
+        final read = await repository.getLastOpenedContent();
+        final value = (read as Success<LastOpenedContent?>).value!;
+        expect(value.identity.code, 'SECOND');
+        expect(value.identity.type, ContentType.interview);
+        expect(value.contentRevision, 9);
+        expect(value.openedAt, clock);
+      },
+    );
 
     test('older delayed write cannot overwrite a newer open event', () async {
       final database = createTestDatabase();

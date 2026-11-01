@@ -78,7 +78,9 @@ final class DriftCatalogueSnapshotRepository
         );
       }
 
-      final decoded = jsonDecode(payloadRows.single.read<String>('payload_json'));
+      final decoded = jsonDecode(
+        payloadRows.single.read<String>('payload_json'),
+      );
       if (decoded is! Map<String, dynamic>) {
         return const FailureResult<CataloguePayload?>(
           ApplicationFailure(

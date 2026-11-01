@@ -200,14 +200,12 @@ void main() {
           (ref) async => const <ContentItem>[],
         ),
         learnerLearningContextProvider.overrideWithValue(
-          const AsyncData<LearnerLearningContext?>(
-            (
-              verticalCode: 'JAVA',
-              verticalTitle: 'Java Backend',
-              goalCode: 'JOB_INTERVIEW',
-              goalTitle: 'Pass Java backend interviews',
-            ),
-          ),
+          const AsyncData<LearnerLearningContext?>((
+            verticalCode: 'JAVA',
+            verticalTitle: 'Java Backend',
+            goalCode: 'JOB_INTERVIEW',
+            goalTitle: 'Pass Java backend interviews',
+          )),
         ),
         continueLearningHomeTargetProvider.overrideWith(
           (ref) async => const ContinueLearningHomeTarget(

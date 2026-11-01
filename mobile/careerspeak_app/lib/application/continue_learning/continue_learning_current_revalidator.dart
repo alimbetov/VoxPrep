@@ -21,7 +21,8 @@ final class ContinueLearningCurrentRevalidator {
     final activeCollections = _activeCollections(graph);
 
     final attempt = proposed.activePracticeTestAttempt;
-    final validAttempt = attempt != null &&
+    final validAttempt =
+        attempt != null &&
             _containsPracticeTest(
               activeCollections,
               attempt.practiceTestCode,
@@ -31,7 +32,8 @@ final class ContinueLearningCurrentRevalidator {
         : null;
 
     final lastOpened = proposed.unfinishedLastOpenedContent;
-    final validLastOpened = lastOpened != null &&
+    final validLastOpened =
+        lastOpened != null &&
             _containsContent(
               activeCollections,
               lastOpened.identity,
@@ -210,7 +212,8 @@ final class ContinueLearningCurrentRevalidator {
     };
     final activeGoals = <String>{
       for (final goal in graph.goals)
-        if (goal.active && activeVerticals.contains(goal.verticalCode)) goal.code,
+        if (goal.active && activeVerticals.contains(goal.verticalCode))
+          goal.code,
     };
     final activeTracks = <String>{
       for (final track in graph.tracks)
@@ -267,10 +270,7 @@ final class ContinueLearningCurrentRevalidator {
     return false;
   }
 
-  static bool _isCompletedAtRevision(
-    ContentMarkerState? marker,
-    int revision,
-  ) {
+  static bool _isCompletedAtRevision(ContentMarkerState? marker, int revision) {
     return marker?.completed == true && marker?.lastRevisionSeen == revision;
   }
 }

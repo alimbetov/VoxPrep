@@ -30,28 +30,31 @@ void main() {
       expect(selection.selectedTrackCode, isNull);
     });
 
-    test('O5 changing goal preserves explicit English level decision', () async {
-      final repository = _FakeRepository(
-        LearnerSelection(
-          selectedGoalCode: 'GOAL_A',
-          selectedTrackCode: 'TRACK_A',
-          selfAssessedLevelCode: 'B2',
-          levelDecisionMade: true,
-        ),
-      );
-      final service = _service(repository);
+    test(
+      'O5 changing goal preserves explicit English level decision',
+      () async {
+        final repository = _FakeRepository(
+          LearnerSelection(
+            selectedGoalCode: 'GOAL_A',
+            selectedTrackCode: 'TRACK_A',
+            selfAssessedLevelCode: 'B2',
+            levelDecisionMade: true,
+          ),
+        );
+        final service = _service(repository);
 
-      final result = await service.selectGoal(
-        graph: _graph(),
-        goalCode: 'GOAL_B',
-      );
+        final result = await service.selectGoal(
+          graph: _graph(),
+          goalCode: 'GOAL_B',
+        );
 
-      final selection = (result as Success<LearnerSelection>).value;
-      expect(selection.selectedGoalCode, 'GOAL_B');
-      expect(selection.selectedTrackCode, isNull);
-      expect(selection.levelDecisionMade, isTrue);
-      expect(selection.selfAssessedLevelCode, 'B2');
-    });
+        final selection = (result as Success<LearnerSelection>).value;
+        expect(selection.selectedGoalCode, 'GOAL_B');
+        expect(selection.selectedTrackCode, isNull);
+        expect(selection.levelDecisionMade, isTrue);
+        expect(selection.selfAssessedLevelCode, 'B2');
+      },
+    );
 
     test('selectTrack rejects track from another goal', () async {
       final repository = _FakeRepository(
@@ -71,28 +74,34 @@ void main() {
       );
     });
 
-    test('Not sure is an explicit level decision with null level code', () async {
-      final repository = _FakeRepository(LearnerSelection.empty);
-      final service = _service(repository);
+    test(
+      'Not sure is an explicit level decision with null level code',
+      () async {
+        final repository = _FakeRepository(LearnerSelection.empty);
+        final service = _service(repository);
 
-      final result = await service.setLevelDecision(null);
+        final result = await service.setLevelDecision(null);
 
-      final selection = (result as Success<LearnerSelection>).value;
-      expect(selection.levelDecisionMade, isTrue);
-      expect(selection.selfAssessedLevelCode, isNull);
-    });
+        final selection = (result as Success<LearnerSelection>).value;
+        expect(selection.levelDecisionMade, isTrue);
+        expect(selection.selfAssessedLevelCode, isNull);
+      },
+    );
 
-    test('normalization retries after CAS conflict and preserves newer choice', () async {
-      final repository = _ConflictThenFreshRepository();
-      final service = _service(repository);
+    test(
+      'normalization retries after CAS conflict and preserves newer choice',
+      () async {
+        final repository = _ConflictThenFreshRepository();
+        final service = _service(repository);
 
-      final result = await service.normalizeAgainst(_graph());
+        final result = await service.normalizeAgainst(_graph());
 
-      final selection = (result as Success<LearnerSelection>).value;
-      expect(selection.selectedGoalCode, 'GOAL_B');
-      expect(selection.selectedTrackCode, isNull);
-      expect(repository.compareAndSetCalls, 1);
-    });
+        final selection = (result as Success<LearnerSelection>).value;
+        expect(selection.selectedGoalCode, 'GOAL_B');
+        expect(selection.selectedTrackCode, isNull);
+        expect(repository.compareAndSetCalls, 1);
+      },
+    );
   });
 }
 

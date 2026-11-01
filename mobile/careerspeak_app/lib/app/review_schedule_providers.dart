@@ -10,7 +10,9 @@ import '../domain/content_review_state.dart';
 import 'learner_state_providers.dart';
 import 'repository_providers.dart';
 
-final reviewScheduleRepositoryProvider = Provider<ReviewScheduleRepository>((ref) {
+final reviewScheduleRepositoryProvider = Provider<ReviewScheduleRepository>((
+  ref,
+) {
   return DriftReviewScheduleRepository(ref.watch(careerSpeakDatabaseProvider));
 });
 
@@ -28,12 +30,12 @@ final reviewDueTimerFactoryProvider = Provider<ReviewDueTimerFactory>((ref) {
   return (delay, callback) => Timer(delay, callback);
 });
 
-typedef ReviewDueTimerFactory = Timer Function(
-  Duration delay,
-  void Function() callback,
-);
+typedef ReviewDueTimerFactory =
+    Timer Function(Duration delay, void Function() callback);
 
-final dueReviewIdentitiesProvider = Provider<AsyncValue<Set<ContentIdentity>>>((ref) {
+final dueReviewIdentitiesProvider = Provider<AsyncValue<Set<ContentIdentity>>>((
+  ref,
+) {
   final schedules = ref.watch(reviewSchedulesProvider);
   final now = ref.watch(reviewClockProvider)().toUtc();
   Timer? timer;
@@ -57,7 +59,10 @@ final dueReviewIdentitiesProvider = Provider<AsyncValue<Set<ContentIdentity>>>((
       if (delay <= Duration.zero) {
         delay = const Duration(microseconds: 1);
       }
-      timer = ref.read(reviewDueTimerFactoryProvider)(delay, ref.invalidateSelf);
+      timer = ref.read(reviewDueTimerFactoryProvider)(
+        delay,
+        ref.invalidateSelf,
+      );
     }
 
     return Set<ContentIdentity>.unmodifiable(due);

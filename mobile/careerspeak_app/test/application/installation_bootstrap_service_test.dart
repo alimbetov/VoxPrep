@@ -81,36 +81,39 @@ void main() {
     expect((await store.readInstallationToken())?.value, 'token-3');
   });
 
-  test('later bootstrap rotates token while preserving installation id', () async {
-    final store = _MemoryCredentialStore(
-      installationId: InstallationId('installation-1'),
-      installationToken: InstallationToken('token-old'),
-    );
-    final gateway = _RegistrationGateway(
-      results: <Result<InstallationToken>>[
-        Success(InstallationToken('token-4')),
-        Success(InstallationToken('token-5')),
-      ],
-    );
-    final service = InstallationBootstrapService(
-      identityService: InstallationIdentityService(store),
-      registrationGateway: gateway,
-    );
+  test(
+    'later bootstrap rotates token while preserving installation id',
+    () async {
+      final store = _MemoryCredentialStore(
+        installationId: InstallationId('installation-1'),
+        installationToken: InstallationToken('token-old'),
+      );
+      final gateway = _RegistrationGateway(
+        results: <Result<InstallationToken>>[
+          Success(InstallationToken('token-4')),
+          Success(InstallationToken('token-5')),
+        ],
+      );
+      final service = InstallationBootstrapService(
+        identityService: InstallationIdentityService(store),
+        registrationGateway: gateway,
+      );
 
-    final first = (await service.ensureCredentials()).getOrThrow();
-    final second = (await service.ensureCredentials()).getOrThrow();
+      final first = (await service.ensureCredentials()).getOrThrow();
+      final second = (await service.ensureCredentials()).getOrThrow();
 
-    expect(first.installationId.value, 'installation-1');
-    expect(second.installationId.value, 'installation-1');
-    expect(first.installationToken.value, 'token-4');
-    expect(second.installationToken.value, 'token-5');
-    expect(gateway.calls, 2);
-    expect(
-      gateway.installationIds.map((value) => value.value),
-      everyElement('installation-1'),
-    );
-    expect((await store.readInstallationToken())?.value, 'token-5');
-  });
+      expect(first.installationId.value, 'installation-1');
+      expect(second.installationId.value, 'installation-1');
+      expect(first.installationToken.value, 'token-4');
+      expect(second.installationToken.value, 'token-5');
+      expect(gateway.calls, 2);
+      expect(
+        gateway.installationIds.map((value) => value.value),
+        everyElement('installation-1'),
+      );
+      expect((await store.readInstallationToken())?.value, 'token-5');
+    },
+  );
 
   test('failed fresh issuance preserves previously stored token', () async {
     final store = _MemoryCredentialStore(

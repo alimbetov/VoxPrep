@@ -13,7 +13,10 @@ void main() {
       repository: repository,
       now: () => DateTime.utc(2026, 11, 1, 10),
     );
-    const identity = ContentIdentity(code: 'JAVA_REVIEW', type: ContentType.topic);
+    const identity = ContentIdentity(
+      code: 'JAVA_REVIEW',
+      type: ContentType.topic,
+    );
 
     final result = await scheduler.recordOutcome(
       identity: identity,
@@ -34,15 +37,18 @@ final class _Repository implements ReviewScheduleRepository {
   ContentReviewState? lastState;
 
   @override
-  Future<Result<Map<ContentIdentity, ContentReviewState>>> getSchedules() async =>
-      Success<Map<ContentIdentity, ContentReviewState>>(
-        lastState == null
-            ? const <ContentIdentity, ContentReviewState>{}
-            : <ContentIdentity, ContentReviewState>{lastState!.identity: lastState!},
-      );
+  Future<Result<Map<ContentIdentity, ContentReviewState>>>
+  getSchedules() async => Success<Map<ContentIdentity, ContentReviewState>>(
+    lastState == null
+        ? const <ContentIdentity, ContentReviewState>{}
+        : <ContentIdentity, ContentReviewState>{
+            lastState!.identity: lastState!,
+          },
+  );
 
   @override
-  Stream<Result<Map<ContentIdentity, ContentReviewState>>> watchSchedules() async* {
+  Stream<Result<Map<ContentIdentity, ContentReviewState>>>
+  watchSchedules() async* {
     yield await getSchedules();
   }
 

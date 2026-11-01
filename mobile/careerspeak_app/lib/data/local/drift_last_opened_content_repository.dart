@@ -7,10 +7,8 @@ import 'database/careerspeak_database.dart';
 
 final class DriftLastOpenedContentRepository
     implements LastOpenedContentRepository {
-  DriftLastOpenedContentRepository(
-    this._database, {
-    DateTime Function()? now,
-  }) : _now = now ?? (() => DateTime.now().toUtc());
+  DriftLastOpenedContentRepository(this._database, {DateTime Function()? now})
+    : _now = now ?? (() => DateTime.now().toUtc());
 
   final CareerSpeakDatabase _database;
   final DateTime Function() _now;

@@ -7,11 +7,10 @@ import '../../application/result/result.dart';
 import '../../domain/onboarding_state.dart';
 import 'database/careerspeak_database.dart';
 
-final class DriftOnboardingStateRepository implements OnboardingStateRepository {
-  DriftOnboardingStateRepository(
-    this._database, {
-    DateTime Function()? now,
-  }) : _now = now ?? (() => DateTime.now().toUtc());
+final class DriftOnboardingStateRepository
+    implements OnboardingStateRepository {
+  DriftOnboardingStateRepository(this._database, {DateTime Function()? now})
+    : _now = now ?? (() => DateTime.now().toUtc());
 
   final CareerSpeakDatabase _database;
   final DateTime Function() _now;
@@ -84,13 +83,11 @@ final class DriftOnboardingStateRepository implements OnboardingStateRepository 
   }
 
   Future<OnboardingState> _readState() async {
-    final row = await _database.customSelect(
-      '''
+    final row = await _database.customSelect('''
       SELECT completed, generation
       FROM onboarding_state
       WHERE id = 1
-      ''',
-    ).getSingle();
+      ''').getSingle();
     return OnboardingState(
       completed: row.read<int>('completed') == 1,
       generation: row.read<int>('generation'),

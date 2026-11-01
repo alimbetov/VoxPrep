@@ -28,10 +28,6 @@ class ContentReviewState {
   }
 
   @override
-  int get hashCode => Object.hash(
-    identity,
-    nextReviewAt,
-    reviewStage,
-    lastReviewOutcome,
-  );
+  int get hashCode =>
+      Object.hash(identity, nextReviewAt, reviewStage, lastReviewOutcome);
 }

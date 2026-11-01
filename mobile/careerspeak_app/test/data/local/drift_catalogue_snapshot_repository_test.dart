@@ -118,13 +118,16 @@ void main() {
     },
   );
 
-  test('catalogue kind absent from CURRENT membership remains nullable', () async {
-    final payload = (await repository.readCurrent(
-      CatalogueKind.skills,
-    )).getOrThrow();
+  test(
+    'catalogue kind absent from CURRENT membership remains nullable',
+    () async {
+      final payload = (await repository.readCurrent(
+        CatalogueKind.skills,
+      )).getOrThrow();
 
-    expect(payload, isNull);
-  });
+      expect(payload, isNull);
+    },
+  );
 }
 
 Future<void> _seedCatalogue(
