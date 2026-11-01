@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../app/audio_playback_providers.dart';
 import '../../app/repository_providers.dart';
 import '../../application/result/result.dart';
 import '../../domain/content_identity.dart';
@@ -28,7 +29,14 @@ class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.identity != widget.identity) {
       _recordedRevision = null;
+      unawaited(ref.read(audioPlaybackControllerProvider).stop());
     }
+  }
+
+  @override
+  void dispose() {
+    unawaited(ref.read(audioPlaybackControllerProvider).stop());
+    super.dispose();
   }
 
   @override
@@ -37,10 +45,10 @@ class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> {
 
     return item.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => Center(
+      error: (error, stackTrace) => const Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text('Unable to load content.\n$error'),
+          padding: EdgeInsets.all(24),
+          child: Text('Unable to load content.'),
         ),
       ),
       data: (value) {
