@@ -1,4 +1,3 @@
-import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/ports/universal_catalogue_repository.dart';
@@ -67,15 +66,3 @@ final applicationBootstrapProvider =
 
       return result;
     });
-
-final class ProductionBootstrapHost extends ConsumerWidget {
-  const ProductionBootstrapHost({required this.child, super.key});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(applicationBootstrapProvider);
-    return child;
-  }
-}
