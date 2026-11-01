@@ -259,6 +259,37 @@ void main() {
     );
   });
 
+  test(
+    'dangling CURRENT pack membership fails closed instead of empty success',
+    () async {
+      const identity = ContentIdentity(
+        code: 'DANGLING_001',
+        type: ContentType.interview,
+      );
+      await _seedCurrentPublicationMembership(
+        database,
+        identity: identity,
+        revision: 1,
+      );
+
+      final catalogResult = await repository
+          .watchContent(const ContentQuery())
+          .first;
+      final identityResult = await repository.getByIdentity(identity);
+
+      expect(catalogResult, isA<FailureResult<Page<ContentItem>>>());
+      expect(
+        (catalogResult as FailureResult<Page<ContentItem>>).failure.code,
+        'CONTENT_READ_MODEL_INVALID',
+      );
+      expect(identityResult, isA<FailureResult<ContentItem?>>());
+      expect(
+        (identityResult as FailureResult<ContentItem?>).failure.code,
+        'CONTENT_READ_MODEL_INVALID',
+      );
+    },
+  );
+
   test('catalog stream reacts after atomic CURRENT publication', () async {
     final iterator = StreamIterator<Result<Page<ContentItem>>>(
       repository.watchContent(const ContentQuery()),
@@ -344,6 +375,57 @@ Future<void> _seed(
           minutes: minutes,
           hasAudio: hasAudio,
           createdAt: now,
+        ),
+      );
+}
+
+Future<void> _seedCurrentPublicationMembership(
+  CareerSpeakDatabase database, {
+  required ContentIdentity identity,
+  required int revision,
+}) async {
+  final now = DateTime.utc(2026, 11, 1, 10);
+  const contentVersion = 101;
+  const packCode = 'PACK_DANGLING';
+  const variantKey = 'canonical';
+
+  await database
+      .into(database.contentManifestStates)
+      .insert(
+        ContentManifestStatesCompanion.insert(
+          id: const Value(1),
+          schemaVersion: 1,
+          currentContentVersion: contentVersion,
+          currentManifestChecksum: _checksumB,
+          updatedAt: now,
+        ),
+      );
+  await database
+      .into(database.contentPackRevisions)
+      .insert(
+        ContentPackRevisionsCompanion.insert(
+          packCode: packCode,
+          variantKey: variantKey,
+          revision: 1,
+          schemaVersion: 1,
+          checksum: _checksumA,
+          state: 'CURRENT',
+          sourceContentVersion: contentVersion,
+          stagedAt: now,
+          verifiedAt: Value<DateTime?>(now),
+          currentAt: Value<DateTime?>(now),
+        ),
+      );
+  await database
+      .into(database.packContentRefs)
+      .insert(
+        PackContentRefsCompanion.insert(
+          packCode: packCode,
+          variantKey: variantKey,
+          packRevision: 1,
+          contentCode: identity.code,
+          contentType: contentTypeToStorage(identity.type),
+          contentRevision: revision,
         ),
       );
 }
