@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../app/content_locations.dart';
+import '../../app/learner_selection_providers.dart';
 import '../../app/learner_state_providers.dart';
 import '../../app/repository_providers.dart';
 import '../../domain/content_identity.dart';
@@ -17,6 +18,7 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final contentPage = ref.watch(contentPageProvider);
     final markers = ref.watch(contentMarkersProvider);
+    final learningContext = ref.watch(learnerLearningContextProvider);
 
     return contentPage.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -24,17 +26,26 @@ class HomeScreen extends ConsumerWidget {
       data: (page) => markers.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, stackTrace) => _HomeLoadError(error: error),
-        data: (values) => _HomeContent(items: page.items, markers: values),
+        data: (values) => _HomeContent(
+          items: page.items,
+          markers: values,
+          learningContext: learningContext,
+        ),
       ),
     );
   }
 }
 
 class _HomeContent extends StatelessWidget {
-  const _HomeContent({required this.items, required this.markers});
+  const _HomeContent({
+    required this.items,
+    required this.markers,
+    required this.learningContext,
+  });
 
   final List<ContentItem> items;
   final Map<ContentIdentity, ContentMarkerState> markers;
+  final AsyncValue<LearnerLearningContext?> learningContext;
 
   ContentMarkerState markerFor(ContentItem item) =>
       markers[ContentIdentity.fromItem(item)] ?? const ContentMarkerState();
@@ -64,6 +75,8 @@ class _HomeContent extends StatelessWidget {
           'Professional English, IELTS and interview practice.',
           style: Theme.of(context).textTheme.bodyLarge,
         ),
+        const SizedBox(height: 16),
+        _LearningContextCard(contextValue: learningContext),
         const SizedBox(height: 24),
         Text('Your learning', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 10),
@@ -164,6 +177,64 @@ class _HomeContent extends StatelessWidget {
         const SizedBox(height: 8),
         for (final item in items.take(3)) ContentCard(item: item),
       ],
+    );
+  }
+}
+
+class _LearningContextCard extends StatelessWidget {
+  const _LearningContextCard({required this.contextValue});
+
+  final AsyncValue<LearnerLearningContext?> contextValue;
+
+  @override
+  Widget build(BuildContext context) {
+    return contextValue.when(
+      loading: () => const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: LinearProgressIndicator(),
+        ),
+      ),
+      error: (error, stack) => Card(
+        child: ListTile(
+          leading: const Icon(Icons.route_outlined),
+          title: const Text('Learning direction unavailable'),
+          subtitle: const Text('Choose or change it from Learn.'),
+          trailing: TextButton(
+            onPressed: () => context.push('/learn/direction'),
+            child: const Text('Open'),
+          ),
+        ),
+      ),
+      data: (value) {
+        if (value == null) {
+          return Card(
+            child: ListTile(
+              leading: const Icon(Icons.route_outlined),
+              title: const Text('Choose learning direction'),
+              subtitle: const Text(
+                'Select a professional area and goal to personalize your learning context.',
+              ),
+              trailing: FilledButton.tonal(
+                onPressed: () => context.push('/learn/direction'),
+                child: const Text('Choose'),
+              ),
+            ),
+          );
+        }
+
+        return Card(
+          child: ListTile(
+            leading: const Icon(Icons.route_outlined),
+            title: Text(value.goalTitle),
+            subtitle: Text(value.verticalTitle),
+            trailing: TextButton(
+              onPressed: () => context.push('/learn/direction'),
+              child: const Text('Change'),
+            ),
+          ),
+        );
+      },
     );
   }
 }
