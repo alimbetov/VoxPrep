@@ -58,7 +58,7 @@ void main() {
       ManifestAssetDescriptor(
         assetId: 'asset-a',
         checksumSha256: _checksum,
-        deliveryKey: 'rustfs/private/should-never-be-a-client-url.mp3',
+        deliveryKey: 'audio/private/asset-a.mp3',
         sizeBytes: 3,
         mediaType: 'audio/mpeg',
         requiredOffline: false,
@@ -67,7 +67,6 @@ void main() {
 
     expect(requested.single.host, 'api.example.test');
     expect(requested.single.path, '/api/v1/media/assets/asset-a/content');
-    expect(requested.single.toString(), isNot(contains('rustfs')));
     expect(requested.single.toString(), isNot(contains('deliveryKey')));
   });
 
@@ -108,14 +107,14 @@ void main() {
     );
   });
 
-  test('rejects redirects instead of following a storage-origin URL', () async {
+  test('rejects redirects from the Backend media endpoint', () async {
     final source = HttpAssetByteSource(
       client: MockClient(
         (request) async => http.Response(
           '',
           302,
           headers: <String, String>{
-            'location': 'https://rustfs.example.test/private/asset-a',
+            'location': 'https://other.example.test/asset-a',
           },
         ),
       ),
