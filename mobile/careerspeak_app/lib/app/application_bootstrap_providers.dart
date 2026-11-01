@@ -49,17 +49,17 @@ final applicationBootstrapProvider =
         final catalogueResult = await ref
             .read(universalCatalogueRepositoryProvider)
             .readCurrent();
-        if (catalogueResult case FailureResult()) {
+        if (catalogueResult is FailureResult) {
           return FailureResult<ApplicationBootstrapOutcome>(
             catalogueResult.failure,
           );
         }
-        final snapshot = (catalogueResult as Success).value;
+        final snapshot = catalogueResult.getOrThrow();
         if (snapshot != null) {
           final normalized = await ref
               .read(learnerSelectionServiceProvider)
               .normalizeAgainst(snapshot.graph);
-          if (normalized case FailureResult()) {
+          if (normalized is FailureResult) {
             return FailureResult<ApplicationBootstrapOutcome>(
               normalized.failure,
             );
