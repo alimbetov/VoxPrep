@@ -19,32 +19,27 @@ final class DriftCatalogueSnapshotRepository
   Future<Result<CataloguePayload?>> readCurrent(CatalogueKind kind) async {
     try {
       await PublicationSnapshotStorage(_database).ensureReady();
-      final rows = await _database
+      final membershipRows = await _database
           .customSelect(
             '''
         SELECT
           p.catalogue_kind,
           p.revision,
-          p.checksum,
-          c.payload_json
+          p.checksum
         FROM content_manifest_states s
         INNER JOIN publication_catalogue_refs p
           ON p.content_version = s.current_content_version
-        INNER JOIN catalogue_revision_reads c
-          ON c.catalogue_kind = p.catalogue_kind
-         AND c.revision = p.revision
-         AND c.checksum = p.checksum
         WHERE s.id = 1
           AND p.catalogue_kind = ?
         ''',
             variables: <Variable<Object>>[Variable<String>(kind.wireName)],
-            readsFrom: <ResultSetImplementation>{
-              _database.contentManifestStates,
-            },
           )
           .get();
-      if (rows.isEmpty) return const Success<CataloguePayload?>(null);
-      if (rows.length != 1) {
+
+      if (membershipRows.isEmpty) {
+        return const Success<CataloguePayload?>(null);
+      }
+      if (membershipRows.length != 1) {
         return const FailureResult<CataloguePayload?>(
           ApplicationFailure(
             code: 'CATALOGUE_READ_MODEL_INVALID',
@@ -53,10 +48,37 @@ final class DriftCatalogueSnapshotRepository
         );
       }
 
-      final row = rows.single;
-      final revision = row.read<int>('revision');
-      final checksum = row.read<String>('checksum');
-      final decoded = jsonDecode(row.read<String>('payload_json'));
+      final membership = membershipRows.single;
+      final revision = membership.read<int>('revision');
+      final checksum = membership.read<String>('checksum');
+      final payloadRows = await _database
+          .customSelect(
+            '''
+        SELECT payload_json
+        FROM catalogue_revision_reads
+        WHERE catalogue_kind = ?
+          AND revision = ?
+          AND checksum = ?
+        ''',
+            variables: <Variable<Object>>[
+              Variable<String>(kind.wireName),
+              Variable<int>(revision),
+              Variable<String>(checksum),
+            ],
+          )
+          .get();
+
+      if (payloadRows.length != 1) {
+        return const FailureResult<CataloguePayload?>(
+          ApplicationFailure(
+            code: 'CATALOGUE_READ_MODEL_INVALID',
+            message:
+                'CURRENT catalogue exact membership is missing its cached payload.',
+          ),
+        );
+      }
+
+      final decoded = jsonDecode(payloadRows.single.read<String>('payload_json'));
       if (decoded is! Map<String, dynamic>) {
         return const FailureResult<CataloguePayload?>(
           ApplicationFailure(
