@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/application_preferences.dart';
 import 'app_preferences_providers.dart';
+import 'bootstrap_status_frame.dart';
 import 'router.dart';
 import 'theme/careerspeak_theme.dart';
 
@@ -36,6 +37,9 @@ class CareerSpeakApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      builder: (context, child) => BootstrapStatusFrame(
+        child: child ?? const SizedBox.shrink(),
+      ),
       routerConfig: router,
     );
   }
