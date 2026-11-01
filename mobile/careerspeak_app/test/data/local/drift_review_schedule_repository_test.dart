@@ -1,4 +1,5 @@
 import 'package:careerspeak_app/application/result/result.dart';
+import 'package:careerspeak_app/application/review/review_scheduler.dart';
 import 'package:careerspeak_app/data/local/drift_review_schedule_repository.dart';
 import 'package:careerspeak_app/domain/content_identity.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
@@ -41,6 +42,40 @@ void main() {
       expect(state.nextReviewAt, now.add(const Duration(days: 2)));
       expect(state.reviewStage, 3);
       expect(state.lastReviewOutcome, ReviewOutcome.correct);
+    });
+
+    test('R1 scheduler decision survives repository reopen', () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      final now = DateTime.utc(2026, 11, 1, 10);
+      final repository = DriftReviewScheduleRepository(
+        database,
+        now: () => now,
+      );
+      await repository.upsertSchedule(
+        identity: identity,
+        nextReviewAt: now,
+        reviewStage: 1,
+      );
+      final scheduler = ReviewScheduler(repository: repository, now: () => now);
+
+      final result = await scheduler.recordOutcome(
+        identity: identity,
+        currentStage: 1,
+        outcome: ReviewOutcome.correct,
+      );
+      expect(result, isA<Success<ContentReviewState>>());
+
+      final reopened = DriftReviewScheduleRepository(database);
+      final read = await reopened.getSchedules();
+      final state =
+          (read as Success<Map<ContentIdentity, ContentReviewState>>)
+              .value[identity]!;
+
+      expect(state.reviewStage, 2);
+      expect(state.lastReviewOutcome, ReviewOutcome.correct);
+      expect(state.nextReviewAt, now.add(const Duration(days: 4)));
+      expect(state.isDueAt(now), isFalse);
     });
 
     test('due predicate is inclusive at nextReviewAt boundary', () {
