@@ -13,6 +13,10 @@ installationId = stable installation identity
 token          = temporary backend-issued session credential
 ```
 
+`installationId` is generated from a cryptographically secure random source as an app-scoped 128-bit identifier (RFC 4122 UUID v4 shape is the current Flutter implementation). It identifies one installation, not the physical device.
+
+The installation identity MUST NOT be derived from hardware or platform tracking identifiers such as IMEI, device serial number, MAC address, advertising identifiers, or equivalent values. Hashing such an identifier (including MD5) does not make it an acceptable installation identity.
+
 The token is **not** a permanent application secret. A fresh token is issued during every application bootstrap and becomes the only learner Bearer credential used by the centralized HTTP client for that runtime session.
 
 ## 2. Bootstrap lifecycle
@@ -40,11 +44,12 @@ repositories / sync / content / progress
 Rules:
 
 1. `installationId` is generated once per installation and preserved in platform Secure Storage.
-2. Bootstrap MUST NOT treat a previously stored token as sufficient to skip token issuance.
-3. `POST /api/v1/installations` is the bootstrap/session-issuance boundary and is safe to retry according to its endpoint-specific idempotency policy.
-4. Every successful bootstrap response returns a fresh token for the same stable installation identity.
-5. The newly issued token atomically replaces the previous token in `TokenStore`.
-6. Business repositories and features never read, persist or pass the token directly.
+2. A reinstall may create a new `installationId`; C5 does not attempt to recover physical-device identity.
+3. Bootstrap MUST NOT treat a previously stored token as sufficient to skip token issuance.
+4. `POST /api/v1/installations` is the bootstrap/session-issuance boundary and is safe to retry according to its endpoint-specific idempotency policy.
+5. Every successful bootstrap response returns a fresh token for the same stable installation identity.
+6. The newly issued token atomically replaces the previous token in `TokenStore`.
+7. Business repositories and features never read, persist or pass the token directly.
 
 ## 3. Centralized HTTP authentication
 
@@ -114,7 +119,8 @@ Rules:
 4. the original request is retried at most once after successful renewal;
 5. a second authentication failure is returned to the application and MUST NOT loop;
 6. `installationId` is preserved across token recovery;
-7. a revoked/disabled installation may fail renewal and remains fail-closed.
+7. a revoked/disabled installation may fail renewal and remains fail-closed;
+8. a credential removed locally is not silently recreated by the request-recovery path.
 
 ## 6. Secure Storage ownership
 
@@ -185,6 +191,9 @@ The wire shape stays intentionally small. Platform/app metadata may be added lat
 C5 does not use:
 
 ```text
+IMEI-derived installation identity
+serial/MAC/hardware-derived installation identity
+MD5 or another hash of a hardware identifier
 email/password learner login
 user account registration
 OAuth authorization code flow
@@ -200,7 +209,7 @@ unbounded 401 retry
 
 C5 is accepted only when cross-system tests prove:
 
-1. first launch creates one `installationId` and obtains a token;
+1. first launch creates one random app-scoped `installationId` and obtains a token;
 2. next cold launch preserves the same `installationId` but obtains a different/current token;
 3. successful bootstrap replaces the token used by all subsequent authenticated requests;
 4. caller code cannot override managed `Authorization`;
@@ -211,14 +220,15 @@ C5 is accepted only when cross-system tests prove:
 9. concurrent `401` responses do not cause multiple competing token rotations;
 10. no token value appears in logs, traces or application failures;
 11. revoked installation renewal fails closed;
-12. no learner account/password/refresh-token infrastructure is introduced.
+12. no learner account/password/refresh-token infrastructure is introduced;
+13. no hardware-derived installation identity is introduced.
 
 ## 11. Architectural consequence
 
 The security boundary is therefore:
 
 ```text
-stable installation identity
+random app-scoped installation identity
           +
 fresh bootstrap-issued token
           +
