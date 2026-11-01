@@ -1,16 +1,13 @@
-import '../content_delivery/universal_catalogue_graph.dart';
 import '../../domain/learner_selection.dart';
+import '../content_delivery/universal_catalogue_graph.dart';
 
 enum LearnerSelectionNormalizationReason {
-  none,
   goalMissing,
   goalInactive,
-  verticalMissing,
   verticalInactive,
   trackMissing,
   trackInactive,
   trackWrongGoal,
-  trackWrongVertical,
 }
 
 final class LearnerSelectionNormalization {
@@ -59,13 +56,7 @@ final class LearnerSelectionNormalizer {
     final vertical = _firstOrNull(
       graph.verticals.where((item) => item.code == goal.verticalCode),
     );
-    if (vertical == null) {
-      return _clearGoalAndTrack(
-        selection,
-        LearnerSelectionNormalizationReason.verticalMissing,
-      );
-    }
-    if (!vertical.active) {
+    if (!vertical!.active) {
       return _clearGoalAndTrack(
         selection,
         LearnerSelectionNormalizationReason.verticalInactive,
@@ -99,12 +90,6 @@ final class LearnerSelectionNormalizer {
       return _clearTrack(
         selection,
         LearnerSelectionNormalizationReason.trackWrongGoal,
-      );
-    }
-    if (track.verticalCode != goal.verticalCode) {
-      return _clearTrack(
-        selection,
-        LearnerSelectionNormalizationReason.trackWrongVertical,
       );
     }
 
