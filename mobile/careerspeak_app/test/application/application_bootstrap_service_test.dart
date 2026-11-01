@@ -12,15 +12,13 @@ import 'package:careerspeak_app/domain/installation_credentials.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('existing credentials are reused before startup sync', () async {
+  test('cold bootstrap rotates existing token before startup sync', () async {
     final store = _MemoryCredentialStore(
       installationId: InstallationId('installation-1'),
-      installationToken: InstallationToken('token-1'),
+      installationToken: InstallationToken('token-old'),
     );
     final registration = _RegistrationGateway(
-      const FailureResult<InstallationToken>(
-        ApplicationFailure(code: 'UNEXPECTED', message: 'must not be called'),
-      ),
+      Success<InstallationToken>(InstallationToken('token-fresh')),
     );
     var syncCalls = 0;
     final service = _service(
@@ -30,7 +28,7 @@ void main() {
         syncCalls += 1;
         expect(runId, 'startup-test');
         expect(trigger, SyncTrigger.startup);
-        expect((await store.readInstallationToken())?.value, 'token-1');
+        expect((await store.readInstallationToken())?.value, 'token-fresh');
         return Success<ContentSyncOutcome>(ContentSyncNoOp(runId));
       },
     );
@@ -38,9 +36,9 @@ void main() {
     final outcome = (await service.bootstrap()).getOrThrow();
 
     expect(outcome.credentials.installationId.value, 'installation-1');
-    expect(outcome.credentials.installationToken.value, 'token-1');
+    expect(outcome.credentials.installationToken.value, 'token-fresh');
     expect(outcome.contentSyncOutcome, isA<ContentSyncNoOp>());
-    expect(registration.calls, 0);
+    expect(registration.calls, 1);
     expect(syncCalls, 1);
   });
 
@@ -104,7 +102,7 @@ void main() {
     expect(await store.readInstallationToken(), isNull);
   });
 
-  test('sync failure preserves valid credentials for later retry', () async {
+  test('sync failure preserves freshly issued credentials for retry', () async {
     final store = _MemoryCredentialStore(
       installationId: InstallationId('installation-1'),
     );
@@ -133,13 +131,13 @@ void main() {
     expect(registration.calls, 1);
   });
 
-  test('concurrent callers share one complete startup pipeline', () async {
+  test('concurrent callers share one complete fresh startup pipeline', () async {
     final store = _MemoryCredentialStore(
       installationId: InstallationId('installation-1'),
-      installationToken: InstallationToken('token-1'),
+      installationToken: InstallationToken('token-old'),
     );
     final registration = _RegistrationGateway(
-      Success<InstallationToken>(InstallationToken('unused')),
+      Success<InstallationToken>(InstallationToken('token-fresh')),
     );
     final gate = Completer<void>();
     var syncCalls = 0;
@@ -148,6 +146,7 @@ void main() {
       registration: registration,
       synchronize: ({required runId, required trigger}) async {
         syncCalls += 1;
+        expect((await store.readInstallationToken())?.value, 'token-fresh');
         await gate.future;
         return Success<ContentSyncOutcome>(ContentSyncNoOp(runId));
       },
@@ -162,6 +161,7 @@ void main() {
       first,
       second,
     ]);
+    expect(registration.calls, 1);
     expect(syncCalls, 1);
   });
 }
