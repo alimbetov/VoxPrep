@@ -35,14 +35,9 @@ final apiClientProvider = Provider<ApiClient>((ref) {
         throw StateError('${failure.code}: ${failure.message}');
       }
       final preferences = (result as Success<ApplicationPreferences>).value;
-      final headers = <String, String>{
+      return <String, String>{
         'accept-language': preferences.selectedLocale.code,
       };
-      final countryCode = preferences.countryCode;
-      if (countryCode != null) {
-        headers['x-country-code'] = countryCode;
-      }
-      return headers;
     },
   );
 });
