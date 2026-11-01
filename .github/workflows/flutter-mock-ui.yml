@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/p1-flutter-mock-ui
+      - feat/flutter-adversarial-hardening
     paths:
       - 'mobile/careerspeak_app/**'
       - '.github/workflows/flutter-mock-ui.yml'
@@ -38,6 +39,9 @@ jobs:
 
       - name: Dependencies
         run: flutter pub get
+
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed lib test
 
       - name: Analyze
         run: flutter analyze
