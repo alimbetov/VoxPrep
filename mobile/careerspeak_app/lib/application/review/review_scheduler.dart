@@ -6,12 +6,10 @@ import 'review_scheduling_policy.dart';
 
 final class ReviewScheduler {
   const ReviewScheduler({
-    required ReviewScheduleRepository repository,
-    ReviewSchedulingPolicy policy = const ReviewSchedulingPolicy(),
+    required this._repository,
+    this._policy = const ReviewSchedulingPolicy(),
     DateTime Function()? now,
-  }) : _repository = repository,
-       _policy = policy,
-       _now = now;
+  }) : _now = now;
 
   final ReviewScheduleRepository _repository;
   final ReviewSchedulingPolicy _policy;
