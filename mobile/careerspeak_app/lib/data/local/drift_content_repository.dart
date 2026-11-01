@@ -117,10 +117,12 @@ final class DriftContentRepository implements ContentRepository {
   }
 
   Future<ApplicationFailure?> _currentPublicationIntegrityFailure() async {
-    final rows = await _database.customSelect(
-      _danglingCurrentMembershipSql,
-      readsFrom: _publicationReadDependencies,
-    ).get();
+    final rows = await _database
+        .customSelect(
+          _danglingCurrentMembershipSql,
+          readsFrom: _publicationReadDependencies,
+        )
+        .get();
     final danglingCount = rows.single.read<int>('dangling_count');
     if (danglingCount == 0) return null;
 
