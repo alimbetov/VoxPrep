@@ -2,6 +2,7 @@ import 'package:careerspeak_app/app/app_preferences_providers.dart';
 import 'package:careerspeak_app/app/asset_resolver_providers.dart';
 import 'package:careerspeak_app/app/audio_playback_providers.dart';
 import 'package:careerspeak_app/app/catalogue_payload_providers.dart';
+import 'package:careerspeak_app/app/learner_selection_providers.dart';
 import 'package:careerspeak_app/app/learner_state_providers.dart';
 import 'package:careerspeak_app/app/repository_providers.dart';
 import 'package:careerspeak_app/application/content_delivery/content_audio_policy.dart';
@@ -185,6 +186,16 @@ void main() {
         ),
         learnerStateRepositoryProvider.overrideWithValue(
           const GoldenLearnerStateRepository(),
+        ),
+        learnerLearningContextProvider.overrideWithValue(
+          const AsyncData<LearnerLearningContext?>(
+            (
+              verticalCode: 'JAVA',
+              verticalTitle: 'Java Backend',
+              goalCode: 'JOB_INTERVIEW',
+              goalTitle: 'Pass Java backend interviews',
+            ),
+          ),
         ),
       ],
       child: const HomeScreen(),
