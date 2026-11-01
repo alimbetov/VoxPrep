@@ -1,0 +1,97 @@
+name: Flutter Production Qualification
+
+on:
+  push:
+    branches:
+      - feat/flutter-adversarial-hardening
+      - main
+    paths:
+      - 'mobile/careerspeak_app/**'
+      - 'contracts/**'
+      - 'docs/compliance/**'
+      - '.github/workflows/flutter-production-qualification.yml'
+  pull_request:
+    paths:
+      - 'mobile/careerspeak_app/**'
+      - 'contracts/**'
+      - 'docs/compliance/**'
+      - '.github/workflows/flutter-production-qualification.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: flutter-production-qualification-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    name: exact-sha-production-qualification
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 1
+
+      - name: Record exact SHA
+        run: |
+          echo "QUALIFIED_SHA=$(git rev-parse HEAD)" | tee "$GITHUB_STEP_SUMMARY"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Toolchain
+        run: flutter --version
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Format gate
+        run: dart format --output=none --set-exit-if-changed lib test tool
+
+      - name: Generated baseline reproducibility
+        run: |
+          dart run build_runner build
+          dart run drift_dev schema dump \
+            lib/data/local/database/careerspeak_database.dart \
+            drift_schemas/drift_schema_v8.json
+          rm -rf test/generated_migrations
+          dart run drift_dev schema generate \
+            --data-classes \
+            --companions \
+            drift_schemas/ \
+            test/generated_migrations/
+          dart format test/generated_migrations
+          git diff --exit-code -- \
+            lib/data/local/database/careerspeak_database.g.dart \
+            drift_schemas/drift_schema_v1.json \
+            drift_schemas/drift_schema_v2.json \
+            drift_schemas/drift_schema_v3.json \
+            drift_schemas/drift_schema_v4.json \
+            drift_schemas/drift_schema_v5.json \
+            drift_schemas/drift_schema_v6.json \
+            drift_schemas/drift_schema_v7.json \
+            drift_schemas/drift_schema_v8.json \
+            test/generated_migrations
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Full tests with coverage
+        run: flutter test --coverage
+
+      - name: Production coverage gate >= 90%
+        run: dart run tool/coverage_gate.dart 90
+
+      - name: Ensure working tree remains reproducible
+        run: git diff --exit-code
