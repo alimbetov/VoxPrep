@@ -70,12 +70,8 @@ void main() {
     final root = manifest(109, packs: <PackRevisionRef>[targetPack]);
     final gateway = _PackGateway(
       root: root,
-      packManifest: PackContentManifest(
-        schemaVersion: 1,
-        identity: targetPack.identity,
-        revision: targetPack.revision,
-        checksum: targetPack.checksum,
-        contents: const <PackContentRef>[],
+      packManifest: _packManifest(
+        targetPack,
         assets: <ManifestAssetDescriptor>[
           ManifestAssetDescriptor(
             assetId: 'audio.required.1',
@@ -86,7 +82,6 @@ void main() {
             requiredOffline: true,
           ),
         ],
-        contentAssets: const <ContentAssetRef>[],
       ),
     );
     final executor = FakeExecutor();
@@ -123,6 +118,63 @@ void main() {
     expect(gateway.packCalls, 1);
     expect(journal.states.last, SyncRunState.failedRetryable);
   });
+
+  test('C4 exact target rejects a newer pack returned mid-sync', () async {
+    final targetPack = pack();
+    final root = manifest(109, packs: <PackRevisionRef>[targetPack]);
+    final advancedPack = PackRevisionRef(
+      identity: targetPack.identity,
+      revision: targetPack.revision + 1,
+      checksum: _advancedPackChecksum,
+    );
+    final gateway = _PackGateway(
+      root: root,
+      packManifest: _packManifest(advancedPack),
+    );
+    final executor = FakeExecutor();
+    final journal = FakeJournal(Success(emptySnapshot()));
+    final prefetcher = RequiredOfflineAssetPrefetcher(
+      manifestGateway: gateway,
+      ensureLocal: (asset) async => Success<AssetDownloadOutcome>(
+        AssetDownloadOutcome(localPath: '/verified/${asset.assetId}', reused: true),
+      ),
+    );
+    final coordinator = ContentSyncCoordinator(
+      journal: journal,
+      manifestGateway: gateway,
+      planner: const ContentSyncPlanner(),
+      executor: executor,
+      requiredOfflinePrefetcher: prefetcher,
+    );
+
+    final result = await coordinator.synchronize(
+      runId: 'c4-advanced-pack-mid-sync',
+      trigger: SyncTrigger.startup,
+      translationLocale: 'ru',
+    );
+
+    expect(result, isA<FailureResult<ContentSyncOutcome>>());
+    final failure = (result as FailureResult<ContentSyncOutcome>).failure;
+    expect(failure.code, 'REQUIRED_OFFLINE_PACK_MISMATCH');
+    expect(executor.calls, 0);
+    expect(gateway.packCalls, 1);
+    expect(journal.states.last, SyncRunState.failedFatal);
+  });
+}
+
+PackContentManifest _packManifest(
+  PackRevisionRef target, {
+  Iterable<ManifestAssetDescriptor> assets = const <ManifestAssetDescriptor>[],
+}) {
+  return PackContentManifest(
+    schemaVersion: 1,
+    identity: target.identity,
+    revision: target.revision,
+    checksum: target.checksum,
+    contents: const <PackContentRef>[],
+    assets: assets,
+    contentAssets: const <ContentAssetRef>[],
+  );
 }
 
 final class _PackGateway implements ContentManifestGateway {
@@ -152,3 +204,5 @@ const _testChecksum =
     'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
 const _assetChecksum =
     'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+const _advancedPackChecksum =
+    'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
