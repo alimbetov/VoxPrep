@@ -15,7 +15,8 @@ paths:
       description: >-
         Returns the exact set of learner-support locales currently enabled for
         one country. Flutter must persist the user's selected locale and use it
-        for Accept-Language on subsequent Backend requests.
+        for Accept-Language on subsequent Backend requests. countryCode is used
+        only to resolve this configuration and is not a substitute for locale.
       parameters:
         - name: countryCode
           in: query
@@ -117,15 +118,12 @@ components:
 
 x-careerspeak-request-context:
   description: >-
-    After onboarding, Flutter centrally sends Accept-Language with the persisted
-    selected BCP-47 locale on Backend requests. X-Country-Code carries the
-    persisted ISO-3166 alpha-2 country when known. Before onboarding Flutter may
-    send neutral Accept-Language: en and omits X-Country-Code. Feature code must
-    not override either managed header.
+    Flutter centrally sends Accept-Language with the persisted selected BCP-47
+    locale on Backend requests. Before onboarding the neutral value is en.
+    Feature code must not override this managed header. Country remains an
+    onboarding/configuration preference and is not sent as a generic locale
+    header.
   headers:
     Accept-Language:
-      requiredAfterOnboarding: true
+      required: true
       example: ru-KZ
-    X-Country-Code:
-      requiredAfterOnboarding: true
-      example: KZ
