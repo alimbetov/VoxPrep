@@ -5,21 +5,17 @@ import 'package:path_provider/path_provider.dart';
 
 import '../application/ports/asset_byte_source.dart';
 import '../application/ports/asset_file_store.dart';
-import '../application/ports/media_access_gateway.dart';
 import '../application/services/asset_download_manager.dart';
 import '../data/local/file_system_asset_store.dart';
 import '../data/remote/http_asset_byte_source.dart';
-import '../data/remote/http_media_access_gateway.dart';
 import 'api_client_providers.dart';
-
-final mediaAccessGatewayProvider = Provider<MediaAccessGateway>((ref) {
-  return HttpMediaAccessGateway(apiClient: ref.watch(apiClientProvider));
-});
+import 'installation_identity_providers.dart';
 
 final assetByteSourceProvider = Provider<AssetByteSource>((ref) {
   return HttpAssetByteSource(
     client: ref.watch(httpClientProvider),
-    accessGateway: ref.watch(mediaAccessGatewayProvider),
+    credentialStore: ref.watch(installationCredentialStoreProvider),
+    baseUri: ref.watch(apiBaseUriProvider),
   );
 });
 
