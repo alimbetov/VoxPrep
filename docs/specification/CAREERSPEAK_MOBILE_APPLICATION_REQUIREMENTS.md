@@ -1,6 +1,6 @@
 # CareerSpeak — Flutter Mobile Application Requirements
 
-**Document version:** 2.3  
+**Document version:** 2.4  
 **Status:** Normative MVP mobile baseline  
 **Applies to:** CareerSpeak v1  
 **Target platforms:** Android, iOS
@@ -39,7 +39,7 @@ locale/theme preferences
 adaptive Material 3 UI
 ```
 
-Flutter does not own backend product/catalog truth.
+Flutter does not own backend product/catalog truth or object-storage access.
 
 Backend-owned product structure:
 
@@ -94,11 +94,11 @@ go_router
 Drift + SQLite
 Secure Storage
 local filesystem
-HTTP abstraction
+Backend HTTP abstraction
 audio abstraction
 ```
 
-Widgets do not issue raw HTTP/SQL calls.
+Widgets do not issue raw HTTP/SQL calls. Production Flutter has no RustFS/S3/CDN client adapter.
 
 ---
 
@@ -225,7 +225,7 @@ Drift
 RustFS
 ```
 
-Raw HTTP/database exceptions are not shown directly.
+Raw HTTP/database/storage exceptions are not shown directly.
 
 Empty/error states should state the problem and a safe next action where possible.
 
@@ -248,9 +248,11 @@ Credential-specific `401` recovery:
 clear rejected token only
 → preserve installationId + learner state
 → re-register once
-→ retry safe startup once
+→ retry safe request once where policy permits
 → fail closed if rejected again
 ```
+
+The same installation credential boundary protects JSON API and Backend media API.
 
 ---
 
@@ -339,7 +341,21 @@ Cache cleanup never erases learner state.
 
 `AssetResolver` returns verified local assets to playback/feature code.
 
-Metadata sync does not automatically download all media.
+Remote asset path is fixed:
+
+```text
+assetId
+→ authenticated GET /api/v1/media/assets/{assetId}/content
+→ Backend binary stream
+→ size/SHA-256 verification
+→ managed local file
+```
+
+Flutter MUST NOT receive or construct RustFS/S3/CDN URLs, signed/presigned URLs, bucket names, storage credentials or object paths. `deliveryKey` is metadata only and MUST NOT be used as a network locator.
+
+Backend redirects to object storage MUST be rejected.
+
+Metadata sync does not automatically download all optional media.
 
 ---
 
@@ -458,6 +474,8 @@ TTL + LRU + quota + explicit-download protection + reference-safe deletion
 
 Learner state is never deleted by cache cleanup.
 
+A deleted disposable local asset is a recoverable cache miss and may be restored only through the authenticated Backend media endpoint.
+
 ---
 
 ## 21. Failure/recovery
@@ -466,7 +484,7 @@ Must preserve useful local state through:
 
 ```text
 backend offline
-CDN failure
+backend media/storage failure
 interrupted sync/download
 checksum mismatch
 401 recovery
@@ -474,6 +492,8 @@ process kill during onboarding/test/audio/review
 storage pressure
 Drift migration
 ```
+
+Flutter never attempts a direct object-storage fallback.
 
 ---
 
@@ -487,6 +507,10 @@ selected goal/track persistence
 CURRENT atomic sync
 locale switch/offline reopen
 real audio/local asset resolution
+Backend-only media download
+no direct RustFS/S3/CDN transport
+redirect-to-storage rejection
+deleted local audio recovery through current installation token
 FAVORITE/LISTENED/COMPLETED persistence
 Due based only on nextReviewAt
 review survives restart/cache cleanup
