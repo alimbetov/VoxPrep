@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:careerspeak_app/application/content_delivery/catalogue_revision_ref.dart';
+import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_catalogue_snapshot_repository.dart';
 import 'package:careerspeak_app/data/local/publication_snapshot_storage.dart';
@@ -95,6 +96,35 @@ void main() {
       );
     },
   );
+
+  test(
+    'CURRENT exact membership with missing cached payload fails closed',
+    () async {
+      await database.customStatement(
+        '''
+        DELETE FROM catalogue_revision_reads
+        WHERE catalogue_kind = ? AND revision = ? AND checksum = ?
+        ''',
+        <Object?>[CatalogueKind.categories.wireName, 1, _checksumV1],
+      );
+
+      final result = await repository.readCurrent(CatalogueKind.categories);
+
+      expect(result, isA<FailureResult>());
+      expect(
+        (result as FailureResult).failure.code,
+        'CATALOGUE_READ_MODEL_INVALID',
+      );
+    },
+  );
+
+  test('catalogue kind absent from CURRENT membership remains nullable', () async {
+    final payload = (await repository.readCurrent(
+      CatalogueKind.skills,
+    )).getOrThrow();
+
+    expect(payload, isNull);
+  });
 }
 
 Future<void> _seedCatalogue(
