@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../app/catalogue_payload_providers.dart';
 import '../../app/learner_selection_providers.dart';
 import '../../app/onboarding_providers.dart';
-import '../../application/content_delivery/universal_catalogue_graph.dart';
 import '../../application/result/result.dart';
 import '../../domain/onboarding_state.dart';
+import '../learning_direction/learning_direction_selection_panel.dart';
 import '../settings/locale_selection_panel.dart';
 
 class OnboardingScreen extends ConsumerStatefulWidget {
@@ -18,7 +17,6 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  String? _selectedVerticalCode;
   bool _saving = false;
 
   @override
@@ -83,13 +81,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         const SizedBox(height: 24),
         Expanded(
           child: switch (step) {
-            OnboardingStep.learningDirection => _LearningDirectionStep(
-              selectedVerticalCode: _selectedVerticalCode,
-              onVerticalSelected: (code) {
-                setState(() => _selectedVerticalCode = code);
-              },
-              onGoalSelected: _selectGoal,
-            ),
+            OnboardingStep.learningDirection =>
+              const LearningDirectionSelectionPanel(),
             OnboardingStep.englishLevel => _EnglishLevelStep(
               saving: _saving,
               onSelected: _selectLevel,
@@ -108,19 +101,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         ),
       ],
     );
-  }
-
-  Future<void> _selectGoal(UniversalCatalogueGraph graph, String code) async {
-    if (_saving) return;
-    setState(() => _saving = true);
-    final result = await ref
-        .read(learnerSelectionServiceProvider)
-        .selectGoal(graph: graph, goalCode: code);
-    if (!mounted) return;
-    setState(() => _saving = false);
-    if (result case FailureResult(:final failure)) {
-      _showFailure(failure.message);
-    }
   }
 
   Future<void> _selectLevel(String? code) async {
@@ -161,97 +141,6 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   void _showFailure(String message) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
-  }
-}
-
-class _LearningDirectionStep extends ConsumerWidget {
-  const _LearningDirectionStep({
-    required this.selectedVerticalCode,
-    required this.onVerticalSelected,
-    required this.onGoalSelected,
-  });
-
-  final String? selectedVerticalCode;
-  final ValueChanged<String> onVerticalSelected;
-  final Future<void> Function(UniversalCatalogueGraph graph, String goalCode)
-  onGoalSelected;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final snapshotAsync = ref.watch(currentUniversalCatalogueProvider);
-    return snapshotAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => _ErrorState(
-        message: 'Learning directions could not be loaded.',
-        onRetry: () => ref.invalidate(currentUniversalCatalogueProvider),
-      ),
-      data: (snapshot) {
-        if (snapshot == null) {
-          return _ErrorState(
-            message: 'No learning catalogue is available yet.',
-            onRetry: () => ref.invalidate(currentUniversalCatalogueProvider),
-          );
-        }
-        final graph = snapshot.graph;
-        final activeGoals = graph.goals.where((goal) => goal.active).toList();
-        final verticals = graph.verticals
-            .where(
-              (vertical) =>
-                  vertical.active &&
-                  activeGoals.any(
-                    (goal) => goal.verticalCode == vertical.code,
-                  ),
-            )
-            .toList();
-        if (verticals.isEmpty) {
-          return const _ErrorState(
-            message: 'No learning directions are currently available.',
-          );
-        }
-
-        final selectedCode = selectedVerticalCode ?? verticals.first.code;
-        final goals = activeGoals
-            .where((goal) => goal.verticalCode == selectedCode)
-            .toList();
-
-        return ListView(
-          children: [
-            Text(
-              'What do you want to practise?',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Choose a learning area, then choose your goal.',
-              style: Theme.of(context).textTheme.bodyLarge,
-            ),
-            const SizedBox(height: 20),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                for (final vertical in verticals)
-                  ChoiceChip(
-                    label: Text(vertical.title),
-                    selected: vertical.code == selectedCode,
-                    onSelected: (_) => onVerticalSelected(vertical.code),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            for (final goal in goals)
-              Card(
-                child: ListTile(
-                  title: Text(goal.title),
-                  subtitle: Text(goal.description),
-                  trailing: const Icon(Icons.arrow_forward),
-                  onTap: () => onGoalSelected(graph, goal.code),
-                ),
-              ),
-          ],
-        );
-      },
-    );
   }
 }
 
