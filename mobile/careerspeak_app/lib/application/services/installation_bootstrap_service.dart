@@ -21,11 +21,16 @@ final class InstallationBootstrapService {
 
   Future<Result<InstallationCredentials>>? _inFlight;
 
+  /// Issues a fresh backend credential for the stable installation identity.
+  ///
+  /// Calls within the same in-flight bootstrap are coalesced, but a later
+  /// bootstrap always contacts the backend again. A previously stored token is
+  /// never treated as sufficient to skip cold-start session issuance.
   Future<Result<InstallationCredentials>> ensureCredentials() {
     final existing = _inFlight;
     if (existing != null) return existing;
 
-    final operation = _ensureCredentials();
+    final operation = _issueFreshCredentials();
     _inFlight = operation;
     operation.whenComplete(() {
       if (identical(_inFlight, operation)) {
@@ -35,13 +40,8 @@ final class InstallationBootstrapService {
     return operation;
   }
 
-  Future<Result<InstallationCredentials>> _ensureCredentials() async {
+  Future<Result<InstallationCredentials>> _issueFreshCredentials() async {
     try {
-      final existing = await _identityService.readCredentials();
-      if (existing != null) {
-        return Success(existing);
-      }
-
       final installationId = await _identityService.ensureInstallationId();
       final registration = await _registrationGateway.register(installationId);
       if (registration case FailureResult<InstallationToken>(:final failure)) {
