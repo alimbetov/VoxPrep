@@ -1,7 +1,5 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart';
-
 import '../../application/ports/learner_selection_repository.dart';
 import '../../application/result/result.dart';
 import '../../domain/learner_selection.dart';
@@ -70,7 +68,7 @@ final class DriftLearnerSelectionRepository
           }
 
           final persisted = next.withGeneration(current.generation + 1);
-          final updated = await _database.customUpdate(
+          await _database.customStatement(
             '''
             UPDATE learner_selection
             SET selected_goal_code = ?,
@@ -81,18 +79,20 @@ final class DriftLearnerSelectionRepository
                 updated_at = ?
             WHERE id = 1 AND generation = ?
             ''',
-            variables: <Variable<Object>>[
-              Variable<String>(persisted.selectedGoalCode),
-              Variable<String>(persisted.selectedTrackCode),
-              Variable<String>(persisted.selfAssessedLevelCode),
-              Variable<int>(persisted.levelDecisionMade ? 1 : 0),
-              Variable<int>(persisted.generation),
-              Variable<int>(_now().millisecondsSinceEpoch),
-              Variable<int>(expectedGeneration),
+            <Object?>[
+              persisted.selectedGoalCode,
+              persisted.selectedTrackCode,
+              persisted.selfAssessedLevelCode,
+              persisted.levelDecisionMade ? 1 : 0,
+              persisted.generation,
+              _now().millisecondsSinceEpoch,
+              expectedGeneration,
             ],
           );
-
-          if (updated != 1) {
+          final changesRow = await _database.customSelect(
+            'SELECT changes() AS affected_rows',
+          ).getSingle();
+          if (changesRow.read<int>('affected_rows') != 1) {
             return FailureResult<LearnerSelection>(
               const ApplicationFailure(
                 code: 'LEARNER_SELECTION_CONFLICT',
