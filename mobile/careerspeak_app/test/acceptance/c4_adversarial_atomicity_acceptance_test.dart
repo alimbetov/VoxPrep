@@ -240,8 +240,21 @@ final class _UnusedAssessmentGateway implements AssessmentPayloadGateway {
   const _UnusedAssessmentGateway();
 
   @override
-  Future<Result<AssessmentPayload>> fetch(AssessmentRevisionTarget target) async {
-    return const FailureResult<AssessmentPayload>(
+  Future<Result<PracticeTestRevision>> fetchPracticeTestRevision({
+    required String practiceTestCode,
+    required int revision,
+    required String checksum,
+  }) async {
+    return const FailureResult<PracticeTestRevision>(
+      ApplicationFailure(code: 'UNUSED', message: 'unused'),
+    );
+  }
+
+  @override
+  Future<Result<AssessmentQuestionRevision>> fetchQuestionRevision(
+    QuestionRevisionId target,
+  ) async {
+    return const FailureResult<AssessmentQuestionRevision>(
       ApplicationFailure(code: 'UNUSED', message: 'unused'),
     );
   }
