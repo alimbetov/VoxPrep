@@ -3,7 +3,8 @@ import '../../application/ports/locale_configuration_gateway.dart';
 import '../../application/result/result.dart';
 import '../../domain/locale_configuration.dart';
 
-final class HttpLocaleConfigurationGateway implements LocaleConfigurationGateway {
+final class HttpLocaleConfigurationGateway
+    implements LocaleConfigurationGateway {
   const HttpLocaleConfigurationGateway({required ApiClient apiClient})
     : _apiClient = apiClient;
 
@@ -49,11 +50,11 @@ final class HttpLocaleConfigurationGateway implements LocaleConfigurationGateway
 
     try {
       final body = _object(apiResponse.jsonBody, r'$');
-      _requireExactKeys(
-        body,
-        const <String>{'countryCode', 'defaultLocale', 'locales'},
-        r'$',
-      );
+      _requireExactKeys(body, const <String>{
+        'countryCode',
+        'defaultLocale',
+        'locales',
+      }, r'$');
       final items = body['locales'];
       if (items is! List) {
         throw const FormatException(r'$.locales must be an array');
@@ -61,11 +62,10 @@ final class HttpLocaleConfigurationGateway implements LocaleConfigurationGateway
       final locales = <SupportedLocaleOption>[];
       for (var index = 0; index < items.length; index++) {
         final item = _object(items[index], r'$.locales[]');
-        _requireExactKeys(
-          item,
-          const <String>{'code', 'label'},
-          r'$.locales[]',
-        );
+        _requireExactKeys(item, const <String>{
+          'code',
+          'label',
+        }, r'$.locales[]');
         locales.add(
           SupportedLocaleOption(
             code: _string(item, 'code'),
@@ -110,7 +110,10 @@ Map<String, Object?> _object(Object? value, String path) {
 String _string(Map<String, Object?> object, String key) {
   final value = object[key];
   if (value is! String || value.trim().isEmpty) {
-    throw FormatException(r'$.' '$key must be a non-blank string');
+    throw FormatException(
+      r'$.'
+      '$key must be a non-blank string',
+    );
   }
   return value.trim();
 }
