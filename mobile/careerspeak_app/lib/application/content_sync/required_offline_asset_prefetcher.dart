@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import '../content_delivery/content_manifest.dart';
 import '../ports/content_manifest_gateway.dart';
 import '../result/result.dart';
