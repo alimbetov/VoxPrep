@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
@@ -8,9 +7,7 @@ import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/application/services/asset_download_manager.dart';
 import 'package:careerspeak_app/application/services/asset_resolver.dart';
 import 'package:careerspeak_app/data/local/file_system_asset_store.dart';
-import 'package:careerspeak_app/data/remote/http_api_client.dart';
 import 'package:careerspeak_app/data/remote/http_asset_byte_source.dart';
-import 'package:careerspeak_app/data/remote/http_media_access_gateway.dart';
 import 'package:careerspeak_app/domain/content_identity.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
 import 'package:careerspeak_app/domain/installation_credentials.dart';
@@ -38,7 +35,7 @@ final _content = ContentIdentity(
 
 void main() {
   test(
-    'deleted local audio is restored through current installation token and immutable asset identity',
+    'deleted local audio is restored through Backend using current installation token',
     () async {
       final directory = await Directory.systemTemp.createTemp(
         'audio-token-recovery-',
@@ -49,54 +46,25 @@ void main() {
         installationId: InstallationId('installation-recovery-1'),
         token: InstallationToken('token-v1'),
       );
+      final requestedUris = <Uri>[];
       final authorizationHeaders = <String?>[];
-      final accessBodies = <Map<String, Object?>>[];
-      var grantNumber = 0;
-      var mediaGets = 0;
 
       final client = MockClient((request) async {
-        if (request.url.host == 'api.example.test' &&
-            request.url.path == '/api/v1/media/access') {
-          authorizationHeaders.add(request.headers['authorization']);
-          accessBodies.add(
-            Map<String, Object?>.from(
-              jsonDecode(request.body) as Map<String, Object?>,
-            ),
-          );
-          grantNumber += 1;
-          return http.Response(
-            jsonEncode(<String, Object?>{
-              'assetId': _audioAsset.assetId,
-              'url':
-                  'https://media.example.test/signed/${_audioAsset.assetId}?grant=$grantNumber',
-              'expiresAt': '2026-11-01T03:00:00Z',
-            }),
-            200,
-            headers: const <String, String>{
-              'content-type': 'application/json',
-            },
-          );
-        }
-
-        if (request.url.host == 'media.example.test') {
-          mediaGets += 1;
-          return http.Response.bytes(_audioBytes, 200);
-        }
-
-        return http.Response('unexpected request', 500);
+        requestedUris.add(request.url);
+        authorizationHeaders.add(request.headers['authorization']);
+        expect(request.url.host, 'api.example.test');
+        expect(
+          request.url.path,
+          '/api/v1/media/assets/${_audioAsset.assetId}/content',
+        );
+        return http.Response.bytes(_audioBytes, 200);
       });
 
       final store = FileSystemAssetStore(directory);
-      final apiClient = HttpApiClient(
+      final source = HttpAssetByteSource(
         client: client,
         credentialStore: credentials,
         baseUri: Uri.parse('https://api.example.test'),
-        delay: (_) async {},
-      );
-      final accessGateway = HttpMediaAccessGateway(apiClient: apiClient);
-      final source = HttpAssetByteSource(
-        client: client,
-        accessGateway: accessGateway,
       );
       final resolver = AssetResolver(
         catalog: const _Catalog(),
@@ -118,12 +86,8 @@ void main() {
       expect(first, isA<Success<ResolvedAsset>>());
       final firstPath = (first as Success<ResolvedAsset>).value.localPath;
       expect(await File(firstPath).readAsBytes(), _audioBytes);
-      expect(grantNumber, 1);
-      expect(mediaGets, 1);
+      expect(requestedUris, hasLength(1));
       expect(authorizationHeaders, <String?>['Bearer token-v1']);
-      expect(accessBodies.single, <String, Object?>{
-        'assetId': _audioAsset.assetId,
-      });
 
       await File(firstPath).delete();
       expect(await File(firstPath).exists(), isFalse);
@@ -140,16 +104,19 @@ void main() {
           (recovered as Success<ResolvedAsset>).value.localPath;
       expect(recoveredPath, firstPath);
       expect(await File(recoveredPath).readAsBytes(), _audioBytes);
-      expect(grantNumber, 2);
-      expect(mediaGets, 2);
+      expect(requestedUris, hasLength(2));
       expect(authorizationHeaders, <String?>[
         'Bearer token-v1',
         'Bearer token-v2',
       ]);
-      expect(accessBodies, <Map<String, Object?>>[
-        <String, Object?>{'assetId': _audioAsset.assetId},
-        <String, Object?>{'assetId': _audioAsset.assetId},
-      ]);
+      expect(
+        requestedUris.every((uri) => uri.host == 'api.example.test'),
+        isTrue,
+      );
+      expect(
+        requestedUris.any((uri) => uri.toString().contains('rustfs')),
+        isFalse,
+      );
       expect(_audioAsset.deliveryKey, 'audio/interview/recoverable-1.mp3');
     },
   );
@@ -170,19 +137,14 @@ void main() {
       return http.Response('unexpected request', 500);
     });
     final store = FileSystemAssetStore(directory);
-    final apiClient = HttpApiClient(
-      client: client,
-      credentialStore: credentials,
-      baseUri: Uri.parse('https://api.example.test'),
-      delay: (_) async {},
-    );
     final resolver = AssetResolver(
       catalog: const _Catalog(),
       store: store,
       downloads: AssetDownloadManager(
         source: HttpAssetByteSource(
           client: client,
-          accessGateway: HttpMediaAccessGateway(apiClient: apiClient),
+          credentialStore: credentials,
+          baseUri: Uri.parse('https://api.example.test'),
         ),
         store: store,
         maxAttempts: 1,
@@ -259,7 +221,9 @@ final class _CredentialStore implements InstallationCredentialStore {
   }
 
   @override
-  Future<void> writeInstallationToken(InstallationToken installationToken) async {
+  Future<void> writeInstallationToken(
+    InstallationToken installationToken,
+  ) async {
     token = installationToken;
   }
 }
