@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import '../../application/ports/api_client.dart';
 import '../../application/ports/locale_configuration_gateway.dart';
 import '../../application/result/result.dart';
