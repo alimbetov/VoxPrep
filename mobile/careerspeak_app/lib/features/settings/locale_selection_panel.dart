@@ -197,7 +197,8 @@ class _LocaleConfigurationView extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             DropdownButtonFormField<String>(
-              value: selected?.locale.code,
+              key: ValueKey('$countryCode:$selectedCode'),
+              initialValue: selected?.locale.code,
               decoration: const InputDecoration(
                 labelText: 'Language',
                 border: OutlineInputBorder(),
