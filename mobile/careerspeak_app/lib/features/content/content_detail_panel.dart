@@ -554,7 +554,7 @@ class _AudioPlaybackControls extends ConsumerWidget {
             ),
             if (phase == AudioPlaybackPhase.completed) ...[
               const SizedBox(height: 12),
-              const Semantics(label: 'Audio listened', child: Text('Listened')),
+              Semantics(label: 'Audio listened', child: const Text('Listened')),
             ],
             if (failure != null) ...[
               const SizedBox(height: 12),
