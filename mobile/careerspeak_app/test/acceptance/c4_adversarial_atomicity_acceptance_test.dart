@@ -130,7 +130,10 @@ void main() {
           .getSingle();
       expect(current.currentContentVersion, 108);
       expect(current.currentManifestChecksum, _rootA);
-      expect(current.updatedAt.millisecondsSinceEpoch, now.millisecondsSinceEpoch);
+      expect(
+        current.updatedAt.millisecondsSinceEpoch,
+        now.millisecondsSinceEpoch,
+      );
     },
   );
 
