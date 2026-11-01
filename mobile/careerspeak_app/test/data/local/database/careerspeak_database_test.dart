@@ -16,16 +16,16 @@ void main() {
   });
 
   test(
-    'schema version 10 creates the production foundation and retention schema',
+    'schema version 12 creates production foundation and BA selection schema',
     () async {
       await database.customSelect('SELECT 1').getSingle();
 
-      expect(database.schemaVersion, 10);
+      expect(database.schemaVersion, 12);
 
       final userVersion = await database
           .customSelect('PRAGMA user_version')
           .getSingle();
-      expect(userVersion.read<int>('user_version'), 10);
+      expect(userVersion.read<int>('user_version'), 12);
 
       final foreignKeys = await database
           .customSelect('PRAGMA foreign_keys')
@@ -67,6 +67,22 @@ void main() {
           )
           .getSingleOrNull();
       expect(retentionTable, isNotNull);
+
+      final selectionTable = await database
+          .customSelect(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'learner_selection'",
+          )
+          .getSingleOrNull();
+      expect(selectionTable, isNotNull);
+
+      final selection = await database
+          .customSelect(
+            'SELECT id, generation, level_decision_made FROM learner_selection WHERE id = 1',
+          )
+          .getSingle();
+      expect(selection.read<int>('id'), 1);
+      expect(selection.read<int>('generation'), 0);
+      expect(selection.read<int>('level_decision_made'), 0);
     },
   );
 
@@ -149,6 +165,23 @@ void main() {
               updatedAt: now,
             ),
           ),
+      throwsA(anything),
+    );
+
+    await expectLater(
+      database.customStatement(
+        '''
+        INSERT INTO learner_selection (
+          id,
+          selected_goal_code,
+          selected_track_code,
+          self_assessed_level_code,
+          level_decision_made,
+          generation,
+          updated_at
+        ) VALUES (2, NULL, NULL, NULL, 0, 0, 0)
+        ''',
+      ),
       throwsA(anything),
     );
   });
