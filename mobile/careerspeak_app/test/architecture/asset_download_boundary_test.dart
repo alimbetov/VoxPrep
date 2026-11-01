@@ -23,12 +23,12 @@ void main() {
       isEmpty,
       reason:
           'Remote learner media must resolve through AssetResolver -> '
-          'AssetDownloadManager -> media access grant -> HttpAssetByteSource -> '
+          'AssetDownloadManager -> authenticated Backend asset stream -> '
           'verified local file.',
     );
   });
 
-  test('production HTTP transport is confined to two explicit planes', () {
+  test('production HTTP transport is confined to Backend API adapters', () {
     final root = Directory('lib');
     expect(root.existsSync(), isTrue, reason: root.path);
 
@@ -53,12 +53,12 @@ void main() {
       violations,
       isEmpty,
       reason:
-          'JSON/control-plane HTTP must use ApiClient. Binary/data-plane HTTP '
-          'must use HttpAssetByteSource after MediaAccessGateway grants access.',
+          'All production HTTP must terminate at Backend API endpoints. '
+          'Flutter must not contain a direct RustFS/S3/CDN transport adapter.',
     );
   });
 
-  test('catalogue icons and audio use typed signed-grant resolution', () {
+  test('catalogue icons and audio use typed backend-only asset resolution', () {
     final iconProvider = File(
       'lib/app/asset_resolver_providers.dart',
     ).readAsStringSync();
@@ -71,18 +71,52 @@ void main() {
     final byteSource = File(
       'lib/data/remote/http_asset_byte_source.dart',
     ).readAsStringSync();
-    final accessGateway = File(
-      'lib/data/remote/http_media_access_gateway.dart',
-    ).readAsStringSync();
 
     expect(iconProvider, contains('resolver.resolveImage('));
     expect(audioProvider, contains('resolver.resolveAudioContent('));
     expect(iconProvider, contains('AssetResolutionPolicy.downloadIfMissing'));
     expect(audioProvider, contains('AssetResolutionPolicy.downloadIfMissing'));
-    expect(downloadProviders, contains('HttpMediaAccessGateway('));
-    expect(accessGateway, contains("path: '/api/v1/media/access'"));
-    expect(byteSource, contains('_accessGateway.resolve(asset.assetId)'));
-    expect(byteSource, contains("http.Request('GET', grant.url)"));
+    expect(downloadProviders, contains('installationCredentialStoreProvider'));
+    expect(downloadProviders, contains('apiBaseUriProvider'));
+    expect(
+      byteSource,
+      contains("'api/v1/media/assets/\$encodedAssetId/content'"),
+    );
+    expect(byteSource, contains("headers['authorization'] = 'Bearer \$token'"));
+    expect(byteSource, isNot(contains('MediaAccessGrant')));
+    expect(byteSource, isNot(contains('grant.url')));
     expect(byteSource, isNot(contains('asset.deliveryKey')));
+  });
+
+  test('Flutter production sources contain no object-storage client boundary', () {
+    final root = Directory('lib');
+    final violations = <String>[];
+    const forbidden = <String>[
+      'rustfs',
+      'presigned',
+      'presign',
+      'signed url',
+      'amazonaws.com',
+      's3.amazonaws.com',
+      'minio',
+    ];
+
+    for (final entity in root.listSync(recursive: true)) {
+      if (entity is! File || !entity.path.endsWith('.dart')) continue;
+      final source = entity.readAsStringSync().toLowerCase();
+      for (final marker in forbidden) {
+        if (source.contains(marker)) {
+          violations.add('${entity.path}: $marker');
+        }
+      }
+    }
+
+    expect(
+      violations,
+      isEmpty,
+      reason:
+          'RustFS/S3/CDN are Backend-internal infrastructure. Flutter may know '
+          'assetId and immutable integrity metadata only.',
+    );
   });
 }
