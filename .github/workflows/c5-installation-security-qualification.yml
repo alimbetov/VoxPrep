@@ -17,6 +17,7 @@ on:
       - 'mobile/careerspeak_app/lib/domain/installation_credentials.dart'
       - 'mobile/careerspeak_app/test/application/installation_*'
       - 'mobile/careerspeak_app/test/application/application_bootstrap_service_test.dart'
+      - 'mobile/careerspeak_app/test/acceptance/c5_*'
       - 'mobile/careerspeak_app/test/data/remote/http_api_client_test.dart'
       - 'mobile/careerspeak_app/test/data/remote/http_installation_registration_gateway_test.dart'
       - 'mobile/careerspeak_app/test/data/secure/flutter_secure_installation_credential_store_test.dart'
@@ -54,6 +55,7 @@ jobs:
           flutter test test/application/installation_bootstrap_service_test.dart
           flutter test test/application/installation_auth_recovery_api_client_test.dart
           flutter test test/application/application_bootstrap_service_test.dart
+          flutter test test/acceptance/c5_restart_security_acceptance_test.dart
           flutter test test/data/remote/http_api_client_test.dart
           flutter test test/data/remote/http_installation_registration_gateway_test.dart
           flutter test test/data/secure/flutter_secure_installation_credential_store_test.dart
