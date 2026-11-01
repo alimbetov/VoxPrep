@@ -12,7 +12,6 @@ import 'package:careerspeak_app/application/continue_learning/continue_learning_
 import 'package:careerspeak_app/application/query/page.dart' as app_page;
 import 'package:careerspeak_app/application/services/role_audio_clip_controller.dart';
 import 'package:careerspeak_app/domain/application_preferences.dart';
-import 'package:careerspeak_app/domain/content_identity.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
 import 'package:careerspeak_app/features/catalogue/catalogue_home_screen.dart';
 import 'package:careerspeak_app/features/content/content_detail_panel.dart';
@@ -197,8 +196,8 @@ void main() {
         learnerStateRepositoryProvider.overrideWithValue(
           const GoldenLearnerStateRepository(),
         ),
-        dueReviewIdentitiesProvider.overrideWithValue(
-          const AsyncData<Set<ContentIdentity>>(<ContentIdentity>{}),
+        dueReviewItemsProvider.overrideWith(
+          (ref) async => const <ContentItem>[],
         ),
         learnerLearningContextProvider.overrideWithValue(
           const AsyncData<LearnerLearningContext?>(
