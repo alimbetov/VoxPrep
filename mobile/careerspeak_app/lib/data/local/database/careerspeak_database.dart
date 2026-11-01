@@ -9,6 +9,7 @@ import 'careerspeak_retirement_tables.dart';
 import 'careerspeak_sync_metadata_tables.dart';
 import 'careerspeak_tables.dart';
 import 'learner_selection_schema_v12.dart';
+import 'practice_test_attempt_schema_v13.dart';
 import 'universal_catalogue_schema_v9.dart';
 
 part 'careerspeak_database.g.dart';
@@ -45,7 +46,7 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
     : super(executor ?? driftDatabase(name: 'careerspeak'));
 
   @override
-  int get schemaVersion => 12;
+  int get schemaVersion => 13;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -55,6 +56,7 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
       await _createAssetCacheRetentionSchemaV10();
       await _createLocaleSelectionSchemaV11();
       await _createLearnerSelectionSchemaV12();
+      await _createPracticeTestAttemptSchemaV13();
     },
     onUpgrade: (migrator, from, to) async {
       if (from < 2) {
@@ -182,6 +184,9 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
       if (from < 12 && to >= 12) {
         await _createLearnerSelectionSchemaV12();
       }
+      if (from < 13 && to >= 13) {
+        await _createPracticeTestAttemptSchemaV13();
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -216,6 +221,12 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
 
   Future<void> _createLearnerSelectionSchemaV12() async {
     for (final statement in learnerSelectionSchemaV12Statements) {
+      await customStatement(statement);
+    }
+  }
+
+  Future<void> _createPracticeTestAttemptSchemaV13() async {
+    for (final statement in practiceTestAttemptSchemaV13Statements) {
       await customStatement(statement);
     }
   }
