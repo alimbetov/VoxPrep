@@ -264,6 +264,12 @@ final class GoldenPreferencesRepository implements AppPreferencesRepository {
       Success<ApplicationPreferences>(preferences);
 
   @override
+  Future<Result<void>> setLocaleSelection({
+    required String countryCode,
+    required AppTranslationLocale locale,
+  }) async => const Success<void>(null);
+
+  @override
   Future<Result<void>> setFocusMode(bool enabled) async =>
       const Success<void>(null);
 
