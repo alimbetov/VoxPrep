@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'app/application_bootstrap_providers.dart';
 import 'app/careerspeak_app.dart';
 import 'app/catalogue_source_providers.dart';
 import 'domain/catalogue_source_mode.dart';
@@ -16,7 +15,7 @@ Future<void> main() async {
           () => CatalogueSourceModeNotifier(CatalogueSourceMode.production),
         ),
       ],
-      child: const ProductionBootstrapHost(child: CareerSpeakApp()),
+      child: const CareerSpeakApp(),
     ),
   );
 }
