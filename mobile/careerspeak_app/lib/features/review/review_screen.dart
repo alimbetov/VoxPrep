@@ -33,18 +33,18 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
     return contentPage.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => Center(
+      error: (error, stackTrace) => const Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text('Unable to load review content.\n$error'),
+          padding: EdgeInsets.all(24),
+          child: Text('Unable to load review content. Please try again.'),
         ),
       ),
       data: (page) => markers.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stackTrace) => Center(
+        error: (error, stackTrace) => const Center(
           child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Text('Unable to load learner state.\n$error'),
+            padding: EdgeInsets.all(24),
+            child: Text('Unable to load learner state. Please try again.'),
           ),
         ),
         data: (values) {
