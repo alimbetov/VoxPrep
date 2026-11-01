@@ -8,6 +8,7 @@ import '../application/result/result.dart';
 import '../application/services/installation_auth_recovery_api_client.dart';
 import '../application/services/installation_bootstrap_service.dart';
 import '../data/remote/http_api_client.dart';
+import '../data/remote/http_installation_registration_gateway.dart';
 import '../domain/application_preferences.dart';
 import 'app_preferences_providers.dart';
 import 'installation_identity_providers.dart';
