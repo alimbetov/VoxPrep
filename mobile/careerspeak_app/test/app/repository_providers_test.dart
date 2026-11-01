@@ -37,17 +37,20 @@ void main() {
     );
   });
 
-  test('production composition uses CURRENT snapshot assessment repository', () {
-    final database = createTestDatabase();
-    addTearDown(database.close);
-    final container = ProviderContainer(
-      overrides: [careerSpeakDatabaseProvider.overrideWithValue(database)],
-    );
-    addTearDown(container.dispose);
+  test(
+    'production composition uses CURRENT snapshot assessment repository',
+    () {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      final container = ProviderContainer(
+        overrides: [careerSpeakDatabaseProvider.overrideWithValue(database)],
+      );
+      addTearDown(container.dispose);
 
-    expect(
-      container.read(practiceTestRepositoryProvider),
-      isA<DriftPracticeTestRepository>(),
-    );
-  });
+      expect(
+        container.read(practiceTestRepositoryProvider),
+        isA<DriftPracticeTestRepository>(),
+      );
+    },
+  );
 }
