@@ -191,7 +191,7 @@ enum AppThemePreference {
 
 final class ApplicationPreferences {
   const ApplicationPreferences({
-    required this.countryCode,
+    this.countryCode,
     required this.uiLocale,
     required this.translationLocale,
     required this.preferredAccent,
@@ -201,7 +201,6 @@ final class ApplicationPreferences {
   }) : assert(storageQuotaBytes == null || storageQuotaBytes >= 0);
 
   static const defaults = ApplicationPreferences(
-    countryCode: null,
     uiLocale: AppUiLocale.english,
     translationLocale: AppTranslationLocale.english,
     preferredAccent: PreferredEnglishAccent.us,
