@@ -18,17 +18,21 @@ import 'app_preferences_providers.dart';
 import 'content_locations.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final preferences = ref.watch(applicationPreferencesProvider).asData?.value;
+  final needsLocaleOnboarding = ref.watch(
+    applicationPreferencesProvider.select(
+      (preferences) => preferences.asData?.value.needsLocaleOnboarding,
+    ),
+  );
 
   return GoRouter(
     initialLocation: '/',
     redirect: (context, state) {
-      if (preferences == null) return null;
+      if (needsLocaleOnboarding == null) return null;
       final onboarding = state.matchedLocation == '/onboarding/locale';
-      if (preferences.needsLocaleOnboarding && !onboarding) {
+      if (needsLocaleOnboarding && !onboarding) {
         return '/onboarding/locale';
       }
-      if (!preferences.needsLocaleOnboarding && onboarding) {
+      if (!needsLocaleOnboarding && onboarding) {
         return '/';
       }
       return null;
