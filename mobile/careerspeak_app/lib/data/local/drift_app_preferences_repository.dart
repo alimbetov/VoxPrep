@@ -32,6 +32,7 @@ final class DriftAppPreferencesRepository implements AppPreferencesRepository {
         try {
           yield Success<ApplicationPreferences>(
             _mapStored(
+              countryCode: await _readCountryCode(),
               uiLocale: row.uiLocale,
               translationLocale: row.translationLocale,
               preferredAccent: row.preferredAccent,
@@ -69,6 +70,7 @@ final class DriftAppPreferencesRepository implements AppPreferencesRepository {
       }
       return Success<ApplicationPreferences>(
         _mapStored(
+          countryCode: await _readCountryCode(),
           uiLocale: row.uiLocale,
           translationLocale: row.translationLocale,
           preferredAccent: row.preferredAccent,
@@ -83,6 +85,53 @@ final class DriftAppPreferencesRepository implements AppPreferencesRepository {
       );
     } on Object catch (error) {
       return FailureResult<ApplicationPreferences>(_readFailure(error));
+    }
+  }
+
+  @override
+  Future<Result<void>> setLocaleSelection({
+    required String countryCode,
+    required AppTranslationLocale locale,
+  }) async {
+    final country = countryCode.trim().toUpperCase();
+    if (!_countryCodePattern.hasMatch(country)) {
+      return const FailureResult<void>(
+        ApplicationFailure(
+          code: 'PREFERENCES_INVALID',
+          message: 'Country code must be an ISO-3166 alpha-2 code.',
+        ),
+      );
+    }
+
+    final initialized = await _ensureDefaults();
+    if (initialized is FailureResult<void>) return initialized;
+
+    try {
+      await _database.transaction(() async {
+        await _database.customStatement(
+          'UPDATE app_preferences SET country_code = ? WHERE id = ?',
+          <Object?>[country, _singletonId],
+        );
+        final statement = _database.update(_database.appPreferences)
+          ..where((table) => table.id.equals(_singletonId));
+        final affected = await statement.write(
+          AppPreferencesCompanion(
+            uiLocale: Value<String>(locale.code),
+            translationLocale: Value<String>(locale.code),
+            updatedAt: Value<DateTime>(DateTime.now().toUtc()),
+          ),
+        );
+        if (affected != 1) {
+          throw const _StoredPreferencesViolation(
+            'locale selection update did not affect singleton row',
+          );
+        }
+      });
+      return const Success<void>(null);
+    } on _StoredPreferencesViolation catch (error) {
+      return FailureResult<void>(_invalidStoredPreferences(error.reason));
+    } on Object catch (error) {
+      return FailureResult<void>(_writeFailure(error));
     }
   }
 
@@ -166,6 +215,20 @@ final class DriftAppPreferencesRepository implements AppPreferencesRepository {
     }
   }
 
+  Future<String?> _readCountryCode() async {
+    final row = await _database.customSelect(
+      'SELECT country_code FROM app_preferences WHERE id = ?',
+      variables: <Variable<Object>>[Variable<int>(_singletonId)],
+      readsFrom: <ResultSetImplementation>{_database.appPreferences},
+    ).getSingleOrNull();
+    final value = row?.readNullable<String>('country_code')?.trim().toUpperCase();
+    if (value == null || value.isEmpty) return null;
+    if (!_countryCodePattern.hasMatch(value)) {
+      throw _StoredPreferencesViolation('invalid country_code: $value');
+    }
+    return value;
+  }
+
   Future<Result<void>> _update(AppPreferencesCompanion values) async {
     final initialized = await _ensureDefaults();
     if (initialized is FailureResult<void>) {
@@ -190,6 +253,7 @@ final class DriftAppPreferencesRepository implements AppPreferencesRepository {
   }
 
   ApplicationPreferences _mapStored({
+    required String? countryCode,
     required String uiLocale,
     required String translationLocale,
     required String? preferredAccent,
@@ -205,6 +269,11 @@ final class DriftAppPreferencesRepository implements AppPreferencesRepository {
     if (translation == null) {
       throw _StoredPreferencesViolation(
         'unsupported translationLocale: $translationLocale',
+      );
+    }
+    if (countryCode != null && ui.code != translation.code) {
+      throw const _StoredPreferencesViolation(
+        'uiLocale and translationLocale must match after locale onboarding',
       );
     }
     final accent = PreferredEnglishAccent.fromCode(preferredAccent);
@@ -224,6 +293,7 @@ final class DriftAppPreferencesRepository implements AppPreferencesRepository {
     }
 
     return ApplicationPreferences(
+      countryCode: countryCode,
       uiLocale: ui,
       translationLocale: translation,
       preferredAccent: accent,
@@ -266,4 +336,5 @@ final class _StoredPreferencesViolation implements Exception {
   final String reason;
 }
 
+final _countryCodePattern = RegExp(r'^[A-Z]{2}$');
 const _singletonId = 1;
