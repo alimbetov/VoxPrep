@@ -15,12 +15,10 @@ typedef InstallationCredentialRenewer =
 /// request simply retries with the new token instead of rotating again.
 final class InstallationAuthRecoveryApiClient implements ApiClient {
   InstallationAuthRecoveryApiClient({
-    required ApiClient delegate,
-    required InstallationCredentialStore credentialStore,
-    required InstallationCredentialRenewer renewCredentials,
-  }) : _delegate = delegate,
-       _credentialStore = credentialStore,
-       _renewCredentials = renewCredentials;
+    required this._delegate,
+    required this._credentialStore,
+    required this._renewCredentials,
+  });
 
   final ApiClient _delegate;
   final InstallationCredentialStore _credentialStore;
