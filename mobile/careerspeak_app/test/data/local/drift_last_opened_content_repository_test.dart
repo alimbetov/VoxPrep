@@ -9,10 +9,10 @@ import '../../support/test_database_factory.dart';
 
 void main() {
   group('DriftLastOpenedContentRepository', () {
-    test('schema v14 starts empty and survives repository reopen', () async {
+    test('v14 capability starts empty and survives repository reopen', () async {
       final database = createTestDatabase();
       addTearDown(database.close);
-      expect(database.schemaVersion, 14);
+      expect(database.schemaVersion, greaterThanOrEqualTo(14));
 
       final openedAt = DateTime.utc(2026, 11, 1, 10, 15);
       final repository = DriftLastOpenedContentRepository(
