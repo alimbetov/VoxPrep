@@ -12,31 +12,36 @@ const _checksum =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 void main() {
-  test('downloads bytes only from authenticated Backend asset endpoint', () async {
-    Uri? requested;
-    String? authorization;
-    bool? followRedirects;
-    final source = HttpAssetByteSource(
-      client: MockClient((request) async {
-        requested = request.url;
-        authorization = request.headers['authorization'];
-        followRedirects = request.followRedirects;
-        return http.Response.bytes(<int>[1, 2, 3], 200);
-      }),
-      credentialStore: _Credentials(InstallationToken('token-1')),
-      baseUri: Uri.parse('https://api.example.test'),
-    );
+  test(
+    'downloads bytes only from authenticated Backend asset endpoint',
+    () async {
+      Uri? requested;
+      String? authorization;
+      bool? followRedirects;
+      final source = HttpAssetByteSource(
+        client: MockClient((request) async {
+          requested = request.url;
+          authorization = request.headers['authorization'];
+          followRedirects = request.followRedirects;
+          return http.Response.bytes(<int>[1, 2, 3], 200);
+        }),
+        credentialStore: _Credentials(InstallationToken('token-1')),
+        baseUri: Uri.parse('https://api.example.test'),
+      );
 
-    final result = await source.open(_asset(size: 3));
+      final result = await source.open(_asset(size: 3));
 
-    expect(result, isA<Success<AssetByteStream>>());
-    expect(
-      requested,
-      Uri.parse('https://api.example.test/api/v1/media/assets/asset-a/content'),
-    );
-    expect(authorization, 'Bearer token-1');
-    expect(followRedirects, isFalse);
-  });
+      expect(result, isA<Success<AssetByteStream>>());
+      expect(
+        requested,
+        Uri.parse(
+          'https://api.example.test/api/v1/media/assets/asset-a/content',
+        ),
+      );
+      expect(authorization, 'Bearer token-1');
+      expect(followRedirects, isFalse);
+    },
+  );
 
   test('deliveryKey never changes the Backend download target', () async {
     final requested = <Uri>[];
@@ -165,7 +170,9 @@ final class _Credentials implements InstallationCredentialStore {
   Future<void> writeInstallationId(InstallationId installationId) async {}
 
   @override
-  Future<void> writeInstallationToken(InstallationToken installationToken) async {
+  Future<void> writeInstallationToken(
+    InstallationToken installationToken,
+  ) async {
     token = installationToken;
   }
 }
