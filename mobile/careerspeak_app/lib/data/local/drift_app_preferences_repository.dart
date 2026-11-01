@@ -216,12 +216,17 @@ final class DriftAppPreferencesRepository implements AppPreferencesRepository {
   }
 
   Future<String?> _readCountryCode() async {
-    final row = await _database.customSelect(
-      'SELECT country_code FROM app_preferences WHERE id = ?',
-      variables: <Variable<Object>>[Variable<int>(_singletonId)],
-      readsFrom: <ResultSetImplementation>{_database.appPreferences},
-    ).getSingleOrNull();
-    final value = row?.readNullable<String>('country_code')?.trim().toUpperCase();
+    final row = await _database
+        .customSelect(
+          'SELECT country_code FROM app_preferences WHERE id = ?',
+          variables: <Variable<Object>>[Variable<int>(_singletonId)],
+          readsFrom: <ResultSetImplementation>{_database.appPreferences},
+        )
+        .getSingleOrNull();
+    final value = row
+        ?.readNullable<String>('country_code')
+        ?.trim()
+        .toUpperCase();
     if (value == null || value.isEmpty) return null;
     if (!_countryCodePattern.hasMatch(value)) {
       throw _StoredPreferencesViolation('invalid country_code: $value');
