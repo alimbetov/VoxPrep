@@ -8,12 +8,17 @@ on:
       - '.github/workflows/flutter-format-export.yml'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   format-export:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout hardening branch
         uses: actions/checkout@v4
+        with:
+          ref: feat/flutter-adversarial-hardening
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -26,15 +31,18 @@ jobs:
         working-directory: mobile/careerspeak_app
         run: flutter pub get
 
-      - name: Apply Dart format
-        working-directory: mobile/careerspeak_app
-        run: dart format lib test
+      - name: Apply authoritative Dart format
+        run: dart format mobile/careerspeak_app/lib mobile/careerspeak_app/test
 
-      - name: Upload formatted sources
-        uses: actions/upload-artifact@v4
-        with:
-          name: careerspeak-formatted-sources
-          path: |
-            mobile/careerspeak_app/lib
-            mobile/careerspeak_app/test
-          retention-days: 1
+      - name: Commit formatted tree and remove exporter
+        run: |
+          rm .github/workflows/flutter-format-export.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile/careerspeak_app/lib mobile/careerspeak_app/test .github/workflows/flutter-format-export.yml
+          if git diff --cached --quiet; then
+            echo "No formatting changes to commit."
+            exit 0
+          fi
+          git commit -m "style(flutter): apply authoritative dart format"
+          git push origin HEAD:feat/flutter-adversarial-hardening
