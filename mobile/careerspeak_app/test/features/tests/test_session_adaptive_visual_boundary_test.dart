@@ -1,9 +1,12 @@
 import 'package:careerspeak_app/app/repository_providers.dart';
+import 'package:careerspeak_app/application/ports/practice_test_attempt_repository.dart';
 import 'package:careerspeak_app/application/ports/practice_test_repository.dart';
 import 'package:careerspeak_app/application/query/page.dart';
 import 'package:careerspeak_app/application/query/practice_test_query.dart';
 import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/domain/practice_test.dart';
+import 'package:careerspeak_app/domain/practice_test_attempt.dart';
+import 'package:careerspeak_app/domain/practice_test_completion_key.dart';
 import 'package:careerspeak_app/features/tests/test_session_screen.dart';
 import 'package:flutter/material.dart' hide Page;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +19,7 @@ void main() {
     testWidgets('Practice test survives long text for $boundary', (
       tester,
     ) async {
+      final attemptRepository = _PracticeTestAttemptRepository();
       await pumpAdaptiveSurface(
         tester,
         boundary: boundary,
@@ -23,6 +27,9 @@ void main() {
           overrides: [
             practiceTestRepositoryProvider.overrideWithValue(
               const _PracticeTestRepository(),
+            ),
+            practiceTestAttemptRepositoryProvider.overrideWithValue(
+              attemptRepository,
             ),
           ],
           child: const MaterialApp(
@@ -133,4 +140,65 @@ final class _PracticeTestRepository implements PracticeTestRepository {
   Stream<Result<Page<PracticeTestSummary>>> watchTests(
     PracticeTestQuery query,
   ) => const Stream<Result<Page<PracticeTestSummary>>>.empty();
+}
+
+final class _PracticeTestAttemptRepository
+    implements PracticeTestAttemptRepository {
+  PracticeTestAttempt? _active;
+  final Set<PracticeTestCompletionKey> _completed =
+      <PracticeTestCompletionKey>{};
+
+  @override
+  Future<Result<PracticeTestAttempt?>> getActiveAttempt() async =>
+      Success<PracticeTestAttempt?>(_active);
+
+  @override
+  Future<Result<PracticeTestAttempt>> startActiveAttempt(String code) async {
+    final now = DateTime.utc(2026, 11, 1, 10);
+    _active = PracticeTestAttempt(
+      practiceTestCode: code,
+      practiceTestRevision: 1,
+      currentIndex: 0,
+      answers: const <int, int>{},
+      startedAt: now,
+      updatedAt: now,
+    );
+    return Success<PracticeTestAttempt>(_active!);
+  }
+
+  @override
+  Future<Result<PracticeTestAttempt>> saveActiveAttempt(
+    PracticeTestAttempt attempt,
+  ) async {
+    _active = attempt;
+    return Success<PracticeTestAttempt>(attempt);
+  }
+
+  @override
+  Future<Result<Set<PracticeTestCompletionKey>>>
+  getCompletedPracticeTests() async =>
+      Success<Set<PracticeTestCompletionKey>>(
+        Set<PracticeTestCompletionKey>.unmodifiable(_completed),
+      );
+
+  @override
+  Future<Result<void>> completeActiveAttempt() async {
+    final active = _active;
+    if (active != null) {
+      _completed.add(
+        PracticeTestCompletionKey(
+          practiceTestCode: active.practiceTestCode,
+          revision: active.practiceTestRevision,
+        ),
+      );
+      _active = null;
+    }
+    return const Success<void>(null);
+  }
+
+  @override
+  Future<Result<void>> clearActiveAttempt() async {
+    _active = null;
+    return const Success<void>(null);
+  }
 }
