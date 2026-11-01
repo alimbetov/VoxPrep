@@ -1,6 +1,8 @@
+import 'package:careerspeak_app/app/continue_learning_providers.dart';
 import 'package:careerspeak_app/app/learner_selection_providers.dart';
 import 'package:careerspeak_app/app/learner_state_providers.dart';
 import 'package:careerspeak_app/app/repository_providers.dart';
+import 'package:careerspeak_app/application/continue_learning/continue_learning_resolver.dart';
 import 'package:careerspeak_app/application/query/page.dart' as app_page;
 import 'package:careerspeak_app/domain/content_identity.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
@@ -42,12 +44,37 @@ void main() {
     expect(find.text('Pass Java backend interviews'), findsOneWidget);
     expect(find.text('Change'), findsOneWidget);
   });
+
+  testWidgets('BA-04 Home renders the resolved Continue Learning target', (
+    tester,
+  ) async {
+    await _pumpHome(
+      tester,
+      const AsyncData<LearnerLearningContext?>(null),
+      continueTarget: const ContinueLearningHomeTarget(
+        decision: BrowseVerticalDecision('TECH'),
+        location: '/catalogue/vertical/TECH',
+        title: 'Browse your learning direction',
+        subtitle: 'TECH',
+      ),
+    );
+
+    expect(find.text('Browse your learning direction'), findsOneWidget);
+    expect(find.text('TECH'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, 'Continue'), findsOneWidget);
+  });
 }
 
 Future<void> _pumpHome(
   WidgetTester tester,
-  AsyncValue<LearnerLearningContext?> learningContext,
-) async {
+  AsyncValue<LearnerLearningContext?> learningContext, {
+  ContinueLearningHomeTarget continueTarget = const ContinueLearningHomeTarget(
+    decision: BrowseVerticalDecision('DEFAULT_VERTICAL'),
+    location: '/catalogue',
+    title: 'Resume learning',
+    subtitle: 'Your CURRENT learning path',
+  ),
+}) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
@@ -62,6 +89,9 @@ Future<void> _pumpHome(
           ),
         ),
         learnerLearningContextProvider.overrideWithValue(learningContext),
+        continueLearningHomeTargetProvider.overrideWith(
+          (ref) async => continueTarget,
+        ),
       ],
       child: const MaterialApp(home: Scaffold(body: HomeScreen())),
     ),
