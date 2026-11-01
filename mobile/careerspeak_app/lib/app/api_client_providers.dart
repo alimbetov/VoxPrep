@@ -31,16 +31,18 @@ final apiClientProvider = Provider<ApiClient>((ref) {
     baseUri: ref.watch(apiBaseUriProvider),
     contextHeadersProvider: () async {
       final result = await preferencesRepository.getPreferences();
-      final preferences = switch (result) {
-        Success<ApplicationPreferences>(:final value) => value,
-        FailureResult<ApplicationPreferences>() =>
-          ApplicationPreferences.defaults,
-      };
-      return <String, String>{
+      if (result case FailureResult<ApplicationPreferences>(:final failure)) {
+        throw StateError('${failure.code}: ${failure.message}');
+      }
+      final preferences = (result as Success<ApplicationPreferences>).value;
+      final headers = <String, String>{
         'accept-language': preferences.selectedLocale.code,
-        if (preferences.countryCode case final countryCode?)
-          'x-country-code': countryCode,
       };
+      final countryCode = preferences.countryCode;
+      if (countryCode != null) {
+        headers['x-country-code'] = countryCode;
+      }
+      return headers;
     },
   );
 });
