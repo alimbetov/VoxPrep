@@ -1,4 +1,3 @@
-import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_asset_catalog_repository.dart';
 import 'package:drift/drift.dart';
@@ -56,9 +55,9 @@ void main() {
     );
 
     final repository = DriftAssetCatalogRepository(database);
-    final before = await repository.findCurrentById('audio.future.1');
-    expect(before, isA<Success>());
-    expect((before as Success).value, isNull);
+    final before = (await repository.findCurrentById('audio.future.1'))
+        .getOrThrow();
+    expect(before, isNull);
 
     await (database.update(database.contentManifestStates)
           ..where((row) => row.id.equals(1)))
@@ -70,11 +69,10 @@ void main() {
       ),
     );
 
-    final after = await repository.findCurrentById('audio.future.1');
-    expect(after, isA<Success>());
-    final asset = (after as Success).value;
+    final asset = (await repository.findCurrentById('audio.future.1'))
+        .getOrThrow();
     expect(asset, isNotNull);
-    expect(asset.assetId, 'audio.future.1');
+    expect(asset!.assetId, 'audio.future.1');
     expect(asset.requiredOffline, isTrue);
   });
 }
