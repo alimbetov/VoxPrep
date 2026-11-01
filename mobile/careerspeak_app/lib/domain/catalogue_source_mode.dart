@@ -1,0 +1,4 @@
+enum CatalogueSourceMode {
+  production,
+  demo,
+}
