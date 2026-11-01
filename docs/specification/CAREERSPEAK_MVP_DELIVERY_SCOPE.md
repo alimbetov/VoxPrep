@@ -3,6 +3,12 @@
 **Status:** Normative MVP delivery boundary  
 **Applies to:** CareerSpeak v1
 
+Related reconciliation record:
+
+- [`CAREERSPEAK_MVP_FUNCTIONAL_BUSINESS_AUDIT_2026-11-01.md`](CAREERSPEAK_MVP_FUNCTIONAL_BUSINESS_AUDIT_2026-11-01.md)
+
+When an older roadmap/backlog conflicts with this document, this MVP delivery boundary wins unless a newer versioned product requirement explicitly supersedes it.
+
 ## 1. Final delivery roadmap
 
 Only these five major implementation stages remain in scope for MVP:
@@ -18,6 +24,8 @@ B1  Backend schema + modular-monolith implementation
  ↓
 A1  Cross-system acceptance
 ```
+
+`R1` is functionally implemented on the Flutter remediation branch. Its remaining closure condition is exact-revision engineering qualification, not an unresolved product decision.
 
 ### R1 — Deterministic Review Policy
 
@@ -58,6 +66,17 @@ Assets / audio references
 
 Flutter must never observe a mixed CURRENT publication assembled from unrelated publication versions.
 
+Required activation semantics:
+
+```text
+stage complete candidate
+→ validate refs/revisions/checksums
+→ single atomic CURRENT activation
+→ readers observe only one publication identity
+```
+
+An incomplete/corrupt candidate never replaces the last-known-good CURRENT. Restart must preserve or deterministically recover the previous valid CURRENT.
+
 ### C5 — Installation / Security
 
 MVP security remains installation-scoped:
@@ -72,23 +91,29 @@ installationToken
 authorized learner API
 ```
 
-Required recovery:
+Registration/re-registration must be idempotent for the same installation identity where the contract permits.
+
+Required bounded recovery:
 
 ```text
 401
  ↓
-invalidate stale token
+invalidate stale token only
  ↓
-re-register installation
+preserve installationId + learner state
  ↓
-retry through the normal client boundary
+re-register once
+ ↓
+retry a safe request once through the normal client boundary
+ ↓
+fail closed on repeated rejection
 ```
 
 No mandatory learner account is introduced.
 
 ### B1 — Backend schema + implementation
 
-Implement the accepted contracts as a Spring Boot modular monolith backed by PostgreSQL and RustFS.
+Implement the accepted contracts as a Spring Boot modular monolith backed by PostgreSQL and private RustFS integration.
 
 Target modules:
 
@@ -112,7 +137,7 @@ Qualify the real production path:
 ```text
 Backend publication
  ↓
-HTTP API
+HTTP learner API
  ↓
 Flutter sync
  ↓
@@ -125,9 +150,60 @@ restart
 content / audio / PracticeTest / Review
 ```
 
-Acceptance must include stale/corrupt/replay/restart adversarial cases and exact-revision reproducibility.
+Acceptance must include stale/corrupt/replay/interruption/restart adversarial cases and exact-revision reproducibility.
 
-## 2. Cancelled / out-of-MVP development
+## 2. Flutter feature boundary
+
+After R1, Flutter learner-domain architecture is feature-frozen for MVP.
+
+The following existing capabilities remain part of the MVP contract:
+
+```text
+3-step onboarding
+Vertical / Goal / Track / Collection discovery
+Continue Learning
+content read/listen/repeat
+PracticeTest lifecycle
+FAVORITE / LISTENED / COMPLETED learner markers
+Review / Due
+verified offline asset use
+local restart-safe learner state
+```
+
+The following convenience surfaces are **not** MVP release gates and SHALL NOT reopen new feature streams before C4/C5/B1/A1:
+
+```text
+standalone Favorites screen/area
+user-managed Downloads dashboard
+collection download library/storage dashboard
+```
+
+`FAVORITE` remains a durable local marker/filter. Offline support remains mandatory through sync/download/verification/AssetResolver infrastructure; a dedicated Downloads UI is deferred.
+
+## 3. Learner media decision
+
+CareerSpeak v1 uses one Flutter-facing media boundary:
+
+```text
+Flutter installation token
+→ authenticated Backend learner media API
+→ Backend-controlled byte delivery
+→ local size/checksum verification
+→ verified local asset
+```
+
+Normative invariants:
+
+```text
+Flutter receives no RustFS/object-storage credentials
+Flutter does not interpret deliveryKey as a remote URL
+Backend owns learner media authorization
+verified local assets remain usable offline
+```
+
+A signed object-storage grant model is not part of the v1 contract and requires a separately versioned future decision if introduced.
+
+## 4. Cancelled / out-of-MVP development
 
 The following work is explicitly cancelled for CareerSpeak v1 unless a later versioned requirement reintroduces it with evidence:
 
@@ -161,9 +237,11 @@ leaderboards
 social graph
 remote UI schema
 generic EAV content model
+standalone Favorites feature stream
+user-managed Downloads feature stream
 ```
 
-## 3. Allowed minimal UX polish
+## 5. Allowed minimal UX polish
 
 UX work before MVP release is limited to defects, accessibility, clarity and small native Flutter transitions that do not create a new feature stream.
 
@@ -179,13 +257,15 @@ error/empty-state copy fixes
 
 These are subordinate to correctness and cross-system acceptance.
 
-## 4. Architecture freeze rule
+## 6. Architecture freeze rule
 
 After R1, Flutter learner-domain architecture is considered feature-frozen for MVP.
 
 New Flutter domain/application subsystems SHALL NOT be added before C4/C5/backend/cross-system acceptance unless they are required to fix a demonstrated correctness defect in an accepted contract.
 
-## 5. MVP completion path
+Mocks/demo catalogues may remain test fixtures only. Production catalogue/runtime state originates from Backend API + synchronized local CURRENT projection.
+
+## 7. MVP completion path
 
 ```text
 R1 Review Policy
