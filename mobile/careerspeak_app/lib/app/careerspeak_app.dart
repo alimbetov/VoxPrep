@@ -29,7 +29,7 @@ class CareerSpeakApp extends ConsumerWidget {
       darkTheme: CareerSpeakTheme.dark(),
       themeMode: themeMode,
       locale: appLocale,
-      supportedLocales: AppTranslationLocale.values
+      supportedLocales: AppUiLocale.values
           .map((locale) => _toFlutterLocale(locale.code))
           .toList(growable: false),
       localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
