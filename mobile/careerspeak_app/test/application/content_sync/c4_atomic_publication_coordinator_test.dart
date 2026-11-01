@@ -2,9 +2,11 @@ import 'package:careerspeak_app/application/content_delivery/content_manifest.da
 import 'package:careerspeak_app/application/content_delivery/product_catalog.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_coordinator.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_planner.dart';
+import 'package:careerspeak_app/application/content_sync/required_offline_asset_prefetcher.dart';
 import 'package:careerspeak_app/application/content_sync/sync_models.dart';
 import 'package:careerspeak_app/application/ports/content_manifest_gateway.dart';
 import 'package:careerspeak_app/application/result/result.dart';
+import 'package:careerspeak_app/application/services/asset_download_manager.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/sync_orchestration_fakes.dart';
@@ -62,7 +64,91 @@ void main() {
     expect(executor.calls, 0);
     expect(journal.states.last, SyncRunState.failedRetryable);
   });
+
+  test('C4 required-offline asset failure blocks activation', () async {
+    final targetPack = pack();
+    final root = manifest(109, packs: <PackRevisionRef>[targetPack]);
+    final gateway = _PackGateway(
+      root: root,
+      packManifest: PackContentManifest(
+        schemaVersion: 1,
+        identity: targetPack.identity,
+        revision: targetPack.revision,
+        checksum: targetPack.checksum,
+        contents: const <PackContentRef>[],
+        assets: <ManifestAssetDescriptor>[
+          ManifestAssetDescriptor(
+            assetId: 'audio.required.1',
+            checksumSha256: _assetChecksum,
+            deliveryKey: 'audio/required-1.mp3',
+            sizeBytes: 128,
+            mediaType: 'audio/mpeg',
+            requiredOffline: true,
+          ),
+        ],
+        contentAssets: const <ContentAssetRef>[],
+      ),
+    );
+    final executor = FakeExecutor();
+    final journal = FakeJournal(Success(emptySnapshot()));
+    final prefetcher = RequiredOfflineAssetPrefetcher(
+      manifestGateway: gateway,
+      ensureLocal: (asset) async => const FailureResult<AssetDownloadOutcome>(
+        ApplicationFailure(
+          code: 'OFFLINE',
+          message: 'required asset is unavailable',
+          retryable: true,
+        ),
+      ),
+    );
+    final coordinator = ContentSyncCoordinator(
+      journal: journal,
+      manifestGateway: gateway,
+      planner: const ContentSyncPlanner(),
+      executor: executor,
+      requiredOfflinePrefetcher: prefetcher,
+    );
+
+    final result = await coordinator.synchronize(
+      runId: 'c4-required-asset-failure',
+      trigger: SyncTrigger.startup,
+      translationLocale: 'ru',
+    );
+
+    expect(result, isA<FailureResult<ContentSyncOutcome>>());
+    final failure = (result as FailureResult<ContentSyncOutcome>).failure;
+    expect(failure.code, 'REQUIRED_OFFLINE_ASSET_UNAVAILABLE');
+    expect(failure.retryable, isTrue);
+    expect(executor.calls, 0);
+    expect(gateway.packCalls, 1);
+    expect(journal.states.last, SyncRunState.failedRetryable);
+  });
+}
+
+final class _PackGateway implements ContentManifestGateway {
+  _PackGateway({required this.root, required this.packManifest});
+
+  final RootContentManifest root;
+  final PackContentManifest packManifest;
+  int packCalls = 0;
+
+  @override
+  Future<Result<RootManifestFetch>> fetchRootManifest({String? etag}) async {
+    return Success<RootManifestFetch>(
+      RootManifestChanged(manifest: root, etag: 'root-${root.contentVersion}'),
+    );
+  }
+
+  @override
+  Future<Result<PackContentManifest>> fetchPackManifest(
+    PackRevisionRef target,
+  ) async {
+    packCalls += 1;
+    return Success<PackContentManifest>(packManifest);
+  }
 }
 
 const _testChecksum =
     'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
+const _assetChecksum =
+    'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
