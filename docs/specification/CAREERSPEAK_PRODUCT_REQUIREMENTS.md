@@ -1,6 +1,6 @@
 # CareerSpeak — Product Requirements Specification
 
-**Document version:** 1.1  
+**Document version:** 1.2  
 **Status:** Normative MVP product baseline  
 **Applies to:** CareerSpeak v1  
 **Target platforms:** Android, iOS
@@ -10,6 +10,7 @@ Related normative documents:
 - [`CAREERSPEAK_SYSTEM_REQUIREMENTS.md`](CAREERSPEAK_SYSTEM_REQUIREMENTS.md)
 - [`CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md`](CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md)
 - [`CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md`](CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
+- [`CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md`](CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md)
 - [`../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md`](../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md)
 
 The expert review in [`../product/MARKETING_DESIGN_EXPERT_PANEL_REVIEW.md`](../product/MARKETING_DESIGN_EXPERT_PANEL_REVIEW.md) is design input. This document contains only the decisions needed for MVP.
@@ -27,9 +28,9 @@ international job interviews
 professional / technical English
 ```
 
-IELTS remains a separate supported goal.
+IELTS remains a separate supported learning direction/goal.
 
-The product is goal-driven, but it must remain simple. MVP SHALL NOT introduce a recommendation engine, learning rules engine, remote UI model, server learner profile or complex curriculum graph.
+The product is goal-driven but grouped by backend-owned learning Verticals. MVP SHALL NOT introduce a recommendation engine, learning rules engine, remote UI model, server learner profile or complex curriculum graph.
 
 ---
 
@@ -60,7 +61,7 @@ review weak material
 ## 3. MVP product principles
 
 ```text
-simple goal-based navigation
+simple direction + goal-based navigation
 professional tone
 no mandatory learner account
 offline-first
@@ -77,9 +78,11 @@ no unnecessary infrastructure or domain layers
 
 ## 4. Minimal product hierarchy
 
-The MVP hierarchy is intentionally small:
+The normative MVP hierarchy is:
 
 ```text
+Vertical
+    ↓
 LearningGoal
     ↓
 LearningTrack
@@ -88,6 +91,10 @@ LearningCollection
     ↓
 Content / PracticeTest
 ```
+
+`Vertical` is the backend-owned subject/professional learning area. Examples include Java, DevOps, Medical English, Workplace English and IELTS-oriented English.
+
+`LearningGoal` is the learner intention inside exactly one Vertical, for example job interview, patient communication or workplace meetings.
 
 No separate backend `LearningActivity` aggregate is required in MVP.
 
@@ -101,23 +108,23 @@ is implemented by Flutter using content/test capabilities and local learner stat
 
 ### Career taxonomy vs learner path
 
-Keep only one important distinction:
+Keep the distinction:
 
 ```text
 CareerTrack
-= professional domain, e.g. JAVA_BACKEND
+= professional taxonomy, e.g. JAVA_BACKEND
 
 LearningTrack
 = learning path, e.g. JAVA_SENIOR_INTERVIEW
 ```
 
-Do not merge them into one entity.
+Do not merge them into one entity. `Vertical` is also not a replacement for either concept: it is the top-level learner-facing product scope.
 
 ---
 
 ## 5. Backend-owned product catalogues
 
-### 5.1 LearningGoal
+### 5.1 Vertical
 
 Minimum fields:
 
@@ -125,28 +132,36 @@ Minimum fields:
 code
 title
 description
+iconAssetId?
 sortOrder
 active
 ```
 
-Example codes:
+Vertical codes are backend data, not permanent Flutter enums.
+
+### 5.2 LearningGoal
+
+Minimum fields:
 
 ```text
-JOB_INTERVIEW
-TECH_INTERVIEW
-WORKPLACE_ENGLISH
-IELTS
+code
+verticalCode
+title
+description
+sortOrder
+active
 ```
 
-These are backend data, not permanent Flutter enums.
+A Goal belongs to exactly one Vertical.
 
-### 5.2 LearningTrack
+### 5.3 LearningTrack
 
 Minimum fields:
 
 ```text
 code
 goalCode
+verticalCode
 title
 description
 levelCode
@@ -156,7 +171,7 @@ active
 
 A track MAY reference career/profession/seniority taxonomy where useful.
 
-### 5.3 LearningCollection
+### 5.4 LearningCollection
 
 A collection packages content around one practical topic.
 
@@ -175,17 +190,17 @@ Minimum fields:
 ```text
 code
 trackCode
+verticalCode
 title
 description
 sortOrder
 active
-contentRefs[]
-practiceTestRefs[]
+ordered members[]
 ```
 
-A collection does not need its own workflow/state machine.
+Members reference exact Content or PracticeTest revisions. A collection does not need its own workflow/state machine.
 
-### 5.4 Existing catalogues
+### 5.5 Existing catalogues
 
 Backend also owns:
 
@@ -207,7 +222,7 @@ Flutter stores locally:
 
 ```text
 onboardingCompleted
-selectedGoalCode
+selectedGoalCode?
 selectedTrackCode?
 selfAssessedLevelCode?
 uiLocale
@@ -219,11 +234,13 @@ review schedule
 test history
 ```
 
+`selectedVerticalCode` is not an independent durable preference when a Goal is selected. Current Vertical is derived from `selectedGoalCode → CURRENT Goal.verticalCode`.
+
 No server learner profile is required in MVP.
 
 Cache cleanup must not erase learner preferences/progress.
 
-If a selected backend catalogue item becomes inactive, Flutter applies a deterministic fallback without failing startup.
+If a selected Track becomes inactive/missing, Flutter clears Track and preserves an active selected Goal. If the selected Goal or its parent Vertical becomes inactive/missing, Flutter clears Goal and Track and asks the learner to choose a learning direction. Flutter MUST NOT silently jump to another Vertical.
 
 ---
 
@@ -231,17 +248,25 @@ If a selected backend catalogue item becomes inactive, Flutter applies a determi
 
 Onboarding SHALL be short, skippable, account-free and restart-safe.
 
-MVP asks only:
+MVP has exactly three learner decisions:
 
 ```text
-1. What are you preparing for?  → LearningGoal
-2. Approximate English level?   → B1 / B2 / C1 / Not sure
-3. Support language?            → published SupportedLocale
+1. Learning direction        → Vertical + LearningGoal
+2. Approximate English level → B1 / B2 / C1 / Not sure
+3. Support language          → published SupportedLocale
 ```
 
-Accent/voice and offline download choices belong in normal Settings/Download flows and do not need to lengthen onboarding.
+Step 1 may visually present Vertical cards followed by Goals inside the selected Vertical, but this remains one onboarding step and one product decision.
 
-Skipping onboarding uses safe defaults and never blocks browsing.
+Only active Verticals with at least one active Goal are selectable. Only active Goals of the selected Vertical are selectable.
+
+Skipping onboarding preserves explicit decisions already made, leaves missing Goal/Track/Level unset, never invents an arbitrary career direction, and opens browse/home mode.
+
+Onboarding progress is persisted after each explicit decision and resumes at the next incomplete step after restart.
+
+Accent/voice and offline download choices belong in normal Settings/Download flows and do not lengthen onboarding.
+
+The detailed normative rules are defined in [`CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md`](CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md).
 
 ---
 
@@ -255,11 +280,13 @@ MVP hierarchy:
 
 ```text
 1. Continue last/current item
-2. Current goal/track
+2. Current Vertical / Goal / Track context
 3. Review due
-4. Browse current track / collections
+4. Browse current track / collections or choose learning direction
 5. Secondary statistics
 ```
+
+If no Goal is selected, Home shows a clear `Choose learning direction` action and does not manufacture a default Vertical.
 
 No AI/recommendation service is required.
 
@@ -273,15 +300,16 @@ MVP discovery:
 
 ```text
 Learn
-├── Current track
+├── Current Vertical / Goal / Track
+├── Verticals
 ├── Collections
 ├── Categories
 └── Browse / Search
 ```
 
-Goals/tracks may be changed from Learn or Settings.
+Vertical/Goal/Track may be changed from Learn or Settings.
 
-Technical content types remain internal classifications; they do not have to dominate the learner navigation.
+Technical content types remain internal classifications; they do not have to dominate learner navigation.
 
 ---
 
@@ -329,7 +357,7 @@ skillCode where useful
 
 A complex recommendation engine based on weak skills is not required for MVP.
 
-Flutter may use `skillCode` and current track/collection to show a simple next-practice link.
+Flutter may use `skillCode` and current Vertical/Goal/Track/Collection context to show a simple next-practice link.
 
 Historical attempts remain reproducible against exact immutable test/question revisions.
 
@@ -385,8 +413,8 @@ Do not create a large custom component framework before it is needed.
 MVP may define a small reusable set:
 
 ```text
-Learning Card
-Track/Collection Card
+Learning Direction Card
+Goal / Track / Collection Card
 Audio controls
 Review state
 Empty state
@@ -432,13 +460,18 @@ If future evidence requires one of these, add it as a separate versioned require
 MVP product contract is ready when:
 
 ```text
-[ ] career/interview is primary focus; IELTS is a separate goal
-[ ] Goal → Track → Collection → Content/Test is sufficient for navigation
-[ ] CareerTrack and LearningTrack are not conflated
-[ ] backend owns Goal/Track/Collection and mutable catalogues
+[ ] career/interview is primary focus; IELTS remains a supported learning direction/goal
+[ ] Vertical → Goal → Track → Collection → Content/Test is the only normative learner hierarchy
+[ ] every Goal belongs to exactly one Vertical
+[ ] CareerTrack, LearningTrack and Vertical are not conflated
+[ ] backend owns Vertical/Goal/Track/Collection and mutable catalogues
 [ ] Flutter owns local learner preferences/progress/review
+[ ] current Vertical is derived from selected Goal, not a conflicting durable preference
 [ ] onboarding is 3-step, skippable and restart-safe
-[ ] Home starts with Continue/current goal rather than dashboard counters
+[ ] onboarding Step 1 selects Vertical + Goal
+[ ] skip never silently chooses a career direction
+[ ] inactive Goal/Vertical clears the selection rather than switching across Verticals
+[ ] Home starts with Continue/current learning context rather than dashboard counters
 [ ] Due means nextReviewAt <= now
 [ ] assessment revisions/answers/explanations are deterministic
 [ ] learner UI contains no engineering implementation language
@@ -450,9 +483,9 @@ MVP product contract is ready when:
 ## 17. Delivery order
 
 ```text
-PR0  Product ownership + simple hierarchy
+PR0  Product ownership + Vertical hierarchy
  ↓
-PR1  Goal / Track / Collection contracts
+PR1  Vertical / Goal / Track / Collection contracts
  ↓
 PR2  typed Content + Assessment contracts
  ↓
