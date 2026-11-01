@@ -16,6 +16,7 @@ import '../features/tests/test_session_screen.dart';
 import '../features/tests/tests_screen.dart';
 import 'content_locations.dart';
 import 'onboarding_providers.dart';
+import 'onboarding_redirect_policy.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final onboardingCompleted = ref.watch(
@@ -26,17 +27,10 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     initialLocation: '/',
-    redirect: (context, state) {
-      if (onboardingCompleted == null) return null;
-      final onboarding = state.matchedLocation == '/onboarding';
-      if (!onboardingCompleted && !onboarding) {
-        return '/onboarding';
-      }
-      if (onboardingCompleted && onboarding) {
-        return '/';
-      }
-      return null;
-    },
+    redirect: (context, state) => onboardingRedirect(
+      onboardingCompleted: onboardingCompleted,
+      matchedLocation: state.matchedLocation,
+    ),
     routes: [
       GoRoute(
         path: '/onboarding',
