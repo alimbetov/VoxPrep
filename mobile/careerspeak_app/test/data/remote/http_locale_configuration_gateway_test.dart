@@ -5,42 +5,45 @@ import 'package:careerspeak_app/domain/locale_configuration.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('loads exact backend locale configuration for selected country', () async {
-    final api = _RecordingApiClient(
-      response: ApiResponse(
-        statusCode: 200,
-        headers: const <String, String>{},
-        jsonBody: const <String, Object?>{
-          'countryCode': 'KZ',
-          'defaultLocale': 'kk-KZ',
-          'locales': <Object?>[
-            <String, Object?>{'code': 'kk-KZ', 'label': 'Қазақша'},
-            <String, Object?>{'code': 'ru-KZ', 'label': 'Русский'},
-            <String, Object?>{'code': 'en', 'label': 'English'},
-          ],
-        },
-      ),
-    );
-    final gateway = HttpLocaleConfigurationGateway(apiClient: api);
+  test(
+    'loads exact backend locale configuration for selected country',
+    () async {
+      final api = _RecordingApiClient(
+        response: ApiResponse(
+          statusCode: 200,
+          headers: const <String, String>{},
+          jsonBody: const <String, Object?>{
+            'countryCode': 'KZ',
+            'defaultLocale': 'kk-KZ',
+            'locales': <Object?>[
+              <String, Object?>{'code': 'kk-KZ', 'label': 'Қазақша'},
+              <String, Object?>{'code': 'ru-KZ', 'label': 'Русский'},
+              <String, Object?>{'code': 'en', 'label': 'English'},
+            ],
+          },
+        ),
+      );
+      final gateway = HttpLocaleConfigurationGateway(apiClient: api);
 
-    final result = await gateway.fetchForCountry('kz');
+      final result = await gateway.fetchForCountry('kz');
 
-    expect(result, isA<Success<CountryLocaleConfiguration>>());
-    final value = (result as Success<CountryLocaleConfiguration>).value;
-    expect(value.countryCode, 'KZ');
-    expect(value.defaultLocale.code, 'kk-KZ');
-    expect(value.locales.map((item) => item.locale.code), <String>[
-      'kk-KZ',
-      'ru-KZ',
-      'en',
-    ]);
-    expect(api.lastRequest?.method, ApiMethod.get);
-    expect(api.lastRequest?.path, '/api/v1/configuration/locales');
-    expect(api.lastRequest?.queryParameters, <String, String>{
-      'countryCode': 'KZ',
-    });
-    expect(api.lastRequest?.authentication, ApiAuthentication.none);
-  });
+      expect(result, isA<Success<CountryLocaleConfiguration>>());
+      final value = (result as Success<CountryLocaleConfiguration>).value;
+      expect(value.countryCode, 'KZ');
+      expect(value.defaultLocale.code, 'kk-KZ');
+      expect(value.locales.map((item) => item.locale.code), <String>[
+        'kk-KZ',
+        'ru-KZ',
+        'en',
+      ]);
+      expect(api.lastRequest?.method, ApiMethod.get);
+      expect(api.lastRequest?.path, '/api/v1/configuration/locales');
+      expect(api.lastRequest?.queryParameters, <String, String>{
+        'countryCode': 'KZ',
+      });
+      expect(api.lastRequest?.authentication, ApiAuthentication.none);
+    },
+  );
 
   test('rejects a response for a different country', () async {
     final gateway = HttpLocaleConfigurationGateway(
