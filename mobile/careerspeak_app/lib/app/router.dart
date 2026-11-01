@@ -12,7 +12,8 @@ import '../features/learn/learn_screen.dart';
 import '../features/learning_direction/learning_direction_screen.dart';
 import '../features/onboarding/onboarding_screen.dart';
 import '../features/review/review_screen.dart';
-import '../features/settings/settings_screen.dart';
+import '../features/settings/legal_screen.dart';
+import '../features/settings/production_settings_screen.dart';
 import '../features/tests/test_session_screen.dart';
 import '../features/tests/tests_screen.dart';
 import 'content_locations.dart';
@@ -143,7 +144,31 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/settings',
             pageBuilder: (context, state) =>
-                _page(state: state, child: const SettingsScreen()),
+                _page(state: state, child: const ProductionSettingsScreen()),
+          ),
+          GoRoute(
+            path: '/settings/privacy',
+            pageBuilder: (context, state) => _page(
+              state: state,
+              hierarchical: true,
+              child: const PrivacyPolicyScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/settings/data-privacy',
+            pageBuilder: (context, state) => _page(
+              state: state,
+              hierarchical: true,
+              child: const DataAndPrivacyScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/settings/terms',
+            pageBuilder: (context, state) => _page(
+              state: state,
+              hierarchical: true,
+              child: const TermsOfUseScreen(),
+            ),
           ),
           GoRoute(
             path: '/content/:type/:code',
