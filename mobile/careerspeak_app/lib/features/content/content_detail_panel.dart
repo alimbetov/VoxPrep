@@ -26,10 +26,10 @@ class ContentDetailPanel extends ConsumerWidget {
 
     return markers.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => Center(
+      error: (error, stackTrace) => const Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text('Unable to load learner state.\n$error'),
+          padding: EdgeInsets.all(24),
+          child: Text('Unable to load learner state.'),
         ),
       ),
       data: (values) {
@@ -50,10 +50,10 @@ class ContentDetailPanel extends ConsumerWidget {
     Future<void> write(Future<void> Function() operation) async {
       try {
         await operation();
-      } catch (error) {
+      } catch (_) {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Unable to update learner state: $error')),
+          const SnackBar(content: Text('Unable to update learner state.')),
         );
       }
     }
@@ -197,10 +197,10 @@ class _InterviewAudioControls extends ConsumerWidget {
           child: LinearProgressIndicator(value: 0),
         ),
       ),
-      error: (error, stackTrace) => Card(
+      error: (error, stackTrace) => const Card(
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text('Interview audio metadata unavailable: $error'),
+          padding: EdgeInsets.all(16),
+          child: Text('Interview audio metadata is unavailable.'),
         ),
       ),
       data: (availableRoles) {
@@ -221,10 +221,10 @@ class _InterviewAudioControls extends ConsumerWidget {
               child: LinearProgressIndicator(value: 0),
             ),
           ),
-          error: (error, stackTrace) => Card(
+          error: (error, stackTrace) => const Card(
             child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text('Interview audio unavailable: $error'),
+              padding: EdgeInsets.all(16),
+              child: Text('Interview audio is unavailable.'),
             ),
           ),
           data: (state) => _buildControls(context, ref, state, availableRoles),
@@ -262,7 +262,7 @@ class _InterviewAudioControls extends ConsumerWidget {
       } catch (error) {
         if (_isBenignAudioSupersession(error) || !context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Interview audio failed: $error')),
+          const SnackBar(content: Text('Interview audio could not be played.')),
         );
       }
     }
@@ -327,11 +327,13 @@ class _InterviewAudioControls extends ConsumerWidget {
                       : () async {
                           try {
                             (await controller.stop()).getOrThrow();
-                          } catch (error) {
+                          } catch (_) {
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Interview audio failed: $error'),
+                              const SnackBar(
+                                content: Text(
+                                  'Interview audio could not be stopped.',
+                                ),
                               ),
                             );
                           }
@@ -341,10 +343,10 @@ class _InterviewAudioControls extends ConsumerWidget {
                 ),
               ],
             ),
-            if (state.failure case final failure?) ...[
+            if (state.failure != null) ...[
               const SizedBox(height: 12),
               Text(
-                failure.message,
+                'Interview audio is unavailable.',
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ],
@@ -371,10 +373,10 @@ class _AudioPlaybackControls extends ConsumerWidget {
           child: LinearProgressIndicator(value: 0),
         ),
       ),
-      error: (error, stackTrace) => Card(
+      error: (error, stackTrace) => const Card(
         child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text('Audio player unavailable: $error'),
+          padding: EdgeInsets.all(16),
+          child: Text('Audio player is unavailable.'),
         ),
       ),
       data: (state) => _buildControls(context, ref, state),
@@ -395,11 +397,14 @@ class _AudioPlaybackControls extends ConsumerWidget {
     final position = isCurrent ? state.positionMs : savedPosition;
     final duration = isCurrent ? state.durationMs : null;
     final isPlaying = phase == AudioPlaybackPhase.playing;
+    final isPaused = phase == AudioPlaybackPhase.paused;
     final isResolving = phase == AudioPlaybackPhase.resolving;
-    final canControl =
+    final canSeek =
         isCurrent &&
-        (phase == AudioPlaybackPhase.playing ||
-            phase == AudioPlaybackPhase.paused);
+        duration != null &&
+        duration > 0 &&
+        (isPlaying || isPaused);
+    final failure = isCurrent ? state.failure : null;
 
     Future<void> run(
       Future<void> Function(AudioPlaybackController controller) operation,
@@ -410,15 +415,32 @@ class _AudioPlaybackControls extends ConsumerWidget {
       } catch (error) {
         if (_isBenignAudioSupersession(error) || !context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Audio playback failed: $error')),
+          const SnackBar(content: Text('Audio could not be played.')),
         );
       }
     }
 
-    final progress = duration != null && duration > 0
-        ? (position.clamp(0, duration) / duration).toDouble()
-        : 0.0;
-    final failure = isCurrent ? state.failure : null;
+    Future<void> startOrToggle() {
+      return run((controller) async {
+        if (isPlaying) {
+          (await controller.pause()).getOrThrow();
+        } else if (isPaused && isCurrent) {
+          (await controller.resume()).getOrThrow();
+        } else {
+          (await controller.play(item, learnerState: marker)).getOrThrow();
+        }
+      });
+    }
+
+    Future<void> retry() {
+      return run((controller) async {
+        (await controller.play(item, learnerState: marker)).getOrThrow();
+      });
+    }
+
+    final clampedPosition = duration != null
+        ? position.clamp(0, duration).toInt()
+        : position.clamp(0, 1 << 31).toInt();
 
     return Card(
       child: Padding(
@@ -428,27 +450,52 @@ class _AudioPlaybackControls extends ConsumerWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.graphic_eq),
+                const Icon(Icons.headphones),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Audio',
+                    'Listen material',
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                 ),
                 const SizedBox(width: 8),
                 Flexible(
-                  child: Text(
-                    duration == null
-                        ? _formatDuration(position)
-                        : '${_formatDuration(position)} / ${_formatDuration(duration)}',
-                    textAlign: TextAlign.end,
+                  child: Semantics(
+                    label: 'Audio position',
+                    value: duration == null
+                        ? _formatDuration(clampedPosition)
+                        : '${_formatDuration(clampedPosition)} of ${_formatDuration(duration)}',
+                    child: Text(
+                      duration == null
+                          ? _formatDuration(clampedPosition)
+                          : '${_formatDuration(clampedPosition)} / ${_formatDuration(duration)}',
+                      textAlign: TextAlign.end,
+                    ),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            LinearProgressIndicator(value: progress),
+            if (duration != null && duration > 0)
+              Semantics(
+                label: 'Audio progress',
+                value:
+                    '${_formatDuration(clampedPosition)} of ${_formatDuration(duration)}',
+                child: Slider(
+                  value: clampedPosition.toDouble(),
+                  min: 0,
+                  max: duration.toDouble(),
+                  onChanged: canSeek
+                      ? (value) => run((controller) async {
+                          (await controller.seek(value.round())).getOrThrow();
+                        })
+                      : null,
+                ),
+              )
+            else if (isResolving)
+              const LinearProgressIndicator()
+            else
+              const LinearProgressIndicator(value: 0),
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -456,21 +503,7 @@ class _AudioPlaybackControls extends ConsumerWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               children: [
                 FilledButton.icon(
-                  onPressed: isResolving
-                      ? null
-                      : () => run((controller) async {
-                          if (isPlaying) {
-                            (await controller.pause()).getOrThrow();
-                          } else if (phase == AudioPlaybackPhase.paused &&
-                              isCurrent) {
-                            (await controller.resume()).getOrThrow();
-                          } else {
-                            (await controller.play(
-                              item,
-                              learnerState: marker,
-                            )).getOrThrow();
-                          }
-                        }),
+                  onPressed: isResolving ? null : startOrToggle,
                   icon: isResolving
                       ? const SizedBox.square(
                           dimension: 18,
@@ -479,53 +512,67 @@ class _AudioPlaybackControls extends ConsumerWidget {
                       : Icon(isPlaying ? Icons.pause : Icons.play_arrow),
                   label: Text(
                     isResolving
-                        ? 'Preparing'
+                        ? 'Preparing audio…'
                         : isPlaying
                         ? 'Pause'
+                        : isPaused
+                        ? 'Resume'
                         : phase == AudioPlaybackPhase.completed
-                        ? 'Replay'
-                        : 'Play',
+                        ? 'Play again'
+                        : 'Listen material',
                   ),
                 ),
-                IconButton.filledTonal(
-                  tooltip: 'Back 10 seconds',
-                  onPressed: canControl
-                      ? () => run((controller) async {
-                          (await controller.seek(
-                            position - 10000,
-                          )).getOrThrow();
-                        })
-                      : null,
-                  icon: const Icon(Icons.replay_10),
-                ),
-                IconButton.filledTonal(
-                  tooltip: 'Forward 10 seconds',
-                  onPressed: canControl
-                      ? () => run((controller) async {
-                          (await controller.seek(
-                            position + 10000,
-                          )).getOrThrow();
-                        })
-                      : null,
-                  icon: const Icon(Icons.forward_10),
-                ),
-                OutlinedButton.icon(
-                  onPressed: canControl
-                      ? () => run((controller) async {
-                          (await controller.stop()).getOrThrow();
-                        })
-                      : null,
-                  icon: const Icon(Icons.stop),
-                  label: const Text('Stop'),
-                ),
+                if (canSeek) ...[
+                  IconButton.filledTonal(
+                    tooltip: 'Back 10 seconds',
+                    onPressed: () => run((controller) async {
+                      (await controller.seek(
+                        clampedPosition - 10000,
+                      )).getOrThrow();
+                    }),
+                    icon: const Icon(Icons.replay_10),
+                  ),
+                  IconButton.filledTonal(
+                    tooltip: 'Forward 10 seconds',
+                    onPressed: () => run((controller) async {
+                      (await controller.seek(
+                        clampedPosition + 10000,
+                      )).getOrThrow();
+                    }),
+                    icon: const Icon(Icons.forward_10),
+                  ),
+                ],
+                if (isCurrent && (isPlaying || isPaused))
+                  OutlinedButton.icon(
+                    onPressed: () => run((controller) async {
+                      (await controller.stop()).getOrThrow();
+                    }),
+                    icon: const Icon(Icons.stop),
+                    label: const Text('Stop'),
+                  ),
               ],
             ),
+            if (phase == AudioPlaybackPhase.completed) ...[
+              const SizedBox(height: 12),
+              const Semantics(
+                label: 'Audio listened',
+                child: Text('Listened'),
+              ),
+            ],
             if (failure != null) ...[
               const SizedBox(height: 12),
               Text(
-                failure.message,
+                _audioFailureMessage(failure),
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
+              if (failure.retryable) ...[
+                const SizedBox(height: 8),
+                OutlinedButton.icon(
+                  onPressed: isResolving ? null : retry,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry audio'),
+                ),
+              ],
             ],
           ],
         ),
@@ -552,9 +599,30 @@ Future<void> _showLocalizedHint(BuildContext context, String hint) {
 
 String _formatDuration(int milliseconds) {
   final totalSeconds = milliseconds.clamp(0, 1 << 31) ~/ 1000;
-  final minutes = totalSeconds ~/ 60;
+  final hours = totalSeconds ~/ 3600;
+  final minutes = (totalSeconds % 3600) ~/ 60;
   final seconds = totalSeconds % 60;
+  if (hours > 0) {
+    return '$hours:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
   return '$minutes:${seconds.toString().padLeft(2, '0')}';
+}
+
+String _audioFailureMessage(ApplicationFailure failure) {
+  return switch (failure.code) {
+    'ASSET_OFFLINE' || 'ASSET_SOURCE_UNAVAILABLE' || 'ASSET_TIMEOUT' =>
+      'Audio is not available offline yet.',
+    'ASSET_NOT_READY' => 'Audio is not ready yet. Please try again.',
+    'ASSET_NOT_FOUND' ||
+    'MEDIA_ACCESS_FORBIDDEN' ||
+    'ASSET_NOT_AUDIO' ||
+    'ASSET_CHECKSUM_MISMATCH' ||
+    'ASSET_SIZE_MISMATCH' => 'Audio is unavailable for this material.',
+    'INSTALLATION_UNAUTHORIZED' || 'UNAUTHORIZED' =>
+      'Audio authorization could not be refreshed.',
+    _ when failure.retryable => 'Audio could not be loaded. Please try again.',
+    _ => 'Audio is unavailable for this material.',
+  };
 }
 
 bool _isBenignAudioSupersession(Object error) {
