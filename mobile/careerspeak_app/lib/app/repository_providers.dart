@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/content_delivery/localized_content_resolution.dart';
 import '../application/ports/content_repository.dart';
+import '../application/ports/last_opened_content_repository.dart';
 import '../application/ports/localized_content_repository.dart';
 import '../application/ports/practice_test_attempt_repository.dart';
 import '../application/ports/practice_test_repository.dart';
@@ -9,6 +10,7 @@ import '../application/query/content_query.dart';
 import '../application/query/page.dart';
 import '../application/query/practice_test_query.dart';
 import '../data/local/drift_content_repository.dart';
+import '../data/local/drift_last_opened_content_repository.dart';
 import '../data/local/drift_localized_content_repository.dart';
 import '../data/local/drift_practice_test_attempt_repository.dart';
 import '../data/local/drift_practice_test_repository.dart';
@@ -22,6 +24,13 @@ import 'learner_state_providers.dart';
 final contentRepositoryProvider = Provider<ContentRepository>((ref) {
   return DriftContentRepository(ref.watch(careerSpeakDatabaseProvider));
 });
+
+final lastOpenedContentRepositoryProvider =
+    Provider<LastOpenedContentRepository>((ref) {
+      return DriftLastOpenedContentRepository(
+        ref.watch(careerSpeakDatabaseProvider),
+      );
+    });
 
 final localizedContentRepositoryProvider = Provider<LocalizedContentRepository>(
   (ref) {

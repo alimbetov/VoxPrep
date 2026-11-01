@@ -1,18 +1,38 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/repository_providers.dart';
+import '../../application/result/result.dart';
 import '../../domain/content_identity.dart';
+import '../../domain/content_item.dart';
+import '../../domain/last_opened_content.dart';
 import 'content_detail_panel.dart';
 
-class ContentDetailScreen extends ConsumerWidget {
+class ContentDetailScreen extends ConsumerStatefulWidget {
   const ContentDetailScreen({required this.identity, super.key});
 
   final ContentIdentity identity;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final item = ref.watch(contentByIdentityProvider(identity));
+  ConsumerState<ContentDetailScreen> createState() => _ContentDetailScreenState();
+}
+
+class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> {
+  int? _recordedRevision;
+
+  @override
+  void didUpdateWidget(covariant ContentDetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.identity != widget.identity) {
+      _recordedRevision = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final item = ref.watch(contentByIdentityProvider(widget.identity));
 
     return item.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -27,10 +47,11 @@ class ContentDetailScreen extends ConsumerWidget {
           return const Center(child: Text('Content not found.'));
         }
 
+        _recordOpened(value);
         final localized = ref.watch(
           localizedContentProvider(
             LocalizedContentRequest(
-              identity: identity,
+              identity: widget.identity,
               contentRevision: value.revision,
             ),
           ),
@@ -39,6 +60,26 @@ class ContentDetailScreen extends ConsumerWidget {
 
         return ContentDetailPanel(item: value, localizedHint: localizedHint);
       },
+    );
+  }
+
+  void _recordOpened(ContentItem item) {
+    if (_recordedRevision == item.revision) return;
+    _recordedRevision = item.revision;
+    unawaited(
+      ref
+          .read(lastOpenedContentRepositoryProvider)
+          .recordOpened(
+            identity: ContentIdentity.fromItem(item),
+            contentRevision: item.revision,
+          )
+          .then((result) {
+            if (result case FailureResult<LastOpenedContent>()) {
+              if (mounted && _recordedRevision == item.revision) {
+                _recordedRevision = null;
+              }
+            }
+          }),
     );
   }
 }
