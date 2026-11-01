@@ -1,0 +1,40 @@
+name: Flutter Format Export
+
+on:
+  push:
+    branches:
+      - feat/flutter-adversarial-hardening
+    paths:
+      - '.github/workflows/flutter-format-export.yml'
+  workflow_dispatch:
+
+jobs:
+  format-export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        working-directory: mobile/careerspeak_app
+        run: flutter pub get
+
+      - name: Apply Dart format
+        working-directory: mobile/careerspeak_app
+        run: dart format lib test
+
+      - name: Upload formatted sources
+        uses: actions/upload-artifact@v4
+        with:
+          name: careerspeak-formatted-sources
+          path: |
+            mobile/careerspeak_app/lib
+            mobile/careerspeak_app/test
+          retention-days: 1
