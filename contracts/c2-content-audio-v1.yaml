@@ -69,5 +69,5 @@ x-publication-invariants:
   - RECOMMENDED audio MAY be absent but MUST produce an ADMIN validation warning.
   - OPTIONAL audio MAY be absent without warning.
   - A published audio binding MUST resolve to an asset whose mediaType starts with audio/.
-  - Publication manifests contain stable asset identity only; signed URLs and access grants are runtime C5 data.
+  - Publication manifests contain stable asset identity only; Flutter downloads media only from the authenticated Backend asset endpoint and never from RustFS/S3/CDN directly.
   - INTERVIEW question and sampleAnswer are independent audio bindings and MAY use different assets or voices.
