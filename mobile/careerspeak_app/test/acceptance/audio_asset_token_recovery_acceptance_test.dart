@@ -34,138 +34,137 @@ final _content = ContentIdentity(
 );
 
 void main() {
-  test(
-    'deleted local audio is restored through Backend using current installation token',
-    () async {
-      final directory = await Directory.systemTemp.createTemp(
-        'audio-token-recovery-',
-      );
-      addTearDown(() => directory.delete(recursive: true));
-
-      final credentials = _CredentialStore(
-        installationId: InstallationId('installation-recovery-1'),
-        token: InstallationToken('token-v1'),
-      );
-      final requestedUris = <Uri>[];
-      final authorizationHeaders = <String?>[];
-
-      final client = MockClient((request) async {
-        requestedUris.add(request.url);
-        authorizationHeaders.add(request.headers['authorization']);
-        expect(request.url.host, 'api.example.test');
-        expect(
-          request.url.path,
-          '/api/v1/media/assets/${_audioAsset.assetId}/content',
-        );
-        return http.Response.bytes(_audioBytes, 200);
-      });
-
-      final store = FileSystemAssetStore(directory);
-      final source = HttpAssetByteSource(
-        client: client,
-        credentialStore: credentials,
-        baseUri: Uri.parse('https://api.example.test'),
-      );
-      final resolver = AssetResolver(
-        catalog: const _Catalog(),
-        store: store,
-        downloads: AssetDownloadManager(
-          source: source,
-          store: store,
-          maxAttempts: 1,
-          delay: (_) async {},
-        ),
-      );
-
-      final first = await resolver.resolveAudioContent(
-        content: _content,
-        revision: 1,
-        role: 'PRIMARY',
-        policy: AssetResolutionPolicy.downloadIfMissing,
-      );
-      expect(first, isA<Success<ResolvedAsset>>());
-      final firstPath = (first as Success<ResolvedAsset>).value.localPath;
-      expect(await File(firstPath).readAsBytes(), _audioBytes);
-      expect(requestedUris, hasLength(1));
-      expect(authorizationHeaders, <String?>['Bearer token-v1']);
-
-      await File(firstPath).delete();
-      expect(await File(firstPath).exists(), isFalse);
-      await credentials.writeInstallationToken(InstallationToken('token-v2'));
-
-      final recovered = await resolver.resolveAudioContent(
-        content: _content,
-        revision: 1,
-        role: 'PRIMARY',
-        policy: AssetResolutionPolicy.downloadIfMissing,
-      );
-      expect(recovered, isA<Success<ResolvedAsset>>());
-      final recoveredPath =
-          (recovered as Success<ResolvedAsset>).value.localPath;
-      expect(recoveredPath, firstPath);
-      expect(await File(recoveredPath).readAsBytes(), _audioBytes);
-      expect(requestedUris, hasLength(2));
-      expect(authorizationHeaders, <String?>[
-        'Bearer token-v1',
-        'Bearer token-v2',
-      ]);
-      expect(
-        requestedUris.every((uri) => uri.host == 'api.example.test'),
-        isTrue,
-      );
-      expect(
-        requestedUris.any((uri) => uri.toString().contains('rustfs')),
-        isFalse,
-      );
-      expect(_audioAsset.deliveryKey, 'audio/interview/recoverable-1.mp3');
-    },
-  );
-
-  test('deleted audio fails closed when current token is unavailable', () async {
+  test('deleted local audio is restored through Backend using current installation token', () async {
     final directory = await Directory.systemTemp.createTemp(
-      'audio-token-missing-',
+      'audio-token-recovery-',
     );
     addTearDown(() => directory.delete(recursive: true));
 
     final credentials = _CredentialStore(
-      installationId: InstallationId('installation-recovery-2'),
-      token: null,
+      installationId: InstallationId('installation-recovery-1'),
+      token: InstallationToken('token-v1'),
     );
-    var networkCalls = 0;
+    final requestedUris = <Uri>[];
+    final authorizationHeaders = <String?>[];
+
     final client = MockClient((request) async {
-      networkCalls += 1;
-      return http.Response('unexpected request', 500);
+      requestedUris.add(request.url);
+      authorizationHeaders.add(request.headers['authorization']);
+      expect(request.url.host, 'api.example.test');
+      expect(
+        request.url.path,
+        '/api/v1/media/assets/${_audioAsset.assetId}/content',
+      );
+      return http.Response.bytes(_audioBytes, 200);
     });
+
     final store = FileSystemAssetStore(directory);
+    final source = HttpAssetByteSource(
+      client: client,
+      credentialStore: credentials,
+      baseUri: Uri.parse('https://api.example.test'),
+    );
     final resolver = AssetResolver(
       catalog: const _Catalog(),
       store: store,
       downloads: AssetDownloadManager(
-        source: HttpAssetByteSource(
-          client: client,
-          credentialStore: credentials,
-          baseUri: Uri.parse('https://api.example.test'),
-        ),
+        source: source,
         store: store,
         maxAttempts: 1,
         delay: (_) async {},
       ),
     );
 
-    final result = await resolver.resolveAudioContent(
+    final first = await resolver.resolveAudioContent(
       content: _content,
       revision: 1,
       role: 'PRIMARY',
       policy: AssetResolutionPolicy.downloadIfMissing,
     );
+    expect(first, isA<Success<ResolvedAsset>>());
+    final firstPath = (first as Success<ResolvedAsset>).value.localPath;
+    expect(await File(firstPath).readAsBytes(), _audioBytes);
+    expect(requestedUris, hasLength(1));
+    expect(authorizationHeaders, <String?>['Bearer token-v1']);
 
-    expect(result, isA<FailureResult<ResolvedAsset>>());
-    expect(
-      (result as FailureResult<ResolvedAsset>).failure.code,
-      'UNAUTHORIZED',
+    await File(firstPath).delete();
+    expect(await File(firstPath).exists(), isFalse);
+    await credentials.writeInstallationToken(InstallationToken('token-v2'));
+
+    final recovered = await resolver.resolveAudioContent(
+      content: _content,
+      revision: 1,
+      role: 'PRIMARY',
+      policy: AssetResolutionPolicy.downloadIfMissing,
     );
-    expect(networkCalls, 0);
+    expect(recovered, isA<Success<ResolvedAsset>>());
+    final recoveredPath = (recovered as Success<ResolvedAsset>).value.localPath;
+    expect(recoveredPath, firstPath);
+    expect(await File(recoveredPath).readAsBytes(), _audioBytes);
+    expect(requestedUris, hasLength(2));
+    expect(authorizationHeaders, <String?>[
+      'Bearer token-v1',
+      'Bearer token-v2',
+    ]);
+    expect(
+      requestedUris.every((uri) => uri.host == 'api.example.test'),
+      isTrue,
+    );
+    expect(
+      requestedUris.any((uri) => uri.toString().contains('rustfs')),
+      isFalse,
+    );
+    expect(_audioAsset.deliveryKey, 'audio/interview/recoverable-1.mp3');
   });
+
+  test(
+    'deleted audio fails closed when current token is unavailable',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'audio-token-missing-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+
+      final credentials = _CredentialStore(
+        installationId: InstallationId('installation-recovery-2'),
+        token: null,
+      );
+      var networkCalls = 0;
+      final client = MockClient((request) async {
+        networkCalls += 1;
+        return http.Response('unexpected request', 500);
+      });
+      final store = FileSystemAssetStore(directory);
+      final resolver = AssetResolver(
+        catalog: const _Catalog(),
+        store: store,
+        downloads: AssetDownloadManager(
+          source: HttpAssetByteSource(
+            client: client,
+            credentialStore: credentials,
+            baseUri: Uri.parse('https://api.example.test'),
+          ),
+          store: store,
+          maxAttempts: 1,
+          delay: (_) async {},
+        ),
+      );
+
+      final result = await resolver.resolveAudioContent(
+        content: _content,
+        revision: 1,
+        role: 'PRIMARY',
+        policy: AssetResolutionPolicy.downloadIfMissing,
+      );
+
+      expect(result, isA<FailureResult<ResolvedAsset>>());
+      expect(
+        (result as FailureResult<ResolvedAsset>).failure.code,
+        'UNAUTHORIZED',
+      );
+      expect(networkCalls, 0);
+    },
+  );
 }
 
 final class _Catalog implements AssetCatalogRepository {
