@@ -24,6 +24,13 @@ void main() {
     if (await root.exists()) await root.delete(recursive: true);
   });
 
+  test('missing local asset is a cache miss, not a phantom success', () async {
+    final found = await store.findVerified(_asset());
+
+    expect(found, isA<Success<String?>>());
+    expect((found as Success<String?>).value, isNull);
+  });
+
   test('writes verified bytes to content-addressed final path', () async {
     final result = await store.writeVerified(
       asset: _asset(),
@@ -50,6 +57,21 @@ void main() {
 
     expect((found as Success<String?>).value, isNull);
     expect(await File(path).exists(), isFalse);
+  });
+
+  test('rejects size mismatch without publishing final file', () async {
+    final result = await store.writeVerified(
+      asset: _asset(),
+      bytes: Stream<List<int>>.value('hell'.codeUnits),
+    );
+
+    expect(result, isA<FailureResult<String>>());
+    expect(
+      (result as FailureResult<String>).failure.code,
+      'ASSET_SIZE_MISMATCH',
+    );
+    final found = await store.findVerified(_asset());
+    expect((found as Success<String?>).value, isNull);
   });
 
   test('rejects checksum mismatch without publishing final file', () async {
