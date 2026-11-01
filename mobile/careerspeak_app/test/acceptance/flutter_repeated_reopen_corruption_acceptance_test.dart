@@ -36,7 +36,7 @@ void main() {
           now: () => openedAt,
         );
         final review = DriftReviewScheduleRepository(database);
-        final practice = DriftPracticeTestAttemptRepository(database);
+        final initialPractice = DriftPracticeTestAttemptRepository(database);
 
         expect(
           await lastOpened.recordOpened(
@@ -55,7 +55,7 @@ void main() {
           isA<Success>(),
         );
         expect(
-          await practice.saveActiveAttempt(
+          await initialPractice.saveActiveAttempt(
             PracticeTestAttempt(
               practiceTestCode: 'TEST_REOPEN_1',
               practiceTestRevision: 5,
