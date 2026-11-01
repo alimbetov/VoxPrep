@@ -151,23 +151,16 @@ final class ContentSyncCoordinator {
       return _finishFailure(activeRunId, persistResult.failure);
     }
 
-    if (plan.isNoOp) {
-      final successTransition = await _transition(
-        activeRunId,
-        SyncRunState.succeeded,
-      );
-      if (successTransition != null) return FailureResult(successTransition);
-      return Success(ContentSyncNoOp(activeRunId));
-    }
-
-    final stagingTransition = await _transition(
-      activeRunId,
-      SyncRunState.staging,
-    );
-    if (stagingTransition != null) return FailureResult(stagingTransition);
-
+    var stagingEntered = false;
     if (targetRoot.practiceTests.isNotEmpty ||
         targetRoot.catalogues.isNotEmpty) {
+      final stagingTransition = await _transition(
+        activeRunId,
+        SyncRunState.staging,
+      );
+      if (stagingTransition != null) return FailureResult(stagingTransition);
+      stagingEntered = true;
+
       final snapshotStager = _snapshotStager;
       if (snapshotStager == null) {
         return _finishFailure(
@@ -185,16 +178,45 @@ final class ContentSyncCoordinator {
       }
     }
 
-    // Publication-required offline assets are part of commit readiness. They
-    // must exist as verified local bytes before the executor can switch CURRENT.
+    // Publication-required offline assets are commit-readiness data. Run this
+    // even for a pack-level no-op so an interrupted download can be repaired
+    // without changing the immutable CURRENT snapshot identity.
     final requiredOfflinePrefetcher = _requiredOfflinePrefetcher;
     if (requiredOfflinePrefetcher != null) {
+      if (!stagingEntered) {
+        final stagingTransition = await _transition(
+          activeRunId,
+          SyncRunState.staging,
+        );
+        if (stagingTransition != null) return FailureResult(stagingTransition);
+        stagingEntered = true;
+      }
       final prefetched = await requiredOfflinePrefetcher.prefetch(
         targetRoot.packs,
       );
       if (prefetched is FailureResult<void>) {
         return _finishFailure(activeRunId, prefetched.failure);
       }
+    }
+
+    // A pack-level no-op can still require idempotent auxiliary repair after an
+    // app upgrade or interrupted previous run. Only finish after exact tests,
+    // catalogues and required-offline bytes for CURRENT are ready.
+    if (plan.isNoOp) {
+      final successTransition = await _transition(
+        activeRunId,
+        SyncRunState.succeeded,
+      );
+      if (successTransition != null) return FailureResult(successTransition);
+      return Success(ContentSyncNoOp(activeRunId));
+    }
+
+    if (!stagingEntered) {
+      final stagingTransition = await _transition(
+        activeRunId,
+        SyncRunState.staging,
+      );
+      if (stagingTransition != null) return FailureResult(stagingTransition);
     }
 
     final executionResult = await _executor.execute(

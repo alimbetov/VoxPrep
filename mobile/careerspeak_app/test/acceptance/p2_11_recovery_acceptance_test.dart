@@ -370,6 +370,8 @@ Map<String, Object?> _rootManifest(int revision) => <String, Object?>{
       'checksum': revision == 1 ? _packChecksumV1 : _packChecksumV2,
     },
   ],
+  'practiceTests': <Object?>[],
+  'catalogues': <Object?>[],
   'tombstones': <Object?>[],
 };
 

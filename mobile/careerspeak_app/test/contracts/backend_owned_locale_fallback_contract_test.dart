@@ -62,6 +62,8 @@ Map<String, Object?> _rootManifest() => <String, Object?>{
     _pack('locale:ru', 5, _russianPackChecksum),
     _pack('locale:kk', 4, _kazakhPackChecksum),
   ],
+  'practiceTests': <Object?>[],
+  'catalogues': <Object?>[],
   'localeFallbacks': <Object?>[
     <String, Object?>{
       'locale': 'ru-KZ',

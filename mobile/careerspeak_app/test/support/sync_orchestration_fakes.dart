@@ -3,6 +3,7 @@ import 'package:careerspeak_app/application/content_delivery/content_manifest.da
 import 'package:careerspeak_app/application/content_delivery/product_catalog.dart';
 import 'package:careerspeak_app/application/content_sync/sync_models.dart';
 import 'package:careerspeak_app/application/ports/content_manifest_gateway.dart';
+import 'package:careerspeak_app/application/ports/publication_snapshot_stager.dart';
 import 'package:careerspeak_app/application/ports/sync_journal.dart';
 import 'package:careerspeak_app/application/ports/sync_plan_executor.dart';
 import 'package:careerspeak_app/application/result/result.dart';
@@ -136,6 +137,20 @@ final class FakeExecutor implements SyncPlanExecutor {
     required SyncPlan plan,
   }) async {
     calls += 1;
+    return result;
+  }
+}
+
+final class FakeSnapshotStager implements PublicationSnapshotStager {
+  FakeSnapshotStager([Result<void>? result])
+    : result = result ?? const Success(null);
+
+  final Result<void> result;
+  final List<RootContentManifest> targets = <RootContentManifest>[];
+
+  @override
+  Future<Result<void>> stage(RootContentManifest target) async {
+    targets.add(target);
     return result;
   }
 }

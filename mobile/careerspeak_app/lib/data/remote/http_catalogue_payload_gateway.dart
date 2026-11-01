@@ -5,10 +5,7 @@ import '../../application/ports/catalogue_payload_gateway.dart';
 import '../../application/result/result.dart';
 
 final class HttpCataloguePayloadGateway implements CataloguePayloadGateway {
-  const HttpCataloguePayloadGateway({required ApiClient apiClient})
-    : this._(apiClient);
-
-  const HttpCataloguePayloadGateway._(this._apiClient);
+  const HttpCataloguePayloadGateway({required this._apiClient});
 
   final ApiClient _apiClient;
 

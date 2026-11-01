@@ -3,6 +3,21 @@
 **Status:** FROZEN IMPLEMENTATION ORDER  
 **Parent contract:** `docs/backend/C4_ATOMIC_PUBLICATION_CONTRACT.md`
 
+Current implementation status:
+
+```text
+C4.1  PublicationSnapshot identity          IMPLEMENTED
+C4.2  exact revision membership             IMPLEMENTED
+C4.3  atomic root/snapshot switch           IMPLEMENTED
+C4.4  immutable publication manifest        IMPLEMENTED
+C4.5  collection → content/test membership  IMPLEMENTED
+C4.6  tombstone/publication interaction     IMPLEMENTED
+C4.7  Flutter snapshot consumption          IMPLEMENTED / QUALIFICATION PENDING
+C4.8  offline/restart consistency           QUALIFICATION IN PROGRESS
+C4.9  adversarial atomicity                 PENDING
+C4.10 exact-SHA qualification               PENDING
+```
+
 Implementation proceeds strictly in this order:
 
 ```text
@@ -124,6 +139,19 @@ root
 ```
 
 C5 token replacement may occur mid-sync but must retry the same exact resource and never change publication selection.
+
+Implemented Flutter invariants:
+
+- locale materialization preserves snapshot-owned `practiceTests[]` and `catalogues[]` unchanged;
+- exact assessment and catalogue revisions are staged before publication completion;
+- learner content, practice-test and catalogue reads are fenced by `ContentManifestStates.currentContentVersion`;
+- practice tests and catalogues never select `latest`, `MAX(revision)` or another floating revision alias;
+- pack-level no-op sync still repairs missing exact assessment/catalogue auxiliary projection;
+- same-version auxiliary repair invalidates active UI streams without changing publication identity;
+- production Riverpod composition uses Drift CURRENT-snapshot repositories rather than mock/unavailable adapters;
+- catalogue delivery uses exact `kind + revision` addressing from publication membership.
+
+C4.7 remains `QUALIFICATION PENDING` until the normal quality and focused C4 workflows pass on the same clean branch state. Exact-SHA closure remains owned by C4.10.
 
 ## C4.8 — Offline/restart consistency
 

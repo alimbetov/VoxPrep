@@ -12,6 +12,8 @@
       "checksum": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     }
   ],
+  "practiceTests": [],
+  "catalogues": [],
   "localeFallbacks": [
     {
       "locale": "ru-KZ",

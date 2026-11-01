@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../application/content_delivery/catalogue_payload.dart';
+import '../application/content_delivery/catalogue_revision_ref.dart';
 import '../application/ports/catalogue_payload_gateway.dart';
 import '../application/ports/catalogue_snapshot_repository.dart';
 import '../application/ports/universal_catalogue_repository.dart';
@@ -36,6 +38,12 @@ final catalogueSnapshotRepositoryProvider =
       return DriftCatalogueSnapshotRepository(
         ref.watch(careerSpeakDatabaseProvider),
       );
+    });
+
+final currentCatalogueProvider =
+    FutureProvider.family<CataloguePayload?, CatalogueKind>((ref, kind) async {
+      final repository = ref.watch(catalogueSnapshotRepositoryProvider);
+      return (await repository.readCurrent(kind)).getOrThrow();
     });
 
 final universalCatalogueRepositoryProvider =
