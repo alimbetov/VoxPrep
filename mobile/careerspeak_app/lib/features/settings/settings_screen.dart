@@ -69,7 +69,10 @@ class SettingsScreen extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 28),
-        Text('Country and language', style: Theme.of(context).textTheme.titleMedium),
+        Text(
+          'Country and language',
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: 12),
         const LocaleSelectionPanel(),
         const SizedBox(height: 20),
