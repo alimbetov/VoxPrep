@@ -2,8 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import '../application/ports/api_client.dart';
+import '../application/ports/installation_registration_gateway.dart';
 import '../application/result/result.dart';
+import '../application/services/installation_auth_recovery_api_client.dart';
+import '../application/services/installation_bootstrap_service.dart';
 import '../data/remote/http_api_client.dart';
+import '../data/remote/http_installation_registration_gateway.dart';
 import '../domain/application_preferences.dart';
 import 'app_preferences_providers.dart';
 import 'installation_identity_providers.dart';
@@ -23,7 +27,10 @@ final httpClientProvider = Provider<http.Client>((ref) {
   return client;
 });
 
-final apiClientProvider = Provider<ApiClient>((ref) {
+/// Raw transport boundary used by installation issuance and as the delegate for
+/// the authenticated recovery client. It never performs credential renewal by
+/// itself, which keeps POST /api/v1/installations outside the recovery loop.
+final rawApiClientProvider = Provider<ApiClient>((ref) {
   final preferencesRepository = ref.watch(appPreferencesRepositoryProvider);
   return HttpApiClient(
     client: ref.watch(httpClientProvider),
@@ -39,5 +46,31 @@ final apiClientProvider = Provider<ApiClient>((ref) {
         'accept-language': preferences.selectedLocale.code,
       };
     },
+  );
+});
+
+final installationRegistrationGatewayProvider =
+    Provider<InstallationRegistrationGateway>((ref) {
+      return HttpInstallationRegistrationGateway(
+        apiClient: ref.watch(rawApiClientProvider),
+      );
+    });
+
+final installationBootstrapServiceProvider =
+    Provider<InstallationBootstrapService>((ref) {
+      return InstallationBootstrapService(
+        identityService: ref.watch(installationIdentityServiceProvider),
+        registrationGateway: ref.watch(installationRegistrationGatewayProvider),
+      );
+    });
+
+/// Learner-facing API client. One installation-authentication 401 may renew the
+/// credential and replay the exact logical request once. A second 401 is
+/// returned fail-closed by the raw delegate.
+final apiClientProvider = Provider<ApiClient>((ref) {
+  return InstallationAuthRecoveryApiClient(
+    delegate: ref.watch(rawApiClientProvider),
+    credentialStore: ref.watch(installationCredentialStoreProvider),
+    renewCredentials: ref.watch(installationBootstrapServiceProvider).ensureCredentials,
   );
 });
