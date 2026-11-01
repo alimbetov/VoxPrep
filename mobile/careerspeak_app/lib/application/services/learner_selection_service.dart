@@ -8,8 +8,9 @@ final class LearnerSelectionService {
   const LearnerSelectionService({
     required LearnerSelectionRepository repository,
     required LearnerSelectionNormalizer normalizer,
-  }) : _repository = repository,
-       _normalizer = normalizer;
+  }) : this._(repository, normalizer);
+
+  const LearnerSelectionService._(this._repository, this._normalizer);
 
   final LearnerSelectionRepository _repository;
   final LearnerSelectionNormalizer _normalizer;
@@ -92,9 +93,7 @@ final class LearnerSelectionService {
     final track = _firstOrNull(
       graph.tracks.where((item) => item.code == trackCode),
     );
-    if (track == null ||
-        !track.active ||
-        track.goalCode != goalCode) {
+    if (track == null || !track.active || track.goalCode != goalCode) {
       return _invalidSelection('LEARNER_SELECTION_TRACK_UNAVAILABLE');
     }
 
