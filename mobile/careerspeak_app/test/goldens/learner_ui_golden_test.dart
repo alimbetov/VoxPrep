@@ -2,10 +2,12 @@ import 'package:careerspeak_app/app/app_preferences_providers.dart';
 import 'package:careerspeak_app/app/asset_resolver_providers.dart';
 import 'package:careerspeak_app/app/audio_playback_providers.dart';
 import 'package:careerspeak_app/app/catalogue_payload_providers.dart';
+import 'package:careerspeak_app/app/continue_learning_providers.dart';
 import 'package:careerspeak_app/app/learner_selection_providers.dart';
 import 'package:careerspeak_app/app/learner_state_providers.dart';
 import 'package:careerspeak_app/app/repository_providers.dart';
 import 'package:careerspeak_app/application/content_delivery/content_audio_policy.dart';
+import 'package:careerspeak_app/application/continue_learning/continue_learning_resolver.dart';
 import 'package:careerspeak_app/application/query/page.dart' as app_page;
 import 'package:careerspeak_app/application/services/role_audio_clip_controller.dart';
 import 'package:careerspeak_app/domain/application_preferences.dart';
@@ -100,6 +102,9 @@ void main() {
         practiceTestRepositoryProvider.overrideWithValue(
           const GoldenPracticeTestRepository(),
         ),
+        practiceTestAttemptRepositoryProvider.overrideWithValue(
+          GoldenPracticeTestAttemptRepository(),
+        ),
       ],
       child: const TestSessionScreen(code: 'JAVA_GOLDEN_TEST'),
     );
@@ -120,6 +125,9 @@ void main() {
       overrides: [
         practiceTestRepositoryProvider.overrideWithValue(
           const GoldenPracticeTestRepository(),
+        ),
+        practiceTestAttemptRepositoryProvider.overrideWithValue(
+          GoldenPracticeTestAttemptRepository(),
         ),
       ],
       child: const TestSessionScreen(code: 'JAVA_GOLDEN_TEST'),
@@ -195,6 +203,17 @@ void main() {
               goalCode: 'JOB_INTERVIEW',
               goalTitle: 'Pass Java backend interviews',
             ),
+          ),
+        ),
+        continueLearningHomeTargetProvider.overrideWith(
+          (ref) async => const ContinueLearningHomeTarget(
+            decision: BrowseTrackDecision(
+              verticalCode: 'JAVA',
+              trackCode: 'JAVA_B2',
+            ),
+            location: '/catalogue',
+            title: 'Browse current track',
+            subtitle: 'JAVA_B2',
           ),
         ),
       ],
