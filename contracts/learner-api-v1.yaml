@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: CareerSpeak Learner API
-  version: 1.4.0
+  version: 1.5.0
   description: >-
     Wire contract consumed by the Flutter installation runtime. Backend persistence
     entities are explicitly not part of this contract.
@@ -31,29 +31,51 @@ paths:
         '500':
           $ref: '#/components/responses/ApiError'
 
-  /api/v1/media/access:
-    post:
-      operationId: createMediaAccessGrant
+  /api/v1/media/assets/{assetId}/content:
+    get:
+      operationId: downloadMediaAsset
       description: >-
-        Resolves one stable published asset identity into a short-lived media access
-        grant. The client supplies only assetId; Backend resolves deliveryKey from
-        authoritative publication/FileAsset state and never signs an arbitrary
-        client-provided storage path.
+        Streams one exact learner-deliverable asset through Backend. Backend
+        resolves FileAsset, deliveryKey and object-storage location internally.
+        Flutter never receives a storage URL and redirects to object storage are
+        not part of this contract.
       security:
         - installationBearer: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/MediaAccessRequest'
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
       responses:
         '200':
-          description: Short-lived access grant for the exact published asset.
-          content:
-            application/json:
+          description: Binary bytes for the exact published asset.
+          headers:
+            Content-Length:
               schema:
-                $ref: '#/components/schemas/MediaAccessGrant'
+                type: integer
+                minimum: 1
+            ETag:
+              schema:
+                type: string
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
         '400':
           $ref: '#/components/responses/ApiError'
         '401':
@@ -67,6 +89,8 @@ paths:
         '429':
           $ref: '#/components/responses/ApiError'
         '500':
+          $ref: '#/components/responses/ApiError'
+        '503':
           $ref: '#/components/responses/ApiError'
 
   /api/v1/content/manifest:
@@ -333,54 +357,6 @@ components:
           type: string
           minLength: 1
 
-    MediaAccessRequest:
-      type: object
-      additionalProperties: false
-      required:
-        - assetId
-      properties:
-        assetId:
-          type: string
-          minLength: 1
-      description: >-
-        Requests access by stable asset identity only. deliveryKey, object key,
-        bucket, signed URL and storage path are intentionally not accepted from
-        the client.
-
-    MediaAccessGrant:
-      type: object
-      additionalProperties: false
-      required:
-        - assetId
-        - url
-        - expiresAt
-        - checksumSha256
-        - sizeBytes
-        - mediaType
-      properties:
-        assetId:
-          type: string
-          minLength: 1
-        url:
-          type: string
-          format: uri
-          minLength: 1
-          description: Short-lived signed/presigned URL outside publication identity.
-        expiresAt:
-          $ref: '#/components/schemas/CanonicalUtcInstant'
-        checksumSha256:
-          $ref: '#/components/schemas/Sha256'
-        sizeBytes:
-          type: integer
-          minimum: 1
-        mediaType:
-          type: string
-          minLength: 1
-      description: >-
-        Short-lived access material for one exact published READY asset. The grant
-        may be regenerated without changing assetId, deliveryKey, checksum or any
-        C4 PublicationSnapshot identity.
-
     ApiError:
       type: object
       additionalProperties: true
@@ -617,6 +593,9 @@ components:
         deliveryKey:
           type: string
           minLength: 1
+          description: >-
+            Immutable Backend storage metadata. Flutter MUST NOT use deliveryKey
+            as a URL, HTTP path, storage locator or authorization input.
         sizeBytes:
           type: integer
           minimum: 1
