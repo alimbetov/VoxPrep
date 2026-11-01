@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../app/learner_state_providers.dart';
 import '../../app/repository_providers.dart';
@@ -151,7 +152,21 @@ class _CatalogList extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Text('Learn', style: Theme.of(context).textTheme.headlineMedium),
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Learn',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+            ),
+            TextButton.icon(
+              onPressed: () => context.push('/learn/direction'),
+              icon: const Icon(Icons.swap_horiz),
+              label: const Text('Change direction'),
+            ),
+          ],
+        ),
         const SizedBox(height: 16),
         SearchBar(
           hintText: 'Search vocabulary, interview, topics…',
