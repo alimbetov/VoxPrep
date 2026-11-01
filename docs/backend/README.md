@@ -1,78 +1,78 @@
-# CareerSpeak Backend Documentation Index
+# CareerSpeak Backend Documentation
 
-**Status:** authoritative navigation for backend design.
+## Canonical v1 documentation
 
-Start backend design here:
+All new backend design work MUST start from:
 
-1. [`BACKEND_DESIGN_BASELINE_V1.md`](BACKEND_DESIGN_BASELINE_V1.md)
-2. [`FLUTTER_BACKEND_GAP_RESOLUTION_2026-11-01.md`](FLUTTER_BACKEND_GAP_RESOLUTION_2026-11-01.md)
-3. [`../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md`](../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md)
-4. [`C4_ATOMIC_PUBLICATION_CONTRACT.md`](C4_ATOMIC_PUBLICATION_CONTRACT.md)
-5. [`C5_INSTALLATION_EXTERNAL_SECURITY_CONTRACT.md`](C5_INSTALLATION_EXTERNAL_SECURITY_CONTRACT.md)
-6. [`C5_MEDIA_SECURITY_CONTRACT.md`](C5_MEDIA_SECURITY_CONTRACT.md)
-7. [`C1_LOCALIZATION_FALLBACK_CONTRACT.md`](C1_LOCALIZATION_FALLBACK_CONTRACT.md)
-8. [`C2_TYPED_CONTENT_CATALOG_CONTRACT.md`](C2_TYPED_CONTENT_CATALOG_CONTRACT.md)
-9. [`C3_ASSESSMENT_CONTRACT.md`](C3_ASSESSMENT_CONTRACT.md)
-10. [`UNIVERSAL_VERTICAL_CATALOGUE_CONTRACT_FREEZE_V1_1.md`](UNIVERSAL_VERTICAL_CATALOGUE_CONTRACT_FREEZE_V1_1.md)
-11. TTS contracts and worker integration documents.
+[`docs/backend/v1/README.md`](v1/README.md)
 
-## Document classes
-
-### Normative design inputs
-
-These documents define what backend design MUST preserve:
-
-- `BACKEND_DESIGN_BASELINE_V1.md`
-- `FLUTTER_BACKEND_GAP_RESOLUTION_2026-11-01.md`
-- `CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md`
-- C1/C2/C3/C4/C5 focused contracts
-- Universal Vertical Catalogue freeze
-- TTS Worker auth/integration contracts
-
-### Implementation guidance
-
-These may guide implementation but do not override normative contracts:
-
-- `C4_IMPLEMENTATION_ROADMAP.md`
-- `C4_IMPLEMENTATION_SLICE_01_PUBLICATION_FOUNDATION.md`
-- `CAREERSPEAK_BACKEND_TTS_REQUIREMENTS.md`
-- `CONTENT_AUDIO_ROLE_POLICY.md`
-
-### Historical/audit material
-
-These explain previous gaps and decisions. They are **not** the current source of truth when they conflict with frozen contracts:
-
-- `FLUTTER_BACKEND_CONTRACT_GAP_AUDIT.md`
-- `FLUTTER_BACKEND_CONTRACT_GAP_REMEDIATION_PLAN.md`
-- qualification ledgers and historical roadmaps
-
-The reconciliation document above is authoritative for interpreting which historical BGA findings are closed, accepted, or still backend design tasks.
-
-## Backend design rule
-
-Do not infer backend domain ownership from Flutter persistence tables.
-
-Flutter tables are local projections and learner state. Backend schema must be designed from business ownership and immutable publication contracts:
+The canonical v1 set is intentionally compact and ordered:
 
 ```text
-Catalogue / Content / Assessment
-        ↓
-immutable revisions
-        ↓
-PublicationSnapshot
-        ↓
-learner exact-read API
-        ↓
-Flutter local CURRENT projection
+v1/
+├── README.md
+├── 01_SYSTEM_ARCHITECTURE.md
+├── 02_DOMAIN_MODEL.md
+├── 03_LEARNER_API_CONTRACT.md
+├── 04_PUBLICATION_AND_INTEGRITY.md
+├── 05_SECURITY_AND_MEDIA.md
+├── 06_TTS_AND_OPERATIONS.md
+└── 07_ACCEPTANCE_AND_IMPLEMENTATION_PLAN.md
 ```
+
+If a root-level historical backend document conflicts with `docs/backend/v1/`, **the v1 document wins**.
+
+## Legacy material
+
+Existing root-level documents are retained temporarily for:
+
+```text
+historical rationale
+old qualification evidence
+detailed implementation notes
+previous gap analysis
+traceability from old PRs/commits
+```
+
+They are not the preferred backend design entry point anymore.
+
+Examples include:
+
+```text
+FLUTTER_BACKEND_CONTRACT_GAP_AUDIT.md
+FLUTTER_BACKEND_CONTRACT_GAP_REMEDIATION_PLAN.md
+C4_IMPLEMENTATION_ROADMAP.md
+C4_IMPLEMENTATION_SLICE_01_PUBLICATION_FOUNDATION.md
+qualification ledgers
+older freeze/roadmap documents
+```
+
+## Removal policy
+
+Do not bulk-delete old docs immediately.
+
+Safe cleanup sequence:
+
+```text
+1. canonical v1 set complete
+2. update active internal references to v1
+3. identify still-useful appendices/fixtures
+4. move historical narrative into docs/backend/archive/
+5. verify no active contract depends on archived paths
+6. remove only true duplicates
+```
+
+This gives backend developers one clean source of truth without losing architectural history or breaking repository references.
 
 ## Current readiness
 
 ```text
-Backend architecture/domain/schema design   READY
-Learner OpenAPI finalization                 NEXT DESIGN OUTPUT
-Spring Boot implementation                   NOT STARTED HERE
-Cross-system acceptance                      AFTER backend implementation
+Flutter consumer contract              FROZEN enough for backend design
+Backend architecture/domain design     READY
+Database schema design                 READY
+Learner OpenAPI v1                     NEXT DESIGN OUTPUT
+Spring Boot implementation             separate next stream
+Cross-system acceptance                required before release
 ```
 
-The baseline deliberately keeps Spring Boot implementation out of `feat/flutter-adversarial-hardening`; this branch freezes the consumer-facing contracts first.
+Do not add Spring Boot implementation code to `feat/flutter-adversarial-hardening`; this branch remains Flutter/contract hardening.
