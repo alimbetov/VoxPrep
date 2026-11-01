@@ -8,8 +8,10 @@ import '../application/services/installation_bootstrap_service.dart';
 import '../data/remote/http_installation_registration_gateway.dart';
 import 'api_client_providers.dart';
 import 'asset_cache_retention_providers.dart';
+import 'catalogue_payload_providers.dart';
 import 'content_sync_providers.dart';
 import 'installation_identity_providers.dart';
+import 'learner_selection_providers.dart';
 
 final installationRegistrationGatewayProvider =
     Provider<InstallationRegistrationGateway>((ref) {
@@ -44,6 +46,26 @@ final applicationBootstrapProvider =
           .bootstrap();
 
       if (result is Success<ApplicationBootstrapOutcome>) {
+        final catalogueResult = await ref
+            .read(universalCatalogueRepositoryProvider)
+            .readCurrent();
+        if (catalogueResult case FailureResult()) {
+          return FailureResult<ApplicationBootstrapOutcome>(
+            catalogueResult.failure,
+          );
+        }
+        final snapshot = (catalogueResult as Success).value;
+        if (snapshot != null) {
+          final normalized = await ref
+              .read(learnerSelectionServiceProvider)
+              .normalizeAgainst(snapshot.graph);
+          if (normalized case FailureResult()) {
+            return FailureResult<ApplicationBootstrapOutcome>(
+              normalized.failure,
+            );
+          }
+        }
+
         final manager = await ref.watch(
           assetCacheRetentionManagerProvider.future,
         );
