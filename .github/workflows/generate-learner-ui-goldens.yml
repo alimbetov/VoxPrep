@@ -4,7 +4,12 @@ on:
   push:
     branches:
       - feat/universal-vertical-catalogue
+      - feat/ba-product-contract-remediation
     paths:
+      - 'mobile/careerspeak_app/lib/features/home/home_screen.dart'
+      - 'mobile/careerspeak_app/lib/features/learn/learn_screen.dart'
+      - 'mobile/careerspeak_app/lib/features/learning_direction/**'
+      - 'mobile/careerspeak_app/lib/features/onboarding/**'
       - 'mobile/careerspeak_app/test/goldens/learner_ui_golden_test.dart'
       - 'mobile/careerspeak_app/test/support/golden_fixtures.dart'
       - '.github/workflows/generate-learner-ui-goldens.yml'
