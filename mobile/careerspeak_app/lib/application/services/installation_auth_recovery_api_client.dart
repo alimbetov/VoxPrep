@@ -14,7 +14,7 @@ typedef InstallationCredentialRenewer =
 /// coalesced, and a request that observes a token already rotated by another
 /// request simply retries with the new token instead of rotating again.
 final class InstallationAuthRecoveryApiClient implements ApiClient {
-  const InstallationAuthRecoveryApiClient({
+  InstallationAuthRecoveryApiClient({
     required ApiClient delegate,
     required InstallationCredentialStore credentialStore,
     required InstallationCredentialRenewer renewCredentials,
@@ -26,7 +26,7 @@ final class InstallationAuthRecoveryApiClient implements ApiClient {
   final InstallationCredentialStore _credentialStore;
   final InstallationCredentialRenewer _renewCredentials;
 
-  static Future<Result<InstallationCredentials>>? _sharedRecovery;
+  Future<Result<InstallationCredentials>>? _recoveryInFlight;
 
   @override
   Future<Result<ApiResponse>> send(ApiRequest request) async {
@@ -65,8 +65,8 @@ final class InstallationAuthRecoveryApiClient implements ApiClient {
 
     if (currentToken == null || currentToken == tokenBefore) {
       final renewed = await _recoverSingleFlight();
-      if (renewed case FailureResult<InstallationCredentials>(:final failure)) {
-        return FailureResult<ApiResponse>(failure);
+      if (renewed is FailureResult<InstallationCredentials>) {
+        return FailureResult<ApiResponse>(renewed.failure);
       }
     }
 
@@ -76,21 +76,21 @@ final class InstallationAuthRecoveryApiClient implements ApiClient {
   }
 
   Future<Result<InstallationCredentials>> _recoverSingleFlight() {
-    final existing = _sharedRecovery;
+    final existing = _recoveryInFlight;
     if (existing != null) return existing;
 
     final operation = _renewCredentials();
-    _sharedRecovery = operation;
+    _recoveryInFlight = operation;
     operation.whenComplete(() {
-      if (identical(_sharedRecovery, operation)) {
-        _sharedRecovery = null;
+      if (identical(_recoveryInFlight, operation)) {
+        _recoveryInFlight = null;
       }
     });
     return operation;
   }
 
-  static bool _isUnauthorized(Result<ApiResponse> result) =>
-      result case FailureResult<ApiResponse>(
-        failure: ApplicationFailure(code: 'UNAUTHORIZED'),
-      );
+  static bool _isUnauthorized(Result<ApiResponse> result) {
+    return result is FailureResult<ApiResponse> &&
+        result.failure.code == 'UNAUTHORIZED';
+  }
 }
