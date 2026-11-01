@@ -40,9 +40,10 @@ void main() {
           );
 
           expect(find.text('Settings'), findsOneWidget);
-          expect(find.text('UI language'), findsOneWidget);
-          expect(find.text('Translation language'), findsOneWidget);
-          expect(find.text('Preferred accent'), findsOneWidget);
+          expect(find.text('Country and language'), findsOneWidget);
+          expect(find.text('Country'), findsOneWidget);
+          expect(find.text('Select country'), findsOneWidget);
+          expect(find.text('Preferred English accent'), findsOneWidget);
 
           await tester.scrollUntilVisible(
             find.text('Storage'),
@@ -77,6 +78,12 @@ final class _PreferencesRepository implements AppPreferencesRepository {
   @override
   Future<Result<ApplicationPreferences>> getPreferences() async =>
       const Success<ApplicationPreferences>(ApplicationPreferences.defaults);
+
+  @override
+  Future<Result<void>> setLocaleSelection({
+    required String countryCode,
+    required AppTranslationLocale locale,
+  }) async => const Success<void>(null);
 
   @override
   Future<Result<void>> setFocusMode(bool enabled) async =>
