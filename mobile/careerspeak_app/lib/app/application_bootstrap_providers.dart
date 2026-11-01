@@ -10,6 +10,11 @@ import 'catalogue_payload_providers.dart';
 import 'content_sync_providers.dart';
 import 'learner_selection_providers.dart';
 
+export 'api_client_providers.dart'
+    show
+        installationBootstrapServiceProvider,
+        installationRegistrationGatewayProvider;
+
 final applicationBootstrapServiceProvider =
     Provider<ApplicationBootstrapService>((ref) {
       final contentSync = ref.watch(preferenceAwareContentSyncProvider);
