@@ -87,8 +87,14 @@ void main() {
         find.text('Interview audio metadata is unavailable.'),
         findsOneWidget,
       );
-      expect(find.textContaining('SYNTHETIC_ASSET_CATALOG_FAILURE'), findsNothing);
-      expect(find.textContaining('synthetic asset catalogue failure'), findsNothing);
+      expect(
+        find.textContaining('SYNTHETIC_ASSET_CATALOG_FAILURE'),
+        findsNothing,
+      );
+      expect(
+        find.textContaining('synthetic asset catalogue failure'),
+        findsNothing,
+      );
       expect(find.text('Question'), findsNothing);
       expect(find.text('Sample answer'), findsNothing);
     },
@@ -114,31 +120,33 @@ void main() {
     expect(find.text('synthetic playback failure'), findsNothing);
   });
 
-  testWidgets(
-    'generic audio failure is safe only for current exact revision',
-    (tester) async {
-      final identity = ContentIdentity.fromItem(_topicWithAudio);
-      await _pump(
-        tester,
-        item: _topicWithAudio,
-        repository: _FakeLearnerStateRepository(),
-        assetCatalog: const _RoleCatalog(<String>{}),
-        playbackState: content_audio.ContentPlaybackState(
-          phase: content_audio.AudioPlaybackPhase.failed,
-          content: identity,
-          revision: _topicWithAudio.revision,
-          failure: const ApplicationFailure(
-            code: 'SYNTHETIC_GENERIC_AUDIO_FAILURE',
-            message: 'generic playback failed',
-          ),
+  testWidgets('generic audio failure is safe only for current exact revision', (
+    tester,
+  ) async {
+    final identity = ContentIdentity.fromItem(_topicWithAudio);
+    await _pump(
+      tester,
+      item: _topicWithAudio,
+      repository: _FakeLearnerStateRepository(),
+      assetCatalog: const _RoleCatalog(<String>{}),
+      playbackState: content_audio.ContentPlaybackState(
+        phase: content_audio.AudioPlaybackPhase.failed,
+        content: identity,
+        revision: _topicWithAudio.revision,
+        failure: const ApplicationFailure(
+          code: 'SYNTHETIC_GENERIC_AUDIO_FAILURE',
+          message: 'generic playback failed',
         ),
-      );
+      ),
+    );
 
-      expect(find.text('Audio is unavailable for this material.'), findsOneWidget);
-      expect(find.text('generic playback failed'), findsNothing);
-      expect(find.text('Listen material'), findsNWidgets(2));
-    },
-  );
+    expect(
+      find.text('Audio is unavailable for this material.'),
+      findsOneWidget,
+    );
+    expect(find.text('generic playback failed'), findsNothing);
+    expect(find.text('Listen material'), findsNWidgets(2));
+  });
 
   testWidgets('retryable generic failure exposes safe Retry action', (
     tester,
@@ -279,45 +287,49 @@ void main() {
     );
   });
 
-  testWidgets(
-    'favorite write failure is safe and current state is preserved',
-    (tester) async {
-      final repository = _FakeLearnerStateRepository(failWrites: true);
-      await _pump(
-        tester,
-        item: _topicNoAudio,
-        repository: repository,
-        assetCatalog: const _RoleCatalog(<String>{}),
-      );
+  testWidgets('favorite write failure is safe and current state is preserved', (
+    tester,
+  ) async {
+    final repository = _FakeLearnerStateRepository(failWrites: true);
+    await _pump(
+      tester,
+      item: _topicNoAudio,
+      repository: repository,
+      assetCatalog: const _RoleCatalog(<String>{}),
+    );
 
-      await tester.tap(find.byTooltip('Add favorite'));
-      await tester.pump();
+    await tester.tap(find.byTooltip('Add favorite'));
+    await tester.pump();
 
-      expect(find.text('Unable to update learner state.'), findsOneWidget);
-      expect(find.textContaining('synthetic learner write failure'), findsNothing);
-      expect(find.byTooltip('Add favorite'), findsOneWidget);
-    },
-  );
+    expect(find.text('Unable to update learner state.'), findsOneWidget);
+    expect(
+      find.textContaining('synthetic learner write failure'),
+      findsNothing,
+    );
+    expect(find.byTooltip('Add favorite'), findsOneWidget);
+  });
 
-  testWidgets(
-    'completed write failure is safe and does not fake completion',
-    (tester) async {
-      final repository = _FakeLearnerStateRepository(failWrites: true);
-      await _pump(
-        tester,
-        item: _topicNoAudio,
-        repository: repository,
-        assetCatalog: const _RoleCatalog(<String>{}),
-      );
+  testWidgets('completed write failure is safe and does not fake completion', (
+    tester,
+  ) async {
+    final repository = _FakeLearnerStateRepository(failWrites: true);
+    await _pump(
+      tester,
+      item: _topicNoAudio,
+      repository: repository,
+      assetCatalog: const _RoleCatalog(<String>{}),
+    );
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Mark completed'));
-      await tester.pump();
+    await tester.tap(find.widgetWithText(FilledButton, 'Mark completed'));
+    await tester.pump();
 
-      expect(find.text('Unable to update learner state.'), findsOneWidget);
-      expect(find.textContaining('synthetic learner write failure'), findsNothing);
-      expect(find.text('Mark completed'), findsOneWidget);
-    },
-  );
+    expect(find.text('Unable to update learner state.'), findsOneWidget);
+    expect(
+      find.textContaining('synthetic learner write failure'),
+      findsNothing,
+    );
+    expect(find.text('Mark completed'), findsOneWidget);
+  });
 
   testWidgets('content without audio never renders listen material controls', (
     tester,
