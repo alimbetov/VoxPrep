@@ -223,6 +223,86 @@ void main() {
     );
     expect(delegate.calls, 1);
   });
+
+  test('credential-store read failure fails locally before transport', () async {
+    final store = _MemoryCredentialStore(
+      installationId: InstallationId('installation-1'),
+      token: InstallationToken('token-old'),
+      failTokenReads: true,
+    );
+    final delegate = _Delegate((request) async => _ok());
+    final client = InstallationAuthRecoveryApiClient(
+      delegate: delegate,
+      credentialStore: store,
+      renewCredentials: () async => throw StateError('must not renew'),
+    );
+
+    final result = await client.send(
+      ApiRequest(method: ApiMethod.get, path: '/api/v1/content'),
+    );
+
+    expect(result, isA<FailureResult<ApiResponse>>());
+    expect(
+      (result as FailureResult<ApiResponse>).failure.code,
+      'CREDENTIAL_STORE_ERROR',
+    );
+    expect(delegate.calls, 0);
+  });
+
+  test('token cleared after first 401 fails closed without renewal or replay', () async {
+    final store = _MemoryCredentialStore(
+      installationId: InstallationId('installation-1'),
+      token: InstallationToken('token-old'),
+    );
+    var renewCalls = 0;
+    final delegate = _Delegate((request) async {
+      await store.clearInstallationToken();
+      return _unauthorized();
+    });
+    final client = InstallationAuthRecoveryApiClient(
+      delegate: delegate,
+      credentialStore: store,
+      renewCredentials: () async {
+        renewCalls += 1;
+        throw StateError('must not renew after local clear');
+      },
+    );
+
+    final result = await client.send(
+      ApiRequest(method: ApiMethod.get, path: '/api/v1/content'),
+    );
+
+    expect(result, isA<FailureResult<ApiResponse>>());
+    expect((result as FailureResult<ApiResponse>).failure.code, 'UNAUTHORIZED');
+    expect(delegate.calls, 1);
+    expect(renewCalls, 0);
+  });
+
+  test('thrown renewal exception is converted to fail-closed result', () async {
+    final store = _MemoryCredentialStore(
+      installationId: InstallationId('installation-1'),
+      token: InstallationToken('token-old'),
+    );
+    final delegate = _Delegate((request) async => _unauthorized());
+    final client = InstallationAuthRecoveryApiClient(
+      delegate: delegate,
+      credentialStore: store,
+      renewCredentials: () async {
+        throw StateError('registration transport exploded');
+      },
+    );
+
+    final result = await client.send(
+      ApiRequest(method: ApiMethod.get, path: '/api/v1/content'),
+    );
+
+    expect(result, isA<FailureResult<ApiResponse>>());
+    expect(
+      (result as FailureResult<ApiResponse>).failure.code,
+      'CREDENTIAL_RENEWAL_ERROR',
+    );
+    expect(delegate.calls, 1);
+  });
 }
 
 Result<ApiResponse> _ok() => Success(
@@ -250,10 +330,15 @@ final class _Delegate implements ApiClient {
 }
 
 final class _MemoryCredentialStore implements InstallationCredentialStore {
-  _MemoryCredentialStore({required this.installationId, required this.token});
+  _MemoryCredentialStore({
+    required this.installationId,
+    required this.token,
+    this.failTokenReads = false,
+  });
 
   InstallationId? installationId;
   InstallationToken? token;
+  final bool failTokenReads;
 
   @override
   Future<void> clear() async {
@@ -270,7 +355,12 @@ final class _MemoryCredentialStore implements InstallationCredentialStore {
   Future<InstallationId?> readInstallationId() async => installationId;
 
   @override
-  Future<InstallationToken?> readInstallationToken() async => token;
+  Future<InstallationToken?> readInstallationToken() async {
+    if (failTokenReads) {
+      throw StateError('secure storage unavailable');
+    }
+    return token;
+  }
 
   @override
   Future<void> writeInstallationId(InstallationId installationId) async {
