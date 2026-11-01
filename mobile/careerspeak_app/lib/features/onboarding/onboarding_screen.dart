@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import '../../app/catalogue_payload_providers.dart';
 import '../../app/learner_selection_providers.dart';
 import '../../app/onboarding_providers.dart';
-import '../../application/content_delivery/product_catalog.dart';
 import '../../application/content_delivery/universal_catalogue_graph.dart';
 import '../../application/result/result.dart';
 import '../../domain/onboarding_state.dart';
