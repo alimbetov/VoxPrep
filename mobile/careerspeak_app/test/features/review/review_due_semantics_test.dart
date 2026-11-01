@@ -11,7 +11,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('Due includes only explicitly scheduled due content', (
+  testWidgets('Due includes only explicitly scheduled CURRENT content', (
     tester,
   ) async {
     const dueItem = ContentItem(
@@ -38,10 +38,6 @@ void main() {
       revision: 1,
       hasAudio: false,
     );
-    const dueIdentity = ContentIdentity(
-      code: 'DUE_ITEM',
-      type: ContentType.topic,
-    );
 
     await tester.pumpWidget(
       ProviderScope(
@@ -49,7 +45,7 @@ void main() {
           contentPageProvider.overrideWith(
             (ref) => Stream<app_page.Page<ContentItem>>.value(
               const app_page.Page<ContentItem>(
-                items: <ContentItem>[dueItem, incompleteButUnscheduled],
+                items: <ContentItem>[incompleteButUnscheduled],
                 hasMore: false,
               ),
             ),
@@ -59,10 +55,8 @@ void main() {
               const <ContentIdentity, ContentMarkerState>{},
             ),
           ),
-          dueReviewIdentitiesProvider.overrideWithValue(
-            const AsyncData<Set<ContentIdentity>>(
-              <ContentIdentity>{dueIdentity},
-            ),
+          dueReviewItemsProvider.overrideWith(
+            (ref) async => const <ContentItem>[dueItem],
           ),
         ],
         child: const MaterialApp(home: Scaffold(body: ReviewScreen())),
@@ -107,8 +101,8 @@ void main() {
               const <ContentIdentity, ContentMarkerState>{},
             ),
           ),
-          dueReviewIdentitiesProvider.overrideWithValue(
-            const AsyncData<Set<ContentIdentity>>(<ContentIdentity>{}),
+          dueReviewItemsProvider.overrideWith(
+            (ref) async => const <ContentItem>[],
           ),
         ],
         child: const MaterialApp(home: Scaffold(body: ReviewScreen())),
