@@ -16,16 +16,16 @@ void main() {
   });
 
   test(
-    'schema version 15 creates production foundation and BA runtime state',
+    'schema version 16 creates production foundation and learner runtime state',
     () async {
       await database.customSelect('SELECT 1').getSingle();
 
-      expect(database.schemaVersion, 15);
+      expect(database.schemaVersion, 16);
 
       final userVersion = await database
           .customSelect('PRAGMA user_version')
           .getSingle();
-      expect(userVersion.read<int>('user_version'), 15);
+      expect(userVersion.read<int>('user_version'), 16);
 
       final foreignKeys = await database
           .customSelect('PRAGMA foreign_keys')
@@ -67,6 +67,7 @@ void main() {
         'practice_test_active_attempt',
         'learner_last_opened_content',
         'practice_test_completions',
+        'content_review_states',
       ]) {
         final row = await database
             .customSelect(
@@ -74,7 +75,7 @@ void main() {
               variables: <Variable<Object>>[Variable<String>(rawTable)],
             )
             .getSingleOrNull();
-        expect(row, isNotNull, reason: '$rawTable must exist in schema v15');
+        expect(row, isNotNull, reason: '$rawTable must exist in schema v16');
       }
 
       final selection = await database
