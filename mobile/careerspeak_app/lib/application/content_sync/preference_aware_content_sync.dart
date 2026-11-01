@@ -27,10 +27,14 @@ final class PreferenceAwareContentSync {
     final preferences =
         (preferencesResult as Success<ApplicationPreferences>).value;
 
+    if (preferences.needsLocaleOnboarding) {
+      return Success<ContentSyncOutcome>(ContentSyncNoOp(runId));
+    }
+
     return _coordinator.synchronize(
       runId: runId,
       trigger: trigger,
-      translationLocale: preferences.translationLocale.code,
+      translationLocale: preferences.selectedLocale.code,
     );
   }
 }
