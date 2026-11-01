@@ -74,7 +74,7 @@ void main() {
   );
 
   testWidgets(
-    'INTERVIEW exposes metadata failure instead of phantom controls',
+    'INTERVIEW metadata failure is safe and does not expose raw failure',
     (tester) async {
       await _pump(
         tester,
@@ -84,15 +84,17 @@ void main() {
       );
 
       expect(
-        find.textContaining('Interview audio metadata unavailable:'),
+        find.text('Interview audio metadata is unavailable.'),
         findsOneWidget,
       );
+      expect(find.textContaining('SYNTHETIC_ASSET_CATALOG_FAILURE'), findsNothing);
+      expect(find.textContaining('synthetic asset catalogue failure'), findsNothing);
       expect(find.text('Question'), findsNothing);
       expect(find.text('Sample answer'), findsNothing);
     },
   );
 
-  testWidgets('INTERVIEW playback failure is learner-visible', (tester) async {
+  testWidgets('INTERVIEW playback failure is learner-safe', (tester) async {
     await _pump(
       tester,
       item: _interview,
@@ -108,11 +110,12 @@ void main() {
       ),
     );
 
-    expect(find.text('synthetic playback failure'), findsOneWidget);
+    expect(find.text('Interview audio is unavailable.'), findsOneWidget);
+    expect(find.text('synthetic playback failure'), findsNothing);
   });
 
   testWidgets(
-    'generic audio failure is shown only for current exact revision',
+    'generic audio failure is safe only for current exact revision',
     (tester) async {
       final identity = ContentIdentity.fromItem(_topicWithAudio);
       await _pump(
@@ -131,10 +134,37 @@ void main() {
         ),
       );
 
-      expect(find.text('generic playback failed'), findsOneWidget);
-      expect(find.text('Play'), findsOneWidget);
+      expect(find.text('Audio is unavailable for this material.'), findsOneWidget);
+      expect(find.text('generic playback failed'), findsNothing);
+      expect(find.text('Listen material'), findsNWidgets(2));
     },
   );
+
+  testWidgets('retryable generic failure exposes safe Retry action', (
+    tester,
+  ) async {
+    final identity = ContentIdentity.fromItem(_topicWithAudio);
+    await _pump(
+      tester,
+      item: _topicWithAudio,
+      repository: _FakeLearnerStateRepository(),
+      assetCatalog: const _RoleCatalog(<String>{}),
+      playbackState: content_audio.ContentPlaybackState(
+        phase: content_audio.AudioPlaybackPhase.failed,
+        content: identity,
+        revision: _topicWithAudio.revision,
+        failure: const ApplicationFailure(
+          code: 'ASSET_TIMEOUT',
+          message: 'socket timeout from internal host',
+          retryable: true,
+        ),
+      ),
+    );
+
+    expect(find.text('Audio is not available offline yet.'), findsOneWidget);
+    expect(find.text('Retry audio'), findsOneWidget);
+    expect(find.textContaining('socket timeout'), findsNothing);
+  });
 
   testWidgets('stale playback failure from another item never leaks into UI', (
     tester,
@@ -156,10 +186,10 @@ void main() {
     );
 
     expect(find.text('must not leak'), findsNothing);
-    expect(find.text('Play'), findsOneWidget);
+    expect(find.text('Listen material'), findsNWidgets(2));
   });
 
-  testWidgets('completed generic audio exposes Replay for current revision', (
+  testWidgets('completed generic audio exposes Listened and Play again', (
     tester,
   ) async {
     final identity = ContentIdentity.fromItem(_topicWithAudio);
@@ -177,10 +207,37 @@ void main() {
       ),
     );
 
-    expect(find.text('Replay'), findsOneWidget);
+    expect(find.text('Play again'), findsOneWidget);
+    expect(find.text('Listened'), findsOneWidget);
   });
 
-  testWidgets('idle generic audio disables seek and stop controls', (
+  testWidgets('playing generic audio exposes enabled seek slider', (
+    tester,
+  ) async {
+    final identity = ContentIdentity.fromItem(_topicWithAudio);
+    await _pump(
+      tester,
+      item: _topicWithAudio,
+      repository: _FakeLearnerStateRepository(),
+      assetCatalog: const _RoleCatalog(<String>{}),
+      playbackState: content_audio.ContentPlaybackState(
+        phase: content_audio.AudioPlaybackPhase.playing,
+        content: identity,
+        revision: _topicWithAudio.revision,
+        positionMs: 15000,
+        durationMs: 60000,
+      ),
+    );
+
+    final slider = tester.widget<Slider>(find.byType(Slider));
+    expect(slider.value, 15000);
+    expect(slider.max, 60000);
+    expect(slider.onChanged, isNotNull);
+    expect(find.text('0:15 / 1:00'), findsOneWidget);
+    expect(find.text('Pause'), findsOneWidget);
+  });
+
+  testWidgets('idle generic audio has no active seek or stop controls', (
     tester,
   ) async {
     await _pump(
@@ -190,20 +247,10 @@ void main() {
       assetCatalog: const _RoleCatalog(<String>{}),
     );
 
-    expect(
-      tester.widget<IconButton>(find.byTooltip('Back 10 seconds')).onPressed,
-      isNull,
-    );
-    expect(
-      tester.widget<IconButton>(find.byTooltip('Forward 10 seconds')).onPressed,
-      isNull,
-    );
-    expect(
-      tester
-          .widget<OutlinedButton>(find.widgetWithText(OutlinedButton, 'Stop'))
-          .onPressed,
-      isNull,
-    );
+    expect(find.byType(Slider), findsNothing);
+    expect(find.byTooltip('Back 10 seconds'), findsNothing);
+    expect(find.byTooltip('Forward 10 seconds'), findsNothing);
+    expect(find.widgetWithText(OutlinedButton, 'Stop'), findsNothing);
   });
 
   testWidgets('stale saved position is not resumed for a newer revision', (
@@ -233,7 +280,7 @@ void main() {
   });
 
   testWidgets(
-    'favorite write failure is surfaced and current state is preserved',
+    'favorite write failure is safe and current state is preserved',
     (tester) async {
       final repository = _FakeLearnerStateRepository(failWrites: true);
       await _pump(
@@ -246,16 +293,14 @@ void main() {
       await tester.tap(find.byTooltip('Add favorite'));
       await tester.pump();
 
-      expect(
-        find.textContaining('Unable to update learner state:'),
-        findsOneWidget,
-      );
+      expect(find.text('Unable to update learner state.'), findsOneWidget);
+      expect(find.textContaining('synthetic learner write failure'), findsNothing);
       expect(find.byTooltip('Add favorite'), findsOneWidget);
     },
   );
 
   testWidgets(
-    'completed write failure is surfaced and does not fake completion',
+    'completed write failure is safe and does not fake completion',
     (tester) async {
       final repository = _FakeLearnerStateRepository(failWrites: true);
       await _pump(
@@ -268,15 +313,13 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Mark completed'));
       await tester.pump();
 
-      expect(
-        find.textContaining('Unable to update learner state:'),
-        findsOneWidget,
-      );
+      expect(find.text('Unable to update learner state.'), findsOneWidget);
+      expect(find.textContaining('synthetic learner write failure'), findsNothing);
       expect(find.text('Mark completed'), findsOneWidget);
     },
   );
 
-  testWidgets('content without audio never renders playback controls', (
+  testWidgets('content without audio never renders listen material controls', (
     tester,
   ) async {
     await _pump(
@@ -287,7 +330,7 @@ void main() {
     );
 
     expect(find.text('Interview audio'), findsNothing);
-    expect(find.text('Audio'), findsNothing);
+    expect(find.text('Listen material'), findsNothing);
   });
 }
 
