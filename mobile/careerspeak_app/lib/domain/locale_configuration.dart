@@ -1,10 +1,7 @@
 import 'application_preferences.dart';
 
 final class SupportedLocaleOption {
-  factory SupportedLocaleOption({
-    required String code,
-    required String label,
-  }) {
+  factory SupportedLocaleOption({required String code, required String label}) {
     final locale = AppTranslationLocale(code);
     final normalizedLabel = label.trim();
     if (normalizedLabel.isEmpty) {
