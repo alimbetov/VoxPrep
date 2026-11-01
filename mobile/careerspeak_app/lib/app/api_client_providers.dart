@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
@@ -7,7 +8,6 @@ import '../application/result/result.dart';
 import '../application/services/installation_auth_recovery_api_client.dart';
 import '../application/services/installation_bootstrap_service.dart';
 import '../data/remote/http_api_client.dart';
-import '../data/remote/http_installation_registration_gateway.dart';
 import '../domain/application_preferences.dart';
 import 'app_preferences_providers.dart';
 import 'installation_identity_providers.dart';
@@ -18,8 +18,24 @@ const _apiBaseUrl = String.fromEnvironment(
 );
 
 final apiBaseUriProvider = Provider<Uri>((ref) {
-  return Uri.parse(_apiBaseUrl);
+  return validateApiBaseUriForEnvironment(Uri.parse(_apiBaseUrl));
 });
+
+/// Release builds must never send installation credentials over cleartext HTTP.
+///
+/// Local HTTP remains available to debug/profile tests by explicitly setting
+/// [releaseMode] to false. The transport layer still validates the URI shape.
+Uri validateApiBaseUriForEnvironment(
+  Uri uri, {
+  bool releaseMode = kReleaseMode,
+}) {
+  if (releaseMode && uri.scheme.toLowerCase() != 'https') {
+    throw StateError(
+      'CAREERSPEAK_API_BASE_URL must use HTTPS in release builds.',
+    );
+  }
+  return uri;
+}
 
 final httpClientProvider = Provider<http.Client>((ref) {
   final client = http.Client();
