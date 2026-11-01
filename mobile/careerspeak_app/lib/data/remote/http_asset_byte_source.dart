@@ -9,8 +9,8 @@ import '../../application/result/result.dart';
 
 /// Streams learner assets exclusively through the authenticated Backend API.
 ///
-/// Flutter never receives or resolves RustFS/S3/CDN URLs. Storage topology,
-/// deliveryKey resolution and object-store credentials remain Backend-internal.
+/// Flutter never receives or resolves object-storage URLs. Storage topology,
+/// deliveryKey resolution and storage credentials remain Backend-internal.
 final class HttpAssetByteSource implements AssetByteSource {
   factory HttpAssetByteSource({
     required http.Client client,
