@@ -1,0 +1,39 @@
+name: Locale Final Format Proof
+
+on:
+  push:
+    branches:
+      - feat/universal-vertical-catalogue
+    paths:
+      - 'mobile/careerspeak_app/lib/app/api_client_providers.dart'
+      - 'mobile/careerspeak_app/lib/app/careerspeak_app.dart'
+      - 'mobile/careerspeak_app/lib/app/router.dart'
+      - 'mobile/careerspeak_app/lib/data/remote/http_api_client.dart'
+      - 'mobile/careerspeak_app/lib/features/settings/locale_selection_panel.dart'
+      - 'mobile/careerspeak_app/test/application/content_sync/preference_aware_content_sync_test.dart'
+      - 'mobile/careerspeak_app/test/data/local/drift_app_preferences_repository_test.dart'
+      - 'mobile/careerspeak_app/test/data/remote/http_api_context_headers_test.dart'
+      - 'mobile/careerspeak_app/test/support/golden_fixtures.dart'
+      - '.github/workflows/locale-final-format-proof.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  format-diff:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - name: Show canonical formatter diff
+        run: |
+          dart format lib test
+          git diff -- lib test
