@@ -30,6 +30,29 @@ void main() {
       expect(selection.selectedTrackCode, isNull);
     });
 
+    test('O5 changing goal preserves explicit English level decision', () async {
+      final repository = _FakeRepository(
+        LearnerSelection(
+          selectedGoalCode: 'GOAL_A',
+          selectedTrackCode: 'TRACK_A',
+          selfAssessedLevelCode: 'B2',
+          levelDecisionMade: true,
+        ),
+      );
+      final service = _service(repository);
+
+      final result = await service.selectGoal(
+        graph: _graph(),
+        goalCode: 'GOAL_B',
+      );
+
+      final selection = (result as Success<LearnerSelection>).value;
+      expect(selection.selectedGoalCode, 'GOAL_B');
+      expect(selection.selectedTrackCode, isNull);
+      expect(selection.levelDecisionMade, isTrue);
+      expect(selection.selfAssessedLevelCode, 'B2');
+    });
+
     test('selectTrack rejects track from another goal', () async {
       final repository = _FakeRepository(
         LearnerSelection(selectedGoalCode: 'GOAL_A'),
