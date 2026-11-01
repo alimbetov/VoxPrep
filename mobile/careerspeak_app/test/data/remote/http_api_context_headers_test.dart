@@ -8,44 +8,37 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
-  test(
-    'sends selected locale and country as managed Backend headers',
-    () async {
-      final client = HttpApiClient(
-        client: MockClient((request) async {
-          expect(request.headers['accept-language'], 'ru-KZ');
-          expect(request.headers['x-country-code'], 'KZ');
-          expect(request.headers['authorization'], 'Bearer token-1');
-          return http.Response('{}', 200);
-        }),
-        credentialStore: _MemoryCredentialStore(InstallationToken('token-1')),
-        baseUri: Uri.parse('https://api.example.test'),
-        contextHeadersProvider: () async => const <String, String>{
-          'accept-language': 'ru-KZ',
-          'x-country-code': 'KZ',
-        },
-      );
+  test('sends selected locale as managed Accept-Language header', () async {
+    final client = HttpApiClient(
+      client: MockClient((request) async {
+        expect(request.headers['accept-language'], 'ru-KZ');
+        expect(request.headers['authorization'], 'Bearer token-1');
+        return http.Response('{}', 200);
+      }),
+      credentialStore: _MemoryCredentialStore(InstallationToken('token-1')),
+      baseUri: Uri.parse('https://api.example.test'),
+      contextHeadersProvider: () async => const <String, String>{
+        'accept-language': 'ru-KZ',
+      },
+    );
 
-      final result = await client.send(
-        ApiRequest(method: ApiMethod.get, path: '/api/v1/content/manifest'),
-      );
+    final result = await client.send(
+      ApiRequest(method: ApiMethod.get, path: '/api/v1/content/manifest'),
+    );
 
-      expect(result, isA<Success<ApiResponse>>());
-    },
-  );
+    expect(result, isA<Success<ApiResponse>>());
+  });
 
-  test('caller cannot override managed locale context headers', () async {
+  test('caller cannot override Accept-Language using header casing', () async {
     final client = HttpApiClient(
       client: MockClient((request) async {
         expect(request.headers['accept-language'], 'kk-KZ');
-        expect(request.headers['x-country-code'], 'KZ');
         return http.Response('{}', 200);
       }),
       credentialStore: _MemoryCredentialStore(InstallationToken('token-1')),
       baseUri: Uri.parse('https://api.example.test'),
       contextHeadersProvider: () async => const <String, String>{
         'accept-language': 'kk-KZ',
-        'x-country-code': 'KZ',
       },
     );
 
@@ -53,44 +46,37 @@ void main() {
       ApiRequest(
         method: ApiMethod.get,
         path: '/api/v1/content/manifest',
-        headers: const <String, String>{
-          'Accept-Language': 'ru-KZ',
-          'X-Country-Code': 'RU',
-        },
+        headers: const <String, String>{'Accept-Language': 'ru-KZ'},
       ),
     );
 
     expect(result, isA<Success<ApiResponse>>());
   });
 
-  test(
-    'pre-onboarding request may send neutral language without country',
-    () async {
-      final client = HttpApiClient(
-        client: MockClient((request) async {
-          expect(request.headers['accept-language'], 'en');
-          expect(request.headers['x-country-code'], isNull);
-          expect(request.headers['authorization'], isNull);
-          return http.Response('{}', 200);
-        }),
-        credentialStore: _MemoryCredentialStore(null),
-        baseUri: Uri.parse('https://api.example.test'),
-        contextHeadersProvider: () async => const <String, String>{
-          'accept-language': 'en',
-        },
-      );
+  test('pre-onboarding request sends neutral Accept-Language', () async {
+    final client = HttpApiClient(
+      client: MockClient((request) async {
+        expect(request.headers['accept-language'], 'en');
+        expect(request.headers['authorization'], isNull);
+        return http.Response('{}', 200);
+      }),
+      credentialStore: _MemoryCredentialStore(null),
+      baseUri: Uri.parse('https://api.example.test'),
+      contextHeadersProvider: () async => const <String, String>{
+        'accept-language': 'en',
+      },
+    );
 
-      final result = await client.send(
-        ApiRequest(
-          method: ApiMethod.get,
-          path: '/api/v1/configuration/locales',
-          authentication: ApiAuthentication.none,
-        ),
-      );
+    final result = await client.send(
+      ApiRequest(
+        method: ApiMethod.get,
+        path: '/api/v1/configuration/locales',
+        authentication: ApiAuthentication.none,
+      ),
+    );
 
-      expect(result, isA<Success<ApiResponse>>());
-    },
-  );
+    expect(result, isA<Success<ApiResponse>>());
+  });
 
   test('rejects unsafe locale context before network transport', () async {
     var calls = 0;
@@ -116,6 +102,28 @@ void main() {
       (result as FailureResult<ApiResponse>).failure.code,
       'REQUEST_CONTEXT_UNAVAILABLE',
     );
+  });
+
+  test('rejects a non-BCP-47 locale before network transport', () async {
+    var calls = 0;
+    final client = HttpApiClient(
+      client: MockClient((request) async {
+        calls += 1;
+        return http.Response('{}', 200);
+      }),
+      credentialStore: _MemoryCredentialStore(InstallationToken('token-1')),
+      baseUri: Uri.parse('https://api.example.test'),
+      contextHeadersProvider: () async => const <String, String>{
+        'accept-language': 'not_a_locale',
+      },
+    );
+
+    final result = await client.send(
+      ApiRequest(method: ApiMethod.get, path: '/api/v1/content/manifest'),
+    );
+
+    expect(calls, 0);
+    expect(result, isA<FailureResult<ApiResponse>>());
   });
 }
 
