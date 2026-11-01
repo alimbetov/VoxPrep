@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart';
+
 import '../../application/ports/review_schedule_repository.dart';
 import '../../application/result/result.dart';
 import '../../domain/content_identity.dart';
@@ -59,7 +61,8 @@ final class DriftReviewScheduleRepository implements ReviewScheduleRepository {
           reviewStage: row.read<int>('review_stage'),
           lastReviewOutcome: outcome,
         );
-        if (state.reviewStage < 0 || state.nextReviewAt.millisecondsSinceEpoch <= 0) {
+        if (state.reviewStage < 0 ||
+            state.nextReviewAt.millisecondsSinceEpoch <= 0) {
           throw const FormatException('invalid review state');
         }
         states[identity] = state;
