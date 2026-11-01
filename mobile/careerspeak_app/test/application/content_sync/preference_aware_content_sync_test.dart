@@ -77,7 +77,10 @@ void main() {
     );
 
     expect(result, isA<Success<ContentSyncOutcome>>());
-    expect((result as Success<ContentSyncOutcome>).value, isA<ContentSyncNoOp>());
+    expect(
+      (result as Success<ContentSyncOutcome>).value,
+      isA<ContentSyncNoOp>(),
+    );
     expect(gateway.calls, 0);
   });
 
