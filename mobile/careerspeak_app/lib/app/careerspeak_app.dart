@@ -47,7 +47,8 @@ class CareerSpeakApp extends ConsumerWidget {
               mediaQuery.disableAnimations ||
               visualPreferences.reducedMotionPreview,
         );
-        final rtl = visualPreferences.rtlPreview || preferences.selectedLocale.isRtl;
+        final rtl =
+            visualPreferences.rtlPreview || preferences.selectedLocale.isRtl;
 
         return MediaQuery(
           data: scaledMediaQuery,
