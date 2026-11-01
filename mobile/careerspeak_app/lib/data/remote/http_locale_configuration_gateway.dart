@@ -28,6 +28,7 @@ final class HttpLocaleConfigurationGateway implements LocaleConfigurationGateway
         method: ApiMethod.get,
         path: '/api/v1/configuration/locales',
         queryParameters: <String, String>{'countryCode': country},
+        authentication: ApiAuthentication.none,
       ),
     );
     if (response case FailureResult<ApiResponse>(:final failure)) {
