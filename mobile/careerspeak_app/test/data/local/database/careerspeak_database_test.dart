@@ -16,16 +16,16 @@ void main() {
   });
 
   test(
-    'schema version 10 creates the production foundation and retention schema',
+    'schema version 16 creates production foundation and learner runtime state',
     () async {
       await database.customSelect('SELECT 1').getSingle();
 
-      expect(database.schemaVersion, 10);
+      expect(database.schemaVersion, 16);
 
       final userVersion = await database
           .customSelect('PRAGMA user_version')
           .getSingle();
-      expect(userVersion.read<int>('user_version'), 10);
+      expect(userVersion.read<int>('user_version'), 16);
 
       final foreignKeys = await database
           .customSelect('PRAGMA foreign_keys')
@@ -61,12 +61,31 @@ void main() {
         }),
       );
 
-      final retentionTable = await database
+      for (final rawTable in <String>[
+        'asset_cache_retention',
+        'learner_selection',
+        'practice_test_active_attempt',
+        'learner_last_opened_content',
+        'practice_test_completions',
+        'content_review_states',
+      ]) {
+        final row = await database
+            .customSelect(
+              "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+              variables: <Variable<Object>>[Variable<String>(rawTable)],
+            )
+            .getSingleOrNull();
+        expect(row, isNotNull, reason: '$rawTable must exist in schema v16');
+      }
+
+      final selection = await database
           .customSelect(
-            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'asset_cache_retention'",
+            'SELECT id, generation, level_decision_made FROM learner_selection WHERE id = 1',
           )
-          .getSingleOrNull();
-      expect(retentionTable, isNotNull);
+          .getSingle();
+      expect(selection.read<int>('id'), 1);
+      expect(selection.read<int>('generation'), 0);
+      expect(selection.read<int>('level_decision_made'), 0);
     },
   );
 
@@ -149,6 +168,23 @@ void main() {
               updatedAt: now,
             ),
           ),
+      throwsA(anything),
+    );
+
+    await expectLater(
+      database.customStatement(
+        '''
+        INSERT INTO learner_selection (
+          id,
+          selected_goal_code,
+          selected_track_code,
+          self_assessed_level_code,
+          level_decision_made,
+          generation,
+          updated_at
+        ) VALUES (2, NULL, NULL, NULL, 0, 0, 0)
+        ''',
+      ),
       throwsA(anything),
     );
   });

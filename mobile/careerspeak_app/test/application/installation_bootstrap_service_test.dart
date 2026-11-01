@@ -9,13 +9,15 @@ import 'package:careerspeak_app/domain/installation_credentials.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('existing credentials bypass registration', () async {
+  test('existing token never skips fresh bootstrap issuance', () async {
     final store = _MemoryCredentialStore(
       installationId: InstallationId('installation-1'),
-      installationToken: InstallationToken('token-1'),
+      installationToken: InstallationToken('token-old'),
     );
     final gateway = _RegistrationGateway(
-      result: Success(InstallationToken('unused')),
+      results: <Result<InstallationToken>>[
+        Success(InstallationToken('token-fresh')),
+      ],
     );
     final service = InstallationBootstrapService(
       identityService: InstallationIdentityService(store),
@@ -25,8 +27,10 @@ void main() {
     final credentials = (await service.ensureCredentials()).getOrThrow();
 
     expect(credentials.installationId.value, 'installation-1');
-    expect(credentials.installationToken.value, 'token-1');
-    expect(gateway.calls, 0);
+    expect(credentials.installationToken.value, 'token-fresh');
+    expect(gateway.calls, 1);
+    expect(gateway.installationIds.single.value, 'installation-1');
+    expect((await store.readInstallationToken())?.value, 'token-fresh');
   });
 
   test('missing token registers once and persists returned token', () async {
@@ -34,7 +38,9 @@ void main() {
       installationId: InstallationId('installation-1'),
     );
     final gateway = _RegistrationGateway(
-      result: Success(InstallationToken('token-2')),
+      results: <Result<InstallationToken>>[
+        Success(InstallationToken('token-2')),
+      ],
     );
     final service = InstallationBootstrapService(
       identityService: InstallationIdentityService(store),
@@ -48,13 +54,16 @@ void main() {
     expect((await store.readInstallationToken())?.value, 'token-2');
   });
 
-  test('concurrent bootstrap callers share one registration', () async {
+  test('concurrent bootstrap callers share one fresh issuance', () async {
     final store = _MemoryCredentialStore(
       installationId: InstallationId('installation-1'),
+      installationToken: InstallationToken('token-old'),
     );
     final gate = Completer<void>();
     final gateway = _RegistrationGateway(
-      result: Success(InstallationToken('token-3')),
+      results: <Result<InstallationToken>>[
+        Success(InstallationToken('token-3')),
+      ],
       gate: gate,
     );
     final service = InstallationBootstrapService(
@@ -69,6 +78,65 @@ void main() {
     gate.complete();
     await Future.wait([first, second]);
     expect(gateway.calls, 1);
+    expect((await store.readInstallationToken())?.value, 'token-3');
+  });
+
+  test('later bootstrap rotates token while preserving installation id', () async {
+    final store = _MemoryCredentialStore(
+      installationId: InstallationId('installation-1'),
+      installationToken: InstallationToken('token-old'),
+    );
+    final gateway = _RegistrationGateway(
+      results: <Result<InstallationToken>>[
+        Success(InstallationToken('token-4')),
+        Success(InstallationToken('token-5')),
+      ],
+    );
+    final service = InstallationBootstrapService(
+      identityService: InstallationIdentityService(store),
+      registrationGateway: gateway,
+    );
+
+    final first = (await service.ensureCredentials()).getOrThrow();
+    final second = (await service.ensureCredentials()).getOrThrow();
+
+    expect(first.installationId.value, 'installation-1');
+    expect(second.installationId.value, 'installation-1');
+    expect(first.installationToken.value, 'token-4');
+    expect(second.installationToken.value, 'token-5');
+    expect(gateway.calls, 2);
+    expect(
+      gateway.installationIds.map((value) => value.value),
+      everyElement('installation-1'),
+    );
+    expect((await store.readInstallationToken())?.value, 'token-5');
+  });
+
+  test('failed fresh issuance preserves previously stored token', () async {
+    final store = _MemoryCredentialStore(
+      installationId: InstallationId('installation-1'),
+      installationToken: InstallationToken('token-old'),
+    );
+    final gateway = _RegistrationGateway(
+      results: const <Result<InstallationToken>>[
+        FailureResult<InstallationToken>(
+          ApplicationFailure(
+            code: 'OFFLINE',
+            message: 'offline',
+            retryable: true,
+          ),
+        ),
+      ],
+    );
+    final service = InstallationBootstrapService(
+      identityService: InstallationIdentityService(store),
+      registrationGateway: gateway,
+    );
+
+    final result = await service.ensureCredentials();
+
+    expect(result, isA<FailureResult<InstallationCredentials>>());
+    expect((await store.readInstallationToken())?.value, 'token-old');
   });
 }
 
@@ -107,16 +175,19 @@ final class _MemoryCredentialStore implements InstallationCredentialStore {
 }
 
 final class _RegistrationGateway implements InstallationRegistrationGateway {
-  _RegistrationGateway({required this.result, this.gate});
+  _RegistrationGateway({required this.results, this.gate});
 
-  final Result<InstallationToken> result;
+  final List<Result<InstallationToken>> results;
   final Completer<void>? gate;
+  final List<InstallationId> installationIds = <InstallationId>[];
   int calls = 0;
 
   @override
   Future<Result<InstallationToken>> register(
     InstallationId installationId,
   ) async {
+    installationIds.add(installationId);
+    final result = results[calls];
     calls += 1;
     if (gate != null) await gate!.future;
     return result;

@@ -1,38 +1,34 @@
 # CareerSpeak / VoxPrep — System Requirements
 
-**Document version:** 0.15  
+**Document version:** 0.17  
 **Status:** Normative MVP baseline  
 **Target:** Android + iOS learner app, Spring Boot backend, TTS Worker
 
 Normative documents:
 
 - [`CAREERSPEAK_PRODUCT_REQUIREMENTS.md`](CAREERSPEAK_PRODUCT_REQUIREMENTS.md)
+- [`CAREERSPEAK_MVP_DELIVERY_SCOPE.md`](CAREERSPEAK_MVP_DELIVERY_SCOPE.md)
+- [`CAREERSPEAK_MVP_FUNCTIONAL_BUSINESS_AUDIT_2026-11-01.md`](CAREERSPEAK_MVP_FUNCTIONAL_BUSINESS_AUDIT_2026-11-01.md)
 - [`CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md`](CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md)
+- [`CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md`](CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md)
 - [`CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md`](CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
-- [`CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md`](CAREERSPEAK_CONTENT_DELIVERY_RETENTION.md)
 - [`../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md`](../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md)
 - [`../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md`](../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md)
 - [`../backend/CAREERSPEAK_BACKEND_TTS_REQUIREMENTS.md`](../backend/CAREERSPEAK_BACKEND_TTS_REQUIREMENTS.md)
 
 ---
 
-## 1. Product
+## 1. Product/system boundary
 
-CareerSpeak is an offline-first English practice application focused on:
+CareerSpeak is an offline-first English practice application for international job interviews, professional/technical English and supported learning directions such as IELTS.
 
-```text
-international job interviews
-professional / technical English
-IELTS as a separate goal
-```
-
-Primary learning loop:
+Primary loop:
 
 ```text
 READ → LISTEN → REPEAT → TEST → REVIEW
 ```
 
-MVP is deliberately simple: no mandatory learner account, no runtime AI, no recommendation service, no server learner profile and no complex curriculum/workflow engine.
+MVP deliberately excludes mandatory learner accounts, runtime AI, recommendation services, server learner profiles and curriculum/workflow engines.
 
 ---
 
@@ -48,22 +44,22 @@ TTS WORKER
 
 ### ADMIN
 
-One fixed secured account for Content Studio operations.
+One secured Content Studio account is sufficient for v1.
 
 ### FLUTTER INSTALLATION
 
 ```text
 random installationId
-→ backend registration
-→ backend-issued installation token
+→ Backend registration/re-registration
+→ installationToken
 → Secure Storage
 ```
 
-Learner progress/preferences remain local in MVP.
+Learner preferences/progress remain device-local.
 
 ### TTS WORKER
 
-Server-managed process/container using a dedicated machine token.
+Server-managed process/container with a dedicated worker token. It does not receive direct PostgreSQL or RustFS credentials.
 
 ---
 
@@ -72,6 +68,7 @@ Server-managed process/container using a dedicated machine token.
 Backend owns mutable product truth:
 
 ```text
+Vertical
 LearningGoal
 LearningTrack
 LearningCollection
@@ -79,69 +76,62 @@ Category
 Level
 Skill
 SupportedLocale
-TtsVoice learner-facing catalogue
-published content/test revisions
+TtsVoice learner catalogue
+published Content revisions
+published PracticeTest revisions
+asset/audio descriptors
 ```
 
-Minimal learner hierarchy:
+Only learner hierarchy:
 
 ```text
+Vertical
+ ↓
 LearningGoal
-    ↓
+ ↓
 LearningTrack
-    ↓
+ ↓
 LearningCollection
-    ↓
-Content / PracticeTest
+ ↓
+exact ContentRevision / PracticeTestRevision members
 ```
 
-Important distinction:
-
-```text
-CareerTrack = professional taxonomy
-LearningTrack = learning path
-```
-
-No backend `LearningActivity` aggregate is required in MVP.
+`CareerTrack != LearningTrack != Vertical`.
 
 Flutter owns local learner state:
 
 ```text
-selected goal/track
-self-assessed level
+selected Goal/Track
+self-assessed Level
 locale/accent/voice preference
-favorites
-listened/completed markers
+FAVORITE/LISTENED/COMPLETED
 review schedule
-test history
+PracticeTest active attempt/completion/history
 playback progress
 ```
+
+Current Vertical derives from selected Goal and CURRENT catalogue. Invalid learner selection fails closed; Flutter never auto-selects a sibling Goal/Track or another Vertical.
 
 ---
 
 ## 4. Backend architecture
 
-One Spring Boot modular monolith.
+CareerSpeak v1 uses one Spring Boot modular monolith.
 
-Suggested logical modules:
+Minimum target modules:
 
 ```text
-admin
-assessment
-catalog
-learning
 installation
-interview
-localization
-manifest
-media
-profession
+catalogue
 publication
-security
-topic
+content
+assessment
+localization
+asset
 tts
-vocabulary
 ```
+
+Additional internal packages may exist where they support concrete use cases, but they do not create separate deployable domain services.
 
 Baseline:
 
@@ -157,11 +147,11 @@ Testcontainers
 Docker
 ```
 
-Use native SQL only where useful, notably TTS claim/lease concurrency.
+Use native SQL where it materially helps, notably TTS claim/lease concurrency.
 
-Do not mirror Flutter DTOs directly into JPA entities.
+Backend JPA entities are derived from backend invariants, not mirrored from Flutter DTOs.
 
-Spring Boot is the sole remote network boundary for Flutter and TTS Worker. RustFS is Backend-internal storage and is accessed only by Backend storage adapters.
+Spring Boot is the sole remote learner/worker network boundary. RustFS is private Backend infrastructure accessed through Backend storage adapters.
 
 ---
 
@@ -179,7 +169,7 @@ HTTP abstraction
 audio abstraction
 ```
 
-Core services:
+Core application/infrastructure boundaries include:
 
 ```text
 ContentSyncCoordinator
@@ -188,10 +178,10 @@ AssetResolver
 AudioPlaybackController
 ReviewScheduler
 StorageRetentionManager
-LearnerContentStateRepository
+learner-state repositories
 ```
 
-Widgets do not issue raw HTTP/SQL calls.
+Production Flutter has no runtime demo/mock catalogue switch and no direct object-storage credential path.
 
 ---
 
@@ -199,70 +189,64 @@ Widgets do not issue raw HTTP/SQL calls.
 
 ### Onboarding
 
-Three-step, skippable, restart-safe:
+Exactly three decisions:
 
 ```text
-1. LearningGoal
-2. approximate level / Not sure
+1. Vertical + LearningGoal
+2. B1 / B2 / C1 / Not sure
 3. support language
 ```
 
-### Home
+Skippable, restart-safe, account-free and CURRENT-validated. Skip does not invent a learning direction.
 
-Priority:
+### Invalid selection
+
+```text
+inactive/missing Track → clear Track; preserve active Goal
+inactive/missing Goal  → clear Goal + Track; Choose learning direction
+inactive/missing Vertical → its Goal invalid; same Goal rule
+```
+
+No sibling auto-fallback.
+
+### Home
 
 ```text
 Continue
-Current goal/track
+Current Vertical / Goal / Track
 Review due
-Browse current track/collections
+Browse current track/collections or Choose learning direction
 Secondary statistics
 ```
 
-No recommendation engine is required. Editorial sort order + local progress is enough.
+### Continue Learning
+
+```text
+active PracticeTest
+→ unfinished last-opened Content
+→ next incomplete Collection member
+→ next eligible Collection
+→ current Track/Vertical browse
+→ Choose learning direction
+```
+
+Every target is revalidated against CURRENT.
 
 ### Learn
 
 ```text
-Current track
+Current Vertical / Goal / Track
+Verticals
 Collections
 Categories
 Browse / Search
 ```
 
-### Copy
-
-Learner UI must not expose implementation language such as repository, adapter, persistence, DTO, manifest, Drift or RustFS.
-
 ---
 
-## 7. Material Design 3 and adaptive UI
+## 7. Content lifecycle and exact revisions
 
-One design system only:
-
-```text
-Material Design 3
-→ CareerSpeak theme/tokens
-→ small reusable component set
-→ adaptive feature UI
-```
-
-Width classes:
-
-```text
-COMPACT   < 600
-MEDIUM    600–839
-EXPANDED  840–1199
-LARGE     >= 1200
-```
-
-State survives resize; presentation changes do not fork business logic.
-
----
-
-## 8. Backend content lifecycle
-
-Revision lifecycle:
+Backend revision lifecycle:
 
 ```text
 DRAFT
@@ -279,36 +263,34 @@ ACTIVE
 INACTIVE
 ```
 
-Learner-deliverable:
+Learner-deliverable = `PUBLISHED + ACTIVE`.
 
-```text
-PUBLISHED + ACTIVE
-```
-
-Published revisions are immutable.
+Published revisions are immutable. Collection members, PracticeTest attempts and completion/history use exact revision identity.
 
 ---
 
-## 9. Flutter lifecycle vocabulary
+## 8. Flutter lifecycle vocabulary
 
 ```text
 Backend ACTIVE
-= backend permits delivery
+= backend permits learner delivery
 
 Flutter CURRENT
-= current local metadata snapshot
+= one selected coherent local publication
 
 Flutter READY
-= verified offline binary bundle
+= verified local binary asset/bundle ready for offline use
 ```
 
-These state machines remain separate.
+These state concepts remain separate.
 
 ---
 
-## 10. Content contract
+## 9. Content and assessment contracts
 
-Use a shared envelope plus typed bodies for real learner content:
+Use typed content bodies rather than one generic EAV/unversioned domain JSON model.
+
+Representative content bodies:
 
 ```text
 VocabularyBody
@@ -318,44 +300,47 @@ PhraseBody
 ShadowingBody
 ```
 
-Do not use one generic EAV content table or arbitrary unversioned JSON domain model.
-
-Assessment uses exact immutable test/question revisions.
+Assessment references exact immutable PracticeTest/question revisions. An active attempt is restart-safe and submitted completion is exact-revision aware.
 
 ---
 
-## 11. Manifest and publication
+## 10. Atomic publication — C4
 
-Backend publishes one locale-independent root:
+Backend exposes one immutable publication identity/root. It references the exact mutable catalogue snapshot and exact immutable payload/checksum set required by the learner app.
+
+Consistency boundary:
 
 ```text
-contentVersion
+Vertical
+Goal
+Track
+Collection
+Content revisions
+PracticeTest revisions
+Localization
+Assets/audio references
 ```
 
-Root references exact pack variants/revisions/checksums.
-
-Variants:
+Publication flow:
 
 ```text
-canonical
-locale:<BCP-47>
-```
-
-Publication is atomic:
-
-```text
-validate
+validate complete candidate
 → materialize exact refs/checksums
-→ allocate never-reused contentVersion
+→ allocate never-reused publication/content version
 → persist immutable root
-→ switch current root atomically
+→ atomically activate CURRENT
 ```
 
-A failed publication exposes only the previous valid root.
+Required semantics:
+
+- readers never observe mixed publication versions;
+- failed/incomplete/corrupt publication exposes only previous valid CURRENT;
+- restart preserves/reconstructs the last valid activation deterministically;
+- exact revision/checksum identity is reproducible.
 
 ---
 
-## 12. Localization
+## 11. Localization
 
 ```text
 learningLanguage = en
@@ -364,48 +349,44 @@ translationLocale
 preferredAccent / preferredVoiceCode where applicable
 ```
 
-Backend owns `SupportedLocale` and content translations/hints/explanations.
+Backend owns SupportedLocale and localized learner payloads. Flutter owns UI ARB strings and selected locale codes.
 
-Flutter owns UI ARB strings and selected locale codes.
-
-Runtime locale contracts accept arbitrary supported BCP-47 identifiers.
-
-Root identity is locale-independent; locale changes only the downloaded support delta.
+Publication/root identity is locale-independent; missing optional translation/hint/explanation does not invalidate canonical English content.
 
 ---
 
-## 13. Audio / media
+## 12. Learner media / RustFS
 
-RustFS stores binary objects behind Backend; PostgreSQL stores metadata.
+RustFS stores private binary objects behind Backend; PostgreSQL stores metadata.
 
-Published media identity:
+Published asset identity includes stable asset identity plus integrity metadata such as SHA-256 and size.
 
-```text
-assetId
-checksumSha256
-deliveryKey
-```
-
-Learner media path:
+CareerSpeak v1 has one Flutter-facing learner media contract:
 
 ```text
-Flutter
-→ GET /api/v1/media/assets/{assetId}/content
-→ Spring Boot validates installation + publication eligibility
-→ Backend resolves FileAsset/deliveryKey
-→ Backend reads RustFS
-→ Backend streams bytes
-→ Flutter verifies size + SHA-256
-→ managed local file
+Flutter installation token
+→ authenticated Backend learner media API
+→ Backend-controlled byte delivery
+→ Flutter size/checksum verification
+→ verified local asset
 ```
 
-Flutter MUST NOT receive RustFS/S3/CDN credentials, storage URLs, signed/presigned URLs, buckets or object paths, and MUST NOT use `deliveryKey` as a remote network locator.
+Non-negotiable invariants:
 
-Backend MUST NOT redirect learner media to object storage.
+```text
+Flutter never receives RustFS/object-storage credentials
+Flutter never treats deliveryKey as a remote locator
+Backend controls learner media authorization
+verified local files remain usable offline
+```
+
+A Backend-issued direct/signed object-storage grant is not a v1 contract. Introducing it later requires a separately versioned contract and security/acceptance update.
+
+A user-managed Downloads dashboard is not an MVP release gate; offline verified asset availability is.
 
 ---
 
-## 14. TTS
+## 13. TTS
 
 Logical concepts:
 
@@ -427,21 +408,13 @@ claim through Backend
 → Backend upload/finalization
 ```
 
-Queue:
-
-```sql
-FOR UPDATE SKIP LOCKED
-```
-
-with lease token, expiry, heartbeat, bounded retry and stale-result rejection.
-
-Worker never receives direct PostgreSQL or RustFS credentials and never addresses RustFS directly.
+Queue uses PostgreSQL `FOR UPDATE SKIP LOCKED` with lease token, expiry, heartbeat, bounded retry and stale-result rejection.
 
 ---
 
-## 15. Review semantics
+## 14. Review semantics
 
-Local deterministic review state:
+Local deterministic state:
 
 ```text
 nextReviewAt
@@ -456,31 +429,29 @@ Due = nextReviewAt <= now
 Due != !Completed
 ```
 
-No ML/AI scheduler is needed.
+Outcome scheduling is local/deterministic/restart-safe. No AI/ML/FSRS requirement in v1.
 
 ---
 
-## 16. Offline and retention
+## 15. Offline / retention
 
 Drift separates:
 
 ```text
 sync/system state
-versioned content/cache
+versioned product/content projections
 local learner preferences/progress
 ```
 
-Disposable storage uses:
+Disposable cache/media may be evicted under bounded retention/quota policies, but learner preferences, markers, review and PracticeTest state are never removed by cache cleanup.
 
-```text
-TTL + LRU + quota + pin/download protection + reference-safe deletion
-```
-
-Eviction never erases learner progress/preferences/review state.
+Standalone Favorites and Downloads application areas are post-MVP convenience surfaces, not system release gates.
 
 ---
 
-## 17. Security zones
+## 16. Installation security — C5
+
+Security zones:
 
 ```text
 /admin/**           → ADMIN session
@@ -489,69 +460,96 @@ Eviction never erases learner progress/preferences/review state.
 Backend storage     → private RustFS credentials
 ```
 
-Installation-token lifecycle must define re-registration, rejection/revocation and one bounded credential recovery attempt.
-
----
-
-## 18. Failure isolation
+Normative learner identity flow:
 
 ```text
-Backend down               → existing local learning continues
-TTS Worker down            → jobs wait; published content unaffected
-Backend media/storage down → verified local assets continue
-sync crash                 → last CURRENT snapshot remains
-worker crash               → lease expires/reclaim
+installationId
+→ idempotent registration/re-registration
+→ installationToken
+→ authorized learner API
 ```
 
-Storage-specific failures are translated by Backend and never require Flutter/Worker to contact RustFS directly.
+Bounded credential recovery:
+
+```text
+401
+→ invalidate rejected token only
+→ preserve installationId + learner state
+→ re-register once
+→ retry safe request once where permitted
+→ fail closed on repeated rejection
+```
+
+No mandatory learner account.
 
 ---
 
-## 19. Explicit non-goals
+## 17. Failure isolation
 
-Do not introduce in MVP without measured need:
+```text
+Backend down               → valid local learning continues
+TTS Worker down            → jobs wait; published content unaffected
+Backend media/storage down → verified local assets continue
+sync/publication crash     → previous CURRENT remains valid
+worker crash               → lease expires/reclaim
+401 repeated after recovery → fail closed without deleting learner state
+```
+
+---
+
+## 18. Explicit non-goals
+
+Do not introduce in v1 without a new versioned requirement:
 
 ```text
 microservices
-Kafka/RabbitMQ
-Redis
+Kafka/RabbitMQ for learner flows
+Redis architectural dependency
 Keycloak
 API Gateway
 server learner profile
+mandatory learner account
 LearningActivity aggregate
 curriculum workflow engine
 recommendation service
 AI personalization
 remote UI schema
-social/leaderboards
-complex gamification
+generic EAV content model
+social/leaderboards/complex gamification
+advanced SRS/FSRS/SM-2
+runtime STT/pronunciation scoring
+standalone Favorites feature stream
+user-managed Downloads feature stream
 ```
 
 ---
 
-## 20. P0 acceptance
+## 19. Remaining delivery gates
 
-Before backend content/schema freeze, accept:
+The system contract is sufficient for this Flutter/BA branch. Full MVP production acceptance still requires:
 
 ```text
-Product Requirements
-Goal → Track → Collection → Content/Test ownership
-CareerTrack != LearningTrack
-three-step onboarding ownership
-real Due semantics
-typed content bodies
-assessment production contract
-locale-independent root
-localized payload delivery
-Category/Level/Skill/SupportedLocale/TtsVoice ownership
-atomic publication snapshot
-installation-token recovery
-Backend-only learner media delivery
-Backend-only Worker model/output delivery
-Drift ERD
-learner + worker OpenAPI
-TTS lease/recovery
-failure/recovery scenarios
+C4 Atomic Publication
+ ↓
+C5 Installation / Security
+ ↓
+B1 Backend schema + modular-monolith implementation
+ ↓
+A1 real Backend ↔ Flutter acceptance
 ```
 
-This is the authoritative MVP system baseline. Prefer the smallest design that satisfies these requirements.
+A1 must prove:
+
+```text
+Backend publication
+→ HTTP API
+→ Flutter sync
+→ Drift CURRENT
+→ content/audio/PracticeTest/Review
+→ offline
+→ restart
+```
+
+with stale/corrupt/replay/interruption/exact-revision adversarial cases.
+
+This is the authoritative v1 system baseline. Prefer the smallest design that satisfies these requirements.

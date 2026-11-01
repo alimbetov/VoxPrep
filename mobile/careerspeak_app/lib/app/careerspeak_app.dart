@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../domain/application_preferences.dart';
 import 'app_preferences_providers.dart';
-import 'mock_visual_preferences.dart';
+import 'bootstrap_status_frame.dart';
 import 'router.dart';
 import 'theme/careerspeak_theme.dart';
 
@@ -16,7 +16,6 @@ class CareerSpeakApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(themeModeProvider);
-    final visualPreferences = ref.watch(mockVisualPreferencesProvider);
     final preferences =
         ref.watch(applicationPreferencesProvider).asData?.value ??
         ApplicationPreferences.defaults;
@@ -38,26 +37,10 @@ class CareerSpeakApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      builder: (context, child) => BootstrapStatusFrame(
+        child: child ?? const SizedBox.shrink(),
+      ),
       routerConfig: router,
-      builder: (context, child) {
-        final mediaQuery = MediaQuery.of(context);
-        final scaledMediaQuery = mediaQuery.copyWith(
-          textScaler: TextScaler.linear(visualPreferences.textScale.factor),
-          disableAnimations:
-              mediaQuery.disableAnimations ||
-              visualPreferences.reducedMotionPreview,
-        );
-        final rtl =
-            visualPreferences.rtlPreview || preferences.selectedLocale.isRtl;
-
-        return MediaQuery(
-          data: scaledMediaQuery,
-          child: Directionality(
-            textDirection: rtl ? TextDirection.rtl : TextDirection.ltr,
-            child: child ?? const SizedBox.shrink(),
-          ),
-        );
-      },
     );
   }
 }

@@ -22,6 +22,17 @@ JOIN content_pack_revisions p
   ON p.pack_code = pa.pack_code AND p.variant_key = pa.variant_key
   AND p.revision = pa.pack_revision AND p.state = 'CURRENT'
 WHERE a.asset_id = ?
+  AND (
+    NOT EXISTS (
+      SELECT 1 FROM content_manifest_states legacy_guard WHERE legacy_guard.id = 1
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM content_manifest_states root
+      WHERE root.id = 1
+        AND p.source_content_version = root.current_content_version
+    )
+  )
 GROUP BY a.asset_id
 ''',
       <Variable<Object>>[Variable<String>(assetId)],
@@ -54,6 +65,17 @@ JOIN pack_asset_refs pa
   AND pa.pack_revision = p.revision AND pa.asset_id = a.asset_id
 WHERE ca.content_code = ? AND ca.content_type = ?
   AND ca.content_revision = ? AND ca.asset_role = ? AND p.variant_key = ?
+  AND (
+    NOT EXISTS (
+      SELECT 1 FROM content_manifest_states legacy_guard WHERE legacy_guard.id = 1
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM content_manifest_states root
+      WHERE root.id = 1
+        AND p.source_content_version = root.current_content_version
+    )
+  )
 GROUP BY a.asset_id
 LIMIT 2
 ''',

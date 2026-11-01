@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/app_preferences_providers.dart';
-import '../../app/mock_visual_preferences.dart';
 import '../../domain/application_preferences.dart';
-import 'catalogue_source_settings_tile.dart';
 import 'locale_selection_panel.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -17,21 +15,12 @@ class SettingsScreen extends ConsumerWidget {
         preferencesAsync.asData?.value ?? ApplicationPreferences.defaults;
     final preferencesReady = preferencesAsync.asData != null;
     final preferencesController = ref.read(appPreferencesControllerProvider);
-    final visual = ref.watch(mockVisualPreferencesProvider);
-    final visualController = ref.read(mockVisualPreferencesProvider.notifier);
 
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
         Text('Settings', style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 24),
-        Text(
-          'Catalogue source',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 8),
-        const CatalogueSourceSettingsTile(),
-        const SizedBox(height: 28),
         Text('Appearance', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 12),
         Wrap(
@@ -103,52 +92,6 @@ class SettingsScreen extends ConsumerWidget {
           ),
         ],
         const SizedBox(height: 28),
-        Text(
-          'Accessibility preview',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
-        const SizedBox(height: 8),
-        Text('Text scale', style: Theme.of(context).textTheme.labelLarge),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            for (final value in MockTextScalePreview.values)
-              ChoiceChip(
-                label: Text(value.label),
-                selected: visual.textScale == value,
-                onSelected: (_) => visualController.setTextScale(value),
-              ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Text scale, RTL and reduced-motion controls are structural qualification previews; they are not persisted product preferences.',
-          style: Theme.of(context).textTheme.bodySmall,
-        ),
-        const SizedBox(height: 8),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          secondary: const Icon(Icons.format_textdirection_r_to_l),
-          title: const Text('RTL layout preview'),
-          subtitle: const Text(
-            'Flip the application shell while canonical English learning text stays LTR.',
-          ),
-          value: visual.rtlPreview,
-          onChanged: visualController.setRtlPreview,
-        ),
-        SwitchListTile(
-          contentPadding: EdgeInsets.zero,
-          secondary: const Icon(Icons.motion_photos_off_outlined),
-          title: const Text('Reduced motion preview'),
-          subtitle: const Text(
-            'Disable non-essential route, card and marker transitions.',
-          ),
-          value: visual.reducedMotionPreview,
-          onChanged: visualController.setReducedMotionPreview,
-        ),
-        const SizedBox(height: 20),
         Card(
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -168,15 +111,19 @@ class SettingsScreen extends ConsumerWidget {
                   'Accent: ${preferences.preferredAccent?.label ?? 'Default'}',
                 ),
                 Text('Theme: ${preferences.theme.code}'),
-                Text('Text scale preview: ${visual.textScale.label}'),
-                Text(
-                  'Reduced motion preview: ${visual.reducedMotionPreview ? 'On' : 'Off'}',
-                ),
               ],
             ),
           ),
         ),
         const SizedBox(height: 20),
+        const ListTile(
+          contentPadding: EdgeInsets.zero,
+          leading: Icon(Icons.accessibility_new_outlined),
+          title: Text('Accessibility'),
+          subtitle: Text(
+            'Text scale, layout direction and reduced-motion preferences follow system settings.',
+          ),
+        ),
         const ListTile(
           contentPadding: EdgeInsets.zero,
           leading: Icon(Icons.storage_outlined),

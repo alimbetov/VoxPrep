@@ -1,16 +1,21 @@
 # CareerSpeak — Flutter Mobile Application Requirements
 
-**Document version:** 2.4  
+**Document version:** 2.6  
 **Status:** Normative MVP mobile baseline  
 **Applies to:** CareerSpeak v1  
 **Target platforms:** Android, iOS
 
-Normative parent:
+Normative parents:
 
 - [`CAREERSPEAK_PRODUCT_REQUIREMENTS.md`](CAREERSPEAK_PRODUCT_REQUIREMENTS.md)
+- [`CAREERSPEAK_MVP_DELIVERY_SCOPE.md`](CAREERSPEAK_MVP_DELIVERY_SCOPE.md)
+- [`CAREERSPEAK_MVP_FUNCTIONAL_BUSINESS_AUDIT_2026-11-01.md`](CAREERSPEAK_MVP_FUNCTIONAL_BUSINESS_AUDIT_2026-11-01.md)
 
 Related contracts:
 
+- [`CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md`](CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md)
+- [`CAREERSPEAK_CONTINUE_LEARNING_PRODUCT_CONTRACT.md`](CAREERSPEAK_CONTINUE_LEARNING_PRODUCT_CONTRACT.md)
+- [`CAREERSPEAK_REVIEW_POLICY.md`](CAREERSPEAK_REVIEW_POLICY.md)
 - [`../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md`](../architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md)
 - [`../mobile/CAREERSPEAK_DRIFT_ERD.md`](../mobile/CAREERSPEAK_DRIFT_ERD.md)
 - [`../mobile/CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md`](../mobile/CAREERSPEAK_CONTENT_SYNC_COORDINATOR.md)
@@ -27,63 +32,38 @@ Flutter owns:
 
 ```text
 3-step onboarding
-selected goal/track/level preferences
+selected Goal/Track/Level preferences
 browse/search local synced content
 read/listen/repeat/shadow
-tests
-local progress/favorites/review
-manifest synchronization
-offline downloads
+PracticeTest lifecycle
+local progress/FAVORITE/LISTENED/COMPLETED markers
+review scheduling
+manifest/publication synchronization
+offline verified asset use
 storage retention
 locale/theme preferences
 adaptive Material 3 UI
 ```
 
-Flutter does not own backend product/catalog truth or object-storage access.
+Flutter does **not** own backend product/catalog truth, object-storage credentials, a server learner profile or runtime recommendation logic.
 
-Backend-owned product structure:
+Backend-owned hierarchy:
 
 ```text
+Vertical
+ ↓
 LearningGoal
+ ↓
 LearningTrack
+ ↓
 LearningCollection
-Category
-Level
-Skill
-SupportedLocale
-TtsVoice catalogue
-Content / PracticeTest definitions
+ ↓
+exact ContentRevision / PracticeTestRevision members
 ```
 
 ---
 
-## 2. Product hierarchy
-
-Minimal hierarchy:
-
-```text
-LearningGoal
-    ↓
-LearningTrack
-    ↓
-LearningCollection
-    ↓
-Content / PracticeTest
-```
-
-No mobile/backend `LearningActivity` entity is required.
-
-The learning loop remains:
-
-```text
-READ → LISTEN → REPEAT → TEST → REVIEW
-```
-
-Flutter derives the available actions from content/test capabilities and local learner state.
-
----
-
-## 3. Technology
+## 2. Technology and boundaries
 
 ```text
 Flutter stable
@@ -98,42 +78,46 @@ Backend HTTP abstraction
 audio abstraction
 ```
 
-Widgets do not issue raw HTTP/SQL calls. Production Flutter has no RustFS/S3/CDN client adapter.
+Widgets do not issue raw HTTP/SQL calls. Production Flutter has no direct RustFS/object-storage credential boundary.
+
+Mocks/demo catalogues are test fixtures only. Production catalogue truth flows from Backend HTTP through synchronized local CURRENT projections.
 
 ---
 
-## 4. Navigation
+## 3. Navigation
 
-Primary routes include:
+Conceptual primary routes:
 
 ```text
 /onboarding
 /
+/catalogue
+/catalogue/vertical/:verticalCode
+/catalogue/vertical/:verticalCode/goal/:goalCode
+/catalogue/vertical/:verticalCode/goal/:goalCode/track/:trackCode
+/catalogue/vertical/:verticalCode/goal/:goalCode/track/:trackCode/collection/:collectionCode
 /learn
-/goals/:code
-/tracks/:code
-/collections/:code
 /tests/:code
 /review
-/favorites
-/downloads
 /settings
 ```
 
-Technical content routes may remain for direct navigation.
+A standalone `/favorites` or `/downloads` route is optional post-MVP convenience and is not a release gate.
 
-Resize/process recreation should preserve meaningful route/state.
+Hierarchy routes MUST validate full parent ownership. Wrong-parent Goal/Track/Collection navigation fails closed.
+
+Resize/process recreation preserves meaningful durable state.
 
 ---
 
-## 5. Onboarding
+## 4. Onboarding and selection
 
-MVP onboarding asks only:
+MVP onboarding consists of exactly three decisions:
 
 ```text
-1. LearningGoal
-2. approximate level / Not sure
-3. support language
+1. Learning direction        → Vertical + LearningGoal
+2. approximate English level → B1 / B2 / C1 / Not sure
+3. support language          → Backend-published SupportedLocale
 ```
 
 Requirements:
@@ -142,53 +126,92 @@ Requirements:
 skippable
 account-free
 restart-safe
-uses backend-published catalogue values
-skip uses deterministic defaults
-never blocks normal browsing
+CURRENT-catalogue validated
+skip preserves explicit decisions
+skip never fabricates Vertical/Goal
+browsing is never blocked by skip
 ```
 
-Accent/voice and download choices remain in Settings/Download flows.
+Flutter persists:
+
+```text
+selectedGoalCode?
+selectedTrackCode?
+selfAssessedLevelCode?
+```
+
+Flutter MUST NOT persist `selectedVerticalCode` as a competing source of truth. Current Vertical derives from `selectedGoalCode → CURRENT Goal.verticalCode`.
+
+Invalid selection is fail-closed:
+
+```text
+Track inactive/missing
+→ clear Track, preserve active Goal
+
+Goal inactive/missing
+→ clear Goal + Track
+→ current Vertical unset
+→ Choose learning direction
+
+Vertical inactive/missing
+→ selected Goal invalid
+→ same Goal rule
+```
+
+Flutter MUST NOT choose the first active sibling Track/Goal automatically.
+
+Onboarding progress is persisted after each explicit decision and resumes at the next incomplete step after restart.
 
 ---
 
-## 6. Home
+## 5. Home / Continue Learning
 
-Priority:
+Decision priority:
 
 ```text
-Continue current/last item
-Current goal/track
+1. active resumable PracticeTest attempt
+2. unfinished last-opened Content
+3. next incomplete current-Collection member
+4. next eligible current-Track Collection
+5. current Track / current Vertical browse entry
+6. Choose learning direction
+```
+
+Candidates are revalidated against CURRENT before navigation. Stale, tombstoned, inactive, dangling or revision-mismatched candidates are skipped, not repaired by guessing.
+
+Home presentation priority:
+
+```text
+Continue
+Current Vertical / Goal / Track
 Review due
-Browse current track/collections
+Browse current track/collections or Choose learning direction
 Secondary statistics
 ```
 
 No recommendation engine is required.
 
-`Recommended` may only mean deterministic editorial order or local continuation logic.
-
 ---
 
-## 7. Learn
+## 6. Learn / discovery
 
 MVP discovery:
 
 ```text
-Current track
+Current Vertical / Goal / Track
+Verticals
 Collections
 Categories
 Browse / Search
 ```
 
-Search and learner-state filters remain available.
-
-Do not make technical content types the only navigation model.
+Search/filters operate on synchronized local data. Search defaults to current Vertical when a current direction exists; cross-Vertical expansion must be explicit.
 
 ---
 
-## 8. Material Design 3 / adaptive UI
+## 7. Material Design 3 / adaptive UI
 
-One design system only:
+One design system:
 
 ```text
 Material Design 3
@@ -206,11 +229,11 @@ EXPANDED  840–1199
 LARGE     >= 1200
 ```
 
-Keep custom components small and evidence-driven. No second visual framework.
+Presentation changes do not fork business state/logic.
 
 ---
 
-## 9. Learner-facing copy
+## 8. Learner-facing copy
 
 Production UI does not expose:
 
@@ -225,13 +248,11 @@ Drift
 RustFS
 ```
 
-Raw HTTP/database/storage exceptions are not shown directly.
-
-Empty/error states should state the problem and a safe next action where possible.
+Raw HTTP/database/storage exceptions are never shown directly. Error/empty states provide a learner-safe problem statement and next action where possible.
 
 ---
 
-## 10. Installation identity
+## 9. Installation identity
 
 ```text
 random installationId
@@ -242,58 +263,70 @@ random installationId
 
 No learner account.
 
-Credential-specific `401` recovery:
+Credential-specific recovery is bounded:
 
 ```text
-clear rejected token only
+401
+→ clear rejected token only
 → preserve installationId + learner state
 → re-register once
 → retry safe request once where policy permits
 → fail closed if rejected again
 ```
 
-The same installation credential boundary protects JSON API and Backend media API.
+The installation credential protects JSON and learner media APIs.
 
 ---
 
-## 11. Offline-first startup
+## 10. Offline-first startup
 
 ```text
 open Drift/filesystem
-→ load local settings/goal/track
+→ load local settings/Goal/Track
 → load secure credential
-→ load CURRENT metadata
-→ load learner progress/review
-→ render usable UI
-→ recover interrupted work
-→ check backend when available
+→ load last-known-good CURRENT publication
+→ validate Goal/Track/Vertical hierarchy
+→ load learner progress/review/active test
+→ render usable local UI
+→ recover interrupted local work
+→ check Backend when available
 ```
 
 Network is not required to use valid cached learning content.
 
+If no usable CURRENT publication exists and Backend is unavailable, show a recoverable connectivity state and never invent catalogue options.
+
 ---
 
-## 12. Synchronization
+## 11. Atomic synchronization
 
-High-level flow:
+High-level C4 target:
 
 ```text
 CHECK LOCAL
 → CHECK REMOTE
 → PLAN
-→ STAGE
-→ VERIFY
-→ ATOMIC CURRENT SWITCH
+→ STAGE COMPLETE CANDIDATE
+→ VERIFY refs/revisions/checksums
+→ ATOMIC CURRENT ACTIVATION
 → CLEAN
 ```
 
-A failed update never replaces the last-known-good CURRENT snapshot.
+The consistency boundary includes:
 
-Backend-owned catalogues are synchronized as local projections.
+```text
+Vertical / Goal / Track / Collection
+Content revisions
+PracticeTest revisions
+Localization
+Assets/audio references
+```
+
+Readers MUST NOT observe mixed CURRENT publications. A failed/incomplete candidate leaves last-known-good CURRENT active across restart.
 
 ---
 
-## 13. Localization
+## 12. Localization
 
 ```text
 learningLanguage = en
@@ -302,64 +335,69 @@ translationLocale
 preferredAccent / preferredVoiceCode where applicable
 ```
 
-UI strings are Flutter ARB/gen-l10n.
+UI strings are Flutter ARB/gen-l10n. Content translations/hints/explanations come from Backend locale payloads. Root identity is locale-independent.
 
-Content translations/hints/explanations come from backend locale payloads.
-
-Root identity is locale-independent.
+Missing optional hint/translation/explanation does not block canonical English content.
 
 ---
 
-## 14. Local persistence
+## 13. Local persistence
 
 Drift separates:
 
 ```text
-SYSTEM/SYNC
-PRODUCT CONTENT/CACHE
+SYSTEM / SYNC
+PRODUCT CONTENT / CACHE
 LOCAL LEARNER STATE
 ```
 
-Local learner state includes:
+Learner state includes:
 
 ```text
-selected goal/track/level
-favorites
-LISTENED / COMPLETED
+onboarding progress
+selected Goal/Track/Level
+FAVORITE / LISTENED / COMPLETED
 review schedule
-test history
+active PracticeTest + completion/history
 playback progress
 ```
 
-Cache cleanup never erases learner state.
+Current Vertical is derived, not persisted as a competing preference. Cache cleanup never erases learner state.
 
 ---
 
-## 15. Download / assets
+## 14. Assets / offline media
 
-`DownloadManager` owns bounded download, retry, temp file, size/checksum verification and atomic final placement.
+`DownloadManager` owns bounded download, retry, temp-file handling, size/checksum verification and atomic final placement.
 
-`AssetResolver` returns verified local assets to playback/feature code.
+`AssetResolver` returns verified local assets to feature/playback code.
 
-Remote asset path is fixed:
+CareerSpeak v1 learner media path is fixed:
 
 ```text
-assetId
-→ authenticated GET /api/v1/media/assets/{assetId}/content
-→ Backend binary stream
-→ size/SHA-256 verification
-→ managed local file
+Flutter installation token
+→ authenticated Backend media API
+→ Backend-controlled byte delivery
+→ Flutter size/SHA-256 verification
+→ verified local file
 ```
 
-Flutter MUST NOT receive or construct RustFS/S3/CDN URLs, signed/presigned URLs, bucket names, storage credentials or object paths. `deliveryKey` is metadata only and MUST NOT be used as a network locator.
+Invariants:
 
-Backend redirects to object storage MUST be rejected.
+```text
+Flutter receives no storage credentials
+Flutter never uses deliveryKey as a remote locator
+Backend controls learner authorization
+verified local assets remain usable offline
+```
 
-Metadata sync does not automatically download all optional media.
+Metadata sync does not imply downloading every optional media asset.
+
+A dedicated Downloads dashboard or collection-download library is deferred post-MVP. Offline readiness remains mandatory without that UI.
 
 ---
 
-## 16. Audio
+## 15. Audio
 
 Shared playback supports:
 
@@ -372,13 +410,11 @@ segment repeat when segment metadata exists
 qualified completion
 ```
 
-UI does not persist `LISTENED` directly; application logic does.
-
-No STT/pronunciation scoring in MVP.
+UI does not persist LISTENED directly; application logic does. No runtime STT/pronunciation scoring in MVP.
 
 ---
 
-## 17. Learner markers
+## 16. Learner markers
 
 Independent durable states:
 
@@ -397,44 +433,28 @@ Completed does not erase test/review history
 markers survive cache/media eviction
 ```
 
+MVP requires favorite state/feedback/filtering where exposed by current UI. A dedicated Favorites application area is not a release gate.
+
 ---
 
-## 18. Assessment
+## 17. Assessment
 
-Modes:
-
-```text
-LEARN
-EXAM
-QUICK
-```
-
-Persist:
+An active PracticeTest attempt persists:
 
 ```text
-test attempt
 exact test revision
-question revisions/snapshots
-selected answers
 current position
-score/result
+selected answers
+started/updated timestamps
 ```
 
-Completion view may show:
-
-```text
-score
-correct/incorrect answers
-explanations
-skillCode where available
-simple next-practice link
-```
+Submission atomically records exact-revision completion and clears the matching active attempt. Historical revision N completion does not imply revision N+1 completion.
 
 No complex recommendation engine is required.
 
 ---
 
-## 19. Review scheduler
+## 18. Review scheduler
 
 Minimal durable state:
 
@@ -451,7 +471,7 @@ Due = nextReviewAt <= now
 Due != !Completed
 ```
 
-Possible outcomes:
+Outcomes:
 
 ```text
 incorrect
@@ -460,31 +480,27 @@ correct
 known
 ```
 
-Scheduling is deterministic/local and survives restart/cache cleanup.
+Scheduling is deterministic/local and restart-safe. UI records outcomes through `ReviewScheduler`; UI does not contain interval logic.
 
 ---
 
-## 20. Storage retention
+## 19. Storage retention
 
-Disposable storage uses:
+Disposable storage uses bounded quota/retention/reference-safe deletion policies. Learner state is never deleted by cache cleanup.
 
-```text
-TTL + LRU + quota + explicit-download protection + reference-safe deletion
-```
+Deleting a disposable verified local asset creates a recoverable cache miss; restoration occurs only through the authorized Backend media path.
 
-Learner state is never deleted by cache cleanup.
-
-A deleted disposable local asset is a recoverable cache miss and may be restored only through the authenticated Backend media endpoint.
+A user-facing storage/download manager is post-MVP.
 
 ---
 
-## 21. Failure/recovery
+## 20. Failure / recovery
 
-Must preserve useful local state through:
+Preserve useful local state through:
 
 ```text
-backend offline
-backend media/storage failure
+Backend offline
+Backend media/storage failure
 interrupted sync/download
 checksum mismatch
 401 recovery
@@ -493,33 +509,33 @@ storage pressure
 Drift migration
 ```
 
-Flutter never attempts a direct object-storage fallback.
+Flutter never attempts direct object-storage credential fallback.
 
 ---
 
-## 22. Acceptance
+## 21. MVP mobile acceptance
 
-MVP mobile acceptance proves:
+Mobile acceptance proves:
 
 ```text
-3-step onboarding complete/skip/restart
-selected goal/track persistence
-CURRENT atomic sync
+Vertical → Goal → Track → Collection ownership
+3-step onboarding + skip + restart
+selected Goal/Track persistence
+Vertical derived from selected Goal
+fail-closed inactive/missing selection handling
+Continue Learning deterministic priority and CURRENT revalidation
+atomic CURRENT publication visibility
 locale switch/offline reopen
 real audio/local asset resolution
-Backend-only media download
-no direct RustFS/S3/CDN transport
-redirect-to-storage rejection
-deleted local audio recovery through current installation token
 FAVORITE/LISTENED/COMPLETED persistence
 Due based only on nextReviewAt
-review survives restart/cache cleanup
-test attempt restoration
-Home starts with Continue/current goal
-Learn exposes track/collection discovery
-adaptive/light/dark/RTL/large-text behavior
+review outcome scheduling survives restart
+PracticeTest attempt/completion exact-revision lifecycle
+Home/Learn current learning context
+adaptive/light/dark/RTL/large-text behavior where specified
 storage cleanup preserves learner state
 learner-facing copy contains no implementation terminology
+production catalogue/media paths have no runtime demo/mock/storage-credential bypass
 ```
 
-Prefer a small explicit implementation over additional abstraction layers.
+Standalone Favorites and Downloads screens are explicitly not required for CareerSpeak v1 acceptance.

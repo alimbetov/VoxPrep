@@ -9,38 +9,37 @@ import '../features/catalogue/catalogue_screen.dart';
 import '../features/content/content_detail_screen.dart';
 import '../features/home/home_screen.dart';
 import '../features/learn/learn_screen.dart';
-import '../features/onboarding/locale_onboarding_screen.dart';
+import '../features/learning_direction/learning_direction_screen.dart';
+import '../features/onboarding/onboarding_screen.dart';
 import '../features/review/review_screen.dart';
 import '../features/settings/settings_screen.dart';
 import '../features/tests/test_session_screen.dart';
 import '../features/tests/tests_screen.dart';
-import 'app_preferences_providers.dart';
 import 'content_locations.dart';
+import 'onboarding_providers.dart';
+import 'onboarding_redirect_policy.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final needsLocaleOnboarding = ref.watch(
-    applicationPreferencesProvider.select(
-      (preferences) => preferences.asData?.value.needsLocaleOnboarding,
+  final onboardingCompleted = ref.watch(
+    onboardingStateProvider.select(
+      (state) => state.asData?.value.completed,
     ),
   );
 
   return GoRouter(
     initialLocation: '/',
-    redirect: (context, state) {
-      if (needsLocaleOnboarding == null) return null;
-      final onboarding = state.matchedLocation == '/onboarding/locale';
-      if (needsLocaleOnboarding && !onboarding) {
-        return '/onboarding/locale';
-      }
-      if (!needsLocaleOnboarding && onboarding) {
-        return '/';
-      }
-      return null;
-    },
+    redirect: (context, state) => onboardingRedirect(
+      onboardingCompleted: onboardingCompleted,
+      matchedLocation: state.matchedLocation,
+    ),
     routes: [
       GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+      GoRoute(
         path: '/onboarding/locale',
-        builder: (context, state) => const LocaleOnboardingScreen(),
+        redirect: (context, state) => '/onboarding',
       ),
       ShellRoute(
         builder: (context, state, child) =>
@@ -116,6 +115,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: '/learn',
             pageBuilder: (context, state) =>
                 _page(state: state, child: const LearnScreen()),
+          ),
+          GoRoute(
+            path: '/learn/direction',
+            pageBuilder: (context, state) => _page(
+              state: state,
+              hierarchical: true,
+              child: const LearningDirectionScreen(),
+            ),
           ),
           GoRoute(
             path: '/tests',

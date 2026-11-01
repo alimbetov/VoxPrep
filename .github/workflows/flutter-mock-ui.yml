@@ -12,6 +12,10 @@ on:
       - 'mobile/careerspeak_app/**'
       - '.github/workflows/flutter-mock-ui.yml'
 
+concurrency:
+  group: flutter-mock-ui-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     runs-on: ubuntu-latest

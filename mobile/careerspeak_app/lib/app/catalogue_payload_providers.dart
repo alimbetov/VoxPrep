@@ -15,15 +15,18 @@ import 'api_client_providers.dart';
 import 'catalogue_source_providers.dart';
 import 'learner_state_providers.dart';
 
-final demoCataloguePayloadsProvider = Provider((ref) {
+final demoCataloguePayloadsProvider = Provider<Map<String, CataloguePayload>>((
+  ref,
+) {
   return buildDemoVerticalCataloguePayloads();
 });
 
+/// Production defaults to HTTP. Tests and local development may override the
+/// runtime source provider to use deterministic demo payloads.
 final cataloguePayloadGatewayProvider = Provider<CataloguePayloadGateway>((
   ref,
 ) {
-  final source = ref.watch(catalogueSourceModeProvider);
-  return switch (source) {
+  return switch (ref.watch(catalogueSourceModeProvider)) {
     CatalogueSourceMode.production => HttpCataloguePayloadGateway(
       apiClient: ref.watch(apiClientProvider),
     ),

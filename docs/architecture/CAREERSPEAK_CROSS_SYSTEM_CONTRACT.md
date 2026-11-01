@@ -1,15 +1,20 @@
 # CareerSpeak — Cross-System Contract Standard
 
-**Document version:** 1.1  
-**Status:** Normative P0 integration standard  
-**Applies to:** CareerSpeak v0.9+  
-**Branch:** `feat/universal-vertical-catalogue`
+**Document version:** 1.2  
+**Status:** Normative CareerSpeak v1 integration standard  
+**Applies to:** Flutter App, Spring Boot Backend, TTS Worker, Backend-internal RustFS
+
+Normative parents:
+
+- [`../specification/CAREERSPEAK_PRODUCT_REQUIREMENTS.md`](../specification/CAREERSPEAK_PRODUCT_REQUIREMENTS.md)
+- [`../specification/CAREERSPEAK_MVP_DELIVERY_SCOPE.md`](../specification/CAREERSPEAK_MVP_DELIVERY_SCOPE.md)
+- [`../specification/CAREERSPEAK_MVP_FUNCTIONAL_BUSINESS_AUDIT_2026-11-01.md`](../specification/CAREERSPEAK_MVP_FUNCTIONAL_BUSINESS_AUDIT_2026-11-01.md)
 
 ---
 
 ## 1. Purpose
 
-This document standardizes integration semantics between:
+This standard defines shared integration semantics for:
 
 ```text
 Spring Boot Backend
@@ -18,15 +23,13 @@ TTS Worker
 Backend-owned object storage (RustFS)
 ```
 
-It defines shared terminology, identifiers, state ownership, version semantics, security boundaries, media identity, error semantics and recovery rules.
-
-If a profile specification uses conflicting terminology, this standard takes precedence until the profile specification is corrected.
+It standardizes identity, ownership, publication/CURRENT semantics, security, media delivery, errors, retry/idempotency and recovery.
 
 ---
 
-## 2. Technical actors
+## 2. Actors and security zones
 
-Exactly three actors exist in MVP:
+Exactly three actors:
 
 ```text
 ADMIN
@@ -34,130 +37,126 @@ FLUTTER INSTALLATION
 TTS WORKER
 ```
 
-### ADMIN
-
-One human account:
+Security zones:
 
 ```text
-fixed username
-strong deployment-managed password hash
-Spring Security server-side session
-HttpOnly/Secure/SameSite cookie
-CSRF
+/admin/**           → ADMIN session
+/api/v1/**          → installation token
+/internal/v1/tts/** → worker token
+Backend storage     → private RustFS credentials
 ```
 
-No moderator/editor/reviewer hierarchy, registration, password reset, OAuth, LDAP, Keycloak or user-role tables.
+Flutter and Worker network I/O terminates at Spring Boot. RustFS is never a client-facing security zone.
 
-### FLUTTER INSTALLATION
-
-No learner account.
-
-```text
-random installationId
-→ backend registration
-→ backend-issued installation token
-→ platform Secure Storage
-```
-
-Learner progress is local-first and is not joined to installation identity on the backend.
-
-### TTS WORKER
-
-Machine actor with a dedicated rotatable token.
-
-No ADMIN credential, learner token, direct PostgreSQL credential or object-storage credential.
+No mandatory learner account exists in v1.
 
 ---
 
-## 3. Security zones
+## 3. Product ownership
+
+Backend owns mutable product truth:
 
 ```text
-/admin/**
-→ ADMIN session
-
-/api/v1/**
-→ installation token
-
-/internal/v1/tts/**
-→ worker machine token
-
-Backend storage adapters
-→ RustFS private storage credentials
+Vertical
+LearningGoal
+LearningTrack
+LearningCollection
+published Content / PracticeTest revisions
+localization catalogues/payloads
+asset/audio metadata
+TTS production state
 ```
 
-Flutter and Worker network I/O terminates at Spring Boot. RustFS is not a client-facing security zone.
+Flutter owns device-local learner state:
 
-Authentication mechanisms SHALL remain separate.
+```text
+selected Goal/Track
+onboarding progress
+FAVORITE/LISTENED/COMPLETED
+Review state
+PracticeTest attempts/completion/history
+playback/local cache state
+UI/locale preferences
+```
+
+Worker owns no durable learner/product truth; it is an execution agent.
 
 ---
 
-## 4. Identity standard
+## 4. Learner hierarchy and selection
 
-### Content
-
-Cross-system learner content identity uses stable business codes.
+Only normative hierarchy:
 
 ```text
-contentCode
-+ revision when revision identity matters
+Vertical
+ ↓
+LearningGoal
+ ↓
+LearningTrack
+ ↓
+LearningCollection
+ ↓
+exact ContentRevision / PracticeTestRevision members
 ```
 
-Server numeric IDs are not mobile learner-domain identity.
+Current Vertical is derived from selected CURRENT Goal.
 
-### Pack
+Invalid selection is fail-closed:
 
 ```text
-packCode
-variantKey
-revision
+invalid Track → clear Track; preserve active Goal
+invalid Goal/Vertical → clear Goal + Track
 ```
 
-Initial variant keys:
+No sibling auto-fallback and no cross-Vertical guessing.
+
+---
+
+## 5. Identity standard
+
+### Learner content
 
 ```text
-canonical
-locale:<bcp47/base-locale>
+stable business code
++ exact revision where revision identity matters
 ```
+
+Server numeric IDs are not Flutter learner-domain identity.
+
+### Publication
+
+```text
+contentVersion / publicationVersion
+```
+
+The identity is never reused and represents one coherent learner snapshot.
 
 ### Asset
 
 ```text
 assetId
+size
 checksumSha256
-deliveryKey
+deliveryKey (Backend-internal storage metadata)
 ```
 
-`deliveryKey` is immutable Backend storage metadata. Flutter and Worker MUST NOT use it as a URL, remote HTTP path, authorization input or object-storage locator.
+Flutter/Worker MUST NOT use `deliveryKey` as a URL/path/authorization input.
 
 ### TTS job
 
-A `jobId` does not prove worker ownership. Completion/heartbeat additionally require the current `leaseToken`.
+`jobId` alone does not prove ownership; heartbeat/completion require the current lease token.
 
 ---
 
-## 5. Time standard
+## 6. Time standard
 
-Persisted/exchanged timestamps use UTC semantics.
+Persisted/exchanged timestamps use UTC semantics and ISO-8601 UTC API representation.
 
-API representation:
-
-```text
-ISO-8601 UTC
-```
-
-Example:
-
-```text
-2026-10-30T09:30:00Z
-```
-
-Local timezone affects presentation/scheduling only.
+Local timezone affects display only. Review scheduling decisions are persisted as UTC instants.
 
 ---
 
-## 6. Backend content lifecycle
-
-Backend owns publication and learner-delivery availability.
+## 7. Backend lifecycle
 
 Revision status:
 
@@ -176,267 +175,170 @@ ACTIVE
 INACTIVE
 ```
 
-Normative delivery condition:
+Learner-deliverable = `PUBLISHED + ACTIVE` within the current Backend publication.
 
-```text
-PUBLISHED + ACTIVE
-```
-
-means:
-
-```text
-visible to learner API where applicable
-included in applicable manifest/pack snapshot
-deliverable to Flutter
-published assets available through Backend media API
-```
-
-`PUBLISHED + INACTIVE` remains auditable but SHALL NOT be offered to new learner delivery.
-
-Backend `ACTIVE` is reserved for server availability and SHALL NOT name a Flutter local-revision state.
+Published revisions are immutable.
 
 ---
 
-## 7. Flutter local lifecycle vocabulary
-
-Local pack/content revision states:
-
-```text
-STAGING
-VERIFIED
-CURRENT
-SUPERSEDED
-FAILED
-```
-
-`CURRENT` = currently selected local metadata/read-model revision.
-
-Offline pack states:
-
-```text
-NOT_DOWNLOADED
-QUEUED
-DOWNLOADING
-VERIFYING
-READY
-UPDATING
-FAILED
-```
-
-`READY` = all assets required by the offline contract are locally verified.
-
-Local file states:
-
-```text
-DOWNLOADING
-VERIFIED
-CORRUPT
-DELETE_PENDING
-```
-
-Critical distinction:
+## 8. Flutter lifecycle vocabulary
 
 ```text
 Backend ACTIVE
-= server permits delivery/download
+= Backend permits learner delivery
 
 Flutter CURRENT
-= local metadata revision currently used
+= one atomically active local publication/read model
 
-Flutter offline READY
-= complete local offline asset set is verified
+Flutter verified local asset / READY
+= exact local bytes passed integrity verification
 ```
+
+These concepts must not be conflated.
 
 ---
 
-## 8. Metadata update vs offline download
+## 9. C4 atomic publication contract
 
-Metadata synchronization and full offline-media download are separate processes.
+The Backend publishes one immutable learner publication identity/root.
 
-Normal learner update:
-
-```text
-Backend PUBLISHED + ACTIVE
-→ manifest/pack metadata
-→ Flutter STAGING
-→ verify metadata
-→ Flutter CURRENT
-→ media may be downloaded/cache on demand through Backend
-```
-
-Explicit offline download:
+Its consistency boundary includes:
 
 ```text
-CURRENT metadata
-→ DownloadManager requests required_offline assets from Backend
-→ checksum verification
-→ offline READY
+Vertical
+LearningGoal
+LearningTrack
+LearningCollection
+exact Content revisions
+exact PracticeTest revisions
+Localization
+Assets/audio references
 ```
 
-When a newer server revision appears, Flutter MAY have:
+Conceptual publication process:
 
 ```text
-metadata rev 8 = CURRENT
-offline rev 7  = READY
-offline rev 8  = UPDATING
+validate complete candidate
+→ persist exact refs/revisions/checksums
+→ allocate never-reused publication/contentVersion
+→ expose immutable root
+→ switch Backend current root atomically
 ```
 
-The old READY offline bundle remains usable until the replacement is fully verified.
+Flutter synchronization:
+
+```text
+observe remote publication
+→ stage complete candidate locally
+→ validate ownership/refs/schema/checksums
+→ one Drift CURRENT activation transaction
+```
+
+Required invariants:
+
+- Backend never exposes a half-published root;
+- Flutter repositories never observe mixed CURRENT publication versions;
+- a seen remote version is not CURRENT until local activation succeeds;
+- incomplete/corrupt sync leaves last-known-good CURRENT active;
+- restart preserves/deterministically recovers the previous valid CURRENT;
+- publication/tombstone behavior is reproducible by exact revision identity.
+
+Atomic metadata activation does not require eagerly downloading all optional media.
 
 ---
 
-## 9. Manifest version model
+## 10. Tombstones / removals
 
-The backend publishes one root learner snapshot version:
+Backend publication explicitly represents removal/deactivation of previously delivered learner objects.
 
-```text
-contentVersion
-```
-
-The root snapshot references exact pack variants/revisions/checksums.
-
-Locale data does not invent an unrelated root epoch. Locale variants are versioned pack members inside the root snapshot.
-
-Conceptual root manifest:
-
-```json
-{
-  "schemaVersion": 1,
-  "contentVersion": 108,
-  "minimumAppContractVersion": 1,
-  "packs": [
-    {
-      "code": "JAVA_SENIOR",
-      "variant": "canonical",
-      "revision": 8,
-      "checksum": "..."
-    },
-    {
-      "code": "JAVA_SENIOR",
-      "variant": "locale:kk",
-      "revision": 4,
-      "checksum": "..."
-    }
-  ],
-  "tombstones": []
-}
-```
-
-Flutter distinguishes:
+Flutter applies removal during atomic activation:
 
 ```text
-remoteContentVersionSeen
-active/currentContentVersion
-```
-
-A seen remote version is not considered locally current until its metadata activation transaction succeeds.
-
----
-
-## 10. Manifest atomicity
-
-For MVP, root `contentVersion` represents a consistent backend delivery snapshot.
-
-Flutter stages changed pack metadata and applies the root snapshot transition atomically in Drift.
-
-A failed metadata pack SHALL NOT produce a half-old/half-new root metadata snapshot.
-
-This root metadata barrier does **not** require downloading all optional learner media.
-
-Explicit offline bundle replacement has its own atomic READY transition.
-
----
-
-## 11. Tombstones
-
-When previously delivered content becomes unavailable, Backend publishes a tombstone or equivalent explicit removal record.
-
-Flutter SHALL:
-
-```text
-remove/retire disposable CURRENT content during atomic metadata commit
-release disposable asset references
+retire disposable CURRENT projection
+release disposable asset references where safe
 preserve durable learner state
 ```
 
-Durable state includes:
+Durable state includes markers, Review and PracticeTest history.
 
-```text
-favorites
-progress
-review schedule
-test attempt history
-```
-
-Absence from a paginated list is never sufficient evidence for destructive deletion.
+Absence from a browse/paginated response is never deletion evidence.
 
 ---
 
-## 12. Localization contract
-
-Learning language:
+## 11. Localization
 
 ```text
-en
-```
-
-Flutter settings:
-
-```text
+learningLanguage = en
 uiLocale
 translationLocale
-preferredAccent
+preferredAccent / preferredVoiceCode where applicable
 ```
 
-UI strings:
+Flutter UI strings use local ARB/gen-l10n. Backend owns supported locale catalogue and localized content payloads.
 
-```text
-Flutter ARB / gen-l10n
-```
-
-Content translations/hints/explanations:
-
-```text
-Backend pack locale variants
-```
-
-Canonical English/audio is shared across locales.
-
-Locale identifiers are BCP-47 compatible.
+Publication/root identity is locale-independent. Locale changes reuse canonical English/audio where identities are unchanged.
 
 ---
 
-## 13. Media delivery contract
+## 12. Learner media contract
 
-Published learner bytes flow:
+CareerSpeak v1 has one Flutter-facing media path:
 
 ```text
 Flutter
 → AssetResolver
 → verified local file if present
-→ otherwise GET /api/v1/media/assets/{assetId}/content
-→ Spring Boot validates installation + publication eligibility
-→ Backend resolves FileAsset + deliveryKey internally
+→ otherwise authenticated Backend media API
+→ Backend validates installation + current publication/asset eligibility
+→ Backend resolves private FileAsset/storage metadata
 → Backend storage adapter reads RustFS
-→ Spring Boot streams bytes
+→ Backend streams bytes
 → Flutter verifies size + SHA-256
-→ trusted local file
+→ atomic verified local file
 ```
-
-Spring Boot is the sole remote media boundary for Flutter.
 
 Flutter SHALL NOT receive or construct:
 
 ```text
 RustFS/S3 endpoint
-bucket
-object key URL
+bucket/object key URL
 storage credentials
-signed/presigned URL
+signed/presigned object-storage URL
 CDN/media-origin URL
 ```
 
-Backend SHALL NOT redirect learner media requests to object storage.
+Backend SHALL NOT redirect v1 learner media requests to object storage.
+
+A future direct/signed grant model requires a new versioned contract; it is not an alternative implementation of this v1 contract.
+
+A standalone Downloads dashboard is not required for this media/offline contract.
+
+---
+
+## 13. Installation identity and bounded 401 recovery
+
+Normative flow:
+
+```text
+random installationId
+→ idempotent Backend registration/re-registration
+→ installationToken
+→ Secure Storage
+→ authorized learner API
+```
+
+Credential-specific recovery:
+
+```text
+401
+→ invalidate rejected token only
+→ preserve installationId + learner state
+→ re-register once
+→ retry safe request once where policy permits
+→ fail closed if rejected again
+```
+
+No account/profile state is fabricated or deleted during token recovery.
 
 ---
 
@@ -445,11 +347,11 @@ Backend SHALL NOT redirect learner media requests to object storage.
 Backend owns:
 
 ```text
-exact voice_model_id selection
+voice/model catalogue
 TTS job lifecycle
 lease state
 fingerprint expectation
-model artifact delivery API
+model artifact delivery
 RustFS persistence
 final FileAsset association
 ADMIN review/publication
@@ -467,40 +369,15 @@ Backend output upload
 complete/fail reporting
 ```
 
-Worker never publishes learner content and never connects directly to RustFS.
+Queue uses PostgreSQL `FOR UPDATE SKIP LOCKED` with lease token, expiry, heartbeat, bounded retry and stale-result rejection.
+
+Worker never publishes learner content and never accesses PostgreSQL/RustFS directly.
 
 ---
 
-## 15. TTS queue standard
+## 15. Error envelope
 
-PostgreSQL is the durable queue.
-
-Claim uses atomic transaction semantics based on:
-
-```sql
-FOR UPDATE SKIP LOCKED
-```
-
-Ownership fields:
-
-```text
-worker_id
-lease_token
-lease_until
-attempt_count
-```
-
-Heartbeat extends the current lease.
-
-Completion with an obsolete lease token is rejected.
-
-A stale text/model fingerprint cannot overwrite a newer revision.
-
----
-
-## 16. Error envelope standard
-
-Backend JSON errors should follow one envelope:
+Backend JSON errors use stable machine-readable codes and safe messages, conceptually:
 
 ```json
 {
@@ -511,219 +388,96 @@ Backend JSON errors should follow one envelope:
 }
 ```
 
-Rules:
-
-```text
-code = stable machine-readable contract
-message = safe human/developer description
-details = optional structured context
-traceId = operational correlation
-```
-
-Flutter maps backend/transport errors to mobile domain failures and SHALL NOT display raw HTTP/SQL/storage exceptions.
-
-Worker uses stable machine error codes in fail callbacks.
+Flutter maps transport/backend failures to learner-safe application failures and never displays raw HTTP/SQL/storage exceptions.
 
 ---
 
-## 17. Retry/idempotency standard
+## 16. Retry / idempotency
 
-Safe GET/read operations MAY use bounded retry/backoff.
+Safe reads may use bounded retry/backoff.
 
-Mutating operations are retried only when idempotency semantics are explicit.
+Mutations are retried only with explicit idempotency/replay semantics.
 
-Mandatory idempotent/replay-safe areas:
+Mandatory replay-safe areas include:
 
 ```text
-manifest reads
-pack reads
-sync staging of immutable revision
-Backend media reads
+publication/manifest reads
+immutable payload reads/staging
+learner media reads
+installation registration/re-registration
 worker heartbeat
-worker complete/fail handling of duplicate callback
-asset upload identity by immutable object/fingerprint policy
+worker duplicate complete/fail handling
+immutable asset/fingerprint finalization
 ```
 
 ---
 
-## 18. Schema/application compatibility
+## 17. Schema/application compatibility
 
-Root manifest exposes `schemaVersion` and may expose a minimum compatible application/contract version.
-
-Flutter SHALL:
+Publication/root exposes schema/application compatibility metadata sufficient for Flutter to:
 
 ```text
 reject unsupported future schema
-keep last compatible CURRENT snapshot
-show update guidance when required
+preserve last compatible CURRENT
+show safe update/recovery guidance
 ```
 
-Backend SHALL NOT silently emit a schema that supported clients cannot interpret.
+Backend SHALL NOT silently activate a schema unsupported by contracted clients.
 
 ---
 
-## 19. Flutter adaptive UI standard
-
-Adaptive layout uses available window size, not device names or orientation alone.
-
-Width classes:
+## 18. Failure boundaries
 
 ```text
-COMPACT   < 600
-MEDIUM    600–839
-EXPANDED  840–1199
-LARGE     >= 1200
-```
+Backend unavailable
+→ valid local CURRENT + verified assets continue
 
-Adaptive presentation SHALL preserve the same route/domain/application state.
+Backend media/storage unavailable
+→ verified local files continue; missing remote asset fails safely
 
-Canonical UI rules are defined in:
+TTS Worker unavailable
+→ production jobs wait; already published learner content unaffected
 
-```text
-docs/mobile/CAREERSPEAK_ADAPTIVE_UI.md
-```
+Flutter sync interrupted/corrupt
+→ previous CURRENT remains active
 
-Layout changes SHALL NOT trigger content identity changes, duplicate domain controllers or unnecessary network requests.
+401 recovery repeatedly rejected
+→ fail closed; preserve learner state
 
----
-
-## 20. Ownership boundaries
-
-### Backend
-
-Source of truth for:
-
-```text
-published content
-availability
-manifest/pack snapshot
-localization content
-asset metadata
-TTS jobs/models
-RustFS access and storage topology
-```
-
-### Flutter
-
-Source of truth for:
-
-```text
-local learner progress
-favorites
-review schedule
-test attempts
-local cache/offline state
-local CURRENT metadata snapshot
-UI settings
-```
-
-Flutter has no direct object-storage boundary.
-
-### Worker
-
-No durable learner/content source of truth. Worker is an execution agent and has no direct object-storage boundary.
-
-### RustFS
-
-Backend-internal binary object store; not a client actor and not source of business lifecycle state.
-
----
-
-## 21. Failure boundaries
-
-Backend unavailable:
-
-```text
-Flutter uses valid local CURRENT metadata and READY/local media
-Worker cannot claim new work or access model/output APIs
-```
-
-Backend media/storage path unavailable:
-
-```text
-local verified files still work
-remote-only assets fail gracefully/retry through Backend
-storage-specific failures do not leak to Flutter
-```
-
-TTS Worker unavailable:
-
-```text
-content production jobs remain pending/recoverable
-already published learner content remains unaffected
-```
-
-Flutter sync interrupted:
-
-```text
-last-known-good CURRENT metadata remains valid
-```
-
-Worker crash:
-
-```text
-lease expires
-job can be reclaimed
+Worker crash
+→ lease expires; job reclaimable
 ```
 
 ---
 
-## 22. Cross-system acceptance scenarios
+## 19. Cross-system acceptance — A1
 
-Before P0 architecture freeze, prove contracts for at least:
+Before v1 release, prove at least:
 
 ```text
-1. ADMIN publishes + activates content → appears in manifest
-2. Flutter upgrades metadata N→N+1 atomically
-3. Flutter media download works through Backend without direct storage access
-4. offline pack retains old READY revision while new revision updates
-5. deactivation publishes tombstone and removes learner delivery
-6. learner progress survives tombstone/cache eviction
-7. locale change reuses canonical English/audio
-8. unsupported schema preserves last CURRENT snapshot
-9. worker claim/lease/reclaim is concurrency-safe
-10. stale worker completion is rejected
-11. published TTS asset becomes learner-deliverable only after backend review/publication
-12. adaptive UI resize preserves route/test/audio state
-13. deleted local media is restored through Backend using current installation token
-14. Flutter/Worker cannot follow Backend redirects to object storage
+1. Backend publication appears as one coherent learner root
+2. Flutter upgrades publication N→N+1 atomically
+3. mixed old/new hierarchy/payload CURRENT is impossible
+4. failed/corrupt candidate preserves prior CURRENT across restart
+5. learner media works through Backend without storage credentials/redirects
+6. valid local media works offline
+7. missing local media reacquires through current installation credential
+8. deactivation/removal retires learner projection without deleting learner history
+9. locale change reuses canonical content/audio where valid
+10. unsupported schema preserves last compatible CURRENT
+11. 401 performs one bounded re-registration/retry path
+12. active PracticeTest/review state survives offline/restart
+13. exact revision completion/history remains reproducible
+14. TTS claim/lease/reclaim and stale completion are concurrency-safe
 ```
 
 ---
 
-## 23. Standard vocabulary
-
-Use these terms consistently:
+## 20. Final invariant
 
 ```text
-Backend:
-PUBLISHED / ARCHIVED
-ACTIVE / INACTIVE
-contentVersion
-pack revision
-assetId
-fingerprint
-
-Flutter metadata:
-STAGING / VERIFIED / CURRENT / SUPERSEDED / FAILED
-
-Flutter offline:
-NOT_DOWNLOADED / QUEUED / DOWNLOADING / VERIFYING / READY / UPDATING / FAILED
-
-Worker:
-PENDING / RUNNING / READY / FAILED / CANCELLED / SUPERSEDED
-leaseToken / leaseUntil
-```
-
-Do not use one term for two different ownership domains.
-
----
-
-## 24. Final invariant
-
-```text
-Backend controls what may be delivered and owns all RustFS access.
-Flutter controls what is currently installed and locally retained.
-Worker only produces backend-requested assets through Backend APIs.
-RustFS stores bytes behind Backend; it is never addressed by Flutter or Worker.
+Backend controls what is published/deliverable and owns all RustFS access.
+Flutter controls device-local learner state and one atomically active CURRENT projection.
+Worker only executes Backend-requested TTS work through Backend APIs.
+RustFS stores private bytes behind Backend and is never addressed by Flutter or Worker.
 ```

@@ -1,7 +1,6 @@
-import 'dart:async';
-
 import 'package:careerspeak_app/app/api_client_providers.dart';
 import 'package:careerspeak_app/app/application_bootstrap_providers.dart';
+import 'package:careerspeak_app/app/bootstrap_status_frame.dart';
 import 'package:careerspeak_app/application/ports/api_client.dart';
 import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/application/services/application_bootstrap_service.dart';
@@ -23,39 +22,50 @@ void main() {
     );
   });
 
-  testWidgets('production bootstrap never blocks last-known-good local UI', (
-    tester,
-  ) async {
-    final gate = Completer<Result<ApplicationBootstrapOutcome>>();
+  testWidgets(
+    'bootstrap failure keeps local UI, hides raw failure, and retries',
+    (tester) async {
+      var bootstrapCalls = 0;
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          applicationBootstrapProvider.overrideWith((ref) => gate.future),
-        ],
-        child: const MaterialApp(
-          home: ProductionBootstrapHost(
-            child: Scaffold(body: Text('local-content')),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            applicationBootstrapProvider.overrideWith((ref) async {
+              bootstrapCalls += 1;
+              return const FailureResult<ApplicationBootstrapOutcome>(
+                ApplicationFailure(
+                  code: 'OFFLINE',
+                  message: 'raw transport details must stay hidden',
+                  retryable: true,
+                ),
+              );
+            }),
+          ],
+          child: const MaterialApp(
+            home: BootstrapStatusFrame(
+              child: Scaffold(body: Text('local-content')),
+            ),
           ),
         ),
-      ),
-    );
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('local-content'), findsOneWidget);
+      expect(bootstrapCalls, 1);
+      expect(find.text('local-content'), findsOneWidget);
+      expect(
+        find.text('Could not refresh data. Saved content remains available.'),
+        findsOneWidget,
+      );
+      expect(find.text('raw transport details must stay hidden'), findsNothing);
+      expect(find.text('Retry'), findsOneWidget);
 
-    gate.complete(
-      const FailureResult<ApplicationBootstrapOutcome>(
-        ApplicationFailure(
-          code: 'OFFLINE',
-          message: 'offline',
-          retryable: true,
-        ),
-      ),
-    );
-    await tester.pump();
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('local-content'), findsOneWidget);
-  });
+      expect(bootstrapCalls, 2);
+      expect(find.text('local-content'), findsOneWidget);
+    },
+  );
 }
 
 final class _UnusedApiClient implements ApiClient {

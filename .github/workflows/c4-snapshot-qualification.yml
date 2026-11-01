@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/backend-contract-gap-audit
+      - feat/ba-product-contract-remediation
     paths:
       - 'mobile/careerspeak_app/**'
       - 'contracts/c4-*'
@@ -34,9 +35,17 @@ jobs:
         working-directory: mobile/careerspeak_app
         run: |
           flutter test test/architecture/c4_snapshot_consumption_boundary_test.dart
+          flutter test test/application/content_sync/c4_atomic_publication_coordinator_test.dart
+          flutter test test/application/asset_download_manager_test.dart
+          flutter test test/data/local/file_system_asset_store_test.dart
+          flutter test test/data/local/drift_sync_plan_executor_test.dart
           flutter test test/data/local/drift_atomic_snapshot_visibility_test.dart
+          flutter test test/data/local/drift_publication_snapshot_stager_visibility_test.dart
           flutter test test/data/local/drift_practice_test_snapshot_repository_test.dart
           flutter test test/data/local/drift_catalogue_snapshot_repository_test.dart
+          flutter test test/data/local/drift_localized_content_repository_test.dart
+          flutter test test/data/local/drift_localized_content_publication_switch_test.dart
+          flutter test test/data/local/drift_asset_catalog_publication_fence_test.dart
           flutter test test/data/local/drift_snapshot_auxiliary_repair_visibility_test.dart
           flutter test test/data/local/drift_tombstone_publication_interaction_test.dart
           flutter test test/acceptance/c4_offline_restart_consistency_acceptance_test.dart

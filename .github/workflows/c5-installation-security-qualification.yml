@@ -1,0 +1,64 @@
+name: C5 Installation Security Qualification
+
+on:
+  push:
+    branches:
+      - feat/ba-product-contract-remediation
+    paths:
+      - 'mobile/careerspeak_app/lib/app/api_client_providers.dart'
+      - 'mobile/careerspeak_app/lib/app/application_bootstrap_providers.dart'
+      - 'mobile/careerspeak_app/lib/application/ports/api_client.dart'
+      - 'mobile/careerspeak_app/lib/application/ports/installation_credential_store.dart'
+      - 'mobile/careerspeak_app/lib/application/ports/installation_registration_gateway.dart'
+      - 'mobile/careerspeak_app/lib/application/services/installation_*'
+      - 'mobile/careerspeak_app/lib/data/remote/http_api_client.dart'
+      - 'mobile/careerspeak_app/lib/data/remote/http_installation_registration_gateway.dart'
+      - 'mobile/careerspeak_app/lib/data/secure/flutter_secure_installation_credential_store.dart'
+      - 'mobile/careerspeak_app/lib/domain/installation_credentials.dart'
+      - 'mobile/careerspeak_app/test/application/installation_*'
+      - 'mobile/careerspeak_app/test/application/application_bootstrap_service_test.dart'
+      - 'mobile/careerspeak_app/test/acceptance/c5_*'
+      - 'mobile/careerspeak_app/test/data/remote/http_api_client_test.dart'
+      - 'mobile/careerspeak_app/test/data/remote/http_installation_registration_gateway_test.dart'
+      - 'mobile/careerspeak_app/test/data/secure/flutter_secure_installation_credential_store_test.dart'
+      - 'docs/backend/C5_*'
+      - '.github/workflows/c5-installation-security-qualification.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: c5-installation-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  installation-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - name: Dependencies
+        working-directory: mobile/careerspeak_app
+        run: flutter pub get
+      - name: Format
+        working-directory: mobile/careerspeak_app
+        run: dart format --output=none --set-exit-if-changed lib test
+      - name: Analyze
+        working-directory: mobile/careerspeak_app
+        run: flutter analyze
+      - name: C5 focused qualification
+        working-directory: mobile/careerspeak_app
+        run: |
+          flutter test test/application/installation_identity_service_test.dart
+          flutter test test/application/installation_bootstrap_service_test.dart
+          flutter test test/application/installation_auth_recovery_api_client_test.dart
+          flutter test test/application/application_bootstrap_service_test.dart
+          flutter test test/acceptance/c5_restart_security_acceptance_test.dart
+          flutter test test/data/remote/http_api_client_test.dart
+          flutter test test/data/remote/http_installation_registration_gateway_test.dart
+          flutter test test/data/secure/flutter_secure_installation_credential_store_test.dart
+      - name: Full regression
+        working-directory: mobile/careerspeak_app
+        run: flutter test

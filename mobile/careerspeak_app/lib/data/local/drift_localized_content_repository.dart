@@ -192,6 +192,9 @@ final class DriftLocalizedContentRepository
           readsFrom: <ResultSetImplementation>{
             _database.localContentRecords,
             _database.contentCatalogReads,
+            _database.contentManifestStates,
+            _database.contentPackRevisions,
+            _database.packContentRefs,
           },
         )
         .get();
@@ -259,6 +262,7 @@ final class DriftLocalizedContentRepository
             Variable<String>(locale),
           ],
           readsFrom: <ResultSetImplementation>{
+            _database.contentManifestStates,
             _database.contentPackRevisions,
             _database.packLocalizationRefs,
             _database.localizedContentReads,
@@ -339,7 +343,7 @@ final class _LocalizedReadInvariant implements Exception {
 }
 
 const _canonicalSql = '''
-SELECT
+SELECT DISTINCT
   r.checksum AS metadata_checksum,
   c.content_code AS payload_content_code,
   c.content_type AS payload_content_type,
@@ -356,7 +360,27 @@ LEFT JOIN content_catalog_reads c
 WHERE r.snapshot_state = 'CURRENT'
   AND r.content_code = ?
   AND r.content_type = ?
-  AND r.revision = ?''';
+  AND r.revision = ?
+  AND (
+    NOT EXISTS (
+      SELECT 1 FROM content_manifest_states legacy_guard WHERE legacy_guard.id = 1
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM content_manifest_states root
+      INNER JOIN content_pack_revisions pack
+        ON pack.source_content_version = root.current_content_version
+       AND pack.state = 'CURRENT'
+      INNER JOIN pack_content_refs member
+        ON member.pack_code = pack.pack_code
+       AND member.variant_key = pack.variant_key
+       AND member.pack_revision = pack.revision
+      WHERE root.id = 1
+        AND member.content_code = r.content_code
+        AND member.content_type = r.content_type
+        AND member.content_revision = r.revision
+    )
+  )''';
 
 const _localizedSql = '''
 SELECT DISTINCT
@@ -385,4 +409,15 @@ WHERE pack.state = 'CURRENT'
   AND p.content_code = ?
   AND p.content_type = ?
   AND p.content_revision = ?
-  AND p.locale = ?''';
+  AND p.locale = ?
+  AND (
+    NOT EXISTS (
+      SELECT 1 FROM content_manifest_states legacy_guard WHERE legacy_guard.id = 1
+    )
+    OR EXISTS (
+      SELECT 1
+      FROM content_manifest_states root
+      WHERE root.id = 1
+        AND pack.source_content_version = root.current_content_version
+    )
+  )''';

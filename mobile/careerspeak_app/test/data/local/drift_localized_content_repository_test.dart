@@ -136,6 +136,25 @@ void main() {
     expect(resolved.title, 'Canonical title');
   });
 
+  test('C4 future-root localization stays invisible before root switch', () async {
+    await _seedLocalization(
+      database,
+      locale: 'ru',
+      packCode: 'PACK_RU_FUTURE',
+      sourceContentVersion: 2,
+      title: 'Будущая локализация',
+    );
+
+    final before = (await repository.resolve(
+      identity: _identity,
+      contentRevision: 1,
+      requestedLocale: 'ru',
+    )).getOrThrow();
+    expect(before, isNotNull);
+    expect(before!.usesCanonicalEnglishOnly, isTrue);
+    expect(before.title, 'Canonical title');
+  });
+
   test('localization checksum drift fails closed', () async {
     await _seedLocalization(
       database,
@@ -208,39 +227,68 @@ void main() {
 
 Future<void> _seedCanonical(CareerSpeakDatabase database) async {
   final now = DateTime.utc(2026, 10, 31, 4);
-  await database
-      .into(database.localContentRecords)
-      .insert(
-        LocalContentRecordsCompanion.insert(
-          contentCode: _identity.code,
-          contentType: 'INTERVIEW',
-          revision: 1,
-          checksum: _canonicalChecksum,
-          sortOrder: const Value(10),
-          publishedAt: Value(now),
-          snapshotState: 'CURRENT',
-          sourceSchemaVersion: 1,
-          createdAt: now,
-        ),
-      );
-  await database
-      .into(database.contentCatalogReads)
-      .insert(
-        ContentCatalogReadsCompanion.insert(
-          contentCode: _identity.code,
-          contentType: 'INTERVIEW',
-          revision: 1,
-          checksum: _canonicalChecksum,
-          title: 'Canonical title',
-          subtitle: 'Canonical subtitle',
-          description: 'Canonical description',
-          category: 'Java Backend',
-          level: 'Senior',
-          minutes: 8,
-          hasAudio: false,
-          createdAt: now,
-        ),
-      );
+  await database.into(database.contentManifestStates).insert(
+    ContentManifestStatesCompanion.insert(
+      id: const Value(1),
+      schemaVersion: 1,
+      currentContentVersion: 1,
+      currentManifestChecksum: _rootChecksum,
+      localePolicyContentVersion: const Value(1),
+      updatedAt: now,
+    ),
+  );
+  await database.into(database.contentPackRevisions).insert(
+    ContentPackRevisionsCompanion.insert(
+      packCode: 'PACK_CANONICAL',
+      variantKey: 'canonical',
+      revision: 1,
+      schemaVersion: 1,
+      checksum: _packChecksum,
+      state: 'CURRENT',
+      sourceContentVersion: 1,
+      stagedAt: now,
+      currentAt: Value(now),
+    ),
+  );
+  await database.into(database.localContentRecords).insert(
+    LocalContentRecordsCompanion.insert(
+      contentCode: _identity.code,
+      contentType: 'INTERVIEW',
+      revision: 1,
+      checksum: _canonicalChecksum,
+      sortOrder: const Value(10),
+      publishedAt: Value(now),
+      snapshotState: 'CURRENT',
+      sourceSchemaVersion: 1,
+      createdAt: now,
+    ),
+  );
+  await database.into(database.packContentRefs).insert(
+    PackContentRefsCompanion.insert(
+      packCode: 'PACK_CANONICAL',
+      variantKey: 'canonical',
+      packRevision: 1,
+      contentCode: _identity.code,
+      contentType: 'INTERVIEW',
+      contentRevision: 1,
+    ),
+  );
+  await database.into(database.contentCatalogReads).insert(
+    ContentCatalogReadsCompanion.insert(
+      contentCode: _identity.code,
+      contentType: 'INTERVIEW',
+      revision: 1,
+      checksum: _canonicalChecksum,
+      title: 'Canonical title',
+      subtitle: 'Canonical subtitle',
+      description: 'Canonical description',
+      category: 'Java Backend',
+      level: 'Senior',
+      minutes: 8,
+      hasAudio: false,
+      createdAt: now,
+    ),
+  );
 }
 
 Future<void> _seedFallbackRule(
@@ -248,33 +296,19 @@ Future<void> _seedFallbackRule(
   required String locale,
   required List<String> fallbackLocales,
 }) async {
-  final now = DateTime.utc(2026, 10, 31, 4);
-  await database
-      .into(database.contentManifestStates)
-      .insertOnConflictUpdate(
-        ContentManifestStatesCompanion.insert(
-          id: const Value(1),
-          schemaVersion: 1,
-          currentContentVersion: 1,
-          currentManifestChecksum: _rootChecksum,
-          localePolicyContentVersion: const Value(1),
-          updatedAt: now,
-        ),
-      );
-  await (database.delete(
-    database.localeFallbackRules,
-  )..where((row) => row.locale.equals(locale))).go();
+  await (database.delete(database.localeFallbackRules)..where(
+        (row) => row.locale.equals(locale),
+      ))
+      .go();
   for (var order = 0; order < fallbackLocales.length; order += 1) {
-    await database
-        .into(database.localeFallbackRules)
-        .insert(
-          LocaleFallbackRulesCompanion.insert(
-            locale: locale,
-            fallbackOrder: order,
-            fallbackLocale: fallbackLocales[order],
-            sourceContentVersion: 1,
-          ),
-        );
+    await database.into(database.localeFallbackRules).insert(
+      LocaleFallbackRulesCompanion.insert(
+        locale: locale,
+        fallbackOrder: order,
+        fallbackLocale: fallbackLocales[order],
+        sourceContentVersion: 1,
+      ),
+    );
   }
 }
 
@@ -283,6 +317,7 @@ Future<void> _seedLocalization(
   required String locale,
   String state = 'CURRENT',
   String? packCode,
+  int sourceContentVersion = 1,
   int localizationRevision = 1,
   String payloadChecksum = _localizedChecksum,
   String? title,
@@ -295,22 +330,20 @@ Future<void> _seedLocalization(
 }) async {
   final now = DateTime.utc(2026, 10, 31, 4, 5);
   final resolvedPackCode = packCode ?? 'PACK_${locale.replaceAll('-', '_')}';
-  await database
-      .into(database.contentPackRevisions)
-      .insert(
-        ContentPackRevisionsCompanion.insert(
-          packCode: resolvedPackCode,
-          variantKey: 'locale:$locale',
-          revision: 1,
-          schemaVersion: 1,
-          checksum: _packChecksum,
-          state: state,
-          sourceContentVersion: 1,
-          stagedAt: now,
-          currentAt: Value(state == 'CURRENT' ? now : null),
-          supersededAt: Value(state == 'SUPERSEDED' ? now : null),
-        ),
-      );
+  await database.into(database.contentPackRevisions).insert(
+    ContentPackRevisionsCompanion.insert(
+      packCode: resolvedPackCode,
+      variantKey: 'locale:$locale',
+      revision: 1,
+      schemaVersion: 1,
+      checksum: _packChecksum,
+      state: state,
+      sourceContentVersion: sourceContentVersion,
+      stagedAt: now,
+      currentAt: Value(state == 'CURRENT' ? now : null),
+      supersededAt: Value(state == 'SUPERSEDED' ? now : null),
+    ),
+  );
   await _insertLocalizedRead(
     database,
     locale: locale,
@@ -323,21 +356,19 @@ Future<void> _seedLocalization(
     hint: hint,
     explanation: explanation,
   );
-  await database
-      .into(database.packLocalizationRefs)
-      .insert(
-        PackLocalizationRefsCompanion.insert(
-          packCode: resolvedPackCode,
-          variantKey: 'locale:$locale',
-          packRevision: 1,
-          contentCode: _identity.code,
-          contentType: 'INTERVIEW',
-          contentRevision: 1,
-          locale: locale,
-          localizationRevision: localizationRevision,
-          checksum: refChecksum,
-        ),
-      );
+  await database.into(database.packLocalizationRefs).insert(
+    PackLocalizationRefsCompanion.insert(
+      packCode: resolvedPackCode,
+      variantKey: 'locale:$locale',
+      packRevision: 1,
+      contentCode: _identity.code,
+      contentType: 'INTERVIEW',
+      contentRevision: 1,
+      locale: locale,
+      localizationRevision: localizationRevision,
+      checksum: refChecksum,
+    ),
+  );
 }
 
 Future<void> _insertLocalizedRead(
@@ -352,25 +383,23 @@ Future<void> _insertLocalizedRead(
   String? hint,
   String? explanation,
 }) async {
-  await database
-      .into(database.localizedContentReads)
-      .insert(
-        LocalizedContentReadsCompanion.insert(
-          contentCode: _identity.code,
-          contentType: 'INTERVIEW',
-          contentRevision: 1,
-          locale: locale,
-          localizationRevision: localizationRevision,
-          checksum: checksum,
-          title: Value(title),
-          subtitle: Value(subtitle),
-          description: Value(description),
-          translation: Value(translation),
-          hint: Value(hint),
-          explanation: Value(explanation),
-          createdAt: DateTime.utc(2026, 10, 31, 4, 5),
-        ),
-      );
+  await database.into(database.localizedContentReads).insert(
+    LocalizedContentReadsCompanion.insert(
+      contentCode: _identity.code,
+      contentType: 'INTERVIEW',
+      contentRevision: 1,
+      locale: locale,
+      localizationRevision: localizationRevision,
+      checksum: checksum,
+      title: Value(title),
+      subtitle: Value(subtitle),
+      description: Value(description),
+      translation: Value(translation),
+      hint: Value(hint),
+      explanation: Value(explanation),
+      createdAt: DateTime.utc(2026, 10, 31, 4, 5),
+    ),
+  );
 }
 
 const _identity = ContentIdentity(
