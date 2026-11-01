@@ -16,16 +16,16 @@ void main() {
   });
 
   test(
-    'schema version 12 creates production foundation and BA selection schema',
+    'schema version 15 creates production foundation and BA runtime state',
     () async {
       await database.customSelect('SELECT 1').getSingle();
 
-      expect(database.schemaVersion, 12);
+      expect(database.schemaVersion, 15);
 
       final userVersion = await database
           .customSelect('PRAGMA user_version')
           .getSingle();
-      expect(userVersion.read<int>('user_version'), 12);
+      expect(userVersion.read<int>('user_version'), 15);
 
       final foreignKeys = await database
           .customSelect('PRAGMA foreign_keys')
@@ -61,19 +61,21 @@ void main() {
         }),
       );
 
-      final retentionTable = await database
-          .customSelect(
-            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'asset_cache_retention'",
-          )
-          .getSingleOrNull();
-      expect(retentionTable, isNotNull);
-
-      final selectionTable = await database
-          .customSelect(
-            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'learner_selection'",
-          )
-          .getSingleOrNull();
-      expect(selectionTable, isNotNull);
+      for (final rawTable in <String>[
+        'asset_cache_retention',
+        'learner_selection',
+        'practice_test_active_attempt',
+        'learner_last_opened_content',
+        'practice_test_completions',
+      ]) {
+        final row = await database
+            .customSelect(
+              "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+              variables: <Variable<Object>>[Variable<String>(rawTable)],
+            )
+            .getSingleOrNull();
+        expect(row, isNotNull, reason: '$rawTable must exist in schema v15');
+      }
 
       final selection = await database
           .customSelect(
