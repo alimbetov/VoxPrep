@@ -25,6 +25,11 @@ const _managedRequestHeaders = <String>{
   'x-country-code',
 };
 
+final _localeHeaderPattern = RegExp(
+  r'^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$',
+);
+final _countryHeaderPattern = RegExp(r'^[A-Z]{2}$');
+
 final class HttpApiClient implements ApiClient {
   factory HttpApiClient({
     required http.Client client,
@@ -108,7 +113,7 @@ final class HttpApiClient implements ApiClient {
       'accept': 'application/json',
       ...contextHeaders,
       for (final entry in request.headers.entries)
-        if (!_managedRequestHeaders.contains(entry.key)) entry.key: entry.value,
+        if (!_isManagedRequestHeader(entry.key)) entry.key: entry.value,
     };
 
     if (request.authentication == ApiAuthentication.installation) {
@@ -290,10 +295,19 @@ final class HttpApiClient implements ApiClient {
           value.contains('\n')) {
         throw const FormatException('Invalid managed request context header.');
       }
+      if (name == 'accept-language' && !_localeHeaderPattern.hasMatch(value)) {
+        throw const FormatException('Invalid Accept-Language locale.');
+      }
+      if (name == 'x-country-code' && !_countryHeaderPattern.hasMatch(value)) {
+        throw const FormatException('Invalid X-Country-Code value.');
+      }
       headers[name] = value;
     }
     return headers;
   }
+
+  static bool _isManagedRequestHeader(String name) =>
+      _managedRequestHeaders.contains(name.trim().toLowerCase());
 
   static Uri _validateBaseUri(Uri value) {
     if (!value.isAbsolute ||
