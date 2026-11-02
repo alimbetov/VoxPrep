@@ -11,6 +11,7 @@ import '../../application/content_delivery/product_catalog.dart';
 import '../../application/content_delivery/universal_catalogue_graph.dart';
 import '../../application/ports/universal_catalogue_repository.dart';
 import '../../domain/content_identity.dart';
+import '../access/full_unlock_screen.dart';
 
 String catalogueVerticalLocation(String code) =>
     '/catalogue/vertical/${Uri.encodeComponent(code)}';
@@ -169,14 +170,22 @@ class CatalogueTrackScreen extends ConsumerWidget {
                 learnerAccess: learnerAccess,
                 collection: collection,
               ),
-              onTap: () => context.push(
-                catalogueCollectionLocation(
-                  vertical.code,
-                  goal.code,
-                  track.code,
-                  collection.code,
-                ),
-              ),
+              onTap: () {
+                final requiresUnlock = CollectionAccessPolicy.requiresUnlock(
+                  learnerAccess: learnerAccess,
+                  collection: collection,
+                );
+                context.push(
+                  requiresUnlock
+                      ? fullUnlockLocation
+                      : catalogueCollectionLocation(
+                          vertical.code,
+                          goal.code,
+                          track.code,
+                          collection.code,
+                        ),
+                );
+              },
             ),
         ],
       );
@@ -451,6 +460,11 @@ class _FullAccessRequired extends StatelessWidget {
                   Text(
                     '${collection.title} is part of Full VoxPrep.',
                     textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () => context.push(fullUnlockLocation),
+                    child: const Text('Unlock Full VoxPrep'),
                   ),
                 ],
               ),
