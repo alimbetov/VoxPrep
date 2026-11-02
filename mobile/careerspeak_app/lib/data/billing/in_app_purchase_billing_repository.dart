@@ -211,11 +211,11 @@ final class InAppPurchaseBillingRepository implements BillingRepository {
   }
 
   StoreProvider _providerFromSource(String source) {
-    final normalized = source.toLowerCase();
-    if (normalized.contains('app_store') || normalized.contains('storekit')) {
-      return StoreProvider.appStore;
-    }
-    return StoreProvider.googlePlay;
+    return switch (source) {
+      'google_play' => StoreProvider.googlePlay,
+      'app_store' => StoreProvider.appStore,
+      _ => throw FormatException('Unsupported Store verification source.'),
+    };
   }
 
   StorePurchaseStatus _status(PurchaseStatus status) {
