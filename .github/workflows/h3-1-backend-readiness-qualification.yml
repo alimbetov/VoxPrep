@@ -27,7 +27,7 @@ jobs:
   h3-1:
     name: h3-1
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 30
     defaults:
       run:
         working-directory: mobile/careerspeak_app
@@ -121,5 +121,36 @@ jobs:
           timeout 8m flutter test \
             test/app \
             test/data/remote \
+            --concurrency=1 \
+            --reporter expanded
+
+      - name: Production E2E core
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 2m flutter test \
+            test/acceptance/p2_10_7_production_e2e_test.dart \
+            --plain-name 'fresh install sync survives file-backed reopen' \
+            --reporter expanded
+          timeout 2m flutter test \
+            test/acceptance/p2_10_7_production_e2e_test.dart \
+            --plain-name 'production learner UI renders synchronized Drift content' \
+            --reporter expanded
+
+      - name: Full core Flutter suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t test_files < <(
+            find test -type f -name '*_test.dart' \
+              ! -path 'test/acceptance/p2_10_7_production_e2e_test.dart' \
+              | sort
+          )
+          if (( ${#test_files[@]} == 0 )); then
+            echo 'No core tests discovered.' >&2
+            exit 1
+          fi
+          timeout 20m flutter test \
+            "${test_files[@]}" \
             --concurrency=1 \
             --reporter expanded
