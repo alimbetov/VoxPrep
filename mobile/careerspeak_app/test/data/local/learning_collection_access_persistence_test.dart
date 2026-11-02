@@ -17,9 +17,11 @@ void main() {
     addTearDown(database.close);
 
     expect(database.schemaVersion, 17);
-    final table = await database.customSelect(
-      "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'learning_collection_access_reads'",
-    ).getSingleOrNull();
+    final table = await database
+        .customSelect(
+          "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'learning_collection_access_reads'",
+        )
+        .getSingleOrNull();
     expect(table, isNotNull);
   });
 
@@ -29,7 +31,9 @@ void main() {
     await _insertCurrentPointer(database, 100);
     await _insertGraph(database, 100, accessLevel: 'FREE');
 
-    final result = await DriftUniversalCatalogueRepository(database).readCurrent();
+    final result = await DriftUniversalCatalogueRepository(
+      database,
+    ).readCurrent();
     expect(result, isA<Success<CurrentUniversalCatalogueSnapshot?>>());
     final snapshot =
         (result as Success<CurrentUniversalCatalogueSnapshot?>).value!;
@@ -44,7 +48,9 @@ void main() {
     await _insertCurrentPointer(database, 101);
     await _insertGraph(database, 101);
 
-    final result = await DriftUniversalCatalogueRepository(database).readCurrent();
+    final result = await DriftUniversalCatalogueRepository(
+      database,
+    ).readCurrent();
     expect(result, isA<Success<CurrentUniversalCatalogueSnapshot?>>());
     final snapshot =
         (result as Success<CurrentUniversalCatalogueSnapshot?>).value!;
@@ -74,7 +80,9 @@ Future<void> _insertCurrentPointer(
   CareerSpeakDatabase database,
   int version,
 ) async {
-  await database.into(database.contentManifestStates).insert(
+  await database
+      .into(database.contentManifestStates)
+      .insert(
         ContentManifestStatesCompanion.insert(
           id: const Value(1),
           schemaVersion: 2,
