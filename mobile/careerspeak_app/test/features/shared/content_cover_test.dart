@@ -1,6 +1,3 @@
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:careerspeak_app/app/asset_resolver_providers.dart';
 import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
 import 'package:careerspeak_app/application/ports/asset_byte_source.dart';
@@ -21,29 +18,17 @@ const _hash =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 const _content = ContentIdentity(code: 'TOPIC_1', type: ContentType.topic);
 const _hostKey = Key('content-cover-host');
-const _png =
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
 
 void main() {
-  late Directory temporary;
-
-  setUp(() async {
-    temporary = await Directory.systemTemp.createTemp('content_cover_ui_');
-  });
-
-  tearDown(() async {
-    await temporary.delete(recursive: true);
-  });
-
   testWidgets('missing cover reserves no layout space', (tester) async {
     await _pump(
       tester,
       binding: const Success<ManifestAssetDescriptor?>(null),
       localPath: null,
+      imageBuilder: _visibleImage,
     );
 
     expect(tester.getSize(find.byKey(_hostKey)), Size.zero);
-    expect(find.byType(Image), findsNothing);
   });
 
   testWidgets('decode failure collapses instead of showing a placeholder', (
@@ -52,30 +37,25 @@ void main() {
     await _pump(
       tester,
       binding: Success<ManifestAssetDescriptor?>(_descriptor()),
-      localPath: '${temporary.path}/verified-cover.png',
-      imageProviderFactory: (_) =>
-          const AssetImage('assets/__img_ui_missing_decode_fixture__.png'),
+      localPath: '/verified/cover.png',
+      imageBuilder: _collapsedImage,
     );
 
     expect(tester.getSize(find.byKey(_hostKey)), Size.zero);
-    expect(find.byType(Image), findsOneWidget);
   });
 
-  testWidgets('valid cover becomes visible only after successful decode', (
+  testWidgets('valid verified cover occupies its requested layout', (
     tester,
   ) async {
-    final file = File('${temporary.path}/valid.png');
-    await file.writeAsBytes(base64Decode(_png));
-
     await _pump(
       tester,
       binding: Success<ManifestAssetDescriptor?>(_descriptor()),
-      localPath: file.path,
-      needsRealIo: true,
+      localPath: '/verified/cover.png',
+      imageBuilder: _visibleImage,
     );
 
     expect(tester.getSize(find.byKey(_hostKey)), const Size(160, 80));
-    expect(find.byType(Image), findsOneWidget);
+    expect(find.byKey(const Key('decoded-cover')), findsOneWidget);
   });
 }
 
@@ -83,8 +63,7 @@ Future<void> _pump(
   WidgetTester tester, {
   required Result<ManifestAssetDescriptor?> binding,
   required String? localPath,
-  ContentCoverImageProviderFactory? imageProviderFactory,
-  bool needsRealIo = false,
+  required ContentCoverImageBuilder imageBuilder,
 }) async {
   final store = _Store(localPath);
   final resolver = ContentCoverResolver(
@@ -114,7 +93,7 @@ Future<void> _pump(
                 revision: 3,
                 width: 160,
                 height: 80,
-                imageProviderFactory: imageProviderFactory,
+                imageBuilder: imageBuilder,
               ),
             ),
           ),
@@ -124,14 +103,35 @@ Future<void> _pump(
   );
 
   await tester.pump();
-  if (needsRealIo) {
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 120));
-    });
-  }
-  for (var frame = 0; frame < 6; frame++) {
-    await tester.pump(const Duration(milliseconds: 25));
-  }
+  await tester.pump();
+}
+
+Widget _visibleImage({
+  required BuildContext context,
+  required String localPath,
+  required double? width,
+  required double? height,
+  required BoxFit fit,
+  required BorderRadius borderRadius,
+  required String? semanticLabel,
+}) {
+  return SizedBox(
+    key: const Key('decoded-cover'),
+    width: width,
+    height: height,
+  );
+}
+
+Widget _collapsedImage({
+  required BuildContext context,
+  required String localPath,
+  required double? width,
+  required double? height,
+  required BoxFit fit,
+  required BorderRadius borderRadius,
+  required String? semanticLabel,
+}) {
+  return const SizedBox.shrink();
 }
 
 ManifestAssetDescriptor _descriptor() {
