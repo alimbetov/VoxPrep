@@ -40,6 +40,8 @@ jobs:
         run: |
           files=(
             lib/app/access_providers.dart
+            lib/app/billing_providers.dart
+            lib/app/router.dart
             lib/application/access/access_snapshot.dart
             lib/application/access/store_product.dart
             lib/application/access/store_purchase_event.dart
@@ -49,6 +51,7 @@ jobs:
             lib/application/content_delivery/product_catalog.dart
             lib/application/ports/access_snapshot_repository.dart
             lib/application/ports/billing_repository.dart
+            lib/data/billing/unavailable_billing_repository.dart
             lib/data/local/database/access_snapshot_schema_v18.dart
             lib/data/local/database/careerspeak_database.dart
             lib/data/local/database/learning_collection_access_schema_v17.dart
@@ -56,6 +59,7 @@ jobs:
             lib/data/local/drift_universal_catalogue_graph_materializer.dart
             lib/data/local/drift_universal_catalogue_repository.dart
             lib/data/remote/universal_catalogue_decoder_registry.dart
+            lib/features/access/full_unlock_screen.dart
             lib/features/catalogue/catalogue_screen.dart
             test/application/access/access_snapshot_test.dart
             test/application/access/store_product_test.dart
@@ -67,6 +71,7 @@ jobs:
             test/data/local/drift_access_snapshot_repository_test.dart
             test/data/local/learning_collection_access_persistence_test.dart
             test/data/remote/monetization_access_decoder_test.dart
+            test/features/access/full_unlock_screen_test.dart
             test/features/catalogue/catalogue_access_gating_test.dart
           )
           dart format "${files[@]}"
@@ -81,6 +86,8 @@ jobs:
         run: |
           files=(
             lib/app/access_providers.dart
+            lib/app/billing_providers.dart
+            lib/app/router.dart
             lib/application/access/access_snapshot.dart
             lib/application/access/store_product.dart
             lib/application/access/store_purchase_event.dart
@@ -90,6 +97,7 @@ jobs:
             lib/application/content_delivery/product_catalog.dart
             lib/application/ports/access_snapshot_repository.dart
             lib/application/ports/billing_repository.dart
+            lib/data/billing/unavailable_billing_repository.dart
             lib/data/local/database/access_snapshot_schema_v18.dart
             lib/data/local/database/careerspeak_database.dart
             lib/data/local/database/learning_collection_access_schema_v17.dart
@@ -97,6 +105,7 @@ jobs:
             lib/data/local/drift_universal_catalogue_graph_materializer.dart
             lib/data/local/drift_universal_catalogue_repository.dart
             lib/data/remote/universal_catalogue_decoder_registry.dart
+            lib/features/access/full_unlock_screen.dart
             lib/features/catalogue/catalogue_screen.dart
             test/application/access/access_snapshot_test.dart
             test/application/access/store_product_test.dart
@@ -108,6 +117,7 @@ jobs:
             test/data/local/drift_access_snapshot_repository_test.dart
             test/data/local/learning_collection_access_persistence_test.dart
             test/data/remote/monetization_access_decoder_test.dart
+            test/features/access/full_unlock_screen_test.dart
             test/features/catalogue/catalogue_access_gating_test.dart
           )
           for file in "${files[@]}"; do
@@ -132,4 +142,5 @@ jobs:
             test/data/local/drift_universal_catalogue_repository_test.dart \
             test/data/remote/monetization_access_decoder_test.dart \
             test/data/remote/universal_catalogue_decoder_registry_test.dart \
+            test/features/access/full_unlock_screen_test.dart \
             test/features/catalogue/catalogue_access_gating_test.dart
