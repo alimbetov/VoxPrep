@@ -55,6 +55,5 @@ jobs:
       - name: Locale projection identity fidelity
         run: timeout 3m flutter test test/application/content_sync/content_sync_locale_projection_test.dart --reporter expanded
 
-      - name: V12 diagnostic
-        continue-on-error: true
+      - name: V12 adversarial qualification
         run: timeout 4m flutter test test/acceptance/v12_universal_catalogue_adversarial_acceptance_test.dart --reporter expanded
