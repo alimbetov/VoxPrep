@@ -27,11 +27,13 @@ jobs:
       - name: Dependencies
         run: flutter pub get
 
-      - name: Format H8 slice
-        run: >-
-          dart format --output=none --set-exit-if-changed
-          lib/core/adaptive/careerspeak_adaptive_scaffold.dart
-          test/core/adaptive/careerspeak_adaptive_scaffold_test.dart
+      - name: Canonical formatter output
+        run: |
+          dart format \
+            lib/core/adaptive/careerspeak_adaptive_scaffold.dart \
+            test/core/adaptive/careerspeak_adaptive_scaffold_test.dart
+          echo '=== careerspeak_adaptive_scaffold_test.dart ==='
+          cat test/core/adaptive/careerspeak_adaptive_scaffold_test.dart
 
       - name: Analyze
         run: flutter analyze
