@@ -75,7 +75,7 @@ Map<String, dynamic> _collection({
     'trackCode': 'TRACK_ALPHA',
     'title': 'Collection',
     'description': 'Collection description',
-    if (accessLevel != null) 'accessLevel': accessLevel,
+    'accessLevel': ?accessLevel,
     'sortOrder': sortOrder,
     'active': true,
     'members': <Object>[
