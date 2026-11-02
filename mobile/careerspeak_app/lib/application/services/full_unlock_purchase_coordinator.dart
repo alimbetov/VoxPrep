@@ -61,9 +61,24 @@ final class FullUnlockPurchaseCoordinator {
 
   FullUnlockPurchaseState get state => _state;
 
-  Stream<FullUnlockPurchaseState> get states async* {
-    yield _state;
-    yield* _states.stream;
+  /// Subscribes to live transitions before publishing the current snapshot.
+  /// This avoids the async-generator handoff gap where a synchronous Store
+  /// event could otherwise be emitted between the initial state and the live
+  /// broadcast subscription.
+  Stream<FullUnlockPurchaseState> get states {
+    return Stream<FullUnlockPurchaseState>.multi((controller) {
+      final subscription = _states.stream.listen(
+        controller.add,
+        onError: (Object error, StackTrace stackTrace) {
+          controller.addError(error, stackTrace);
+        },
+        onDone: controller.close,
+      );
+      controller.add(_state);
+      controller.onCancel = () {
+        unawaited(subscription.cancel());
+      };
+    });
   }
 
   void start() {
