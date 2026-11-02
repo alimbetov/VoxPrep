@@ -20,19 +20,23 @@ void main() {
       addTearDown(database.close);
       final now = DateTime.utc(2026, 11, 2, 9);
 
-      await database.into(database.contentManifestStates).insert(
-        ContentManifestStatesCompanion.insert(
-          id: const Value(1),
-          schemaVersion: 1,
-          currentContentVersion: 108,
-          currentManifestChecksum: _rootChecksum,
-          etag: const Value('root-v1-108'),
-          updatedAt: now,
-        ),
-      );
+      await database
+          .into(database.contentManifestStates)
+          .insert(
+            ContentManifestStatesCompanion.insert(
+              id: const Value(1),
+              schemaVersion: 1,
+              currentContentVersion: 108,
+              currentManifestChecksum: _rootChecksum,
+              etag: const Value('root-v1-108'),
+              localePolicyContentVersion: const Value(108),
+              updatedAt: now,
+            ),
+          );
 
-      final local = (await DriftSyncJournal(database).readLocalSnapshot())
-          .getOrThrow();
+      final local = (await DriftSyncJournal(
+        database,
+      ).readLocalSnapshot()).getOrThrow();
       expect(local.currentSchemaVersion, 1);
 
       final remoteV1 = RootContentManifest(
