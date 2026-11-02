@@ -1,5 +1,6 @@
 name: H3.1 Format Normalize
 
+# One-off helper; removed after canonical formatter output is committed.
 on:
   push:
     branches:
