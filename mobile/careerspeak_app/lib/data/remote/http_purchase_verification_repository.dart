@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import '../../application/access/purchase_verification.dart';
 import '../../application/access/store_product.dart';
 import '../../application/access/store_purchase_event.dart';
