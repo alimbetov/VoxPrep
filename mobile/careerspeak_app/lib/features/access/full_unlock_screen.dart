@@ -23,52 +23,114 @@ class FullUnlockScreen extends ConsumerWidget {
     );
 
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 36),
       children: [
-        const SizedBox(height: 16),
-        const Icon(Icons.lock_open_outlined, size: 52),
-        const SizedBox(height: 20),
-        Text(
-          'Unlock Full VoxPrep',
-          textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-        const SizedBox(height: 12),
-        const Text(
-          'Get access to the complete VoxPrep catalogue.',
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 24),
-        const _Benefit(text: 'All learning collections'),
-        const _Benefit(text: 'Included practice tests'),
-        const _Benefit(text: 'Included audio'),
-        const _Benefit(text: 'Offline access for entitled content'),
-        const SizedBox(height: 28),
-        product.when(
-          data: (value) => _StoreProductPanel(
-            product: value,
-            busy: busy,
-            onPurchase: () => _purchase(context, ref, value),
-          ),
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stackTrace) => const _StoreUnavailablePanel(),
-        ),
-        const SizedBox(height: 12),
-        purchaseState.when(
-          data: (value) => _PurchaseStatusPanel(state: value),
-          loading: () => const SizedBox.shrink(),
-          error: (error, stackTrace) => const _PurchaseStatusPanel(
-            state: FullUnlockPurchaseState(
-              phase: FullUnlockPurchasePhase.failed,
-              message: 'Purchase status is temporarily unavailable.',
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 620),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: Alignment.center,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 7,
+                      ),
+                      child: Text(
+                        'VOXPREP FULL',
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.8,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Unlock every learning path',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'One payment unlocks the complete VoxPrep catalogue, practice tests, audio and entitled offline content.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 24),
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Column(
+                      children: [
+                        _Benefit(text: 'All learning collections'),
+                        _Benefit(text: 'Included practice tests'),
+                        _Benefit(text: 'Included audio'),
+                        _Benefit(text: 'Offline access for entitled content'),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 22),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: const [
+                    Chip(label: Text('No subscription')),
+                    Chip(label: Text('One-time unlock')),
+                    Chip(label: Text('Restore purchases anytime')),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                product.when(
+                  data: (value) => _StoreProductPanel(
+                    product: value,
+                    busy: busy,
+                    onPurchase: () => _purchase(context, ref, value),
+                  ),
+                  loading: () => const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(20),
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
+                  error: (error, stackTrace) => const _StoreUnavailablePanel(),
+                ),
+                const SizedBox(height: 12),
+                purchaseState.when(
+                  data: (value) => _PurchaseStatusPanel(state: value),
+                  loading: () => const SizedBox.shrink(),
+                  error: (error, stackTrace) => const _PurchaseStatusPanel(
+                    state: FullUnlockPurchaseState(
+                      phase: FullUnlockPurchasePhase.failed,
+                      message: 'Purchase status is temporarily unavailable.',
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  key: const Key('full-unlock-restore-button'),
+                  onPressed: busy ? null : () => _restore(context, ref),
+                  child: const Text('Restore Purchases'),
+                ),
+                Text(
+                  'Purchases are processed by your app store. VoxPrep unlocks Full access only after the purchase is verified.',
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
             ),
           ),
-        ),
-        const SizedBox(height: 8),
-        TextButton(
-          key: const Key('full-unlock-restore-button'),
-          onPressed: busy ? null : () => _restore(context, ref),
-          child: const Text('Restore Purchases'),
         ),
       ],
     );
@@ -116,25 +178,33 @@ class _StoreProductPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          product.localizedPrice,
-          key: const Key('full-unlock-localized-price'),
-          style: Theme.of(context).textTheme.headlineSmall,
+    return Card(
+      color: Theme.of(context).colorScheme.primaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          children: [
+            Text(
+              product.localizedPrice,
+              key: const Key('full-unlock-localized-price'),
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 4),
+            const Text('One-time purchase'),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                key: const Key('full-unlock-purchase-button'),
+                onPressed: busy ? null : onPurchase,
+                child: Text(busy ? 'Please wait…' : 'Unlock Full VoxPrep'),
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 4),
-        const Text('One-time purchase'),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            key: const Key('full-unlock-purchase-button'),
-            onPressed: busy ? null : onPurchase,
-            child: const Text('Unlock Full VoxPrep'),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }
@@ -159,23 +229,28 @@ class _PurchaseStatusPanel extends StatelessWidget {
 
     return Semantics(
       liveRegion: true,
-      child: Row(
-        key: const Key('full-unlock-purchase-status'),
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          if (state.busy) ...[
-            const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-            const SizedBox(width: 10),
-          ] else if (icon != null) ...[
-            Icon(icon, size: 20),
-            const SizedBox(width: 10),
-          ],
-          Flexible(child: Text(state.message, textAlign: TextAlign.center)),
-        ],
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            key: const Key('full-unlock-purchase-status'),
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (state.busy) ...[
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                const SizedBox(width: 10),
+              ] else if (icon != null) ...[
+                Icon(icon, size: 20),
+                const SizedBox(width: 10),
+              ],
+              Flexible(child: Text(state.message, textAlign: TextAlign.center)),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -188,10 +263,21 @@ class _StoreUnavailablePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Card(
       child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Text(
-          'Store purchases are temporarily unavailable.',
-          textAlign: TextAlign.center,
+        padding: EdgeInsets.all(18),
+        child: Column(
+          children: [
+            Icon(Icons.storefront_outlined, size: 32),
+            SizedBox(height: 10),
+            Text(
+              'Store purchases are temporarily unavailable.',
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 4),
+            Text(
+              'You can keep using the free content and try again later.',
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
       ),
     );
@@ -206,10 +292,14 @@ class _Benefit extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
         children: [
-          const Icon(Icons.check_circle_outline, size: 20),
+          Icon(
+            Icons.check_circle_rounded,
+            size: 21,
+            color: Theme.of(context).colorScheme.primary,
+          ),
           const SizedBox(width: 10),
           Expanded(child: Text(text)),
         ],
