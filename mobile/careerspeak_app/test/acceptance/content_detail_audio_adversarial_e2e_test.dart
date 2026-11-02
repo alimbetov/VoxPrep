@@ -34,7 +34,7 @@ void main() {
     'corrupted local audio is discarded and exact asset is redownloaded',
     (tester) async {
       final scenario = await _Scenario.create();
-      addTearDown(scenario.dispose);
+      addTearDown(() => scenario.dispose(tester));
       await scenario.pump(tester);
 
       await scenario.play(tester);
@@ -42,14 +42,18 @@ void main() {
       final path = scenario.engine.lastOpenedPath!;
 
       await scenario.stop(tester);
-      await File(path).writeAsBytes(_badBytes, flush: true);
-      expect(await File(path).readAsBytes(), _badBytes);
+      await tester.runAsync(
+        () => File(path).writeAsBytes(_badBytes, flush: true),
+      );
+      final corrupted = await tester.runAsync(() => File(path).readAsBytes());
+      expect(corrupted, _badBytes);
 
       await scenario.play(tester);
 
       expect(scenario.source.openCount, 2);
       expect(scenario.engine.openCount, 2);
-      expect(await File(path).readAsBytes(), _goodBytes);
+      final repaired = await tester.runAsync(() => File(path).readAsBytes());
+      expect(repaired, _goodBytes);
       expect(find.text('Pause'), findsOneWidget);
     },
   );
@@ -58,11 +62,12 @@ void main() {
     'bad checksum download fails closed and is never opened by player',
     (tester) async {
       final scenario = await _Scenario.create(sourceBytes: _badBytes);
-      addTearDown(scenario.dispose);
+      addTearDown(() => scenario.dispose(tester));
       await scenario.pump(tester);
 
       await tester.tap(find.widgetWithText(FilledButton, 'Play'));
-      await tester.pumpAndSettle();
+      await _waitForCondition(tester, () => scenario.source.openCount == 1);
+      await _pumpUntilVisible(tester, find.textContaining('checksum'));
 
       expect(scenario.source.openCount, 1);
       expect(scenario.engine.openCount, 0);
@@ -75,27 +80,34 @@ void main() {
     'offline after eviction exhausts retries without inventing local audio',
     (tester) async {
       final scenario = await _Scenario.create();
-      addTearDown(scenario.dispose);
+      addTearDown(() => scenario.dispose(tester));
       await scenario.pump(tester);
 
       await scenario.play(tester);
       scenario.engine.latestSession.complete();
-      await tester.pumpAndSettle();
+      await _pumpUntilVisible(
+        tester,
+        find.widgetWithText(FilledButton, 'Replay'),
+      );
       final path = scenario.engine.lastOpenedPath!;
 
-      await scenario.expireAndEvict();
-      expect(await File(path).exists(), isFalse);
+      await scenario.expireAndEvict(tester);
+      final existsAfterEviction = await tester.runAsync(() => File(path).exists());
+      expect(existsAfterEviction, isFalse);
 
       scenario.source.online = false;
       await tester.tap(find.widgetWithText(FilledButton, 'Replay'));
-      await tester.pumpAndSettle();
+      await _waitForCondition(tester, () => scenario.source.openCount == 4);
+      await _pumpUntilVisible(tester, find.textContaining('offline'));
+      await _pumpUntilVisible(tester, find.widgetWithText(FilledButton, 'Play'));
 
       expect(
         scenario.source.openCount,
         4,
       ); // first success + three offline attempts
       expect(scenario.engine.openCount, 1);
-      expect(await File(path).exists(), isFalse);
+      final stillMissing = await tester.runAsync(() => File(path).exists());
+      expect(stillMissing, isFalse);
       expect(find.textContaining('offline'), findsWidgets);
       expect(find.text('Play'), findsOneWidget);
     },
@@ -105,31 +117,68 @@ void main() {
     tester,
   ) async {
     final scenario = await _Scenario.create();
-    addTearDown(scenario.dispose);
+    addTearDown(() => scenario.dispose(tester));
     await scenario.pump(tester);
 
     await scenario.play(tester);
     scenario.engine.latestSession.complete();
-    await tester.pumpAndSettle();
+    await _pumpUntilVisible(
+      tester,
+      find.widgetWithText(FilledButton, 'Replay'),
+    );
     final path = scenario.engine.lastOpenedPath!;
 
-    await scenario.expireAndEvict();
+    await scenario.expireAndEvict(tester);
     scenario.source.online = false;
     await tester.tap(find.widgetWithText(FilledButton, 'Replay'));
-    await tester.pumpAndSettle();
+    await _waitForCondition(tester, () => scenario.source.openCount == 4);
+    await _pumpUntilVisible(tester, find.widgetWithText(FilledButton, 'Play'));
     expect(scenario.source.openCount, 4);
-    expect(await File(path).exists(), isFalse);
+    final missingOffline = await tester.runAsync(() => File(path).exists());
+    expect(missingOffline, isFalse);
 
     scenario.source.online = true;
     await tester.tap(find.widgetWithText(FilledButton, 'Play'));
-    await tester.pumpAndSettle();
+    await _waitForCondition(tester, () => scenario.engine.openCount == 2);
+    await _pumpUntilVisible(
+      tester,
+      find.widgetWithText(FilledButton, 'Pause'),
+    );
 
     expect(scenario.source.openCount, 5);
     expect(scenario.engine.openCount, 2);
     expect(scenario.engine.lastOpenedPath, path);
-    expect(await File(path).readAsBytes(), _goodBytes);
+    final recovered = await tester.runAsync(() => File(path).readAsBytes());
+    expect(recovered, _goodBytes);
     expect(find.text('Pause'), findsOneWidget);
   });
+}
+
+Future<void> _waitForCondition(
+  WidgetTester tester,
+  bool Function() condition, {
+  int maxAttempts = 100,
+}) async {
+  for (var attempt = 0; attempt < maxAttempts; attempt += 1) {
+    if (condition()) return;
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 10)),
+    );
+    await tester.pump();
+  }
+  throw TestFailure('Expected asynchronous condition was not satisfied.');
+}
+
+Future<void> _pumpUntilVisible(
+  WidgetTester tester,
+  Finder finder, {
+  int maxPumps = 100,
+}) async {
+  for (var attempt = 0; attempt < maxPumps; attempt += 1) {
+    await tester.pump(const Duration(milliseconds: 10));
+    if (finder.evaluate().isNotEmpty) return;
+  }
+  throw TestFailure('Expected widget did not become visible: $finder');
 }
 
 const _topic = ContentItem(
@@ -221,32 +270,44 @@ final class _Scenario {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await _pumpUntilVisible(tester, find.widgetWithText(FilledButton, 'Play'));
   }
 
   Future<void> play(WidgetTester tester) async {
+    final expectedOpenCount = engine.openCount + 1;
     await tester.tap(find.widgetWithText(FilledButton, 'Play'));
-    await tester.pumpAndSettle();
+    await _waitForCondition(tester, () => engine.openCount == expectedOpenCount);
+    await _pumpUntilVisible(
+      tester,
+      find.widgetWithText(FilledButton, 'Pause'),
+    );
   }
 
   Future<void> stop(WidgetTester tester) async {
     await tester.tap(find.widgetWithText(OutlinedButton, 'Stop'));
-    await tester.pumpAndSettle();
+    await _pumpUntilVisible(tester, find.widgetWithText(FilledButton, 'Play'));
   }
 
-  Future<void> expireAndEvict() async {
+  Future<void> expireAndEvict(WidgetTester tester) async {
     advanceNow(const Duration(days: 100));
-    final result = await AssetCacheRetentionManager(
-      retention: retention,
-      evictionStore: store,
-      audioTtl: const Duration(days: 90),
-      now: readNow,
-    ).cleanupExpiredAudio();
+    final result = await tester.runAsync(
+      () => AssetCacheRetentionManager(
+        retention: retention,
+        evictionStore: store,
+        audioTtl: const Duration(days: 90),
+        now: readNow,
+      ).cleanupExpiredAudio(),
+    );
     expect(result, isA<Success<AssetRetentionCleanupReport>>());
-    expect((result as Success<AssetRetentionCleanupReport>).value.evicted, 1);
+    expect((result! as Success<AssetRetentionCleanupReport>).value.evicted, 1);
   }
 
-  Future<void> dispose() async {
+  Future<void> dispose(WidgetTester tester) async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 20)),
+    );
     await learnerState.dispose();
     if (await directory.exists()) await directory.delete(recursive: true);
   }
