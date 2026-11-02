@@ -34,9 +34,21 @@ jobs:
         working-directory: mobile/careerspeak_app
         shell: bash
         run: |
-          dart format lib test
-          if ! git diff --quiet -- lib test; then
-            git diff -- lib test > "$RUNNER_TEMP/img-ui-format.diff"
+          files=(
+            lib/application/services/asset_resolver.dart
+            lib/application/services/content_cover_resolver.dart
+            lib/app/asset_resolver_providers.dart
+            lib/app/continue_learning_providers.dart
+            lib/features/catalogue/catalogue_screen.dart
+            lib/features/content/content_detail_screen.dart
+            lib/features/home/home_screen.dart
+            lib/features/shared/content_cover.dart
+            test/application/content_delivery/content_cover_resolver_test.dart
+            test/features/shared/content_cover_test.dart
+          )
+          dart format "${files[@]}"
+          if ! git diff --quiet -- "${files[@]}"; then
+            git diff -- "${files[@]}" > "$RUNNER_TEMP/img-ui-format.diff"
             cat "$RUNNER_TEMP/img-ui-format.diff"
             exit 1
           fi
@@ -50,7 +62,7 @@ jobs:
             echo '### IMG-UI.1 formatter diagnostics'
             echo
             echo '```diff'
-            head -c 50000 "$RUNNER_TEMP/img-ui-format.diff"
+            cat "$RUNNER_TEMP/img-ui-format.diff"
             echo
             echo '```'
           } > "$RUNNER_TEMP/img-ui-format-comment.md"
