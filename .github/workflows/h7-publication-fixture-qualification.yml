@@ -1,0 +1,50 @@
+name: H7 Publication Fixture Qualification
+
+on:
+  push:
+    branches:
+      - feat/learner-product-ui-v1
+  workflow_dispatch:
+
+jobs:
+  h7:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Format H7 fixtures
+        run: >-
+          dart format --output=none --set-exit-if-changed
+          test/application/content_sync/content_sync_planner_test.dart
+          test/application/content_sync/locale_policy_repair_test.dart
+          test/support/sync_orchestration_fakes.dart
+
+      - name: Planner identity fixtures
+        run: timeout 3m flutter test test/application/content_sync/content_sync_planner_test.dart --reporter expanded
+
+      - name: Locale policy repair fixtures
+        run: timeout 3m flutter test test/application/content_sync/locale_policy_repair_test.dart --reporter expanded
+
+      - name: Coordinator identity fixtures
+        run: timeout 3m flutter test test/application/content_sync/content_sync_coordinator_test.dart --reporter expanded
+
+      - name: Locale projection identity fixtures
+        run: timeout 3m flutter test test/application/content_sync/content_sync_locale_projection_test.dart --reporter expanded
+
+      - name: V12 diagnostic
+        run: timeout 4m flutter test test/acceptance/v12_universal_catalogue_adversarial_acceptance_test.dart --reporter expanded

@@ -31,7 +31,7 @@ RootContentManifest manifest(
   Iterable<LocaleFallbackRule> localeFallbacks = const <LocaleFallbackRule>[],
 }) {
   return RootContentManifest(
-    schemaVersion: 1,
+    schemaVersion: supportedContentManifestSchemaVersion,
     contentVersion: version,
     minimumAppContractVersion: 1,
     publishedAt: DateTime.utc(2026, 10, 30, 10),
