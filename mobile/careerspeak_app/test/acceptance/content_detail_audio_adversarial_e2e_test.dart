@@ -55,6 +55,7 @@ void main() {
       final repaired = await tester.runAsync(() => File(path).readAsBytes());
       expect(repaired, _goodBytes);
       expect(find.text('Pause'), findsOneWidget);
+      await scenario.unmount(tester);
     },
   );
 
@@ -73,6 +74,7 @@ void main() {
       expect(scenario.engine.openCount, 0);
       expect(find.textContaining('checksum'), findsWidgets);
       expect(find.text('Play'), findsOneWidget);
+      await scenario.unmount(tester);
     },
   );
 
@@ -115,6 +117,7 @@ void main() {
       expect(stillMissing, isFalse);
       expect(find.textContaining('offline'), findsWidgets);
       expect(find.text('Play'), findsOneWidget);
+      await scenario.unmount(tester);
     },
   );
 
@@ -153,6 +156,7 @@ void main() {
     final recovered = await tester.runAsync(() => File(path).readAsBytes());
     expect(recovered, _goodBytes);
     expect(find.text('Pause'), findsOneWidget);
+    await scenario.unmount(tester);
   });
 }
 
@@ -302,6 +306,14 @@ final class _Scenario {
     );
     expect(result, isA<Success<AssetRetentionCleanupReport>>());
     expect((result! as Success<AssetRetentionCleanupReport>).value.evicted, 1);
+  }
+
+  Future<void> unmount(WidgetTester tester) async {
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump();
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 20)),
+    );
   }
 
   Future<void> dispose() async {
