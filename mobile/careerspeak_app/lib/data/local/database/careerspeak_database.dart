@@ -10,6 +10,7 @@ import 'careerspeak_sync_metadata_tables.dart';
 import 'careerspeak_tables.dart';
 import 'last_opened_content_schema_v14.dart';
 import 'learner_selection_schema_v12.dart';
+import 'learning_collection_access_schema_v17.dart';
 import 'practice_test_attempt_schema_v13.dart';
 import 'practice_test_completion_schema_v15.dart';
 import 'review_schedule_schema_v16.dart';
@@ -49,7 +50,7 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
     : super(executor ?? driftDatabase(name: 'careerspeak'));
 
   @override
-  int get schemaVersion => 16;
+  int get schemaVersion => 17;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -63,6 +64,7 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
       await _createLastOpenedContentSchemaV14();
       await _createPracticeTestCompletionSchemaV15();
       await _createReviewScheduleSchemaV16();
+      await _createLearningCollectionAccessSchemaV17();
     },
     onUpgrade: (migrator, from, to) async {
       if (from < 2) {
@@ -202,6 +204,9 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
       if (from < 16 && to >= 16) {
         await _createReviewScheduleSchemaV16();
       }
+      if (from < 17 && to >= 17) {
+        await _createLearningCollectionAccessSchemaV17();
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -260,6 +265,12 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
 
   Future<void> _createReviewScheduleSchemaV16() async {
     for (final statement in reviewScheduleSchemaV16Statements) {
+      await customStatement(statement);
+    }
+  }
+
+  Future<void> _createLearningCollectionAccessSchemaV17() async {
+    for (final statement in learningCollectionAccessSchemaV17Statements) {
       await customStatement(statement);
     }
   }
