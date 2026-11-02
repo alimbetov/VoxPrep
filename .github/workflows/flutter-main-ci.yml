@@ -1,0 +1,63 @@
+name: Flutter Main CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flutter-main-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flutter-main:
+    name: flutter-main
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Generated Drift check
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          git diff --exit-code -- lib/data/local/database/careerspeak_database.g.dart
+          grep -q 'int get schemaVersion => 18;' lib/data/local/database/careerspeak_database.dart
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Hardening targeted tests
+        shell: bash
+        run: |
+          set -o pipefail
+          flutter test test/data/local/database/careerspeak_database_test.dart --reporter expanded
+          flutter test test/app/api_client_providers_test.dart --reporter expanded
+          timeout 5m flutter test test/acceptance/content_detail_audio_redownload_e2e_test.dart --reporter expanded
+
+      - name: Full test suite
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 20m flutter test --concurrency=1 --reporter expanded
