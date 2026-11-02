@@ -61,6 +61,7 @@ jobs:
           set -euo pipefail
           flutter test test/data/local/database/careerspeak_database_test.dart --reporter expanded
           flutter test test/data/local/database/careerspeak_database_migration_test.dart --reporter expanded
+          flutter test test/data/local/database/careerspeak_database_v18_qualification_test.dart --reporter expanded
           flutter test test/app/api_client_providers_test.dart --reporter expanded
           timeout 5m flutter test test/acceptance/content_detail_audio_redownload_e2e_test.dart --reporter expanded
 
