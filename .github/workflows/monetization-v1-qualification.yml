@@ -39,23 +39,31 @@ jobs:
       - name: Format monetization slice
         run: |
           files=(
+            lib/app/access_providers.dart
+            lib/application/access/access_snapshot.dart
             lib/application/content_delivery/collection_access_policy.dart
             lib/application/content_delivery/content_manifest.dart
             lib/application/content_delivery/content_visual_policy.dart
             lib/application/content_delivery/product_catalog.dart
+            lib/application/ports/access_snapshot_repository.dart
+            lib/data/local/database/access_snapshot_schema_v18.dart
             lib/data/local/database/careerspeak_database.dart
             lib/data/local/database/learning_collection_access_schema_v17.dart
+            lib/data/local/drift_access_snapshot_repository.dart
             lib/data/local/drift_universal_catalogue_graph_materializer.dart
             lib/data/local/drift_universal_catalogue_repository.dart
             lib/data/remote/universal_catalogue_decoder_registry.dart
+            lib/features/catalogue/catalogue_screen.dart
+            test/application/access/access_snapshot_test.dart
             test/application/content_delivery/collection_access_policy_test.dart
             test/application/content_delivery/content_visual_policy_test.dart
             test/application/content_delivery/monetization_access_level_test.dart
             test/application/content_delivery/monetization_app_contract_version_test.dart
             test/contracts/c2_content_catalog_v3_access_contract_test.dart
-            test/data/local/database/careerspeak_database_test.dart
+            test/data/local/drift_access_snapshot_repository_test.dart
             test/data/local/learning_collection_access_persistence_test.dart
             test/data/remote/monetization_access_decoder_test.dart
+            test/features/catalogue/catalogue_access_gating_test.dart
           )
           dart format "${files[@]}"
           git diff --exit-code -- "${files[@]}"
@@ -68,23 +76,31 @@ jobs:
       - name: Analyze monetization slice
         run: |
           files=(
+            lib/app/access_providers.dart
+            lib/application/access/access_snapshot.dart
             lib/application/content_delivery/collection_access_policy.dart
             lib/application/content_delivery/content_manifest.dart
             lib/application/content_delivery/content_visual_policy.dart
             lib/application/content_delivery/product_catalog.dart
+            lib/application/ports/access_snapshot_repository.dart
+            lib/data/local/database/access_snapshot_schema_v18.dart
             lib/data/local/database/careerspeak_database.dart
             lib/data/local/database/learning_collection_access_schema_v17.dart
+            lib/data/local/drift_access_snapshot_repository.dart
             lib/data/local/drift_universal_catalogue_graph_materializer.dart
             lib/data/local/drift_universal_catalogue_repository.dart
             lib/data/remote/universal_catalogue_decoder_registry.dart
+            lib/features/catalogue/catalogue_screen.dart
+            test/application/access/access_snapshot_test.dart
             test/application/content_delivery/collection_access_policy_test.dart
             test/application/content_delivery/content_visual_policy_test.dart
             test/application/content_delivery/monetization_access_level_test.dart
             test/application/content_delivery/monetization_app_contract_version_test.dart
             test/contracts/c2_content_catalog_v3_access_contract_test.dart
-            test/data/local/database/careerspeak_database_test.dart
+            test/data/local/drift_access_snapshot_repository_test.dart
             test/data/local/learning_collection_access_persistence_test.dart
             test/data/remote/monetization_access_decoder_test.dart
+            test/features/catalogue/catalogue_access_gating_test.dart
           )
           for file in "${files[@]}"; do
             echo "::group::dart analyze $file"
@@ -95,13 +111,16 @@ jobs:
       - name: Monetization and affected regression tests
         run: |
           flutter test \
+            test/application/access/access_snapshot_test.dart \
             test/application/content_delivery/collection_access_policy_test.dart \
             test/application/content_delivery/content_visual_policy_test.dart \
             test/application/content_delivery/monetization_access_level_test.dart \
             test/application/content_delivery/monetization_app_contract_version_test.dart \
             test/contracts/c2_content_catalog_v3_access_contract_test.dart \
+            test/data/local/drift_access_snapshot_repository_test.dart \
             test/data/local/learning_collection_access_persistence_test.dart \
             test/data/local/drift_universal_catalogue_graph_materializer_test.dart \
             test/data/local/drift_universal_catalogue_repository_test.dart \
             test/data/remote/monetization_access_decoder_test.dart \
-            test/data/remote/universal_catalogue_decoder_registry_test.dart
+            test/data/remote/universal_catalogue_decoder_registry_test.dart \
+            test/features/catalogue/catalogue_access_gating_test.dart
