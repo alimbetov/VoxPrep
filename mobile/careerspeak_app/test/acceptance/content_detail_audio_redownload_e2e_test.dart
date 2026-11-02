@@ -32,9 +32,11 @@ void main() {
   testWidgets(
     'ContentDetail Play downloads, completes, evicts, then Replay redownloads exact audio',
     (tester) async {
-      final directory = await Directory.systemTemp.createTemp(
-        'careerspeak-content-detail-audio-e2e-',
-      );
+      final directory = (await tester.runAsync(
+        () => Directory.systemTemp.createTemp(
+          'careerspeak-content-detail-audio-e2e-',
+        ),
+      ))!;
       addTearDown(() => directory.delete(recursive: true));
 
       var now = DateTime.utc(2026, 1, 1);
@@ -83,6 +85,7 @@ void main() {
       expect(source.openCount, 0);
 
       await tester.tap(find.widgetWithText(FilledButton, 'Play'));
+      await _waitForCondition(tester, () => engine.openCount == 1);
       await _pumpUntilVisible(
         tester,
         find.widgetWithText(FilledButton, 'Pause'),
@@ -91,7 +94,10 @@ void main() {
       expect(source.openCount, 1);
       expect(engine.openCount, 1);
       expect(engine.lastOpenedPath, isNotNull);
-      expect(await File(engine.lastOpenedPath!).readAsBytes(), _bytes);
+      final initialBytes = await tester.runAsync(
+        () => File(engine.lastOpenedPath!).readAsBytes(),
+      );
+      expect(initialBytes, _bytes);
 
       engine.latestSession.complete();
       await _pumpUntilVisible(
@@ -105,24 +111,33 @@ void main() {
       );
 
       final cachedPath = engine.lastOpenedPath!;
-      expect(await File(cachedPath).exists(), isTrue);
+      final existsBeforeCleanup = await tester.runAsync(
+        () => File(cachedPath).exists(),
+      );
+      expect(existsBeforeCleanup, isTrue);
 
       now = now.add(const Duration(days: 100));
-      final cleanup = await AssetCacheRetentionManager(
-        retention: retention,
-        evictionStore: store,
-        audioTtl: const Duration(days: 90),
-        now: () => now,
-      ).cleanupExpiredAudio();
+      final cleanup = await tester.runAsync(
+        () => AssetCacheRetentionManager(
+          retention: retention,
+          evictionStore: store,
+          audioTtl: const Duration(days: 90),
+          now: () => now,
+        ).cleanupExpiredAudio(),
+      );
 
       expect(cleanup, isA<Success<AssetRetentionCleanupReport>>());
       expect(
-        (cleanup as Success<AssetRetentionCleanupReport>).value.evicted,
+        (cleanup! as Success<AssetRetentionCleanupReport>).value.evicted,
         1,
       );
-      expect(await File(cachedPath).exists(), isFalse);
+      final existsAfterCleanup = await tester.runAsync(
+        () => File(cachedPath).exists(),
+      );
+      expect(existsAfterCleanup, isFalse);
 
       await tester.tap(find.widgetWithText(FilledButton, 'Replay'));
+      await _waitForCondition(tester, () => engine.openCount == 2);
       await _pumpUntilVisible(
         tester,
         find.widgetWithText(FilledButton, 'Pause'),
@@ -131,12 +146,33 @@ void main() {
       expect(source.openCount, 2);
       expect(engine.openCount, 2);
       expect(engine.lastOpenedPath, cachedPath);
-      expect(await File(cachedPath).readAsBytes(), _bytes);
+      final replayBytes = await tester.runAsync(
+        () => File(cachedPath).readAsBytes(),
+      );
+      expect(replayBytes, _bytes);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
+      await tester.runAsync(
+        () => Future<void>.delayed(const Duration(milliseconds: 20)),
+      );
     },
   );
+}
+
+Future<void> _waitForCondition(
+  WidgetTester tester,
+  bool Function() condition, {
+  int maxAttempts = 100,
+}) async {
+  for (var attempt = 0; attempt < maxAttempts; attempt += 1) {
+    if (condition()) return;
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 10)),
+    );
+    await tester.pump();
+  }
+  throw TestFailure('Expected asynchronous condition was not satisfied.');
 }
 
 Future<void> _pumpUntilVisible(
