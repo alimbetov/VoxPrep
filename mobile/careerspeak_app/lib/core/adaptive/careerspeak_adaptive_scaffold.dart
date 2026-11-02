@@ -13,6 +13,8 @@ class CareerSpeakAdaptiveScaffold extends StatelessWidget {
   final String location;
   final Widget child;
 
+  static const _minimumRailHeight = 360.0;
+
   static const _destinations = <_Destination>[
     _Destination('/', 'Home', Icons.home_outlined, Icons.home),
     _Destination('/catalogue', 'Learn', Icons.school_outlined, Icons.school),
@@ -43,12 +45,13 @@ class CareerSpeakAdaptiveScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
-    final windowClass = windowSizeClassFor(width);
+    final size = MediaQuery.sizeOf(context);
+    final windowClass = windowSizeClassFor(size.width);
     final compact = windowClass == CareerSpeakWindowSizeClass.compact;
     final large = windowClass == CareerSpeakWindowSizeClass.large;
+    final useBottomNavigation = compact || size.height < _minimumRailHeight;
 
-    if (compact) {
+    if (useBottomNavigation) {
       return Scaffold(
         body: SafeArea(child: child),
         bottomNavigationBar: NavigationBar(
