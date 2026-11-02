@@ -43,21 +43,21 @@ fi
 rc alias set voxprep "$RUSTFS_ENDPOINT" "$ROOT_ACCESS_KEY" "$ROOT_SECRET_KEY" \
   --region "$RUSTFS_REGION" --bucket-lookup path >/dev/null
 
-rc ready voxprep
-rc bucket create "voxprep/$RUSTFS_BUCKET" --ignore-existing
+rc ready voxprep >/dev/null
+rc bucket create "voxprep/$RUSTFS_BUCKET" --ignore-existing >/dev/null
 
 POLICY_FILE="/tmp/${RUSTFS_POLICY_NAME}.json"
 sed "s/__BUCKET__/${RUSTFS_BUCKET}/g" /bootstrap/backend-rw.json > "$POLICY_FILE"
 
 if ! rc admin policy info voxprep "$RUSTFS_POLICY_NAME" >/dev/null 2>&1; then
-  rc admin policy create voxprep "$RUSTFS_POLICY_NAME" "$POLICY_FILE"
+  rc admin policy create voxprep "$RUSTFS_POLICY_NAME" "$POLICY_FILE" >/dev/null
 fi
 
 if ! rc admin user info voxprep "$BACKEND_ACCESS_KEY" >/dev/null 2>&1; then
-  rc admin user add voxprep "$BACKEND_ACCESS_KEY" "$BACKEND_SECRET_KEY"
+  rc admin user add voxprep "$BACKEND_ACCESS_KEY" "$BACKEND_SECRET_KEY" >/dev/null
 fi
 
-rc admin policy attach voxprep "$RUSTFS_POLICY_NAME" --user "$BACKEND_ACCESS_KEY"
+rc admin policy attach voxprep "$RUSTFS_POLICY_NAME" --user "$BACKEND_ACCESS_KEY" >/dev/null
 
 echo "RustFS bootstrap completed."
-echo "Bucket and Backend IAM policy are ready."
+echo "Private bucket and Backend IAM policy are ready."
