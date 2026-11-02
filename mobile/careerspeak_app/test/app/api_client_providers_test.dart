@@ -111,10 +111,13 @@ final class _MemoryInstallationCredentialStore
   }
 
   @override
-  Future<InstallationToken?> readInstallationToken() async => _installationToken;
+  Future<InstallationToken?> readInstallationToken() async =>
+      _installationToken;
 
   @override
-  Future<void> writeInstallationToken(InstallationToken installationToken) async {
+  Future<void> writeInstallationToken(
+    InstallationToken installationToken,
+  ) async {
     _installationToken = installationToken;
   }
 
