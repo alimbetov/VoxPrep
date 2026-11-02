@@ -102,12 +102,12 @@ Future<void> _pump(
       overrides: [
         contentCoverResolverProvider.overrideWith((ref) async => resolver),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
         home: Scaffold(
           body: Center(
             child: Container(
               key: _hostKey,
-              child: ContentCover(
+              child: const ContentCover(
                 content: _content,
                 revision: 3,
                 width: 160,
@@ -139,7 +139,9 @@ final class _Catalog implements AssetCatalogRepository {
   final Result<ManifestAssetDescriptor?> binding;
 
   @override
-  Future<Result<ManifestAssetDescriptor?>> findCurrentById(String assetId) async {
+  Future<Result<ManifestAssetDescriptor?>> findCurrentById(
+    String assetId,
+  ) async {
     return binding;
   }
 

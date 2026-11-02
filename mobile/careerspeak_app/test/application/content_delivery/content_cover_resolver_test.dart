@@ -115,7 +115,9 @@ final class _Catalog implements AssetCatalogRepository {
   final Result<ManifestAssetDescriptor?> binding;
 
   @override
-  Future<Result<ManifestAssetDescriptor?>> findCurrentById(String assetId) async {
+  Future<Result<ManifestAssetDescriptor?>> findCurrentById(
+    String assetId,
+  ) async {
     return binding;
   }
 
