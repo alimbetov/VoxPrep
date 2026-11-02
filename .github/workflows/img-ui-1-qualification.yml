@@ -46,6 +46,7 @@ jobs:
             lib/features/home/home_screen.dart
             lib/features/shared/content_cover.dart
             test/application/content_delivery/content_cover_resolver_test.dart
+            test/data/local/file_system_asset_store_corruption_test.dart
             test/features/shared/content_cover_test.dart
           )
           dart format "${files[@]}"
@@ -124,10 +125,13 @@ jobs:
       - name: Dependencies
         working-directory: mobile/careerspeak_app
         run: flutter pub get
-      - name: IMG-UI.1 resolver qualification
+      - name: IMG-UI.1 resolver and storage corruption qualification
         working-directory: mobile/careerspeak_app
-        run: flutter test test/application/content_delivery/content_cover_resolver_test.dart
-      - name: IMG-UI.1 widget corruption qualification
+        run: |
+          flutter test \
+            test/application/content_delivery/content_cover_resolver_test.dart \
+            test/data/local/file_system_asset_store_corruption_test.dart
+      - name: IMG-UI.1 widget decode-fallback qualification
         id: widget
         working-directory: mobile/careerspeak_app
         shell: bash
