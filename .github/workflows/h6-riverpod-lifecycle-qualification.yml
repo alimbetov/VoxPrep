@@ -27,11 +27,15 @@ jobs:
       - name: Dependencies
         run: flutter pub get
 
-      - name: Format qualification files
-        run: >-
-          dart format --output=none --set-exit-if-changed
-          test/app/review_schedule_providers_test.dart
-          test/app/learner_learning_context_provider_test.dart
+      - name: Canonical formatter output
+        run: |
+          dart format \
+            test/app/review_schedule_providers_test.dart \
+            test/app/learner_learning_context_provider_test.dart
+          echo '=== review_schedule_providers_test.dart ==='
+          cat test/app/review_schedule_providers_test.dart
+          echo '=== learner_learning_context_provider_test.dart ==='
+          cat test/app/learner_learning_context_provider_test.dart
 
       - name: Review schedule lifecycle
         run: timeout 2m flutter test test/app/review_schedule_providers_test.dart --reporter expanded
