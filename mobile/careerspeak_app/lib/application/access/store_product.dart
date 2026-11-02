@@ -14,7 +14,9 @@ final class StoreProduct {
     if (normalizedId.isEmpty ||
         normalizedTitle.isEmpty ||
         normalizedPrice.isEmpty) {
-      throw ArgumentError('Store product identity, title and price are required.');
+      throw ArgumentError(
+        'Store product identity, title and price are required.',
+      );
     }
     return StoreProduct._(
       productId: normalizedId,
