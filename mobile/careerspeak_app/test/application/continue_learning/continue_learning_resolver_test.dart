@@ -238,10 +238,7 @@ PracticeTestAttempt _attempt() {
 
 LastOpenedContent _lastOpened() {
   return LastOpenedContent(
-    identity: const ContentIdentity(
-      code: 'CONTENT_A',
-      type: ContentType.topic,
-    ),
+    identity: const ContentIdentity(code: 'CONTENT_A', type: ContentType.topic),
     contentRevision: 4,
     openedAt: DateTime.utc(2026, 11, 1, 9),
   );

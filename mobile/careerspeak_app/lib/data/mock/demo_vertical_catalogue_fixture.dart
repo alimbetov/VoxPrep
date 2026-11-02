@@ -53,21 +53,21 @@ Map<String, CataloguePayload> buildDemoVerticalCataloguePayloads() {
       'SOFTWARE_ENGINEERING',
       'Software Engineering',
       'Interview and engineering communication.',
-      'demo-section-software',
+      demoCatalogueIconAssetId,
       0,
     ),
     _section(
       'CLOUD_PLATFORM',
       'Cloud & Platform',
       'Cloud and infrastructure English.',
-      'demo-section-cloud',
+      demoCatalogueIconAssetId,
       10,
     ),
     _section(
       'ENGLISH_COMMUNICATION',
       'English & Communication',
       'Professional English for domain communication.',
-      'demo-section-english',
+      demoCatalogueIconAssetId,
       20,
     ),
   ];
@@ -293,7 +293,7 @@ Map<String, dynamic> _vertical({
   'sectionCode': sectionCode,
   'title': title,
   'description': '$title learning path delivered by demo backend data.',
-  'iconAssetId': 'demo-${code.toLowerCase()}',
+  'iconAssetId': demoCatalogueIconAssetId,
   'sortOrder': sortOrder,
   'active': true,
 };

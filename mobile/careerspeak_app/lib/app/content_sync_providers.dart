@@ -43,6 +43,7 @@ final publicationSnapshotStagerProvider = Provider<PublicationSnapshotStager>((
     ref.watch(careerSpeakDatabaseProvider),
     ref.watch(assessmentRevisionLoaderProvider),
     ref.watch(cataloguePayloadGatewayProvider),
+    manifestGateway: ref.watch(contentManifestGatewayProvider),
   );
 });
 

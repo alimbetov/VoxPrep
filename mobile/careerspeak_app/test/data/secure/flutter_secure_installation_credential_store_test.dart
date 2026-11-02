@@ -37,10 +37,7 @@ void main() {
     await store.writeInstallationToken(InstallationToken('token-new'));
 
     expect(await store.readInstallationId(), InstallationId('install-1'));
-    expect(
-      await store.readInstallationToken(),
-      InstallationToken('token-new'),
-    );
+    expect(await store.readInstallationToken(), InstallationToken('token-new'));
   });
 
   test('clearing token does not rotate installation identity', () async {

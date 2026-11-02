@@ -23,9 +23,8 @@ void main() {
         ),
         GoRoute(
           path: '/learn/direction',
-          builder: (context, state) => const Scaffold(
-            body: Center(child: Text('direction-screen')),
-          ),
+          builder: (context, state) =>
+              const Scaffold(body: Center(child: Text('direction-screen'))),
         ),
       ],
     );

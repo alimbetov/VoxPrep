@@ -1,0 +1,44 @@
+name: H6 Riverpod Lifecycle Qualification
+
+on:
+  push:
+    branches:
+      - feat/learner-product-ui-v1
+  workflow_dispatch:
+
+jobs:
+  h6:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Canonical formatter output
+        run: |
+          dart format \
+            test/app/review_schedule_providers_test.dart \
+            test/app/learner_learning_context_provider_test.dart
+          echo '=== review_schedule_providers_test.dart ==='
+          cat test/app/review_schedule_providers_test.dart
+          echo '=== learner_learning_context_provider_test.dart ==='
+          cat test/app/learner_learning_context_provider_test.dart
+
+      - name: Review schedule lifecycle
+        run: timeout 2m flutter test test/app/review_schedule_providers_test.dart --reporter expanded
+
+      - name: Learner context lifecycle
+        run: timeout 2m flutter test test/app/learner_learning_context_provider_test.dart --reporter expanded

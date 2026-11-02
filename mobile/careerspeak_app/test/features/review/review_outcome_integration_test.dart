@@ -38,15 +38,13 @@ void main() {
         code: 'R1_TOPIC',
         type: ContentType.topic,
       );
-      final schedules = _ReviewSchedules(
-        <ContentIdentity, ContentReviewState>{
-          identity: ContentReviewState(
-            identity: identity,
-            nextReviewAt: now,
-            reviewStage: 1,
-          ),
-        },
-      );
+      final schedules = _ReviewSchedules(<ContentIdentity, ContentReviewState>{
+        identity: ContentReviewState(
+          identity: identity,
+          nextReviewAt: now,
+          reviewStage: 1,
+        ),
+      });
       final content = _ContentRepository(item);
       addTearDown(schedules.dispose);
 
@@ -120,16 +118,18 @@ final class _ContentRepository implements ContentRepository {
 
 final class _ReviewSchedules implements ReviewScheduleRepository {
   _ReviewSchedules(Map<ContentIdentity, ContentReviewState> initial)
-      : values = Map<ContentIdentity, ContentReviewState>.from(initial);
+    : values = Map<ContentIdentity, ContentReviewState>.from(initial);
 
   final Map<ContentIdentity, ContentReviewState> values;
   final StreamController<Result<Map<ContentIdentity, ContentReviewState>>>
-      _changes = StreamController<
+  _changes =
+      StreamController<
         Result<Map<ContentIdentity, ContentReviewState>>
       >.broadcast();
 
   @override
-  Stream<Result<Map<ContentIdentity, ContentReviewState>>> watchSchedules() async* {
+  Stream<Result<Map<ContentIdentity, ContentReviewState>>>
+  watchSchedules() async* {
     yield Success<Map<ContentIdentity, ContentReviewState>>(
       Map<ContentIdentity, ContentReviewState>.unmodifiable(values),
     );
@@ -137,7 +137,8 @@ final class _ReviewSchedules implements ReviewScheduleRepository {
   }
 
   @override
-  Future<Result<Map<ContentIdentity, ContentReviewState>>> getSchedules() async {
+  Future<Result<Map<ContentIdentity, ContentReviewState>>>
+  getSchedules() async {
     return Success<Map<ContentIdentity, ContentReviewState>>(
       Map<ContentIdentity, ContentReviewState>.unmodifiable(values),
     );

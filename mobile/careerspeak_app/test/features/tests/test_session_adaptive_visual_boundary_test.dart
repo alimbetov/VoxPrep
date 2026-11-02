@@ -176,10 +176,9 @@ final class _PracticeTestAttemptRepository
 
   @override
   Future<Result<Set<PracticeTestCompletionKey>>>
-  getCompletedPracticeTests() async =>
-      Success<Set<PracticeTestCompletionKey>>(
-        Set<PracticeTestCompletionKey>.unmodifiable(_completed),
-      );
+  getCompletedPracticeTests() async => Success<Set<PracticeTestCompletionKey>>(
+    Set<PracticeTestCompletionKey>.unmodifiable(_completed),
+  );
 
   @override
   Future<Result<void>> completeActiveAttempt() async {

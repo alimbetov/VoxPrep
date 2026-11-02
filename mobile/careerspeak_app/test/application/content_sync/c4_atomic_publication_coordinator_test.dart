@@ -136,7 +136,10 @@ void main() {
     final prefetcher = RequiredOfflineAssetPrefetcher(
       manifestGateway: gateway,
       ensureLocal: (asset) async => Success<AssetDownloadOutcome>(
-        AssetDownloadOutcome(localPath: '/verified/${asset.assetId}', reused: true),
+        AssetDownloadOutcome(
+          localPath: '/verified/${asset.assetId}',
+          reused: true,
+        ),
       ),
     );
     final coordinator = ContentSyncCoordinator(

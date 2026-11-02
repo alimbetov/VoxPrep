@@ -222,7 +222,7 @@ RootContentManifest _manifest({
   Iterable<ContentTombstone> tombstones = const <ContentTombstone>[],
 }) {
   return RootContentManifest(
-    schemaVersion: 1,
+    schemaVersion: supportedContentManifestSchemaVersion,
     contentVersion: contentVersion,
     minimumAppContractVersion: 1,
     publishedAt: DateTime.utc(2026, 10, 30, 10),

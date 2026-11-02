@@ -61,7 +61,7 @@ void main() {
       expect(await _count(database, 'catalogue_revision_reads'), 0);
       expect(await _count(database, 'publication_catalogue_refs'), 0);
       expect(await _count(database, 'publication_practice_test_refs'), 0);
-      expect(await _count(database, 'content_manifest_state'), 0);
+      expect(await _count(database, 'content_manifest_states'), 0);
     },
   );
 
@@ -166,7 +166,7 @@ void main() {
 
       expect(await _count(database, 'catalogue_revision_reads'), 1);
       expect(await _count(database, 'publication_catalogue_refs'), 1);
-      expect(await _count(database, 'content_manifest_state'), 0);
+      expect(await _count(database, 'content_manifest_states'), 0);
     },
   );
 }

@@ -160,6 +160,9 @@ final class DriftSyncJournal implements SyncJournal {
 
       return Success(
         SyncLocalSnapshot(
+          currentSchemaVersion: currentVersion == null
+              ? null
+              : manifest!.schemaVersion,
           currentContentVersion: currentVersion,
           currentManifestChecksum: currentVersion == null
               ? null

@@ -29,8 +29,10 @@ final class ContentSyncPlanner {
     }
 
     if (currentVersion == remote.contentVersion && currentVersion != null) {
+      final localSchemaVersion =
+          local.currentSchemaVersion ?? supportedContentManifestSchemaVersion;
       final localIdentity = PublicationSnapshotIdentity(
-        schemaVersion: supportedContentManifestSchemaVersion,
+        schemaVersion: localSchemaVersion,
         contentVersion: currentVersion,
         checksum: local.currentManifestChecksum!,
         etag: local.etag,
@@ -50,6 +52,8 @@ final class ContentSyncPlanner {
                 'The same content version was observed with a different immutable publication identity.',
             details: <String, Object?>{
               'contentVersion': remote.contentVersion,
+              'localSchemaVersion': localSchemaVersion,
+              'remoteSchemaVersion': remote.schemaVersion,
               'localChecksum': local.currentManifestChecksum,
               'remoteChecksum': remote.checksum,
               'localEtag': local.etag,

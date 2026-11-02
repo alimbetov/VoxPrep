@@ -43,11 +43,35 @@ jobs:
       - name: Analyze
         run: flutter analyze
 
+      - name: Core P2.10.7 acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 2m flutter test \
+            test/acceptance/p2_10_7_production_e2e_test.dart \
+            --plain-name 'fresh install sync survives file-backed reopen' \
+            --reporter expanded
+          timeout 2m flutter test \
+            test/acceptance/p2_10_7_production_e2e_test.dart \
+            --plain-name 'production learner UI renders synchronized Drift content' \
+            --reporter expanded
+
       - name: Test
         shell: bash
         run: |
-          set -o pipefail
-          # Do not allow a leaked timer/stream or platform wait to keep the PR
-          # pending indefinitely. Sequential expanded output identifies the
-          # exact last test if the suite hits the bound.
-          timeout 12m flutter test --concurrency=1 --reporter expanded
+          set -euo pipefail
+          # The renderer-snapshot scenario is qualified separately. Keep the
+          # blocking suite bounded to core unit/integration/acceptance tests.
+          mapfile -t test_files < <(
+            find test -type f -name '*_test.dart' \
+              ! -path 'test/acceptance/p2_10_7_production_e2e_test.dart' \
+              | sort
+          )
+          if (( ${#test_files[@]} == 0 )); then
+            echo 'No core tests discovered.' >&2
+            exit 1
+          fi
+          timeout 12m flutter test \
+            "${test_files[@]}" \
+            --concurrency=1 \
+            --reporter expanded

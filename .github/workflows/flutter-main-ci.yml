@@ -1,0 +1,100 @@
+name: Flutter Main CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flutter-main-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  flutter-main:
+    name: flutter-main
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Generated Drift check
+        shell: bash
+        run: |
+          set -euo pipefail
+          dart run build_runner build --delete-conflicting-outputs
+          git diff --exit-code -- lib/data/local/database/careerspeak_database.g.dart
+          grep -q 'int get schemaVersion => 18;' lib/data/local/database/careerspeak_database.dart
+          rm -f /tmp/drift_schema_v18.json
+          dart run drift_dev schema dump \
+            lib/data/local/database/careerspeak_database.dart \
+            /tmp/drift_schema_v18.json
+          diff -u drift_schemas/drift_schema_v18.json /tmp/drift_schema_v18.json
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Hardening targeted tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter test test/data/local/database/careerspeak_database_test.dart --reporter expanded
+          flutter test test/data/local/database/careerspeak_database_migration_test.dart --reporter expanded
+          flutter test test/data/local/database/careerspeak_database_v18_qualification_test.dart --reporter expanded
+          flutter test test/app/api_client_providers_test.dart --reporter expanded
+          flutter test test/acceptance/p2_8_asset_resolution_test.dart --reporter expanded
+          timeout 2m flutter test \
+            test/acceptance/p2_10_7_production_e2e_test.dart \
+            --plain-name 'fresh install sync survives file-backed reopen' \
+            --reporter expanded
+          timeout 2m flutter test \
+            test/acceptance/p2_10_7_production_e2e_test.dart \
+            --plain-name 'production learner UI renders synchronized Drift content' \
+            --reporter expanded
+          flutter test test/acceptance/c4_adversarial_atomicity_acceptance_test.dart --reporter expanded
+          timeout 4m flutter test test/acceptance/v12_universal_catalogue_adversarial_acceptance_test.dart --reporter expanded
+          timeout 4m flutter test \
+            test/acceptance/content_detail_audio_redownload_e2e_test.dart \
+            test/acceptance/content_detail_audio_adversarial_e2e_test.dart \
+            --reporter expanded
+
+      - name: Full test suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t test_files < <(
+            find test -type f -name '*_test.dart' \
+              ! -path 'test/acceptance/p2_10_7_production_e2e_test.dart' \
+              | sort
+          )
+          if (( ${#test_files[@]} == 0 )); then
+            echo 'No core tests discovered.' >&2
+            exit 1
+          fi
+          timeout 20m flutter test \
+            "${test_files[@]}" \
+            --concurrency=1 \
+            --reporter expanded

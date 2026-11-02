@@ -26,10 +26,10 @@ class HomeScreen extends ConsumerWidget {
 
     return contentPage.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stackTrace) => _HomeLoadError(error: error),
+      error: (error, stackTrace) => const _HomeLoadError(),
       data: (page) => markers.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stackTrace) => _HomeLoadError(error: error),
+        error: (error, stackTrace) => const _HomeLoadError(),
         data: (values) => _HomeContent(
           items: page.items,
           markers: values,
@@ -72,80 +72,167 @@ class _HomeContent extends StatelessWidget {
     );
 
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
       children: [
-        Text('CareerSpeak', style: Theme.of(context).textTheme.headlineMedium),
-        const SizedBox(height: 4),
-        Text(
-          'Professional English, IELTS and interview practice.',
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
-        const SizedBox(height: 16),
+        const _BrandHero(),
+        const SizedBox(height: 18),
         _LearningContextCard(contextValue: learningContext),
-        const SizedBox(height: 24),
-        Text('Your learning', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 10),
+        const SizedBox(height: 28),
+        const _SectionTitle(
+          title: 'Continue learning',
+          subtitle: 'Pick up from the best next step in your learning path.',
+        ),
+        const SizedBox(height: 12),
+        _ContinueLearningCard(target: continueLearning),
+        const SizedBox(height: 30),
+        const _SectionTitle(
+          title: 'Today',
+          subtitle: 'A quick view of your current learning activity.',
+        ),
+        const SizedBox(height: 12),
         Wrap(
           spacing: 12,
           runSpacing: 12,
           children: [
             _StatCard(
-              icon: Icons.check_circle_outline,
+              icon: Icons.replay_rounded,
+              label: 'Due',
+              value: dueValue,
+              emphasized: true,
+            ),
+            _StatCard(
+              icon: Icons.check_circle_outline_rounded,
               label: 'Completed',
               value: '$completed',
             ),
             _StatCard(
-              icon: Icons.headphones_outlined,
+              icon: Icons.headphones_rounded,
               label: 'Listened',
               value: '$listened',
             ),
             _StatCard(
-              icon: Icons.favorite_outline,
+              icon: Icons.favorite_border_rounded,
               label: 'Favorites',
               value: '$favorites',
             ),
-            _StatCard(
-              icon: Icons.replay_outlined,
-              label: 'Due',
-              value: dueValue,
-            ),
           ],
         ),
-        const SizedBox(height: 28),
-        Text(
-          'Continue learning',
-          style: Theme.of(context).textTheme.titleLarge,
+        const SizedBox(height: 30),
+        const _SectionTitle(
+          title: 'Quick actions',
+          subtitle: 'Choose how you want to practice right now.',
         ),
-        const SizedBox(height: 8),
-        _ContinueLearningCard(target: continueLearning),
-        const SizedBox(height: 24),
-        Text('Quick access', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 10,
+          runSpacing: 10,
           children: [
-            ActionChip(
-              avatar: const Icon(Icons.school_outlined),
-              label: const Text('Learn'),
+            FilledButton.tonalIcon(
               onPressed: () => context.go('/catalogue'),
+              icon: const Icon(Icons.school_outlined),
+              label: const Text('Explore learning'),
             ),
-            ActionChip(
-              avatar: const Icon(Icons.quiz_outlined),
-              label: const Text('Quick test'),
+            FilledButton.tonalIcon(
               onPressed: () => context.go('/tests'),
+              icon: const Icon(Icons.quiz_outlined),
+              label: const Text('Practice test'),
             ),
-            ActionChip(
-              avatar: const Icon(Icons.replay_outlined),
-              label: const Text('Daily review'),
+            FilledButton.tonalIcon(
               onPressed: () => context.go('/review'),
+              icon: const Icon(Icons.replay_outlined),
+              label: const Text('Daily review'),
             ),
           ],
         ),
-        const SizedBox(height: 24),
-        Text('Recommended', style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 8),
-        for (final item in items.take(3)) ContentCard(item: item),
+        if (items.isNotEmpty) ...[
+          const SizedBox(height: 30),
+          const _SectionTitle(
+            title: 'Recommended',
+            subtitle: 'Useful material from your current catalogue.',
+          ),
+          const SizedBox(height: 12),
+          for (final item in items.take(3)) ...[
+            ContentCard(item: item),
+            const SizedBox(height: 10),
+          ],
+        ],
+      ],
+    );
+  }
+}
+
+class _BrandHero extends StatelessWidget {
+  const _BrandHero();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [scheme.primaryContainer, scheme.secondaryContainer],
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: scheme.surface.withValues(alpha: 0.78),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(Icons.graphic_eq_rounded, color: scheme.primary),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'VoxPrep',
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Prepare. Practice. Improve.',
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Professional English and interview practice built around one clear next step.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle({required this.title, required this.subtitle});
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 3),
+        Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
       ],
     );
   }
@@ -168,11 +255,10 @@ class _ContinueLearningCard extends StatelessWidget {
       error: (error, stackTrace) => const Card(
         child: Padding(
           padding: EdgeInsets.all(20),
-          child: Text('Continue learning is temporarily unavailable.'),
+          child: Text('Your next learning step is temporarily unavailable.'),
         ),
       ),
       data: (value) => Card(
-        clipBehavior: Clip.antiAlias,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -180,7 +266,7 @@ class _ContinueLearningCard extends StatelessWidget {
               ContentCover(
                 content: content,
                 revision: value.coverRevision!,
-                height: 140,
+                height: 180,
               ),
             Padding(
               padding: const EdgeInsets.all(20),
@@ -188,16 +274,30 @@ class _ContinueLearningCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
+                    'YOUR NEXT STEP',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
                     value.title,
-                    style: Theme.of(context).textTheme.titleLarge,
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(value.subtitle),
-                  const SizedBox(height: 14),
-                  FilledButton.icon(
-                    onPressed: () => context.push(value.location),
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Continue'),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () => context.push(value.location),
+                      icon: const Icon(Icons.play_arrow_rounded),
+                      label: const Text('Continue'),
+                    ),
                   ),
                 ],
               ),
@@ -237,28 +337,64 @@ class _LearningContextCard extends StatelessWidget {
       data: (value) {
         if (value == null) {
           return Card(
-            child: ListTile(
-              leading: const Icon(Icons.route_outlined),
-              title: const Text('Choose learning direction'),
-              subtitle: const Text(
-                'Select a professional area and goal to personalize your learning context.',
-              ),
-              trailing: FilledButton.tonal(
-                onPressed: () => context.push('/learn/direction'),
-                child: const Text('Choose'),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.route_outlined),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Choose learning direction',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          'Tell VoxPrep what you are preparing for so the catalogue can focus on the right path.',
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton.tonal(
+                          onPressed: () => context.push('/learn/direction'),
+                          child: const Text('Choose'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           );
         }
 
         return Card(
-          child: ListTile(
-            leading: const Icon(Icons.route_outlined),
-            title: Text(value.goalTitle),
-            subtitle: Text(value.verticalTitle),
-            trailing: TextButton(
-              onPressed: () => context.push('/learn/direction'),
-              child: const Text('Change'),
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Row(
+              children: [
+                const Icon(Icons.route_outlined),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        value.goalTitle,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 3),
+                      Text(value.verticalTitle),
+                    ],
+                  ),
+                ),
+                TextButton(
+                  onPressed: () => context.push('/learn/direction'),
+                  child: const Text('Change'),
+                ),
+              ],
             ),
           ),
         );
@@ -268,16 +404,29 @@ class _LearningContextCard extends StatelessWidget {
 }
 
 class _HomeLoadError extends StatelessWidget {
-  const _HomeLoadError({required this.error});
-
-  final Object error;
+  const _HomeLoadError();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return const Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text('Unable to load learning content.\n$error'),
+        padding: EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off_outlined, size: 42),
+            SizedBox(height: 12),
+            Text(
+              'Could not load your learning home.',
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 6),
+            Text(
+              'Check your connection and try again.',
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -288,25 +437,34 @@ class _StatCard extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.value,
+    this.emphasized = false,
   });
 
   final IconData icon;
   final String label;
   final String value;
+  final bool emphasized;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return SizedBox(
       width: 150,
       child: Card(
+        color: emphasized ? scheme.primaryContainer : null,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon),
-              const SizedBox(height: 12),
-              Text(value, style: Theme.of(context).textTheme.headlineSmall),
+              Icon(icon, color: emphasized ? scheme.onPrimaryContainer : null),
+              const SizedBox(height: 14),
+              Text(
+                value,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 2),
               Text(label),
             ],

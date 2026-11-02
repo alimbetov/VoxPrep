@@ -22,7 +22,7 @@ class CareerSpeakApp extends ConsumerWidget {
     final appLocale = _toFlutterLocale(preferences.selectedLocale.code);
 
     return MaterialApp.router(
-      title: 'CareerSpeak',
+      title: 'VoxPrep',
       debugShowCheckedModeBanner: false,
       theme: CareerSpeakTheme.light(),
       darkTheme: CareerSpeakTheme.dark(),
@@ -37,9 +37,8 @@ class CareerSpeakApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      builder: (context, child) => BootstrapStatusFrame(
-        child: child ?? const SizedBox.shrink(),
-      ),
+      builder: (context, child) =>
+          BootstrapStatusFrame(child: child ?? const SizedBox.shrink()),
       routerConfig: router,
     );
   }

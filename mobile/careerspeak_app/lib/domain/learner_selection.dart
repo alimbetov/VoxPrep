@@ -25,9 +25,7 @@ final class LearnerSelection {
     );
 
     if (trackCode != null && goalCode == null) {
-      throw ArgumentError(
-        'selectedTrackCode requires selectedGoalCode.',
-      );
+      throw ArgumentError('selectedTrackCode requires selectedGoalCode.');
     }
     if (!levelDecisionMade && levelCode != null) {
       throw ArgumentError(
@@ -125,7 +123,11 @@ String? _optionalStableCode(String? value, String field) {
   if (value == null) return null;
   final normalized = value.trim();
   if (!_stableCodePattern.hasMatch(normalized)) {
-    throw ArgumentError.value(value, field, 'must be a stable backend-owned code');
+    throw ArgumentError.value(
+      value,
+      field,
+      'must be a stable backend-owned code',
+    );
   }
   return normalized;
 }

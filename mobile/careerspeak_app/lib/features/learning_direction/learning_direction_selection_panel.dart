@@ -63,14 +63,10 @@ class _LearningDirectionSelectionPanelState
         }
 
         final selectedGoalCode = selection?.selectedGoalCode;
-        final persistedVertical = _verticalForGoal(
-          graph,
-          selectedGoalCode,
-        );
+        final persistedVertical = _verticalForGoal(graph, selectedGoalCode);
         final requestedVertical = _selectedVerticalCode ?? persistedVertical;
-        final selectedVerticalCode = verticals.any(
-          (vertical) => vertical.code == requestedVertical,
-        )
+        final selectedVerticalCode =
+            verticals.any((vertical) => vertical.code == requestedVertical)
             ? requestedVertical!
             : verticals.first.code;
         final goals = activeGoals
@@ -108,9 +104,7 @@ class _LearningDirectionSelectionPanelState
                   leading: goal.code == selectedGoalCode
                       ? const Icon(Icons.check_circle_outline)
                       : null,
-                  trailing: _saving
-                      ? null
-                      : const Icon(Icons.arrow_forward),
+                  trailing: _saving ? null : const Icon(Icons.arrow_forward),
                   onTap: _saving ? null : () => _selectGoal(graph, goal.code),
                 ),
               ),

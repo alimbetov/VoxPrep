@@ -11,7 +11,7 @@ void main() {
       checksum: _packChecksum,
     );
     final remote = RootContentManifest(
-      schemaVersion: 1,
+      schemaVersion: supportedContentManifestSchemaVersion,
       contentVersion: 108,
       minimumAppContractVersion: 1,
       publishedAt: DateTime.utc(2026, 10, 31, 7),
@@ -50,7 +50,7 @@ void main() {
       checksum: _packChecksum,
     );
     final remote = RootContentManifest(
-      schemaVersion: 1,
+      schemaVersion: supportedContentManifestSchemaVersion,
       contentVersion: 108,
       minimumAppContractVersion: 1,
       publishedAt: DateTime.utc(2026, 10, 31, 7),
@@ -93,7 +93,7 @@ void main() {
       checksum: _packChecksum,
     );
     final remote = RootContentManifest(
-      schemaVersion: 1,
+      schemaVersion: supportedContentManifestSchemaVersion,
       contentVersion: 108,
       minimumAppContractVersion: 1,
       publishedAt: DateTime.utc(2026, 10, 31, 7),

@@ -16,16 +16,16 @@ void main() {
   });
 
   test(
-    'schema version 17 creates production foundation and learner runtime state',
+    'schema version 18 creates production foundation and learner runtime state',
     () async {
       await database.customSelect('SELECT 1').getSingle();
 
-      expect(database.schemaVersion, 17);
+      expect(database.schemaVersion, 18);
 
       final userVersion = await database
           .customSelect('PRAGMA user_version')
           .getSingle();
-      expect(userVersion.read<int>('user_version'), 17);
+      expect(userVersion.read<int>('user_version'), 18);
 
       final foreignKeys = await database
           .customSelect('PRAGMA foreign_keys')
@@ -69,6 +69,7 @@ void main() {
         'practice_test_completions',
         'content_review_states',
         'learning_collection_access_reads',
+        'learner_access_snapshot',
       ]) {
         final row = await database
             .customSelect(
@@ -76,8 +77,13 @@ void main() {
               variables: <Variable<Object>>[Variable<String>(rawTable)],
             )
             .getSingleOrNull();
-        expect(row, isNotNull, reason: '$rawTable must exist in schema v17');
+        expect(row, isNotNull, reason: '$rawTable must exist in schema v18');
       }
+
+      final accessSnapshotRows = await database
+          .customSelect('SELECT id FROM learner_access_snapshot')
+          .get();
+      expect(accessSnapshotRows, isEmpty);
 
       final selection = await database
           .customSelect(
@@ -242,85 +248,91 @@ void main() {
     expect(await database.select(database.syncTombstones).get(), isEmpty);
   });
 
-  test('asset references cascade only when their owner is removed', () async {
-    final now = DateTime.utc(2026, 10, 30, 10);
-    const checksum =
-        'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+  test(
+    'asset bindings are independent of local content row lifecycle',
+    () async {
+      final now = DateTime.utc(2026, 10, 30, 10);
+      const checksum =
+          'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
-    await database
-        .into(database.contentPackRevisions)
-        .insert(
-          ContentPackRevisionsCompanion.insert(
-            packCode: 'JAVA_SENIOR',
-            variantKey: 'canonical',
-            revision: 8,
-            schemaVersion: 1,
-            checksum: checksum,
-            state: 'CURRENT',
-            sourceContentVersion: 108,
-            stagedAt: now,
-          ),
-        );
+      await database
+          .into(database.contentPackRevisions)
+          .insert(
+            ContentPackRevisionsCompanion.insert(
+              packCode: 'JAVA_SENIOR',
+              variantKey: 'canonical',
+              revision: 8,
+              schemaVersion: 1,
+              checksum: checksum,
+              state: 'CURRENT',
+              sourceContentVersion: 108,
+              stagedAt: now,
+            ),
+          );
 
-    await database
-        .into(database.localContentRecords)
-        .insert(
-          LocalContentRecordsCompanion.insert(
-            contentCode: 'JAVA_Q_001',
-            contentType: 'INTERVIEW',
-            revision: 3,
-            checksum: checksum,
-            snapshotState: 'CURRENT',
-            sourceSchemaVersion: 1,
-            createdAt: now,
-          ),
-        );
+      await database
+          .into(database.localContentRecords)
+          .insert(
+            LocalContentRecordsCompanion.insert(
+              contentCode: 'JAVA_Q_001',
+              contentType: 'INTERVIEW',
+              revision: 3,
+              checksum: checksum,
+              snapshotState: 'CURRENT',
+              sourceSchemaVersion: 1,
+              createdAt: now,
+            ),
+          );
 
-    await database
-        .into(database.assetCatalog)
-        .insert(
-          AssetCatalogCompanion.insert(
-            assetId: 'audio-1',
-            checksumSha256: checksum,
-            assetKind: 'AUDIO',
-            deliveryKey: 'audio/java-q-001.mp3',
-            sizeBytes: 100,
-            mimeType: 'audio/mpeg',
-            createdAt: now,
-          ),
-        );
+      await database
+          .into(database.assetCatalog)
+          .insert(
+            AssetCatalogCompanion.insert(
+              assetId: 'audio-1',
+              checksumSha256: checksum,
+              assetKind: 'AUDIO',
+              deliveryKey: 'audio/java-q-001.mp3',
+              sizeBytes: 100,
+              mimeType: 'audio/mpeg',
+              createdAt: now,
+            ),
+          );
 
-    await database
-        .into(database.contentAssetRefs)
-        .insert(
-          ContentAssetRefsCompanion.insert(
-            contentCode: 'JAVA_Q_001',
-            contentType: 'INTERVIEW',
-            contentRevision: 3,
-            assetId: 'audio-1',
-            assetRole: 'promptAudio',
-            requiredOffline: const Value(false),
-          ),
-        );
+      await database
+          .into(database.contentAssetRefs)
+          .insert(
+            ContentAssetRefsCompanion.insert(
+              contentCode: 'JAVA_Q_001',
+              contentType: 'INTERVIEW',
+              contentRevision: 3,
+              assetId: 'audio-1',
+              assetRole: 'promptAudio',
+              requiredOffline: const Value(false),
+            ),
+          );
 
-    await database
-        .into(database.packAssetRefs)
-        .insert(
-          PackAssetRefsCompanion.insert(
-            packCode: 'JAVA_SENIOR',
-            variantKey: 'canonical',
-            packRevision: 8,
-            assetId: 'audio-1',
-            requiredOffline: const Value(false),
-          ),
-        );
+      await database
+          .into(database.packAssetRefs)
+          .insert(
+            PackAssetRefsCompanion.insert(
+              packCode: 'JAVA_SENIOR',
+              variantKey: 'canonical',
+              packRevision: 8,
+              assetId: 'audio-1',
+              requiredOffline: const Value(false),
+            ),
+          );
 
-    await (database.delete(
-      database.localContentRecords,
-    )..where((row) => row.contentCode.equals('JAVA_Q_001'))).go();
+      await (database.delete(
+        database.localContentRecords,
+      )..where((row) => row.contentCode.equals('JAVA_Q_001'))).go();
 
-    expect(await database.select(database.contentAssetRefs).get(), isEmpty);
-    expect(await database.select(database.assetCatalog).get(), hasLength(1));
-    expect(await database.select(database.packAssetRefs).get(), hasLength(1));
-  });
+      expect(
+        await database.select(database.contentAssetRefs).get(),
+        hasLength(1),
+      );
+      expect(await database.select(database.assetCatalog).get(), hasLength(1));
+      expect(await database.select(database.packAssetRefs).get(), hasLength(1));
+    },
+  );
 }

@@ -8,51 +8,73 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('Due invalidates exactly at the nearest future review boundary', () async {
-    const identity = ContentIdentity(
-      code: 'BOUNDARY_ITEM',
-      type: ContentType.topic,
-    );
-    var now = DateTime.utc(2026, 11, 1, 10);
-    final nextReviewAt = now.add(const Duration(minutes: 5));
-    Duration? scheduledDelay;
-    void Function()? scheduledCallback;
+  test(
+    'Due invalidates exactly at the nearest future review boundary',
+    () async {
+      const identity = ContentIdentity(
+        code: 'BOUNDARY_ITEM',
+        type: ContentType.topic,
+      );
+      var now = DateTime.utc(2026, 11, 1, 10);
+      final nextReviewAt = now.add(const Duration(minutes: 5));
+      Duration? scheduledDelay;
+      void Function()? scheduledCallback;
 
-    final container = ProviderContainer(
-      overrides: [
-        reviewSchedulesProvider.overrideWith(
-          (ref) => Stream<Map<ContentIdentity, ContentReviewState>>.value(
-            <ContentIdentity, ContentReviewState>{
-              identity: ContentReviewState(
-                identity: identity,
-                nextReviewAt: nextReviewAt,
-                reviewStage: 1,
-              ),
-            },
+      final container = ProviderContainer(
+        overrides: [
+          reviewSchedulesProvider.overrideWith(
+            (ref) => Stream<Map<ContentIdentity, ContentReviewState>>.value(
+              <ContentIdentity, ContentReviewState>{
+                identity: ContentReviewState(
+                  identity: identity,
+                  nextReviewAt: nextReviewAt,
+                  reviewStage: 1,
+                ),
+              },
+            ),
           ),
-        ),
-        reviewClockProvider.overrideWithValue(() => now),
-        reviewDueTimerFactoryProvider.overrideWithValue((delay, callback) {
-          scheduledDelay = delay;
-          scheduledCallback = callback;
-          return _FakeTimer();
-        }),
-      ],
-    );
-    addTearDown(container.dispose);
+          reviewClockProvider.overrideWithValue(() => now),
+          reviewDueTimerFactoryProvider.overrideWithValue((delay, callback) {
+            scheduledDelay = delay;
+            scheduledCallback = callback;
+            return _FakeTimer();
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
 
-    await container.read(reviewSchedulesProvider.future);
-    final before = container.read(dueReviewIdentitiesProvider);
-    expect(before.requireValue, isEmpty);
-    expect(scheduledDelay, const Duration(minutes: 5));
-    expect(scheduledCallback, isNotNull);
+      final firstDue = Completer<Set<ContentIdentity>>();
+      final subscription = container.listen(dueReviewIdentitiesProvider, (
+        previous,
+        next,
+      ) {
+        next.when(
+          data: (value) {
+            if (!firstDue.isCompleted) firstDue.complete(value);
+          },
+          error: (error, stackTrace) {
+            if (!firstDue.isCompleted) {
+              firstDue.completeError(error, stackTrace);
+            }
+          },
+          loading: () {},
+        );
+      }, fireImmediately: true);
+      addTearDown(subscription.close);
 
-    now = nextReviewAt;
-    scheduledCallback!();
+      final before = await firstDue.future;
+      expect(before, isEmpty);
+      expect(scheduledDelay, const Duration(minutes: 5));
+      expect(scheduledCallback, isNotNull);
 
-    final atBoundary = container.read(dueReviewIdentitiesProvider);
-    expect(atBoundary.requireValue, contains(identity));
-  });
+      now = nextReviewAt;
+      scheduledCallback!();
+      await Future<void>.delayed(Duration.zero);
+
+      final atBoundary = container.read(dueReviewIdentitiesProvider);
+      expect(atBoundary.requireValue, contains(identity));
+    },
+  );
 
   test('Due schedules only the earliest future boundary', () async {
     const first = ContentIdentity(code: 'FIRST', type: ContentType.topic);
@@ -87,9 +109,26 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    await container.read(reviewSchedulesProvider.future);
-    container.read(dueReviewIdentitiesProvider);
+    final firstDue = Completer<Set<ContentIdentity>>();
+    final subscription = container.listen(dueReviewIdentitiesProvider, (
+      previous,
+      next,
+    ) {
+      next.when(
+        data: (value) {
+          if (!firstDue.isCompleted) firstDue.complete(value);
+        },
+        error: (error, stackTrace) {
+          if (!firstDue.isCompleted) {
+            firstDue.completeError(error, stackTrace);
+          }
+        },
+        loading: () {},
+      );
+    }, fireImmediately: true);
+    addTearDown(subscription.close);
 
+    await firstDue.future;
     expect(scheduledDelay, const Duration(minutes: 3));
   });
 }

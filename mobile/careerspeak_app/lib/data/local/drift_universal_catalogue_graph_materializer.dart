@@ -26,6 +26,7 @@ final class DriftUniversalCatalogueGraphMaterializer {
   Future<Result<void>> materialize({
     required RootContentManifest root,
     required Iterable<CataloguePayload> payloads,
+    Iterable<PackContentManifest>? packManifests,
   }) async {
     final UniversalCatalogueGraph graph;
     try {
@@ -37,7 +38,11 @@ final class DriftUniversalCatalogueGraphMaterializer {
       requireUniversalCatalogueManifestV2(root);
       graph = _decodeGraph(root, payloads);
       _requireExactPracticeTestMembership(root, graph);
-      await _requireExactIconAssetMembership(root, graph);
+      await _requireExactIconAssetMembership(
+        root,
+        graph,
+        packManifests: packManifests,
+      );
     } on Object catch (error) {
       return FailureResult<void>(
         ApplicationFailure(
@@ -269,8 +274,9 @@ final class DriftUniversalCatalogueGraphMaterializer {
 
   Future<void> _requireExactIconAssetMembership(
     RootContentManifest root,
-    UniversalCatalogueGraph graph,
-  ) async {
+    UniversalCatalogueGraph graph, {
+    Iterable<PackContentManifest>? packManifests,
+  }) async {
     final iconAssetIds = <String>{
       for (final section in graph.sections)
         if (section.iconAssetId case final String id) id,
@@ -278,6 +284,78 @@ final class DriftUniversalCatalogueGraphMaterializer {
     };
     if (iconAssetIds.isEmpty) return;
 
+    if (packManifests != null) {
+      _requireExactIconAssetMembershipFromManifests(
+        root,
+        iconAssetIds,
+        packManifests,
+      );
+      return;
+    }
+
+    await _requireExactIconAssetMembershipFromDatabase(root, iconAssetIds);
+  }
+
+  void _requireExactIconAssetMembershipFromManifests(
+    RootContentManifest root,
+    Set<String> iconAssetIds,
+    Iterable<PackContentManifest> packManifests,
+  ) {
+    final exactPackKeys = <String>{
+      for (final ref in root.packs)
+        _packKey(ref.identity, ref.revision, ref.checksum),
+    };
+    final seenPackKeys = <String>{};
+    final assetsById = <String, ManifestAssetDescriptor>{};
+
+    for (final manifest in packManifests) {
+      final key = _packKey(
+        manifest.identity,
+        manifest.revision,
+        manifest.checksum,
+      );
+      if (!exactPackKeys.contains(key) || !seenPackKeys.add(key)) {
+        throw const FormatException(
+          'Pack manifests conflict with exact publication membership.',
+        );
+      }
+
+      for (final asset in manifest.assets) {
+        final existing = assetsById[asset.assetId];
+        if (existing != null && !_sameAsset(existing, asset)) {
+          throw FormatException(
+            'Asset ${asset.assetId} has conflicting metadata across exact packs.',
+          );
+        }
+        assetsById[asset.assetId] = asset;
+      }
+    }
+
+    if (seenPackKeys.length != exactPackKeys.length) {
+      throw const FormatException(
+        'Exact pack manifest membership is incomplete.',
+      );
+    }
+
+    for (final assetId in iconAssetIds) {
+      final asset = assetsById[assetId];
+      if (asset == null) {
+        throw FormatException(
+          'Catalogue icon $assetId is outside exact pack asset membership.',
+        );
+      }
+      if (!asset.mediaType.toLowerCase().startsWith('image/')) {
+        throw FormatException(
+          'Catalogue icon $assetId must resolve to image/*, got ${asset.mediaType}.',
+        );
+      }
+    }
+  }
+
+  Future<void> _requireExactIconAssetMembershipFromDatabase(
+    RootContentManifest root,
+    Set<String> iconAssetIds,
+  ) async {
     for (final assetId in iconAssetIds) {
       String? mediaType;
       for (final pack in root.packs) {
@@ -318,6 +396,19 @@ final class DriftUniversalCatalogueGraphMaterializer {
         );
       }
     }
+  }
+
+  String _packKey(PackIdentity identity, int revision, String checksum) {
+    return '${identity.code}\u0000${identity.variant}\u0000$revision\u0000$checksum';
+  }
+
+  bool _sameAsset(ManifestAssetDescriptor left, ManifestAssetDescriptor right) {
+    return left.assetId == right.assetId &&
+        left.checksumSha256 == right.checksumSha256 &&
+        left.deliveryKey == right.deliveryKey &&
+        left.sizeBytes == right.sizeBytes &&
+        left.mediaType == right.mediaType &&
+        left.requiredOffline == right.requiredOffline;
   }
 
   Future<void> _insertSection(
