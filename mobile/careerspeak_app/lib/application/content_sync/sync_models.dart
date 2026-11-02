@@ -75,6 +75,7 @@ enum SyncTombstoneState {
 
 final class SyncLocalSnapshot {
   factory SyncLocalSnapshot({
+    int? currentSchemaVersion,
     required int? currentContentVersion,
     required String? currentManifestChecksum,
     required String? etag,
@@ -123,17 +124,25 @@ final class SyncLocalSnapshot {
     }
 
     if (currentContentVersion == null) {
-      if (currentManifestChecksum != null ||
+      if (currentSchemaVersion != null ||
+          currentManifestChecksum != null ||
           etag != null ||
           packs.isNotEmpty ||
           repairPacks.isNotEmpty ||
           fallbackRules.isNotEmpty ||
           localePolicyRepairRequired) {
         throw ArgumentError(
-          'A missing CURRENT root cannot carry checksum, ETag, CURRENT packs, fallback policy, or repair work.',
+          'A missing CURRENT root cannot carry schema, checksum, ETag, CURRENT packs, fallback policy, or repair work.',
         );
       }
     } else {
+      if (currentSchemaVersion != null && currentSchemaVersion <= 0) {
+        throw ArgumentError.value(
+          currentSchemaVersion,
+          'currentSchemaVersion',
+          'must be positive when present',
+        );
+      }
       if (currentContentVersion <= 0) {
         throw ArgumentError.value(
           currentContentVersion,
@@ -147,6 +156,7 @@ final class SyncLocalSnapshot {
     }
 
     return SyncLocalSnapshot._(
+      currentSchemaVersion: currentSchemaVersion,
       currentContentVersion: currentContentVersion,
       currentManifestChecksum: currentManifestChecksum,
       etag: etag,
@@ -158,6 +168,7 @@ final class SyncLocalSnapshot {
   }
 
   const SyncLocalSnapshot._({
+    required this.currentSchemaVersion,
     required this.currentContentVersion,
     required this.currentManifestChecksum,
     required this.etag,
@@ -167,6 +178,11 @@ final class SyncLocalSnapshot {
     required this.localePolicyRepairRequired,
   });
 
+  /// Exact schema version of the persisted CURRENT root. Production storage
+  /// provides this value so publication identity remains stable across app
+  /// upgrades that add support for newer manifest schemas. Null is retained
+  /// only for explicit test adapters that predate persisted schema identity.
+  final int? currentSchemaVersion;
   final int? currentContentVersion;
   final String? currentManifestChecksum;
   final String? etag;

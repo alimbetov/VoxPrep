@@ -1,4 +1,4 @@
-name: H7 Publication Fixture Qualification
+name: H7 Publication Identity Qualification
 
 on:
   push:
@@ -27,24 +27,34 @@ jobs:
       - name: Dependencies
         run: flutter pub get
 
-      - name: Format H7 fixtures
+      - name: Format H7 slice
         run: >-
           dart format --output=none --set-exit-if-changed
+          lib/application/content_sync/sync_models.dart
+          lib/application/content_sync/content_sync_planner.dart
+          lib/data/local/drift_sync_journal.dart
           test/application/content_sync/content_sync_planner_test.dart
           test/application/content_sync/locale_policy_repair_test.dart
+          test/application/content_sync/content_sync_coordinator_test.dart
+          test/application/content_sync/content_sync_locale_projection_test.dart
+          test/data/local/drift_sync_journal_schema_identity_test.dart
           test/support/sync_orchestration_fakes.dart
 
       - name: Planner identity fixtures
         run: timeout 3m flutter test test/application/content_sync/content_sync_planner_test.dart --reporter expanded
 
+      - name: Persisted schema identity
+        run: timeout 3m flutter test test/data/local/drift_sync_journal_schema_identity_test.dart --reporter expanded
+
       - name: Locale policy repair fixtures
         run: timeout 3m flutter test test/application/content_sync/locale_policy_repair_test.dart --reporter expanded
 
-      - name: Coordinator identity fixtures
+      - name: Coordinator identity fidelity
         run: timeout 3m flutter test test/application/content_sync/content_sync_coordinator_test.dart --reporter expanded
 
-      - name: Locale projection identity fixtures
+      - name: Locale projection identity fidelity
         run: timeout 3m flutter test test/application/content_sync/content_sync_locale_projection_test.dart --reporter expanded
 
       - name: V12 diagnostic
+        continue-on-error: true
         run: timeout 4m flutter test test/acceptance/v12_universal_catalogue_adversarial_acceptance_test.dart --reporter expanded

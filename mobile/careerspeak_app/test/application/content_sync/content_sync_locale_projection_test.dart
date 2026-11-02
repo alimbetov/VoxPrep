@@ -70,6 +70,7 @@ void main() {
       final journal = FakeJournal(
         Success(
           SyncLocalSnapshot(
+            currentSchemaVersion: 1,
             currentContentVersion: 108,
             currentManifestChecksum: rootA,
             etag: 'root-108',
@@ -117,6 +118,7 @@ void main() {
       final journal = FakeJournal(
         Success(
           SyncLocalSnapshot(
+            currentSchemaVersion: 1,
             currentContentVersion: 108,
             currentManifestChecksum: rootA,
             etag: 'root-108',
