@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/ports/purchase_verification_repository.dart';
@@ -12,14 +13,19 @@ import 'billing_providers.dart';
 
 const _mockPurchaseVerification = bool.fromEnvironment(
   'CAREERSPEAK_MOCK_PURCHASE_VERIFICATION',
-  defaultValue: true,
+  defaultValue: !kReleaseMode,
 );
 
 final purchaseVerificationRepositoryProvider =
     Provider<PurchaseVerificationRepository>((ref) {
-      if (_mockPurchaseVerification) {
+      if (_mockPurchaseVerification && !kReleaseMode) {
         return MockPurchaseVerificationRepository();
       }
+
+      // Release builds never compose the accepting mock verifier. Even if a
+      // release build is accidentally compiled with the mock flag enabled,
+      // verification is routed through the real backend boundary. Without a
+      // successful backend verification the entitlement remains fail-closed.
       return HttpPurchaseVerificationRepository(
         apiClient: ref.watch(apiClientProvider),
       );
