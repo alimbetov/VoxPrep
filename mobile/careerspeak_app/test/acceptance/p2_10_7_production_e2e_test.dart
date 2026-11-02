@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:careerspeak_app/app/api_client_providers.dart';
 import 'package:careerspeak_app/app/application_bootstrap_providers.dart';
+import 'package:careerspeak_app/app/asset_download_providers.dart';
 import 'package:careerspeak_app/app/careerspeak_app.dart';
 import 'package:careerspeak_app/app/installation_identity_providers.dart';
 import 'package:careerspeak_app/app/learner_state_providers.dart';
@@ -129,13 +130,22 @@ void main() {
       );
       final backend = _LearnerApiFixture();
       final client = MockClient(backend.handle);
+      final assetRootDirectory = (await tester.runAsync(
+        () => Directory.systemTemp.createTemp(
+          'careerspeak-p2-10-7-assets-',
+        ),
+      ))!;
       addTearDown(database.close);
       addTearDown(client.close);
+      addTearDown(() => assetRootDirectory.delete(recursive: true));
 
       const screenshotKey = Key('production-e2e-screenshot');
       ProviderScope buildApp({required bool bootstrap}) => ProviderScope(
         overrides: [
           careerSpeakDatabaseProvider.overrideWithValue(database),
+          assetRootDirectoryProvider.overrideWith(
+            (ref) async => assetRootDirectory,
+          ),
           installationCredentialStoreProvider.overrideWithValue(
             credentialStore,
           ),
@@ -465,9 +475,9 @@ http.Response _jsonResponse(
 const _installationId = '11111111-1111-4111-8111-111111111111';
 const _token = 'installation-token-e2e';
 const _rootChecksum =
-    'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    'e0bb83877e16655a6b9a649f31d1d727abafe82623fec74f21e5a5a9a215372f';
 const _packChecksum =
-    'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb';
+    '6945dc3f01162e5e3bf39cc7a2553b2aeb4da712fe330c7ad8d881e558b0c09d';
 const _contentChecksum =
     'cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc';
 
