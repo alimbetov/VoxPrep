@@ -9,12 +9,13 @@ import '../../application/result/result.dart';
 
 final class InAppPurchaseBillingRepository implements BillingRepository {
   InAppPurchaseBillingRepository({InAppPurchase? inAppPurchase})
-      : _inAppPurchase = inAppPurchase ?? InAppPurchase.instance {
+    : _inAppPurchase = inAppPurchase ?? InAppPurchase.instance {
     _events = _inAppPurchase.purchaseStream.expand(_mapPurchaseList);
   }
 
   final InAppPurchase _inAppPurchase;
-  final Map<String, ProductDetails> _productDetailsById = <String, ProductDetails>{};
+  final Map<String, ProductDetails> _productDetailsById =
+      <String, ProductDetails>{};
   final Map<String, PurchaseDetails> _purchaseDetailsByEventId =
       <String, PurchaseDetails>{};
   late final Stream<StorePurchaseEvent> _events;
@@ -33,9 +34,9 @@ final class InAppPurchaseBillingRepository implements BillingRepository {
         );
       }
 
-      final response = await _inAppPurchase.queryProductDetails(
-        const <String>{fullUnlockProductId},
-      );
+      final response = await _inAppPurchase.queryProductDetails(const <String>{
+        fullUnlockProductId,
+      });
       if (response.error != null ||
           response.notFoundIDs.contains(fullUnlockProductId)) {
         return const FailureResult<StoreProduct>(
