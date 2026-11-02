@@ -101,7 +101,8 @@ BEGIN
        OR NEW.config_asset_id IS DISTINCT FROM OLD.config_asset_id
        OR NEW.model_sha256 IS DISTINCT FROM OLD.model_sha256
        OR NEW.config_sha256 IS DISTINCT FROM OLD.config_sha256 THEN
-        RAISE EXCEPTION 'TTS voice model execution identity is immutable';
+        RAISE EXCEPTION 'TTS voice model execution identity is immutable'
+            USING ERRCODE = '23514';
     END IF;
     RETURN NEW;
 END;
