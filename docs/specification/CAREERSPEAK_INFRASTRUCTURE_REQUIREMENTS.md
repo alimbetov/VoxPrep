@@ -1,6 +1,6 @@
 # CareerSpeak / VoxPrep — Infrastructure Requirements
 
-**Document version:** 1.0  
+**Document version:** 1.1  
 **Status:** Normative B1 infrastructure baseline  
 **Applies to:** CareerSpeak v1 Backend implementation  
 **Scope classification:** internal B1 infrastructure; not a separate feature stream or independent MVP release gate
@@ -332,7 +332,26 @@ PROD example host location:
 /etc/voxprep/secrets/prod/
 ```
 
-Secret files SHOULD be owner-readable only (`0600` or equivalent).
+Secret permissions depend on the deployment mechanism:
+
+```text
+native orchestrator secrets
+→ use platform-controlled ownership/mode and least-readable permissions
+
+plain Docker Compose file-backed secrets
+→ source files are bind-mounted and retain host permissions
+→ protected parent directory SHALL restrict host traversal
+→ individual files SHALL remain readable by the non-root container UID
+```
+
+For the current single-host Compose implementation the accepted baseline is:
+
+```text
+secret directory: 0700, owned by deployment administrator/root
+secret files:     0444, inside that protected directory
+```
+
+The `0444` file mode is a Compose bind-mount compatibility requirement, not permission to expose the directory to host users. Moving to native Docker/Kubernetes secrets SHOULD replace this workaround with tighter per-secret ownership/mode controls.
 
 Repository `.env.example` files contain names/placeholders only, never usable production secrets.
 
@@ -493,6 +512,7 @@ I14 clean restore drill reconstructs PostgreSQL + RustFS successfully
 I15 restored publication/asset references pass integrity checks
 I16 RustFS bind-mount permissions are valid for the container runtime UID
 I17 infrastructure works with the normal Backend storage adapter; no direct Flutter/Worker storage credential path appears
+I18 file-backed Compose secrets remain inaccessible through host directory traversal while readable by required non-root container users
 ```
 
 This infrastructure baseline belongs to B1 and does not add another MVP delivery stage.

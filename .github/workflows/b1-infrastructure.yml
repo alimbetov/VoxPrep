@@ -6,10 +6,12 @@ on:
       - feat/b1-infrastructure-bootstrap
     paths:
       - "infra/**"
+      - "docs/specification/CAREERSPEAK_INFRASTRUCTURE_REQUIREMENTS.md"
       - ".github/workflows/b1-infrastructure.yml"
   pull_request:
     paths:
       - "infra/**"
+      - "docs/specification/CAREERSPEAK_INFRASTRUCTURE_REQUIREMENTS.md"
       - ".github/workflows/b1-infrastructure.yml"
 
 permissions:
