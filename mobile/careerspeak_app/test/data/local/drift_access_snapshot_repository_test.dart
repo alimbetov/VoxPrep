@@ -37,31 +37,34 @@ void main() {
     expect(restored.source, AccessSnapshotSource.backendVerified);
   });
 
-  test('verified FREE snapshot can replace FULL after revocation sync', () async {
-    final database = createTestDatabase();
-    addTearDown(database.close);
-    final repository = DriftAccessSnapshotRepository(database);
+  test(
+    'verified FREE snapshot can replace FULL after revocation sync',
+    () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      final repository = DriftAccessSnapshotRepository(database);
 
-    await repository.replace(
-      AccessSnapshot(
-        accessLevel: AccessLevel.full,
-        verifiedAt: DateTime.utc(2026, 11, 2, 4),
-        source: AccessSnapshotSource.backendVerified,
-      ),
-    );
-    await repository.replace(
-      AccessSnapshot(
-        accessLevel: AccessLevel.free,
-        verifiedAt: DateTime.utc(2026, 11, 2, 5),
-        source: AccessSnapshotSource.backendVerified,
-      ),
-    );
+      await repository.replace(
+        AccessSnapshot(
+          accessLevel: AccessLevel.full,
+          verifiedAt: DateTime.utc(2026, 11, 2, 4),
+          source: AccessSnapshotSource.backendVerified,
+        ),
+      );
+      await repository.replace(
+        AccessSnapshot(
+          accessLevel: AccessLevel.free,
+          verifiedAt: DateTime.utc(2026, 11, 2, 5),
+          source: AccessSnapshotSource.backendVerified,
+        ),
+      );
 
-    final result = await repository.read();
-    final restored = (result as Success<AccessSnapshot?>).value!;
-    expect(restored.accessLevel, AccessLevel.free);
-    expect(restored.verifiedAt, DateTime.utc(2026, 11, 2, 5));
-  });
+      final result = await repository.read();
+      final restored = (result as Success<AccessSnapshot?>).value!;
+      expect(restored.accessLevel, AccessLevel.free);
+      expect(restored.verifiedAt, DateTime.utc(2026, 11, 2, 5));
+    },
+  );
 
   test('schema v18 bounds access and source values', () async {
     final database = createTestDatabase();
@@ -69,19 +72,15 @@ void main() {
 
     expect(database.schemaVersion, 18);
     await expectLater(
-      database.customStatement(
-        '''INSERT INTO learner_access_snapshot
+      database.customStatement('''INSERT INTO learner_access_snapshot
            (id, access_level, verified_at, source, updated_at)
-           VALUES (1, 'TRIAL', 1, 'BACKEND_VERIFIED', 1)''',
-      ),
+           VALUES (1, 'TRIAL', 1, 'BACKEND_VERIFIED', 1)'''),
       throwsA(anything),
     );
     await expectLater(
-      database.customStatement(
-        '''INSERT INTO learner_access_snapshot
+      database.customStatement('''INSERT INTO learner_access_snapshot
            (id, access_level, verified_at, source, updated_at)
-           VALUES (1, 'FULL', 1, 'LOCAL_ONLY', 1)''',
-      ),
+           VALUES (1, 'FULL', 1, 'LOCAL_ONLY', 1)'''),
       throwsA(anything),
     );
   });
