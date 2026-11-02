@@ -16,16 +16,16 @@ void main() {
   });
 
   test(
-    'schema version 16 creates production foundation and learner runtime state',
+    'schema version 17 creates production foundation and learner runtime state',
     () async {
       await database.customSelect('SELECT 1').getSingle();
 
-      expect(database.schemaVersion, 16);
+      expect(database.schemaVersion, 17);
 
       final userVersion = await database
           .customSelect('PRAGMA user_version')
           .getSingle();
-      expect(userVersion.read<int>('user_version'), 16);
+      expect(userVersion.read<int>('user_version'), 17);
 
       final foreignKeys = await database
           .customSelect('PRAGMA foreign_keys')
@@ -68,6 +68,7 @@ void main() {
         'learner_last_opened_content',
         'practice_test_completions',
         'content_review_states',
+        'learning_collection_access_reads',
       ]) {
         final row = await database
             .customSelect(
@@ -75,7 +76,7 @@ void main() {
               variables: <Variable<Object>>[Variable<String>(rawTable)],
             )
             .getSingleOrNull();
-        expect(row, isNotNull, reason: '$rawTable must exist in schema v16');
+        expect(row, isNotNull, reason: '$rawTable must exist in schema v17');
       }
 
       final selection = await database
@@ -172,8 +173,7 @@ void main() {
     );
 
     await expectLater(
-      database.customStatement(
-        '''
+      database.customStatement('''
         INSERT INTO learner_selection (
           id,
           selected_goal_code,
@@ -183,8 +183,7 @@ void main() {
           generation,
           updated_at
         ) VALUES (2, NULL, NULL, NULL, 0, 0, 0)
-        ''',
-      ),
+        '''),
       throwsA(anything),
     );
   });

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../core/adaptive/careerspeak_adaptive_scaffold.dart';
 import '../core/motion/careerspeak_motion.dart';
+import '../features/access/full_unlock_screen.dart';
 import '../features/catalogue/catalogue_home_screen.dart';
 import '../features/catalogue/catalogue_screen.dart';
 import '../features/content/content_detail_screen.dart';
@@ -21,9 +22,7 @@ import 'onboarding_redirect_policy.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final onboardingCompleted = ref.watch(
-    onboardingStateProvider.select(
-      (state) => state.asData?.value.completed,
-    ),
+    onboardingStateProvider.select((state) => state.asData?.value.completed),
   );
 
   return GoRouter(
@@ -109,6 +108,14 @@ final routerProvider = Provider<GoRouter>((ref) {
                 trackCode: state.pathParameters['trackCode']!,
                 collectionCode: state.pathParameters['collectionCode']!,
               ),
+            ),
+          ),
+          GoRoute(
+            path: '/unlock',
+            pageBuilder: (context, state) => _page(
+              state: state,
+              hierarchical: true,
+              child: const FullUnlockScreen(),
             ),
           ),
           GoRoute(

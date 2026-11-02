@@ -1,0 +1,172 @@
+name: Monetization v1 Qualification
+
+# M6A mock-backed purchase flow is included in exact-SHA qualification.
+on:
+  push:
+    branches:
+      - feat/monetization-v1-spec
+    paths:
+      - 'mobile/careerspeak_app/**'
+      - 'contracts/**'
+      - 'docs/specification/VOXPREP_MONETIZATION_V1_SPEC.md'
+      - '.github/workflows/monetization-v1-qualification.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: monetization-v1-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Format monetization slice
+        run: |
+          files=(
+            lib/app/access_providers.dart
+            lib/app/billing_providers.dart
+            lib/app/purchase_providers.dart
+            lib/app/router.dart
+            lib/application/access/access_snapshot.dart
+            lib/application/access/purchase_verification.dart
+            lib/application/access/store_product.dart
+            lib/application/access/store_purchase_event.dart
+            lib/application/content_delivery/collection_access_policy.dart
+            lib/application/content_delivery/content_manifest.dart
+            lib/application/content_delivery/content_visual_policy.dart
+            lib/application/content_delivery/product_catalog.dart
+            lib/application/ports/access_snapshot_repository.dart
+            lib/application/ports/billing_repository.dart
+            lib/application/ports/purchase_verification_repository.dart
+            lib/application/services/full_unlock_purchase_coordinator.dart
+            lib/data/billing/in_app_purchase_billing_repository.dart
+            lib/data/billing/mock_billing_repository.dart
+            lib/data/billing/mock_purchase_verification_repository.dart
+            lib/data/billing/unavailable_billing_repository.dart
+            lib/data/local/database/access_snapshot_schema_v18.dart
+            lib/data/local/database/careerspeak_database.dart
+            lib/data/local/database/learning_collection_access_schema_v17.dart
+            lib/data/local/drift_access_snapshot_repository.dart
+            lib/data/local/drift_universal_catalogue_graph_materializer.dart
+            lib/data/local/drift_universal_catalogue_repository.dart
+            lib/data/remote/http_purchase_verification_repository.dart
+            lib/data/remote/universal_catalogue_decoder_registry.dart
+            lib/features/access/full_unlock_screen.dart
+            lib/features/catalogue/catalogue_screen.dart
+            test/application/access/access_snapshot_test.dart
+            test/application/access/store_product_test.dart
+            test/application/content_delivery/collection_access_policy_test.dart
+            test/application/content_delivery/content_visual_policy_test.dart
+            test/application/content_delivery/monetization_access_level_test.dart
+            test/application/content_delivery/monetization_app_contract_version_test.dart
+            test/application/full_unlock_purchase_coordinator_test.dart
+            test/contracts/c2_content_catalog_v3_access_contract_test.dart
+            test/contracts/monetization_billing_dependency_contract_test.dart
+            test/data/http_purchase_verification_repository_test.dart
+            test/data/local/drift_access_snapshot_repository_test.dart
+            test/data/local/learning_collection_access_persistence_test.dart
+            test/data/remote/monetization_access_decoder_test.dart
+            test/features/access/full_unlock_screen_test.dart
+            test/features/catalogue/catalogue_access_gating_test.dart
+          )
+          dart format "${files[@]}"
+          git diff --exit-code -- "${files[@]}"
+
+      - name: Generated Drift code reproducibility
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          git diff --exit-code -- lib/data/local/database/careerspeak_database.g.dart
+
+      - name: Analyze monetization slice
+        run: |
+          files=(
+            lib/app/access_providers.dart
+            lib/app/billing_providers.dart
+            lib/app/purchase_providers.dart
+            lib/app/router.dart
+            lib/application/access/access_snapshot.dart
+            lib/application/access/purchase_verification.dart
+            lib/application/access/store_product.dart
+            lib/application/access/store_purchase_event.dart
+            lib/application/content_delivery/collection_access_policy.dart
+            lib/application/content_delivery/content_manifest.dart
+            lib/application/content_delivery/content_visual_policy.dart
+            lib/application/content_delivery/product_catalog.dart
+            lib/application/ports/access_snapshot_repository.dart
+            lib/application/ports/billing_repository.dart
+            lib/application/ports/purchase_verification_repository.dart
+            lib/application/services/full_unlock_purchase_coordinator.dart
+            lib/data/billing/in_app_purchase_billing_repository.dart
+            lib/data/billing/mock_billing_repository.dart
+            lib/data/billing/mock_purchase_verification_repository.dart
+            lib/data/billing/unavailable_billing_repository.dart
+            lib/data/local/database/access_snapshot_schema_v18.dart
+            lib/data/local/database/careerspeak_database.dart
+            lib/data/local/database/learning_collection_access_schema_v17.dart
+            lib/data/local/drift_access_snapshot_repository.dart
+            lib/data/local/drift_universal_catalogue_graph_materializer.dart
+            lib/data/local/drift_universal_catalogue_repository.dart
+            lib/data/remote/http_purchase_verification_repository.dart
+            lib/data/remote/universal_catalogue_decoder_registry.dart
+            lib/features/access/full_unlock_screen.dart
+            lib/features/catalogue/catalogue_screen.dart
+            test/application/access/access_snapshot_test.dart
+            test/application/access/store_product_test.dart
+            test/application/content_delivery/collection_access_policy_test.dart
+            test/application/content_delivery/content_visual_policy_test.dart
+            test/application/content_delivery/monetization_access_level_test.dart
+            test/application/content_delivery/monetization_app_contract_version_test.dart
+            test/application/full_unlock_purchase_coordinator_test.dart
+            test/contracts/c2_content_catalog_v3_access_contract_test.dart
+            test/contracts/monetization_billing_dependency_contract_test.dart
+            test/data/http_purchase_verification_repository_test.dart
+            test/data/local/drift_access_snapshot_repository_test.dart
+            test/data/local/learning_collection_access_persistence_test.dart
+            test/data/remote/monetization_access_decoder_test.dart
+            test/features/access/full_unlock_screen_test.dart
+            test/features/catalogue/catalogue_access_gating_test.dart
+          )
+          for file in "${files[@]}"; do
+            echo "::group::dart analyze $file"
+            dart analyze "$file"
+            echo "::endgroup::"
+          done
+
+      - name: Monetization and affected regression tests
+        run: |
+          flutter test \
+            test/application/access/access_snapshot_test.dart \
+            test/application/access/store_product_test.dart \
+            test/application/content_delivery/collection_access_policy_test.dart \
+            test/application/content_delivery/content_visual_policy_test.dart \
+            test/application/content_delivery/monetization_access_level_test.dart \
+            test/application/content_delivery/monetization_app_contract_version_test.dart \
+            test/application/full_unlock_purchase_coordinator_test.dart \
+            test/contracts/c2_content_catalog_v3_access_contract_test.dart \
+            test/contracts/monetization_billing_dependency_contract_test.dart \
+            test/data/http_purchase_verification_repository_test.dart \
+            test/data/local/drift_access_snapshot_repository_test.dart \
+            test/data/local/learning_collection_access_persistence_test.dart \
+            test/data/local/drift_universal_catalogue_graph_materializer_test.dart \
+            test/data/local/drift_universal_catalogue_repository_test.dart \
+            test/data/remote/monetization_access_decoder_test.dart \
+            test/data/remote/universal_catalogue_decoder_registry_test.dart \
+            test/features/access/full_unlock_screen_test.dart \
+            test/features/catalogue/catalogue_access_gating_test.dart

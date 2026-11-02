@@ -192,10 +192,15 @@ final class DriftUniversalCatalogueRepository
     final rows = await _database
         .customSelect(
           '''
-      SELECT code, vertical_code, track_code, title, description, sort_order, active
-      FROM learning_collection_reads
-      WHERE content_version = ?
-      ORDER BY sort_order, code
+      SELECT c.code, c.vertical_code, c.track_code, c.title, c.description,
+             COALESCE(a.access_level, 'FULL') AS access_level,
+             c.sort_order, c.active
+      FROM learning_collection_reads c
+      LEFT JOIN learning_collection_access_reads a
+        ON a.content_version = c.content_version
+       AND a.collection_code = c.code
+      WHERE c.content_version = ?
+      ORDER BY c.sort_order, c.code
       ''',
           variables: [Variable<int>(version)],
         )
@@ -211,6 +216,9 @@ final class DriftUniversalCatalogueRepository
           trackCode: row.read<String>('track_code'),
           title: row.read<String>('title'),
           description: row.read<String>('description'),
+          accessLevel: AccessLevel.fromWireName(
+            row.read<String>('access_level'),
+          ),
           sortOrder: row.read<int>('sort_order'),
           active: row.read<int>('active') == 1,
           members: await _readMembers(version, code),

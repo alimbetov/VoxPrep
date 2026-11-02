@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/access_providers.dart';
 import '../../app/catalogue_payload_providers.dart';
 import '../../app/content_locations.dart';
+import '../../application/content_delivery/collection_access_policy.dart';
 import '../../application/content_delivery/learning_vertical.dart';
 import '../../application/content_delivery/product_catalog.dart';
 import '../../application/content_delivery/universal_catalogue_graph.dart';
 import '../../application/ports/universal_catalogue_repository.dart';
 import '../../domain/content_identity.dart';
+import '../access/full_unlock_screen.dart';
 
 String catalogueVerticalLocation(String code) =>
     '/catalogue/vertical/${Uri.encodeComponent(code)}';
@@ -129,6 +132,7 @@ class CatalogueTrackScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final learnerAccess = ref.watch(learnerAccessLevelProvider);
     return _withSnapshot(ref, (snapshot) {
       final graph = snapshot.graph;
       final vertical = _activeVertical(graph, verticalCode);
@@ -160,15 +164,28 @@ class CatalogueTrackScreen extends ConsumerWidget {
             _HierarchyCard(
               title: collection.title,
               description: collection.description,
-              supportingText: '${collection.members.length} items',
-              onTap: () => context.push(
-                catalogueCollectionLocation(
-                  vertical.code,
-                  goal.code,
-                  track.code,
-                  collection.code,
-                ),
+              supportingText:
+                  '${collection.members.length} items${CollectionAccessPolicy.requiresUnlock(learnerAccess: learnerAccess, collection: collection) ? ' · Full' : ''}',
+              locked: CollectionAccessPolicy.requiresUnlock(
+                learnerAccess: learnerAccess,
+                collection: collection,
               ),
+              onTap: () {
+                final requiresUnlock = CollectionAccessPolicy.requiresUnlock(
+                  learnerAccess: learnerAccess,
+                  collection: collection,
+                );
+                context.push(
+                  requiresUnlock
+                      ? fullUnlockLocation
+                      : catalogueCollectionLocation(
+                          vertical.code,
+                          goal.code,
+                          track.code,
+                          collection.code,
+                        ),
+                );
+              },
             ),
         ],
       );
@@ -192,6 +209,7 @@ class CatalogueCollectionScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final learnerAccess = ref.watch(learnerAccessLevelProvider);
     return _withSnapshot(ref, (snapshot) {
       final graph = snapshot.graph;
       final vertical = _activeVertical(graph, verticalCode);
@@ -217,6 +235,12 @@ class CatalogueCollectionScreen extends ConsumerWidget {
           .firstOrNull;
       if (collection == null) {
         return const _NotFound(message: 'Learning collection is unavailable.');
+      }
+      if (CollectionAccessPolicy.requiresUnlock(
+        learnerAccess: learnerAccess,
+        collection: collection,
+      )) {
+        return _FullAccessRequired(collection: collection);
       }
       return ListView(
         padding: const EdgeInsets.all(24),
@@ -337,12 +361,14 @@ class _HierarchyCard extends StatelessWidget {
     required this.description,
     required this.onTap,
     this.supportingText,
+    this.locked = false,
   });
 
   final String title;
   final String description;
   final String? supportingText;
   final VoidCallback onTap;
+  final bool locked;
 
   @override
   Widget build(BuildContext context) {
@@ -364,7 +390,7 @@ class _HierarchyCard extends StatelessWidget {
             ],
           ],
         ),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: Icon(locked ? Icons.lock_outline : Icons.chevron_right),
         onTap: onTap,
       ),
     );
@@ -403,6 +429,50 @@ class _CollectionMemberCard extends StatelessWidget {
         ),
       ),
     };
+  }
+}
+
+class _FullAccessRequired extends StatelessWidget {
+  const _FullAccessRequired({required this.collection});
+
+  final LearningCollectionProjection collection;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Card(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.lock_outline, size: 40),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Full access required',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${collection.title} is part of Full VoxPrep.',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () => context.push(fullUnlockLocation),
+                    child: const Text('Unlock Full VoxPrep'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
