@@ -43,16 +43,21 @@ final continueLearningCurrentRevalidatorProvider =
 final continueLearningHomeTargetProvider =
     FutureProvider<ContinueLearningHomeTarget>((ref) async {
       final selection = await ref.watch(learnerSelectionProvider.future);
-      final snapshot = await ref.watch(currentUniversalCatalogueProvider.future);
+      final snapshot = await ref.watch(
+        currentUniversalCatalogueProvider.future,
+      );
       final markers = await ref.watch(contentMarkersProvider.future);
-      final attemptRepository = ref.watch(practiceTestAttemptRepositoryProvider);
+      final attemptRepository = ref.watch(
+        practiceTestAttemptRepositoryProvider,
+      );
       final attempt = (await attemptRepository.getActiveAttempt()).getOrThrow();
       final completedPracticeTests =
           (await attemptRepository.getCompletedPracticeTests()).getOrThrow();
-      final lastOpened = (await ref
-              .watch(lastOpenedContentRepositoryProvider)
-              .getLastOpenedContent())
-          .getOrThrow();
+      final lastOpened =
+          (await ref
+                  .watch(lastOpenedContentRepositoryProvider)
+                  .getLastOpenedContent())
+              .getOrThrow();
 
       if (snapshot == null) {
         return _chooseDirectionTarget();
@@ -130,7 +135,8 @@ ContinueLearningHomeTarget _homeTarget(
   if (decision is ResumePracticeTestDecision) {
     return ContinueLearningHomeTarget(
       decision: decision,
-      location: '/tests/${Uri.encodeComponent(decision.attempt.practiceTestCode)}',
+      location:
+          '/tests/${Uri.encodeComponent(decision.attempt.practiceTestCode)}',
       title: 'Resume practice test',
       subtitle: decision.attempt.practiceTestCode,
     );
@@ -142,7 +148,7 @@ ContinueLearningHomeTarget _homeTarget(
       title: 'Continue where you left off',
       subtitle: decision.content.identity.code,
       coverContent: decision.content.identity,
-      coverRevision: decision.content.revision,
+      coverRevision: decision.content.contentRevision,
     );
   }
   if (decision is OpenMemberDecision) {

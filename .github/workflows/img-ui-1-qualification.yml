@@ -42,6 +42,7 @@ jobs:
             lib/application/services/asset_resolver.dart
             lib/application/services/content_cover_resolver.dart
             lib/app/asset_resolver_providers.dart
+            lib/app/continue_learning_providers.dart
             lib/features/home/home_screen.dart
             lib/features/shared/content_cover.dart
             test/application/content_delivery/content_cover_resolver_test.dart
