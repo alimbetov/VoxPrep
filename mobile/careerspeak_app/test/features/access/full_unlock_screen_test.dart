@@ -63,10 +63,7 @@ void main() {
   });
 }
 
-Future<void> _pump(
-  WidgetTester tester,
-  _FakeBillingRepository billing,
-) async {
+Future<void> _pump(WidgetTester tester, _FakeBillingRepository billing) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [billingRepositoryProvider.overrideWithValue(billing)],
@@ -89,7 +86,8 @@ final class _FakeBillingRepository implements BillingRepository {
   StoreProduct? lastPurchasedProduct;
 
   @override
-  Future<Result<StoreProduct>> loadFullUnlockProduct() async => Success(product);
+  Future<Result<StoreProduct>> loadFullUnlockProduct() async =>
+      Success(product);
 
   @override
   Stream<StorePurchaseEvent> watchPurchaseEvents() =>
