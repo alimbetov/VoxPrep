@@ -19,10 +19,9 @@ final class DriftPublicationSnapshotStager
     this._database,
     this._assessmentLoader,
     this._catalogueGateway, {
-    ContentManifestGateway? manifestGateway,
+    this._manifestGateway,
     DateTime Function()? now,
-  }) : _manifestGateway = manifestGateway,
-       _now = now ?? (() => DateTime.now().toUtc());
+  }) : _now = now ?? (() => DateTime.now().toUtc());
 
   final CareerSpeakDatabase _database;
   final AssessmentRevisionLoader _assessmentLoader;
@@ -228,11 +227,7 @@ final class DriftPublicationSnapshotStager
 
     final manifests = <PackContentManifest>[];
     for (final ref in target.packs) {
-      final fetched = await gateway.fetchPackManifest(
-        identity: ref.identity,
-        revision: ref.revision,
-        checksum: ref.checksum,
-      );
+      final fetched = await gateway.fetchPackManifest(ref);
       switch (fetched) {
         case FailureResult<PackContentManifest>(:final failure):
           return FailureResult<List<PackContentManifest>>(failure);
