@@ -74,7 +74,7 @@ public class TtsModelDeliveryService {
                 .signatureDuration(properties.getUrlTtl())
                 .getObjectRequest(getObjectRequest)
                 .build();
-        URI uri = presigner.presignGetObject(request).url().toURI();
+        URI uri = URI.create(presigner.presignGetObject(request).url().toString());
         return new TtsModelDelivery.Artifact(
                 asset.getId(),
                 uri,
