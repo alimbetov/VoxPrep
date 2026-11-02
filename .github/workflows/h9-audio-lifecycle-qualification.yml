@@ -28,11 +28,15 @@ jobs:
       - name: Dependencies
         run: flutter pub get
 
-      - name: Format H9 slice
-        run: >-
-          dart format --output=none --set-exit-if-changed
-          test/acceptance/content_detail_audio_redownload_e2e_test.dart
-          test/acceptance/content_detail_audio_adversarial_e2e_test.dart
+      - name: Canonical formatter output
+        shell: bash
+        run: |
+          set -euo pipefail
+          dart format \
+            test/acceptance/content_detail_audio_redownload_e2e_test.dart \
+            test/acceptance/content_detail_audio_adversarial_e2e_test.dart
+          echo '=== content_detail_audio_adversarial_e2e_test.dart ==='
+          cat test/acceptance/content_detail_audio_adversarial_e2e_test.dart
 
       - name: Analyze
         run: flutter analyze
