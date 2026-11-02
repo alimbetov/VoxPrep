@@ -74,6 +74,7 @@ jobs:
           flutter test test/data/remote/http_catalogue_payload_gateway_test.dart --reporter expanded
           flutter test test/data/remote/http_assessment_payload_gateway_test.dart --reporter expanded
           flutter test test/data/remote/http_asset_byte_source_test.dart --reporter expanded
+          flutter test test/data/remote/http_purchase_verification_repository_test.dart --reporter expanded
           flutter test test/data/remote/content_payload_all_kinds_test.dart --reporter expanded
           flutter test test/data/remote/publication_manifest_wire_guard_test.dart --reporter expanded
           flutter test test/data/remote/universal_catalogue_decoder_registry_test.dart --reporter expanded
