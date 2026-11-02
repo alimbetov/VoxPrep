@@ -33,7 +33,7 @@ void main() {
   testWidgets(
     'corrupted local audio is discarded and exact asset is redownloaded',
     (tester) async {
-      final scenario = await _Scenario.create();
+      final scenario = await _Scenario.create(tester);
       addTearDown(scenario.dispose);
       await scenario.pump(tester);
 
@@ -62,7 +62,7 @@ void main() {
   testWidgets(
     'bad checksum download fails closed and is never opened by player',
     (tester) async {
-      final scenario = await _Scenario.create(sourceBytes: _badBytes);
+      final scenario = await _Scenario.create(tester, sourceBytes: _badBytes);
       addTearDown(scenario.dispose);
       await scenario.pump(tester);
 
@@ -81,7 +81,7 @@ void main() {
   testWidgets(
     'offline after eviction exhausts retries without inventing local audio',
     (tester) async {
-      final scenario = await _Scenario.create();
+      final scenario = await _Scenario.create(tester);
       addTearDown(scenario.dispose);
       await scenario.pump(tester);
 
@@ -124,7 +124,7 @@ void main() {
   testWidgets('next Play redownloads exact audio after network recovery', (
     tester,
   ) async {
-    final scenario = await _Scenario.create();
+    final scenario = await _Scenario.create(tester);
     addTearDown(scenario.dispose);
     await scenario.pump(tester);
 
@@ -223,10 +223,15 @@ final class _Scenario {
   final DateTime Function() readNow;
   final void Function(Duration duration) advanceNow;
 
-  static Future<_Scenario> create({List<int> sourceBytes = _goodBytes}) async {
-    final directory = await Directory.systemTemp.createTemp(
-      'careerspeak-content-detail-audio-adversarial-',
-    );
+  static Future<_Scenario> create(
+    WidgetTester tester, {
+    List<int> sourceBytes = _goodBytes,
+  }) async {
+    final directory = (await tester.runAsync(
+      () => Directory.systemTemp.createTemp(
+        'careerspeak-content-detail-audio-adversarial-',
+      ),
+    ))!;
     var now = DateTime.utc(2026, 1, 1);
     final descriptor = ManifestAssetDescriptor(
       assetId: 'topic-narration-r2',
