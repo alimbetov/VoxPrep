@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 
+import 'access_snapshot_schema_v18.dart';
 import 'asset_cache_retention_schema_v10.dart';
 import 'careerspeak_assessment_tables.dart';
 import 'careerspeak_content_read_tables.dart';
@@ -50,7 +51,7 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
     : super(executor ?? driftDatabase(name: 'careerspeak'));
 
   @override
-  int get schemaVersion => 17;
+  int get schemaVersion => 18;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -65,6 +66,7 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
       await _createPracticeTestCompletionSchemaV15();
       await _createReviewScheduleSchemaV16();
       await _createLearningCollectionAccessSchemaV17();
+      await _createAccessSnapshotSchemaV18();
     },
     onUpgrade: (migrator, from, to) async {
       if (from < 2) {
@@ -207,6 +209,9 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
       if (from < 17 && to >= 17) {
         await _createLearningCollectionAccessSchemaV17();
       }
+      if (from < 18 && to >= 18) {
+        await _createAccessSnapshotSchemaV18();
+      }
     },
     beforeOpen: (details) async {
       await customStatement('PRAGMA foreign_keys = ON');
@@ -271,6 +276,12 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
 
   Future<void> _createLearningCollectionAccessSchemaV17() async {
     for (final statement in learningCollectionAccessSchemaV17Statements) {
+      await customStatement(statement);
+    }
+  }
+
+  Future<void> _createAccessSnapshotSchemaV18() async {
+    for (final statement in accessSnapshotSchemaV18Statements) {
       await customStatement(statement);
     }
   }
