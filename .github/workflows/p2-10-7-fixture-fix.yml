@@ -33,7 +33,7 @@ jobs:
       - name: Dependencies
         run: flutter pub get
 
-      - name: Repair canonical manifest checksums
+      - name: Repair P2.10.7 production fixture
         shell: bash
         run: |
           set -euo pipefail
@@ -55,6 +55,51 @@ jobs:
 
           text = text.replace(old_root, new_root, 1)
           text = text.replace(old_pack, new_pack, 1)
+
+          import_anchor = "import 'package:careerspeak_app/app/application_bootstrap_providers.dart';\n"
+          asset_import = "import 'package:careerspeak_app/app/asset_download_providers.dart';\n"
+          if asset_import not in text:
+              if text.count(import_anchor) != 1:
+                  raise SystemExit('application bootstrap import anchor changed')
+              text = text.replace(import_anchor, import_anchor + asset_import, 1)
+
+          client_anchor = """      final backend = _LearnerApiFixture();
+      final client = MockClient(backend.handle);
+      addTearDown(database.close);
+      addTearDown(client.close);
+
+      const screenshotKey = Key('production-e2e-screenshot');
+"""
+          client_replacement = """      final backend = _LearnerApiFixture();
+      final client = MockClient(backend.handle);
+      final assetRootDirectory = (await tester.runAsync(
+        () => Directory.systemTemp.createTemp(
+          'careerspeak-p2-10-7-assets-',
+        ),
+      ))!;
+      addTearDown(database.close);
+      addTearDown(client.close);
+      addTearDown(() => assetRootDirectory.delete(recursive: true));
+
+      const screenshotKey = Key('production-e2e-screenshot');
+"""
+          if text.count(client_anchor) != 1:
+              raise SystemExit(f'expected one renderer fixture anchor, got {text.count(client_anchor)}')
+          text = text.replace(client_anchor, client_replacement, 1)
+
+          override_anchor = """        overrides: [
+          careerSpeakDatabaseProvider.overrideWithValue(database),
+"""
+          override_replacement = """        overrides: [
+          careerSpeakDatabaseProvider.overrideWithValue(database),
+          assetRootDirectoryProvider.overrideWith(
+            (ref) async => assetRootDirectory,
+          ),
+"""
+          if text.count(override_anchor) != 1:
+              raise SystemExit(f'expected one production ProviderScope override anchor, got {text.count(override_anchor)}')
+          text = text.replace(override_anchor, override_replacement, 1)
+
           path.write_text(text)
           PY
 
@@ -78,5 +123,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add mobile/careerspeak_app/test/acceptance/p2_10_7_production_e2e_test.dart
-          git commit -m 'test(p2): canonicalize production E2E manifest fixtures'
+          git commit -m 'test(p2): stabilize production E2E bootstrap fixture'
           git push origin HEAD:feat/learner-product-ui-v1
