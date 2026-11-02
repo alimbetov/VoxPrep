@@ -411,8 +411,8 @@ final class DriftUniversalCatalogueGraphMaterializer {
   Future<void> _insertCollection(
     int contentVersion,
     LearningCollectionProjection collection,
-  ) {
-    return _database.customStatement(
+  ) async {
+    await _database.customStatement(
       '''
       INSERT INTO learning_collection_reads (
         content_version, code, vertical_code, track_code, title, description,
@@ -428,6 +428,18 @@ final class DriftUniversalCatalogueGraphMaterializer {
         collection.description,
         collection.sortOrder,
         collection.active ? 1 : 0,
+      ],
+    );
+    await _database.customStatement(
+      '''
+      INSERT INTO learning_collection_access_reads (
+        content_version, collection_code, access_level
+      ) VALUES (?, ?, ?)
+      ''',
+      <Object?>[
+        contentVersion,
+        collection.code,
+        collection.accessLevel.wireName,
       ],
     );
   }
