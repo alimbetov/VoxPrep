@@ -5,12 +5,14 @@ import 'package:go_router/go_router.dart';
 import '../../app/access_providers.dart';
 import '../../app/catalogue_payload_providers.dart';
 import '../../app/content_locations.dart';
+import '../../app/repository_providers.dart';
 import '../../application/content_delivery/collection_access_policy.dart';
 import '../../application/content_delivery/learning_vertical.dart';
 import '../../application/content_delivery/product_catalog.dart';
 import '../../application/content_delivery/universal_catalogue_graph.dart';
 import '../../application/ports/universal_catalogue_repository.dart';
 import '../../domain/content_identity.dart';
+import '../../domain/content_item.dart';
 import '../access/full_unlock_screen.dart';
 import '../shared/content_cover.dart';
 
@@ -46,20 +48,23 @@ class CatalogueVerticalScreen extends ConsumerWidget {
       final graph = snapshot.graph;
       final vertical = _activeVertical(graph, verticalCode);
       if (vertical == null) {
-        return const _NotFound(message: 'Learning vertical is unavailable.');
+        return const _NotFound(message: 'This learning path is unavailable.');
       }
       final goals = graph.goals
           .where((item) => item.verticalCode == vertical.code && item.active)
           .toList(growable: false);
       return _HierarchyPage(
+        eyebrow: 'LEARNING PATH',
         title: vertical.title,
         description: vertical.description,
-        emptyMessage: 'No learning goals are published for this vertical.',
+        emptyMessage: 'No learning goals are available here yet.',
         children: [
           for (final goal in goals)
             _HierarchyCard(
+              icon: Icons.flag_outlined,
               title: goal.title,
               description: goal.description,
+              actionLabel: 'Explore goal',
               onTap: () =>
                   context.push(catalogueGoalLocation(vertical.code, goal.code)),
             ),
@@ -85,11 +90,11 @@ class CatalogueGoalScreen extends ConsumerWidget {
       final graph = snapshot.graph;
       final vertical = _activeVertical(graph, verticalCode);
       if (vertical == null) {
-        return const _NotFound(message: 'Learning goal is unavailable.');
+        return const _NotFound(message: 'This learning goal is unavailable.');
       }
       final goal = _activeGoal(graph, vertical.code, goalCode);
       if (goal == null) {
-        return const _NotFound(message: 'Learning goal is unavailable.');
+        return const _NotFound(message: 'This learning goal is unavailable.');
       }
       final tracks = graph.tracks
           .where(
@@ -100,15 +105,18 @@ class CatalogueGoalScreen extends ConsumerWidget {
           )
           .toList(growable: false);
       return _HierarchyPage(
+        eyebrow: vertical.title.toUpperCase(),
         title: goal.title,
         description: goal.description,
-        emptyMessage: 'No learning tracks are published for this goal.',
+        emptyMessage: 'No learning tracks are available for this goal yet.',
         children: [
           for (final track in tracks)
             _HierarchyCard(
+              icon: Icons.route_outlined,
               title: track.title,
               description: track.description,
               supportingText: track.levelCode,
+              actionLabel: 'View track',
               onTap: () => context.push(
                 catalogueTrackLocation(vertical.code, goal.code, track.code),
               ),
@@ -138,15 +146,15 @@ class CatalogueTrackScreen extends ConsumerWidget {
       final graph = snapshot.graph;
       final vertical = _activeVertical(graph, verticalCode);
       if (vertical == null) {
-        return const _NotFound(message: 'Learning track is unavailable.');
+        return const _NotFound(message: 'This learning track is unavailable.');
       }
       final goal = _activeGoal(graph, vertical.code, goalCode);
       if (goal == null) {
-        return const _NotFound(message: 'Learning track is unavailable.');
+        return const _NotFound(message: 'This learning track is unavailable.');
       }
       final track = _activeTrack(graph, vertical.code, goal.code, trackCode);
       if (track == null) {
-        return const _NotFound(message: 'Learning track is unavailable.');
+        return const _NotFound(message: 'This learning track is unavailable.');
       }
       final collections = graph.collections
           .where(
@@ -157,16 +165,18 @@ class CatalogueTrackScreen extends ConsumerWidget {
           )
           .toList(growable: false);
       return _HierarchyPage(
+        eyebrow: goal.title.toUpperCase(),
         title: track.title,
         description: track.description,
-        emptyMessage: 'No learning collections are published for this track.',
+        emptyMessage: 'No learning collections are available for this track yet.',
         children: [
           for (final collection in collections)
             _HierarchyCard(
+              icon: Icons.menu_book_outlined,
               title: collection.title,
               description: collection.description,
-              supportingText:
-                  '${collection.members.length} items${CollectionAccessPolicy.requiresUnlock(learnerAccess: learnerAccess, collection: collection) ? ' · Full' : ''}',
+              supportingText: '${collection.members.length} learning items',
+              actionLabel: 'Open collection',
               locked: CollectionAccessPolicy.requiresUnlock(
                 learnerAccess: learnerAccess,
                 collection: collection,
@@ -215,15 +225,15 @@ class CatalogueCollectionScreen extends ConsumerWidget {
       final graph = snapshot.graph;
       final vertical = _activeVertical(graph, verticalCode);
       if (vertical == null) {
-        return const _NotFound(message: 'Learning collection is unavailable.');
+        return const _NotFound(message: 'This learning collection is unavailable.');
       }
       final goal = _activeGoal(graph, vertical.code, goalCode);
       if (goal == null) {
-        return const _NotFound(message: 'Learning collection is unavailable.');
+        return const _NotFound(message: 'This learning collection is unavailable.');
       }
       final track = _activeTrack(graph, vertical.code, goal.code, trackCode);
       if (track == null) {
-        return const _NotFound(message: 'Learning collection is unavailable.');
+        return const _NotFound(message: 'This learning collection is unavailable.');
       }
       final collection = graph.collections
           .where(
@@ -235,7 +245,7 @@ class CatalogueCollectionScreen extends ConsumerWidget {
           )
           .firstOrNull;
       if (collection == null) {
-        return const _NotFound(message: 'Learning collection is unavailable.');
+        return const _NotFound(message: 'This learning collection is unavailable.');
       }
       if (CollectionAccessPolicy.requiresUnlock(
         learnerAccess: learnerAccess,
@@ -244,22 +254,49 @@ class CatalogueCollectionScreen extends ConsumerWidget {
         return _FullAccessRequired(collection: collection);
       }
       return ListView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 36),
         children: [
+          Text(
+            'COLLECTION',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 8),
           Text(
             collection.title,
             style: Theme.of(context).textTheme.headlineMedium,
           ),
           const SizedBox(height: 8),
-          Text(collection.description),
-          const SizedBox(height: 24),
           Text(
-            'Learning sequence',
+            collection.description,
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Icon(Icons.format_list_numbered_rounded, size: 18),
+              const SizedBox(width: 6),
+              Text('${collection.members.length} learning items'),
+            ],
+          ),
+          const SizedBox(height: 28),
+          Text(
+            'Your learning sequence',
             style: Theme.of(context).textTheme.titleLarge,
           ),
-          const SizedBox(height: 8),
-          for (final member in collection.members)
+          const SizedBox(height: 6),
+          Text(
+            'Work through the lessons and practice tests in order, or open any available step.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 14),
+          for (final member in collection.members) ...[
             _CollectionMemberCard(member: member),
+            const SizedBox(height: 12),
+          ],
         ],
       );
     });
@@ -273,7 +310,7 @@ Widget _withSnapshot(
   final value = ref.watch(currentUniversalCatalogueProvider);
   return value.when(
     loading: () => const Center(child: CircularProgressIndicator()),
-    error: (error, stackTrace) => _CatalogueError(error: error),
+    error: (error, stackTrace) => const _CatalogueError(),
     data: (snapshot) =>
         snapshot == null ? const _CatalogueEmpty() : builder(snapshot),
   );
@@ -322,12 +359,14 @@ LearningTrackProjection? _activeTrack(
 
 class _HierarchyPage extends StatelessWidget {
   const _HierarchyPage({
+    required this.eyebrow,
     required this.title,
     required this.description,
     required this.children,
     required this.emptyMessage,
   });
 
+  final String eyebrow;
   final String title;
   final String description;
   final List<Widget> children;
@@ -336,21 +375,33 @@ class _HierarchyPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 36),
       children: [
+        Text(
+          eyebrow,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: Theme.of(context).colorScheme.primary,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
+          ),
+        ),
+        const SizedBox(height: 8),
         Text(title, style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 8),
-        Text(description),
-        const SizedBox(height: 24),
+        Text(description, style: Theme.of(context).textTheme.bodyLarge),
+        const SizedBox(height: 26),
         if (children.isEmpty)
           Card(
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(22),
               child: Text(emptyMessage),
             ),
           )
         else
-          ...children,
+          for (final child in children) ...[
+            child,
+            const SizedBox(height: 12),
+          ],
       ],
     );
   }
@@ -358,41 +409,116 @@ class _HierarchyPage extends StatelessWidget {
 
 class _HierarchyCard extends StatelessWidget {
   const _HierarchyCard({
+    required this.icon,
     required this.title,
     required this.description,
     required this.onTap,
+    required this.actionLabel,
     this.supportingText,
     this.locked = false,
   });
 
+  final IconData icon;
   final String title;
   final String description;
   final String? supportingText;
   final VoidCallback onTap;
+  final String actionLabel;
   final bool locked;
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
     return Card(
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 10,
-        ),
-        title: Text(title),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(description),
-            if (supportingText != null) ...[
-              const SizedBox(height: 6),
-              Text(supportingText!),
-            ],
-          ],
-        ),
-        trailing: Icon(locked ? Icons.lock_outline : Icons.chevron_right),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
         onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: scheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, color: scheme.onSecondaryContainer),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ),
+                        if (locked) ...[
+                          const SizedBox(width: 8),
+                          DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: scheme.tertiaryContainer,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 9,
+                                vertical: 4,
+                              ),
+                              child: Text(
+                                'FULL',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelSmall
+                                    ?.copyWith(
+                                      color: scheme.onTertiaryContainer,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 5),
+                    Text(description),
+                    if (supportingText != null) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        supportingText!,
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Icon(
+                          locked ? Icons.lock_outline : Icons.arrow_forward_rounded,
+                          size: 18,
+                          color: scheme.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          locked ? 'Unlock to continue' : actionLabel,
+                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: scheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -409,35 +535,33 @@ class _CollectionMemberCard extends StatelessWidget {
       LearningCollectionMemberType.content => _ContentCollectionMemberCard(
         member: member,
       ),
-      LearningCollectionMemberType.practiceTest => _HierarchyCard(
-        title: member.practiceTestRef!.practiceTestCode,
-        description:
-            'Practice test · revision ${member.practiceTestRef!.revision}',
-        supportingText: 'Step ${member.position + 1}',
-        onTap: () => context.push(
-          '/tests/${Uri.encodeComponent(member.practiceTestRef!.practiceTestCode)}',
-        ),
+      LearningCollectionMemberType.practiceTest => _PracticeTestMemberCard(
+        member: member,
       ),
     };
   }
 }
 
-class _ContentCollectionMemberCard extends StatelessWidget {
+class _ContentCollectionMemberCard extends ConsumerWidget {
   const _ContentCollectionMemberCard({required this.member});
 
   final LearningCollectionMember member;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final content = member.contentRef!;
     final identity = ContentIdentity(
       code: content.contentCode,
       type: content.contentType,
     );
+    final resolved = ref.watch(contentByIdentityProvider(identity)).asData?.value;
+    final exact = resolved?.revision == content.revision ? resolved : null;
+    final title = exact?.title ?? _contentTypeLabel(content.contentType);
+    final subtitle = exact?.subtitle ?? 'Learning content';
 
     return Card(
-      clipBehavior: Clip.antiAlias,
       child: InkWell(
+        borderRadius: BorderRadius.circular(20),
         onTap: () => context.push(contentDetailLocation(identity)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -445,31 +569,38 @@ class _ContentCollectionMemberCard extends StatelessWidget {
             ContentCover(
               content: identity,
               revision: content.revision,
-              height: 120,
+              height: 132,
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 14,
-              ),
+              padding: const EdgeInsets.all(18),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _StepBadge(step: member.position + 1),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(content.contentCode),
+                        Text(
+                          content.contentType.name.toUpperCase(),
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                         const SizedBox(height: 4),
                         Text(
-                          '${content.contentType.name} · revision ${content.revision}',
+                          title,
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
-                        const SizedBox(height: 6),
-                        Text('Step ${member.position + 1}'),
+                        const SizedBox(height: 4),
+                        Text(subtitle),
                       ],
                     ),
                   ),
-                  const Icon(Icons.chevron_right),
+                  const SizedBox(width: 8),
+                  const Icon(Icons.chevron_right_rounded),
                 ],
               ),
             ),
@@ -478,6 +609,99 @@ class _ContentCollectionMemberCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _PracticeTestMemberCard extends ConsumerWidget {
+  const _PracticeTestMemberCard({required this.member});
+
+  final LearningCollectionMember member;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final reference = member.practiceTestRef!;
+    final test = ref.watch(practiceTestByCodeProvider(reference.practiceTestCode));
+    final resolved = test.asData?.value;
+    final title = resolved?.title ?? 'Practice test';
+    final subtitle = resolved == null
+        ? 'Check your knowledge before moving on.'
+        : '${resolved.questions.length} questions · ${resolved.subtitle}';
+
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(20),
+        onTap: () => context.push(
+          '/tests/${Uri.encodeComponent(reference.practiceTestCode)}',
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _StepBadge(step: member.position + 1),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'PRACTICE TEST',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(title, style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    Text(subtitle),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(Icons.chevron_right_rounded),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StepBadge extends StatelessWidget {
+  const _StepBadge({required this.step});
+
+  final int step;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      width: 36,
+      height: 36,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: scheme.primaryContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        '$step',
+        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+          color: scheme.onPrimaryContainer,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+}
+
+String _contentTypeLabel(ContentType type) {
+  return switch (type) {
+    ContentType.vocabulary => 'Vocabulary lesson',
+    ContentType.interview => 'Interview practice',
+    ContentType.topic => 'Learning topic',
+    ContentType.shadowing => 'Shadowing practice',
+    ContentType.phrase => 'Useful phrase',
+  };
 }
 
 class _FullAccessRequired extends StatelessWidget {
@@ -498,21 +722,35 @@ class _FullAccessRequired extends StatelessWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.lock_outline, size: 40),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.tertiaryContainer,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: Text('FULL'),
+                    ),
+                  ),
                   const SizedBox(height: 16),
                   Text(
-                    'Full access required',
-                    style: Theme.of(context).textTheme.titleLarge,
+                    'Unlock this learning collection',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '${collection.title} is part of Full VoxPrep.',
+                    '${collection.title} is included with VoxPrep Full.',
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: () => context.push(fullUnlockLocation),
-                    child: const Text('Unlock Full VoxPrep'),
+                  const SizedBox(height: 20),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () => context.push(fullUnlockLocation),
+                      icon: const Icon(Icons.lock_open_rounded),
+                      label: const Text('Unlock Full VoxPrep'),
+                    ),
                   ),
                 ],
               ),
@@ -532,23 +770,37 @@ class _CatalogueEmpty extends StatelessWidget {
     return const Center(
       child: Padding(
         padding: EdgeInsets.all(24),
-        child: Text('No published learning catalogue is available yet.'),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.school_outlined, size: 42),
+            SizedBox(height: 12),
+            Text('No learning catalogue is available yet.'),
+          ],
+        ),
       ),
     );
   }
 }
 
 class _CatalogueError extends StatelessWidget {
-  const _CatalogueError({required this.error});
-
-  final Object error;
+  const _CatalogueError();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return const Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Text('Unable to load the learning catalogue.\n$error'),
+        padding: EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off_outlined, size: 42),
+            SizedBox(height: 12),
+            Text('Could not load the learning catalogue.'),
+            SizedBox(height: 6),
+            Text('Check your connection and try again.'),
+          ],
+        ),
       ),
     );
   }
@@ -562,7 +814,17 @@ class _NotFound extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(padding: const EdgeInsets.all(24), child: Text(message)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.search_off_rounded, size: 42),
+            const SizedBox(height: 12),
+            Text(message, textAlign: TextAlign.center),
+          ],
+        ),
+      ),
     );
   }
 }
