@@ -58,8 +58,8 @@ void main() {
     addTearDown(database.close);
     await _insertGraph(database, 102);
 
-    expect(
-      () => database.customStatement(
+    await expectLater(
+      database.customStatement(
         '''INSERT INTO learning_collection_access_reads
            (content_version, collection_code, access_level)
            VALUES (?, ?, 'TRIAL')''',
