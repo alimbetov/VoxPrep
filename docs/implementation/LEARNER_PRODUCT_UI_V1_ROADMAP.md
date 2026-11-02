@@ -119,11 +119,13 @@ Publication fixtures satisfy current immutable identity invariants. `PUBLICATION
 
 Tests follow the current Material 3 adaptive shell and realistic viewports while preserving the production `NavigationBar` / `NavigationRail` design and text-scale boundaries.
 
-### H9 — Audio E2E lifecycle — IMPLEMENTED, awaiting exact-SHA qualification
+### H9 — Audio E2E lifecycle — IMPLEMENTED, targeted GREEN
 
 The redownload path and adversarial audio scenarios use deterministic bounded waits. Real filesystem operations, including temporary-directory creation, execute in `WidgetTester.runAsync`, and widget teardown ownership is explicit. Production audio behavior was not weakened to satisfy the test harness.
 
-### H10 — Full suite GREEN — REQUIRED
+### H10 — Full suite GREEN — IN PROGRESS
+
+Current blocker is isolated to `test/acceptance/p2_10_7_production_e2e_test.dart`: canonical manifest fixture checksums are stale and the renderer-snapshot case must override the production asset root so `path_provider` is not awaited through a plugin-less widget-test host. The repair is guarded by an isolated P2.10.7 qualification before commit.
 
 Target:
 
