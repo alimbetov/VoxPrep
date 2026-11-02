@@ -5,6 +5,8 @@ import '../../app/billing_providers.dart';
 import '../../application/access/store_product.dart';
 import '../../application/result/result.dart';
 
+const fullUnlockLocation = '/unlock';
+
 class FullUnlockScreen extends ConsumerStatefulWidget {
   const FullUnlockScreen({super.key});
 
