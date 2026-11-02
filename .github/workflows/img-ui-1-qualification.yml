@@ -69,11 +69,47 @@ jobs:
           } > "$RUNNER_TEMP/img-ui-format-comment.md"
           gh pr comment 20 --body-file "$RUNNER_TEMP/img-ui-format-comment.md"
       - name: Analyze
+        id: analyze
         working-directory: mobile/careerspeak_app
-        run: flutter analyze
+        shell: bash
+        run: |
+          set -o pipefail
+          flutter analyze 2>&1 | tee "$RUNNER_TEMP/img-ui-analyze.log"
+      - name: Report analyze diagnostics
+        if: failure() && steps.analyze.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          {
+            echo '### IMG-UI.1 analyzer diagnostics'
+            echo
+            echo '```text'
+            tail -n 200 "$RUNNER_TEMP/img-ui-analyze.log"
+            echo '```'
+          } > "$RUNNER_TEMP/img-ui-analyze-comment.md"
+          gh pr comment 20 --body-file "$RUNNER_TEMP/img-ui-analyze-comment.md"
       - name: Full test suite
+        id: full_tests
         working-directory: mobile/careerspeak_app
-        run: flutter test
+        shell: bash
+        run: |
+          set -o pipefail
+          flutter test 2>&1 | tee "$RUNNER_TEMP/img-ui-full-tests.log"
+      - name: Report full-suite diagnostics
+        if: failure() && steps.full_tests.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          {
+            echo '### IMG-UI.1 full-test diagnostics'
+            echo
+            echo '```text'
+            tail -n 200 "$RUNNER_TEMP/img-ui-full-tests.log"
+            echo '```'
+          } > "$RUNNER_TEMP/img-ui-full-tests-comment.md"
+          gh pr comment 20 --body-file "$RUNNER_TEMP/img-ui-full-tests-comment.md"
 
   verification:
     runs-on: ubuntu-latest
