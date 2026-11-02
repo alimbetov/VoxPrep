@@ -1,8 +1,9 @@
 package io.github.alimbetov.voxprep.backend.tts.web;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetKind;
@@ -16,119 +17,75 @@ import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceEntity;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceModelEntity;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceModelRepository;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceRepository;
-import io.github.alimbetov.voxprep.backend.tts.support.TtsTestAssets;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @ActiveProfiles("test")
 @SpringBootTest
 @Transactional
 class TtsModelDeliveryIntegrationTest {
 
-    @Autowired
-    private WebApplicationContext webApplicationContext;
-    @Autowired
-    private WorkerDeliveryProperties workerProperties;
-    @Autowired
-    private FileAssetRepository assetRepository;
-    @Autowired
-    private TtsVoiceRepository voiceRepository;
-    @Autowired
-    private TtsVoiceModelRepository modelRepository;
-
+    @Autowired private WebApplicationContext context;
+    @Autowired private WorkerDeliveryProperties workerProperties;
+    @Autowired private FileAssetRepository assetRepository;
+    @Autowired private TtsVoiceRepository voiceRepository;
+    @Autowired private TtsVoiceModelRepository modelRepository;
+    @Autowired private S3Client s3Client;
     private MockMvc mockMvc;
 
     @BeforeEach
-    void setUpMockMvc() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
-    }
+    void setUp() { mockMvc = MockMvcBuilders.webAppContextSetup(context).build(); }
 
     @Test
-    void workerMustAuthenticateBeforeModelLookup() throws Exception {
-        mockMvc.perform(get("/internal/tts/models/{id}", java.util.UUID.randomUUID()))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void returnsExactActiveModelAndConfigWithPresignedUrls() throws Exception {
+    void bearerTokenProtectsRawModelAndConfigDownloads() throws Exception {
         var voice = voiceRepository.saveAndFlush(new TtsVoiceEntity(
-                "voice-delivery", "US English Lessac", "en-US", "US", "FEMALE", "NEUTRAL", true));
-        var assets = TtsTestAssets.createModelAssets(assetRepository, "delivery", 'a', 'b');
+                "voice-http-contract", "US English", "en-US", "US", "FEMALE", "NEUTRAL", true));
+        var modelBytes = "onnx-model".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        var configBytes = "{}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        var modelHash = sha256(modelBytes);
+        var configHash = sha256(configBytes);
+        var modelAsset = saveAsset("tts/models/http-contract.onnx", "application/octet-stream", modelBytes, modelHash,
+                FileAssetKind.TTS_MODEL);
+        var configAsset = saveAsset("tts/models/http-contract.onnx.json", "application/json", configBytes, configHash,
+                FileAssetKind.TTS_CONFIG);
         var model = modelRepository.saveAndFlush(new TtsVoiceModelEntity(
-                "model-delivery",
-                voice,
-                TtsEngine.PIPER,
-                "1.3.0",
-                "en_US-lessac-medium-v1",
-                assets.modelAssetId(),
-                assets.configAssetId(),
-                String.valueOf('a').repeat(64),
-                String.valueOf('b').repeat(64),
-                TtsVoiceModelStatus.ACTIVE,
-                "MIT",
-                "https://example.invalid/license",
-                true,
-                Instant.parse("2026-11-02T18:00:00Z")));
+                "model-http-contract", voice, TtsEngine.PIPER, "1.3.0", "http-v1",
+                modelAsset.getId(), configAsset.getId(), modelHash, configHash, TtsVoiceModelStatus.ACTIVE,
+                "MIT", "https://example.invalid/license", true, Instant.parse("2026-11-02T18:00:00Z")));
 
-        mockMvc.perform(get("/internal/tts/models/{id}", model.getId())
-                        .header(TtsModelDeliveryController.WORKER_KEY_HEADER, workerProperties.getApiKey()))
+        mockMvc.perform(get("/internal/v1/tts/models/{id}/model", model.getId()))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/internal/v1/tts/models/{id}/model", model.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + workerProperties.getApiKey()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.voiceModelId").value(model.getId().toString()))
-                .andExpect(jsonPath("$.engine").value("PIPER"))
-                .andExpect(jsonPath("$.engineVersion").value("1.3.0"))
-                .andExpect(jsonPath("$.model.assetId").value(assets.modelAssetId().toString()))
-                .andExpect(jsonPath("$.model.sha256").value(String.valueOf('a').repeat(64)))
-                .andExpect(jsonPath("$.model.downloadUrl").value(org.hamcrest.Matchers.containsString("X-Amz-Signature")))
-                .andExpect(jsonPath("$.config.assetId").value(assets.configAssetId().toString()))
-                .andExpect(jsonPath("$.config.sha256").value(String.valueOf('b').repeat(64)))
-                .andExpect(jsonPath("$.config.downloadUrl").value(org.hamcrest.Matchers.containsString("X-Amz-Signature")));
+                .andExpect(header().string("X-Content-SHA256", modelHash))
+                .andExpect(content().bytes(modelBytes));
+        mockMvc.perform(get("/internal/v1/tts/models/{id}/config", model.getId())
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + workerProperties.getApiKey()))
+                .andExpect(status().isOk())
+                .andExpect(content().bytes(configBytes));
     }
 
-    @Test
-    void databaseRejectsWrongAssetKindForActiveModel() {
-        var voice = voiceRepository.saveAndFlush(new TtsVoiceEntity(
-                "voice-wrong-kind", "US English Lessac", "en-US", "US", "FEMALE", "NEUTRAL", true));
-        var wrongModelAsset = assetRepository.saveAndFlush(new FileAssetEntity(
-                FileAssetKind.TTS_AUDIO,
-                FileAssetStatus.READY,
-                "voxprep-assets",
-                "tts/audio/wrong.mp3",
-                "audio/mpeg",
-                128,
-                String.valueOf('c').repeat(64)));
-        var config = assetRepository.saveAndFlush(new FileAssetEntity(
-                FileAssetKind.TTS_CONFIG,
-                FileAssetStatus.READY,
-                "voxprep-assets",
-                "tts/models/wrong.json",
-                "application/json",
-                128,
-                String.valueOf('d').repeat(64)));
+    private FileAssetEntity saveAsset(String key, String mediaType, byte[] bytes, String hash, FileAssetKind kind) {
+        s3Client.putObject(PutObjectRequest.builder().bucket("voxprep-assets").key(key).contentType(mediaType).build(),
+                RequestBody.fromBytes(bytes));
+        return assetRepository.saveAndFlush(new FileAssetEntity(
+                kind, FileAssetStatus.READY, "voxprep-assets", key, mediaType, bytes.length, hash));
+    }
 
-        assertThatThrownBy(() -> modelRepository.saveAndFlush(new TtsVoiceModelEntity(
-                        "model-wrong-kind",
-                        voice,
-                        TtsEngine.PIPER,
-                        "1.3.0",
-                        "wrong-v1",
-                        wrongModelAsset.getId(),
-                        config.getId(),
-                        String.valueOf('c').repeat(64),
-                        String.valueOf('d').repeat(64),
-                        TtsVoiceModelStatus.ACTIVE,
-                        "MIT",
-                        "https://example.invalid/license",
-                        true,
-                        Instant.parse("2026-11-02T18:00:00Z"))))
-                .isInstanceOf(DataIntegrityViolationException.class);
+    private static String sha256(byte[] value) throws Exception {
+        return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(value));
     }
 }

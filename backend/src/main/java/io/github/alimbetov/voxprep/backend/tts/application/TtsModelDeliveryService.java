@@ -5,81 +5,58 @@ import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetStatus;
 import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetEntity;
 import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetRepository;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceModelRepository;
-import java.net.URI;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import software.amazon.awssdk.core.ResponseBytes;
+import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 @Service
 public class TtsModelDeliveryService {
 
+    public enum ArtifactType { MODEL, CONFIG }
+
+    public record Artifact(byte[] bytes, String mediaType, String sha256) { }
+
     private final TtsVoiceModelRepository modelRepository;
     private final FileAssetRepository assetRepository;
-    private final S3Presigner presigner;
-    private final WorkerDeliveryProperties properties;
+    private final S3Client s3Client;
 
     public TtsModelDeliveryService(
             TtsVoiceModelRepository modelRepository,
             FileAssetRepository assetRepository,
-            S3Presigner presigner,
-            WorkerDeliveryProperties properties) {
+            S3Client s3Client) {
         this.modelRepository = modelRepository;
         this.assetRepository = assetRepository;
-        this.presigner = presigner;
-        this.properties = properties;
+        this.s3Client = s3Client;
     }
 
     @Transactional(readOnly = true)
-    public TtsModelDelivery delivery(UUID voiceModelId) {
+    public Artifact download(UUID voiceModelId, ArtifactType type) {
         var model = modelRepository.findById(voiceModelId)
                 .orElseThrow(() -> new NoSuchElementException("TTS voice model not found"));
-        if (!model.selectableForNewJobs()) {
-            throw new IllegalStateException("TTS voice model is not active for new jobs");
+        if (model.getStatus() == io.github.alimbetov.voxprep.backend.tts.domain.TtsVoiceModelStatus.INVALID
+                || model.getStatus() == io.github.alimbetov.voxprep.backend.tts.domain.TtsVoiceModelStatus.QUARANTINED) {
+            throw new NoSuchElementException("TTS voice model is not deliverable");
         }
-
-        var modelAsset = requireAsset(model.getModelAssetId(), FileAssetKind.TTS_MODEL, model.getModelSha256());
-        var configAsset = requireAsset(model.getConfigAssetId(), FileAssetKind.TTS_CONFIG, model.getConfigSha256());
-
-        return new TtsModelDelivery(
-                model.getId(),
-                model.getEngine(),
-                model.getEngineVersion(),
-                model.getModelVersion(),
-                artifact(modelAsset),
-                artifact(configAsset));
+        UUID assetId = type == ArtifactType.MODEL ? model.getModelAssetId() : model.getConfigAssetId();
+        FileAssetKind kind = type == ArtifactType.MODEL ? FileAssetKind.TTS_MODEL : FileAssetKind.TTS_CONFIG;
+        String expectedHash = type == ArtifactType.MODEL ? model.getModelSha256() : model.getConfigSha256();
+        var asset = requireAsset(assetId, kind, expectedHash);
+        ResponseBytes<GetObjectResponse> object = s3Client.getObjectAsBytes(GetObjectRequest.builder()
+                .bucket(asset.getBucket()).key(asset.getObjectKey()).build());
+        return new Artifact(object.asByteArray(), asset.getMediaType(), asset.getSha256());
     }
 
     private FileAssetEntity requireAsset(UUID id, FileAssetKind kind, String expectedHash) {
         var asset = assetRepository.findById(id)
-                .orElseThrow(() -> new IllegalStateException("TTS model asset is missing"));
-        if (asset.getKind() != kind || asset.getStatus() != FileAssetStatus.READY) {
-            throw new IllegalStateException("TTS model asset is not READY with expected kind");
-        }
-        if (!asset.getSha256().equals(expectedHash)) {
-            throw new IllegalStateException("TTS model asset checksum does not match catalogue identity");
+                .orElseThrow(() -> new NoSuchElementException("TTS model asset is missing"));
+        if (asset.getKind() != kind || asset.getStatus() != FileAssetStatus.READY || !asset.getSha256().equals(expectedHash)) {
+            throw new NoSuchElementException("TTS model asset is unavailable");
         }
         return asset;
-    }
-
-    private TtsModelDelivery.Artifact artifact(FileAssetEntity asset) {
-        GetObjectRequest getObjectRequest = GetObjectRequest.builder()
-                .bucket(asset.getBucket())
-                .key(asset.getObjectKey())
-                .build();
-        GetObjectPresignRequest request = GetObjectPresignRequest.builder()
-                .signatureDuration(properties.getUrlTtl())
-                .getObjectRequest(getObjectRequest)
-                .build();
-        URI uri = URI.create(presigner.presignGetObject(request).url().toString());
-        return new TtsModelDelivery.Artifact(
-                asset.getId(),
-                uri,
-                asset.getSha256(),
-                asset.getSizeBytes(),
-                asset.getMediaType());
     }
 }

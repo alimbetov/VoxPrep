@@ -61,14 +61,53 @@ public class TtsJobEntity extends AbstractJpaEntity {
     @Column(name = "failed_at")
     private Instant failedAt;
 
+    @Column(name = "file_id", updatable = false)
+    private UUID fileId;
+
+    @Column(name = "content_revision_id", updatable = false)
+    private UUID contentRevisionId;
+
+    @Column(name = "audio_role", updatable = false, length = 64)
+    private String audioRole;
+
+    @Column(name = "normalized_tts_text", updatable = false, columnDefinition = "text")
+    private String normalizedTtsText;
+
+    @Column(name = "language", updatable = false, length = 64)
+    private String language;
+
+    @Column(name = "fingerprint", updatable = false, length = 64)
+    private String fingerprint;
+
     protected TtsJobEntity() {
     }
 
     public TtsJobEntity(TtsVoiceModelEntity voiceModel, String inputText, String inputSha256) {
         this.voiceModel = Objects.requireNonNull(voiceModel, "voiceModel");
         this.inputText = required(inputText, "inputText", 10000);
-        this.inputSha256 = sha256(inputSha256);
+        this.inputSha256 = sha256(inputSha256, "inputSha256");
         this.status = TtsJobStatus.PENDING;
+    }
+
+    public void prepareWorkerClaim(
+            UUID fileId,
+            UUID contentRevisionId,
+            String audioRole,
+            String normalizedTtsText,
+            String language,
+            String fingerprint) {
+        if (this.fileId != null) {
+            throw new IllegalStateException("Worker claim snapshot is already assigned");
+        }
+        if (status != TtsJobStatus.PENDING) {
+            throw new IllegalStateException("Worker claim snapshot can only be assigned to PENDING jobs");
+        }
+        this.fileId = Objects.requireNonNull(fileId, "fileId");
+        this.contentRevisionId = Objects.requireNonNull(contentRevisionId, "contentRevisionId");
+        this.audioRole = required(audioRole, "audioRole", 64);
+        this.normalizedTtsText = required(normalizedTtsText, "normalizedTtsText", 10000);
+        this.language = required(language, "language", 64);
+        this.fingerprint = sha256(fingerprint, "fingerprint");
     }
 
     public TtsVoiceModelEntity getVoiceModel() { return voiceModel; }
@@ -84,6 +123,12 @@ public class TtsJobEntity extends AbstractJpaEntity {
     public String getFailureCode() { return failureCode; }
     public String getFailureMessage() { return failureMessage; }
     public Instant getFailedAt() { return failedAt; }
+    public UUID getFileId() { return fileId; }
+    public UUID getContentRevisionId() { return contentRevisionId; }
+    public String getAudioRole() { return audioRole; }
+    public String getNormalizedTtsText() { return normalizedTtsText; }
+    public String getLanguage() { return language; }
+    public String getFingerprint() { return fingerprint; }
 
     private static String required(String value, String field, int maxLength) {
         Objects.requireNonNull(value, field);
@@ -100,10 +145,10 @@ public class TtsJobEntity extends AbstractJpaEntity {
         return value;
     }
 
-    private static String sha256(String value) {
-        Objects.requireNonNull(value, "inputSha256");
+    private static String sha256(String value, String field) {
+        Objects.requireNonNull(value, field);
         if (!value.matches("[0-9a-f]{64}")) {
-            throw new IllegalArgumentException("inputSha256 must be lowercase SHA-256");
+            throw new IllegalArgumentException(field + " must be lowercase SHA-256");
         }
         return value;
     }

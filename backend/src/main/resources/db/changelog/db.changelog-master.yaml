@@ -22,3 +22,5 @@ databaseChangeLog:
       file: db/changelog/b1-p8-tts-model-assets.sql
   - include:
       file: db/changelog/b1-p9-tts-job-worker-lifecycle.sql
+  - include:
+      file: db/changelog/b1-p10-worker-contract.sql
