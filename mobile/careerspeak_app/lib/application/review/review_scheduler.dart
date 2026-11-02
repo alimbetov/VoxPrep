@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import '../../application/ports/review_schedule_repository.dart';
 import '../../domain/content_identity.dart';
 import '../../domain/content_review_state.dart';

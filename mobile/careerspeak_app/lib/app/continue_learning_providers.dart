@@ -16,12 +16,19 @@ final class ContinueLearningHomeTarget {
     required this.location,
     required this.title,
     required this.subtitle,
-  });
+    this.coverContent,
+    this.coverRevision,
+  }) : assert(
+         (coverContent == null && coverRevision == null) ||
+             (coverContent != null && coverRevision != null),
+       );
 
   final ContinueLearningDecision decision;
   final String location;
   final String title;
   final String subtitle;
+  final ContentIdentity? coverContent;
+  final int? coverRevision;
 }
 
 final continueLearningResolverProvider = Provider<ContinueLearningResolver>(
@@ -36,16 +43,21 @@ final continueLearningCurrentRevalidatorProvider =
 final continueLearningHomeTargetProvider =
     FutureProvider<ContinueLearningHomeTarget>((ref) async {
       final selection = await ref.watch(learnerSelectionProvider.future);
-      final snapshot = await ref.watch(currentUniversalCatalogueProvider.future);
+      final snapshot = await ref.watch(
+        currentUniversalCatalogueProvider.future,
+      );
       final markers = await ref.watch(contentMarkersProvider.future);
-      final attemptRepository = ref.watch(practiceTestAttemptRepositoryProvider);
+      final attemptRepository = ref.watch(
+        practiceTestAttemptRepositoryProvider,
+      );
       final attempt = (await attemptRepository.getActiveAttempt()).getOrThrow();
       final completedPracticeTests =
           (await attemptRepository.getCompletedPracticeTests()).getOrThrow();
-      final lastOpened = (await ref
-              .watch(lastOpenedContentRepositoryProvider)
-              .getLastOpenedContent())
-          .getOrThrow();
+      final lastOpened =
+          (await ref
+                  .watch(lastOpenedContentRepositoryProvider)
+                  .getLastOpenedContent())
+              .getOrThrow();
 
       if (snapshot == null) {
         return _chooseDirectionTarget();
@@ -123,7 +135,8 @@ ContinueLearningHomeTarget _homeTarget(
   if (decision is ResumePracticeTestDecision) {
     return ContinueLearningHomeTarget(
       decision: decision,
-      location: '/tests/${Uri.encodeComponent(decision.attempt.practiceTestCode)}',
+      location:
+          '/tests/${Uri.encodeComponent(decision.attempt.practiceTestCode)}',
       title: 'Resume practice test',
       subtitle: decision.attempt.practiceTestCode,
     );
@@ -134,6 +147,8 @@ ContinueLearningHomeTarget _homeTarget(
       location: contentDetailLocation(decision.content.identity),
       title: 'Continue where you left off',
       subtitle: decision.content.identity.code,
+      coverContent: decision.content.identity,
+      coverRevision: decision.content.contentRevision,
     );
   }
   if (decision is OpenMemberDecision) {
@@ -144,6 +159,8 @@ ContinueLearningHomeTarget _homeTarget(
         location: contentDetailLocation(target.identity),
         title: 'Continue next item',
         subtitle: target.identity.code,
+        coverContent: target.identity,
+        coverRevision: target.revision,
       );
     }
     final test = target as ContinueLearningPracticeTestTarget;

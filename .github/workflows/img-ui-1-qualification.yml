@@ -1,0 +1,165 @@
+name: IMG-UI.1 Content Cover Qualification
+
+on:
+  push:
+    branches:
+      - feat/content-cover-ui-hardening
+    paths:
+      - 'mobile/careerspeak_app/**'
+      - 'contracts/**'
+      - 'docs/implementation/IMG_UI_1_CONTENT_COVER.md'
+      - 'docs/implementation/P2_5_MANIFEST_CONTRACTS.md'
+      - 'docs/implementation/P2_8_ASSET_RESOLVER.md'
+      - '.github/workflows/img-ui-1-qualification.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: img-ui-1-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - name: Dependencies
+        working-directory: mobile/careerspeak_app
+        run: flutter pub get
+      - name: Format IMG-UI owned files
+        id: format
+        working-directory: mobile/careerspeak_app
+        shell: bash
+        run: |
+          # Main currently has formatter drift in several pre-existing integration
+          # files. Keep this slice strict for newly owned/clean files without
+          # sweeping unrelated baseline formatting into the feature branch.
+          files=(
+            lib/application/services/asset_resolver.dart
+            lib/application/services/content_cover_resolver.dart
+            lib/app/asset_resolver_providers.dart
+            lib/app/continue_learning_providers.dart
+            lib/features/home/home_screen.dart
+            lib/features/shared/content_cover.dart
+            test/application/content_delivery/content_cover_resolver_test.dart
+            test/data/local/file_system_asset_store_corruption_test.dart
+            test/features/shared/content_cover_test.dart
+          )
+          dart format "${files[@]}"
+          if ! git diff --quiet -- "${files[@]}"; then
+            git diff -- "${files[@]}" > "$RUNNER_TEMP/img-ui-format.diff"
+            cat "$RUNNER_TEMP/img-ui-format.diff"
+            exit 1
+          fi
+      - name: Report format diagnostics
+        if: failure() && steps.format.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          {
+            echo '### IMG-UI.1 formatter diagnostics'
+            echo
+            echo '```diff'
+            cat "$RUNNER_TEMP/img-ui-format.diff"
+            echo
+            echo '```'
+          } > "$RUNNER_TEMP/img-ui-format-comment.md"
+          gh pr comment 20 --body-file "$RUNNER_TEMP/img-ui-format-comment.md"
+      - name: Analyze
+        id: analyze
+        working-directory: mobile/careerspeak_app
+        shell: bash
+        run: |
+          set -o pipefail
+          flutter analyze 2>&1 | tee "$RUNNER_TEMP/img-ui-analyze.log"
+      - name: Report analyze diagnostics
+        if: failure() && steps.analyze.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          {
+            echo '### IMG-UI.1 analyzer diagnostics'
+            echo
+            echo '```text'
+            tail -n 200 "$RUNNER_TEMP/img-ui-analyze.log"
+            echo '```'
+          } > "$RUNNER_TEMP/img-ui-analyze-comment.md"
+          gh pr comment 20 --body-file "$RUNNER_TEMP/img-ui-analyze-comment.md"
+      - name: Full test suite
+        id: full_tests
+        working-directory: mobile/careerspeak_app
+        shell: bash
+        run: |
+          set -o pipefail
+          # Sequential + expanded output makes the exact hanging/failing test
+          # visible. The shell timeout prevents a single leaked timer/stream or
+          # platform-codec wait from holding the PR indefinitely.
+          timeout 12m flutter test --concurrency=1 --reporter expanded 2>&1 \
+            | tee "$RUNNER_TEMP/img-ui-full-tests.log"
+      - name: Report full-suite diagnostics
+        if: failure() && steps.full_tests.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          {
+            echo '### IMG-UI.1 full-test diagnostics'
+            echo
+            echo '```text'
+            tail -n 300 "$RUNNER_TEMP/img-ui-full-tests.log"
+            echo '```'
+          } > "$RUNNER_TEMP/img-ui-full-tests-comment.md"
+          gh pr comment 20 --body-file "$RUNNER_TEMP/img-ui-full-tests-comment.md"
+
+  verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - name: Dependencies
+        working-directory: mobile/careerspeak_app
+        run: flutter pub get
+      - name: IMG-UI.1 resolver and storage corruption qualification
+        working-directory: mobile/careerspeak_app
+        run: |
+          flutter test \
+            test/application/content_delivery/content_cover_resolver_test.dart \
+            test/data/local/file_system_asset_store_corruption_test.dart
+      - name: IMG-UI.1 widget decode-fallback qualification
+        id: widget
+        working-directory: mobile/careerspeak_app
+        shell: bash
+        run: |
+          set -o pipefail
+          timeout 90s flutter test test/features/shared/content_cover_test.dart --reporter expanded 2>&1 \
+            | tee "$RUNNER_TEMP/img-ui-widget.log"
+      - name: Report widget diagnostics
+        if: failure() && steps.widget.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          {
+            echo '### IMG-UI.1 widget-test diagnostics'
+            echo
+            echo '```text'
+            tail -n 160 "$RUNNER_TEMP/img-ui-widget.log"
+            echo '```'
+          } > "$RUNNER_TEMP/img-ui-widget-comment.md"
+          gh pr comment 20 --body-file "$RUNNER_TEMP/img-ui-widget-comment.md"

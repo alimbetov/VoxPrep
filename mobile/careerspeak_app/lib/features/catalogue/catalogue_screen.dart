@@ -12,6 +12,7 @@ import '../../application/content_delivery/universal_catalogue_graph.dart';
 import '../../application/ports/universal_catalogue_repository.dart';
 import '../../domain/content_identity.dart';
 import '../access/full_unlock_screen.dart';
+import '../shared/content_cover.dart';
 
 String catalogueVerticalLocation(String code) =>
     '/catalogue/vertical/${Uri.encodeComponent(code)}';
@@ -405,19 +406,8 @@ class _CollectionMemberCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (member.type) {
-      LearningCollectionMemberType.content => _HierarchyCard(
-        title: member.contentRef!.contentCode,
-        description:
-            '${member.contentRef!.contentType.name} · revision ${member.contentRef!.revision}',
-        supportingText: 'Step ${member.position + 1}',
-        onTap: () => context.push(
-          contentDetailLocation(
-            ContentIdentity(
-              code: member.contentRef!.contentCode,
-              type: member.contentRef!.contentType,
-            ),
-          ),
-        ),
+      LearningCollectionMemberType.content => _ContentCollectionMemberCard(
+        member: member,
       ),
       LearningCollectionMemberType.practiceTest => _HierarchyCard(
         title: member.practiceTestRef!.practiceTestCode,
@@ -429,6 +419,64 @@ class _CollectionMemberCard extends StatelessWidget {
         ),
       ),
     };
+  }
+}
+
+class _ContentCollectionMemberCard extends StatelessWidget {
+  const _ContentCollectionMemberCard({required this.member});
+
+  final LearningCollectionMember member;
+
+  @override
+  Widget build(BuildContext context) {
+    final content = member.contentRef!;
+    final identity = ContentIdentity(
+      code: content.contentCode,
+      type: content.contentType,
+    );
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () => context.push(contentDetailLocation(identity)),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            ContentCover(
+              content: identity,
+              revision: content.revision,
+              height: 120,
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 20,
+                vertical: 14,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(content.contentCode),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${content.contentType.name} · revision ${content.revision}',
+                        ),
+                        const SizedBox(height: 6),
+                        Text('Step ${member.position + 1}'),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

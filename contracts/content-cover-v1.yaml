@@ -1,0 +1,48 @@
+openapi: 3.1.0
+info:
+  title: CareerSpeak Content Cover Contract
+  version: 1.0.0
+  description: >-
+    Normative IMG-UI.1 contract for optional exact-revision learner content
+    covers. It supplements the learner manifest contract without introducing
+    direct storage URLs or making visual media required for content.
+paths: {}
+components:
+  schemas:
+    ContentCoverRole:
+      type: string
+      const: coverImage
+      description: >-
+        Stable preview-safe role for one optional cover bound to one exact
+        canonical content revision.
+
+    ContentCoverMediaType:
+      type: string
+      enum:
+        - image/webp
+        - image/jpeg
+        - image/png
+
+x-content-cover-invariants:
+  - A cover binding is OPTIONAL. No cover is a valid published and learner-visible state.
+  - A cover is identified by contentCode + contentType + contentRevision + role=coverImage.
+  - One exact content revision MUST reference at most one coverImage asset.
+  - A coverImage asset MUST resolve to exactly one published ManifestAssetDescriptor.
+  - Only image/webp, image/jpeg and image/png are supported as content covers in v1.
+  - deliveryKey remains Backend storage metadata and MUST NOT be used by Flutter as a URL or authorization input.
+  - Flutter MUST resolve cover bytes through the existing verified AssetResolver/download pipeline.
+  - Missing, unavailable or undecodable cover media MUST NOT make otherwise valid learner content unavailable.
+  - Learner UI MUST reserve no image slot when a cover is absent or cannot be rendered.
+  - Cover availability MUST NOT change Continue Learning selection, learner markers, audio state or practice-test state.
+  - Cover access inherits the authorization/access policy of the owning content and collection; no independent entitlement is introduced.
+  - A decorative cover MAY be excluded from accessibility semantics. Any future pedagogical image that conveys required information needs an explicit localized accessibility-text contract.
+
+x-learner-api-alignment:
+  manifestSchemaVersionsSupportedByCurrentFlutter:
+    minimum: 1
+    maximum: 2
+  mediaResponseTypesRequiredForCovers:
+    - image/webp
+    - image/jpeg
+    - image/png
+  alignedInLearnerApiVersion: 1.6.0

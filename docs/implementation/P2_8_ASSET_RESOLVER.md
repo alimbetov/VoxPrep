@@ -20,6 +20,19 @@ AssetResolver
 `resolve(assetId)` or `resolveContent(content, revision, role, variant)`.
 The default variant is `canonical`; locale variants must be explicit.
 
+Typed media helpers are part of the same boundary:
+
+```text
+resolveImage(assetId)
+resolveImageContent(content, revision, role, variant)
+resolveAudioContent(content, revision, role, variant)
+```
+
+The image/audio helpers validate the published MIME family before a remote byte
+source can be opened. `resolveImageContent` was added by IMG-UI.1 so presentation
+can resolve an exact-revision `coverImage` binding without bypassing catalogue,
+CURRENT-publication, integrity or local-file checks.
+
 ## Resolution rules
 
 | Condition | Result |
@@ -29,6 +42,7 @@ The default variant is `canonical`; locale variants must be explicit.
 | Missing/corrupt file, `downloadIfMissing` | Existing DownloadManager downloads, verifies and atomically finalizes |
 | No current asset binding | `ASSET_NOT_CURRENT` |
 | Multiple distinct assets match a content role | `ASSET_REFERENCE_AMBIGUOUS` |
+| Media family differs from a typed resolver | `ASSET_MEDIA_TYPE_MISMATCH` before transfer |
 | Invalid persisted descriptor | `ASSET_CATALOG_INVALID` |
 | Catalog storage cannot be read | `ASSET_CATALOG_READ_FAILED` |
 | File/network/integrity failure | Original P2.7 failure, with retryability preserved |
@@ -53,10 +67,22 @@ An in-progress resolution is bound to the immutable descriptor selected at its
 start. A later metadata activation affects the next lookup; it does not cancel
 an already-running download. Playback lifecycle policy belongs to P2.9.
 
-`CURRENT` describes metadata availability, not local audio readiness. An audio
-file may still need downloading after successful metadata synchronization.
-An old pinned offline pack's independent READY lifecycle is not implemented by
-this current-snapshot resolver.
+`CURRENT` describes metadata availability, not local audio/image readiness. A
+file may still need downloading after successful metadata synchronization. An
+old pinned offline pack's independent READY lifecycle is not implemented by this
+current-snapshot resolver.
+
+## Optional cover presentation
+
+IMG-UI.1 adds `ContentCoverResolver` above `AssetResolver`. It deliberately
+converts cover-only availability failures to `null` so learner presentation can
+collapse the optional visual region. This does not weaken AssetResolver itself:
+manifest ambiguity, CURRENT membership, MIME-family validation, checksum and
+file verification remain strict at their owning boundaries.
+
+A corrupt or undecodable image can still fail after `AssetResolver` has returned
+a verified file if its bytes are syntactically invalid for Flutter's decoder.
+`ContentCover` owns that final fail-soft presentation boundary.
 
 ## Acceptance
 
@@ -70,6 +96,10 @@ unknown bindings, staging/superseded/tombstoned visibility, exact revision/type/
 role/variant selection, same-pack membership, shared and ambiguous bindings,
 CURRENT activation, concurrent calls, retry after delivery failure, malformed
 metadata, and closing/reopening the on-disk database and resolver offline.
+
+IMG-UI.1 adds focused cover tests for absent bindings, missing verified files,
+unsupported/non-image media, supported exact-revision images, corrupt decoder
+bytes and zero-space collapse behavior.
 
 The byte fixture proves asset integrity and restart resolution, not MP3 decoding
 or audible playback. P2.9 owns the real player; P2.10 owns UI cutover; P2.11 owns

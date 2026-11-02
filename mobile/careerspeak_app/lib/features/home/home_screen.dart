@@ -11,6 +11,7 @@ import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
 import '../../domain/content_marker_state.dart';
 import '../shared/content_card.dart';
+import '../shared/content_cover.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -171,25 +172,37 @@ class _ContinueLearningCard extends StatelessWidget {
         ),
       ),
       data: (value) => Card(
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                value.title,
-                style: Theme.of(context).textTheme.titleLarge,
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (value.coverContent case final content?)
+              ContentCover(
+                content: content,
+                revision: value.coverRevision!,
+                height: 140,
               ),
-              const SizedBox(height: 6),
-              Text(value.subtitle),
-              const SizedBox(height: 14),
-              FilledButton.icon(
-                onPressed: () => context.push(value.location),
-                icon: const Icon(Icons.play_arrow),
-                label: const Text('Continue'),
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value.title,
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(value.subtitle),
+                  const SizedBox(height: 14),
+                  FilledButton.icon(
+                    onPressed: () => context.push(value.location),
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('Continue'),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
