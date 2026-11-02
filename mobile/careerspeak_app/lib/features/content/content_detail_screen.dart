@@ -8,6 +8,7 @@ import '../../application/result/result.dart';
 import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
 import '../../domain/last_opened_content.dart';
+import '../shared/content_cover.dart';
 import 'content_detail_panel.dart';
 
 class ContentDetailScreen extends ConsumerStatefulWidget {
@@ -58,7 +59,21 @@ class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> {
         );
         final localizedHint = localized.asData?.value?.hint;
 
-        return ContentDetailPanel(item: value, localizedHint: localizedHint);
+        return Column(
+          children: [
+            ContentCover(
+              content: widget.identity,
+              revision: value.revision,
+              height: 220,
+            ),
+            Expanded(
+              child: ContentDetailPanel(
+                item: value,
+                localizedHint: localizedHint,
+              ),
+            ),
+          ],
+        );
       },
     );
   }

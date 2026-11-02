@@ -74,6 +74,24 @@ final class AssetResolver {
     return _resolve(descriptor, policy);
   }
 
+  /// Resolves a published content-image binding and rejects non-image media
+  /// before opening the remote byte source.
+  Future<Result<ResolvedAsset>> resolveImageContent({
+    required ContentIdentity content,
+    required int revision,
+    required String role,
+    String variant = 'canonical',
+    AssetResolutionPolicy policy = AssetResolutionPolicy.localOnly,
+  }) async {
+    final descriptor = await _catalog.findCurrentForContent(
+      content: content,
+      revision: revision,
+      role: role,
+      variant: variant,
+    );
+    return _resolve(descriptor, policy, expectedMediaPrefix: 'image/');
+  }
+
   /// Resolves a published content audio binding and rejects non-audio media
   /// before opening the remote byte source.
   Future<Result<ResolvedAsset>> resolveAudioContent({

@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: CareerSpeak Learner API
-  version: 1.5.0
+  version: 1.6.0
   description: >-
     Wire contract consumed by the Flutter installation runtime. Backend persistence
     entities are explicitly not part of this contract.
@@ -65,6 +65,10 @@ paths:
                 type: string
                 format: binary
             audio/mpeg:
+              schema:
+                type: string
+                format: binary
+            image/webp:
               schema:
                 type: string
                 format: binary
@@ -486,7 +490,7 @@ components:
         schemaVersion:
           type: integer
           minimum: 1
-          maximum: 1
+          maximum: 2
         contentVersion:
           type: integer
           minimum: 1
@@ -602,6 +606,9 @@ components:
         mediaType:
           type: string
           minLength: 1
+          description: >-
+            Published binary MIME type. IMG-UI.1 content covers support only
+            image/webp, image/jpeg and image/png.
         requiredOffline:
           type: boolean
 
@@ -627,6 +634,9 @@ components:
         role:
           type: string
           minLength: 1
+          description: >-
+            Stable exact-revision asset role. coverImage is optional and at most
+            one coverImage binding may exist for one exact content revision.
 
     PackContentManifest:
       type: object
@@ -645,7 +655,7 @@ components:
         schemaVersion:
           type: integer
           minimum: 1
-          maximum: 1
+          maximum: 2
         code:
           $ref: '#/components/schemas/BusinessCode'
         variant:
@@ -778,3 +788,11 @@ components:
             - string
             - 'null'
           minLength: 1
+
+x-content-cover-invariants:
+  - coverImage is optional; absence is a valid publication and UI state.
+  - One exact content revision may reference at most one coverImage asset.
+  - coverImage supports image/webp, image/jpeg and image/png in IMG-UI.1.
+  - Flutter resolves cover bytes through the verified AssetResolver path and never through deliveryKey directly.
+  - Missing, unavailable or undecodable cover media must not make otherwise valid learner content unavailable.
+  - Learner UI reserves no cover slot while the cover is absent, unavailable or undecodable.

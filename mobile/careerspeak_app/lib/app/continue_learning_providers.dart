@@ -16,12 +16,19 @@ final class ContinueLearningHomeTarget {
     required this.location,
     required this.title,
     required this.subtitle,
-  });
+    this.coverContent,
+    this.coverRevision,
+  }) : assert(
+         (coverContent == null && coverRevision == null) ||
+             (coverContent != null && coverRevision != null),
+       );
 
   final ContinueLearningDecision decision;
   final String location;
   final String title;
   final String subtitle;
+  final ContentIdentity? coverContent;
+  final int? coverRevision;
 }
 
 final continueLearningResolverProvider = Provider<ContinueLearningResolver>(
@@ -134,6 +141,8 @@ ContinueLearningHomeTarget _homeTarget(
       location: contentDetailLocation(decision.content.identity),
       title: 'Continue where you left off',
       subtitle: decision.content.identity.code,
+      coverContent: decision.content.identity,
+      coverRevision: decision.content.revision,
     );
   }
   if (decision is OpenMemberDecision) {
@@ -144,6 +153,8 @@ ContinueLearningHomeTarget _homeTarget(
         location: contentDetailLocation(target.identity),
         title: 'Continue next item',
         subtitle: target.identity.code,
+        coverContent: target.identity,
+        coverRevision: target.revision,
       );
     }
     final test = target as ContinueLearningPracticeTestTarget;

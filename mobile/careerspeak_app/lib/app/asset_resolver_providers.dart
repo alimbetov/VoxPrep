@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../application/ports/asset_catalog_repository.dart';
 import '../application/result/result.dart';
 import '../application/services/asset_resolver.dart';
+import '../application/services/content_cover_resolver.dart';
 import '../data/local/drift_asset_catalog_repository.dart';
+import '../domain/content_identity.dart';
 import 'asset_cache_retention_providers.dart';
 import 'asset_download_providers.dart';
 import 'learner_state_providers.dart';
@@ -23,6 +25,26 @@ final assetResolverProvider = FutureProvider<AssetResolver>((ref) async {
     retention: ref.watch(assetCacheRetentionRepositoryProvider),
   );
 });
+
+final contentCoverResolverProvider = FutureProvider<ContentCoverResolver>((
+  ref,
+) async {
+  return ContentCoverResolver(await ref.watch(assetResolverProvider.future));
+});
+
+typedef ContentCoverRequest = ({ContentIdentity content, int revision});
+
+final contentCoverAssetProvider =
+    FutureProvider.family<ResolvedAsset?, ContentCoverRequest>((
+      ref,
+      request,
+    ) async {
+      final resolver = await ref.watch(contentCoverResolverProvider.future);
+      return resolver.resolve(
+        content: request.content,
+        revision: request.revision,
+      );
+    });
 
 final catalogueIconAssetProvider =
     FutureProvider.family<ResolvedAsset?, String>((ref, assetId) async {
