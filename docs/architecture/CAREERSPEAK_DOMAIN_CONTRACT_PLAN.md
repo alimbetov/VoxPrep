@@ -368,10 +368,13 @@ After R1, do not introduce a new Flutter learner-domain subsystem unless require
 Security zones:
 
 ```text
-/admin/**           → ADMIN session
-/api/v1/**          → installation token
-/internal/v1/tts/** → worker token
+/admin/**                   → ADMIN session
+POST /api/v1/installations  → anonymous installation registration/re-registration
+other /api/v1/**            → installation token
+/internal/v1/tts/**         → worker token
 ```
+
+The anonymous endpoint is only the bootstrap/session-issuance boundary. Learner content, media, catalogue, assessment and purchase-verification operations remain installation-authenticated.
 
 Learner identity:
 
