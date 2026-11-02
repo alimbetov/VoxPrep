@@ -34,7 +34,7 @@ void main() {
     'corrupted local audio is discarded and exact asset is redownloaded',
     (tester) async {
       final scenario = await _Scenario.create();
-      addTearDown(() => scenario.dispose(tester));
+      addTearDown(scenario.dispose);
       await scenario.pump(tester);
 
       await scenario.play(tester);
@@ -62,7 +62,7 @@ void main() {
     'bad checksum download fails closed and is never opened by player',
     (tester) async {
       final scenario = await _Scenario.create(sourceBytes: _badBytes);
-      addTearDown(() => scenario.dispose(tester));
+      addTearDown(scenario.dispose);
       await scenario.pump(tester);
 
       await tester.tap(find.widgetWithText(FilledButton, 'Play'));
@@ -80,7 +80,7 @@ void main() {
     'offline after eviction exhausts retries without inventing local audio',
     (tester) async {
       final scenario = await _Scenario.create();
-      addTearDown(() => scenario.dispose(tester));
+      addTearDown(scenario.dispose);
       await scenario.pump(tester);
 
       await scenario.play(tester);
@@ -122,7 +122,7 @@ void main() {
     tester,
   ) async {
     final scenario = await _Scenario.create();
-    addTearDown(() => scenario.dispose(tester));
+    addTearDown(scenario.dispose);
     await scenario.pump(tester);
 
     await scenario.play(tester);
@@ -304,14 +304,12 @@ final class _Scenario {
     expect((result! as Success<AssetRetentionCleanupReport>).value.evicted, 1);
   }
 
-  Future<void> dispose(WidgetTester tester) async {
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump();
-    await tester.runAsync(() async {
-      await Future<void>.delayed(const Duration(milliseconds: 20));
-      await learnerState.dispose().timeout(const Duration(seconds: 2));
-      if (await directory.exists()) await directory.delete(recursive: true);
-    });
+  Future<void> dispose() async {
+    // WidgetTester belongs to the test body. Flutter owns widget-tree teardown;
+    // this fixture only releases resources it created itself. Do not await the
+    // broadcast close here because ProviderScope cancellation is asynchronous.
+    unawaited(learnerState.dispose());
+    if (await directory.exists()) await directory.delete(recursive: true);
   }
 }
 
