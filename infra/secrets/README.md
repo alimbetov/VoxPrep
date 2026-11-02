@@ -36,4 +36,19 @@ rustfs_backend_access_key
 rustfs_backend_secret_key
 ```
 
-Production files should be owned by the deployment administrator/root and readable only by the intended deployment process (`0600` or equivalent). Never copy DEV/TEST credentials into PROD.
+## Plain Docker Compose permission model
+
+The Compose files use file-backed `secrets:`. In ordinary non-Swarm Docker Compose these are bind mounts, so the container sees the source file permissions. PostgreSQL initialization and RustFS run as non-root users and must be able to read the mounted files.
+
+For the current single-host Compose deployment use:
+
+```text
+secret directory: 0700, owned by the deployment administrator/root
+secret files:     0444, inside that protected directory
+```
+
+The closed parent directory prevents ordinary host users from traversing to the files, while the read-only file mode lets the non-root container processes read the bind-mounted secret.
+
+If the deployment later moves to native orchestrator secrets (Docker Swarm/Kubernetes/etc.), use that platform's tighter per-secret ownership/mode controls instead of preserving this Compose-specific workaround.
+
+Never copy DEV/TEST credentials into PROD and never bake secret values into images, Compose YAML or tracked env files.
