@@ -1,0 +1,51 @@
+name: Monetization v1 Qualification
+
+on:
+  push:
+    branches:
+      - feat/monetization-v1-spec
+    paths:
+      - 'mobile/careerspeak_app/**'
+      - 'contracts/**'
+      - 'docs/specification/VOXPREP_MONETIZATION_V1_SPEC.md'
+      - '.github/workflows/monetization-v1-qualification.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: monetization-v1-${{ github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed lib test tool
+
+      - name: Generated Drift code reproducibility
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          git diff --exit-code -- lib/data/local/database/careerspeak_database.g.dart
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Full Flutter regression
+        run: flutter test
