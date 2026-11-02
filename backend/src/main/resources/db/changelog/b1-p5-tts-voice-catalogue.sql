@@ -43,8 +43,8 @@ CREATE TABLE app.tts_voice_model (
     model_version varchar(128) NOT NULL,
     model_asset_id uuid NOT NULL,
     config_asset_id uuid NOT NULL,
-    model_sha256 char(64) NOT NULL,
-    config_sha256 char(64) NOT NULL,
+    model_sha256 varchar(64) NOT NULL,
+    config_sha256 varchar(64) NOT NULL,
     status varchar(32) NOT NULL,
     license_name varchar(256),
     license_reference varchar(1024),
@@ -85,7 +85,7 @@ RESET ROLE;
 --rollback DROP TABLE app.tts_voice_model;
 --rollback RESET ROLE;
 
---changeset voxprep:b1-p5-0003-guard-immutable-tts-model splitStatements:false
+--changeset voxprep:b1-p5-0003-guard-immutable-tts-model-function splitStatements:false
 SET ROLE voxprep_owner;
 CREATE FUNCTION app.tts_voice_model_immutable_identity_guard()
 RETURNS trigger
@@ -106,6 +106,13 @@ BEGIN
     RETURN NEW;
 END;
 $$;
+RESET ROLE;
+--rollback SET ROLE voxprep_owner;
+--rollback DROP FUNCTION app.tts_voice_model_immutable_identity_guard();
+--rollback RESET ROLE;
+
+--changeset voxprep:b1-p5-0004-guard-immutable-tts-model-trigger
+SET ROLE voxprep_owner;
 CREATE TRIGGER trg_tts_voice_model_immutable_identity
 BEFORE UPDATE ON app.tts_voice_model
 FOR EACH ROW
@@ -113,5 +120,4 @@ EXECUTE FUNCTION app.tts_voice_model_immutable_identity_guard();
 RESET ROLE;
 --rollback SET ROLE voxprep_owner;
 --rollback DROP TRIGGER trg_tts_voice_model_immutable_identity ON app.tts_voice_model;
---rollback DROP FUNCTION app.tts_voice_model_immutable_identity_guard();
 --rollback RESET ROLE;
