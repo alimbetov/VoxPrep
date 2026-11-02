@@ -13,72 +13,84 @@ void main() {
     verifier = SchemaVerifier(GeneratedHelper());
   });
 
-  test('runtime migration v8 to v18 matches a fresh production v18 schema', () async {
-    final legacySchema = await verifier.schemaAt(8);
-    final storedNow =
-        DateTime.utc(2026, 11, 2, 7).millisecondsSinceEpoch ~/ 1000;
+  test(
+    'runtime migration v8 to v18 matches a fresh production v18 schema',
+    () async {
+      final legacySchema = await verifier.schemaAt(8);
+      final storedNow =
+          DateTime.utc(2026, 11, 2, 7).millisecondsSinceEpoch ~/ 1000;
 
-    final legacy = v8.DatabaseAtV8(legacySchema.newConnection());
-    await legacy.into(legacy.favorites).insert(
-      v8.FavoritesCompanion.insert(
-        contentCode: 'JAVA_DI_001',
-        contentType: 'INTERVIEW',
-        createdAt: storedNow,
-      ),
-    );
-    await legacy.close();
+      final legacy = v8.DatabaseAtV8(legacySchema.newConnection());
+      await legacy
+          .into(legacy.favorites)
+          .insert(
+            v8.FavoritesCompanion.insert(
+              contentCode: 'JAVA_DI_001',
+              contentType: 'INTERVIEW',
+              createdAt: storedNow,
+            ),
+          );
+      await legacy.close();
 
-    final migrated = CareerSpeakDatabase(legacySchema.newConnection());
-    await migrated.customSelect('SELECT 1').getSingle();
+      final migrated = CareerSpeakDatabase(legacySchema.newConnection());
+      await migrated.customSelect('SELECT 1').getSingle();
 
-    final migratedVersion = await migrated
-        .customSelect('PRAGMA user_version')
-        .getSingle();
-    expect(migratedVersion.read<int>('user_version'), 18);
+      final migratedVersion = await migrated
+          .customSelect('PRAGMA user_version')
+          .getSingle();
+      expect(migratedVersion.read<int>('user_version'), 18);
 
-    final favorites = await migrated.select(migrated.favorites).get();
-    expect(favorites, hasLength(1));
-    expect(favorites.single.contentCode, 'JAVA_DI_001');
+      final favorites = await migrated.select(migrated.favorites).get();
+      expect(favorites, hasLength(1));
+      expect(favorites.single.contentCode, 'JAVA_DI_001');
 
-    final fresh = createTestDatabase();
-    await fresh.customSelect('SELECT 1').getSingle();
-    final freshVersion = await fresh.customSelect('PRAGMA user_version').getSingle();
-    expect(freshVersion.read<int>('user_version'), 18);
+      final fresh = createTestDatabase();
+      await fresh.customSelect('SELECT 1').getSingle();
+      final freshVersion = await fresh
+          .customSelect('PRAGMA user_version')
+          .getSingle();
+      expect(freshVersion.read<int>('user_version'), 18);
 
-    expect(await _schemaShape(migrated), await _schemaShape(fresh));
+      expect(await _schemaShape(migrated), await _schemaShape(fresh));
 
-    final appPreferenceColumns = await _columnNames(migrated, 'app_preferences');
-    expect(appPreferenceColumns, contains('country_code'));
+      final appPreferenceColumns = await _columnNames(
+        migrated,
+        'app_preferences',
+      );
+      expect(appPreferenceColumns, contains('country_code'));
 
-    final migratedTables = (await _schemaShape(migrated)).keys.toSet();
-    expect(
-      migratedTables,
-      containsAll(<String>{
-        'publication_snapshots',
-        'vertical_section_reads',
-        'learning_vertical_reads',
-        'learning_goal_reads',
-        'learning_track_reads',
-        'learning_collection_reads',
-        'learning_collection_member_reads',
-        'vertical_presentation_reads',
-        'asset_cache_retention',
-        'learner_selection',
-        'practice_test_active_attempt',
-        'learner_last_opened_content',
-        'practice_test_completions',
-        'content_review_states',
-        'learning_collection_access_reads',
-        'learner_access_snapshot',
-      }),
-    );
+      final migratedTables = (await _schemaShape(migrated)).keys.toSet();
+      expect(
+        migratedTables,
+        containsAll(<String>{
+          'publication_snapshots',
+          'vertical_section_reads',
+          'learning_vertical_reads',
+          'learning_goal_reads',
+          'learning_track_reads',
+          'learning_collection_reads',
+          'learning_collection_member_reads',
+          'vertical_presentation_reads',
+          'asset_cache_retention',
+          'learner_selection',
+          'practice_test_active_attempt',
+          'learner_last_opened_content',
+          'practice_test_completions',
+          'content_review_states',
+          'learning_collection_access_reads',
+          'learner_access_snapshot',
+        }),
+      );
 
-    await migrated.close();
-    await fresh.close();
-  });
+      await migrated.close();
+      await fresh.close();
+    },
+  );
 }
 
-Future<Map<String, List<String>>> _schemaShape(CareerSpeakDatabase database) async {
+Future<Map<String, List<String>>> _schemaShape(
+  CareerSpeakDatabase database,
+) async {
   final rows = await database.customSelect('''
     SELECT name
     FROM sqlite_master
@@ -100,6 +112,8 @@ Future<List<String>> _columnNames(
   String tableName,
 ) async {
   final quoted = tableName.replaceAll('"', '""');
-  final rows = await database.customSelect('PRAGMA table_info("$quoted")').get();
+  final rows = await database
+      .customSelect('PRAGMA table_info("$quoted")')
+      .get();
   return rows.map((row) => row.read<String>('name')).toList(growable: false);
 }
