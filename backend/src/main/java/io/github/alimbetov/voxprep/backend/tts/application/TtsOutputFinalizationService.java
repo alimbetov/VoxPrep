@@ -2,8 +2,9 @@ package io.github.alimbetov.voxprep.backend.tts.application;
 
 import io.github.alimbetov.voxprep.backend.infrastructure.storage.RustFsProperties;
 import java.security.MessageDigest;
-import java.time.Instant;
 import java.util.HexFormat;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -37,65 +38,126 @@ public class TtsOutputFinalizationService {
 
     public FinalizationResult finalizeOutput(OutputUpload upload) {
         validateArtifact(upload);
+
+        FinalizationResult completed = completedState(upload);
+        if (completed != null) {
+            return completed;
+        }
         if (!ownsActiveLease(upload)) {
             return FinalizationResult.LEASE_LOST;
         }
 
-        String objectKey = "tts/audio/" + upload.fileId() + "/" + upload.leaseToken() + ".mp3";
+        String objectKey = objectKey(upload);
         s3Client.putObject(
                 PutObjectRequest.builder()
                         .bucket(storageProperties.getBucket())
                         .key(objectKey)
                         .contentType(CONTENT_TYPE)
-                        .metadata(java.util.Map.of(
+                        .metadata(Map.of(
                                 "sha256", upload.sha256(),
                                 "fingerprint", upload.fingerprint(),
                                 "audio-profile", upload.audioProfile()))
                         .build(),
                 RequestBody.fromBytes(upload.bytes()));
 
-        Boolean finalized = transactionTemplate.execute(status -> {
-            if (!ownsActiveLease(upload)) {
-                return false;
-            }
-            jdbcTemplate.update("""
-                    INSERT INTO app.file_asset (
-                        id, version, created_at, updated_at, kind, status,
-                        bucket, object_key, media_type, size_bytes, sha256,
-                        audio_profile, duration_ms)
-                    VALUES (?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'TTS_AUDIO', 'READY',
-                            ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    upload.fileId(), storageProperties.getBucket(), objectKey, CONTENT_TYPE,
-                    upload.sizeBytes(), upload.sha256(), upload.audioProfile(), upload.durationMs());
+        FinalizationResult result = transactionTemplate.execute(status -> finalizeDatabase(upload, objectKey));
+        return Objects.requireNonNull(result, "finalization result");
+    }
 
-            int updated = jdbcTemplate.update("""
-                    UPDATE app.tts_job
-                       SET status = 'READY',
-                           output_asset_id = ?,
-                           lease_owner = NULL,
-                           lease_token = NULL,
-                           lease_until = NULL,
-                           version = version + 1,
-                           updated_at = CURRENT_TIMESTAMP
-                     WHERE id = ?
-                       AND file_id = ?
-                       AND fingerprint = ?
-                       AND voice_model_id = ?
-                       AND lease_owner = ?
-                       AND lease_token = ?
-                       AND status IN ('CLAIMED', 'PROCESSING')
-                       AND lease_until >= CURRENT_TIMESTAMP
-                    """,
-                    upload.fileId(), upload.jobId(), upload.fileId(), upload.fingerprint(),
-                    upload.voiceModelId(), upload.workerId(), upload.leaseToken());
-            if (updated != 1) {
-                status.setRollbackOnly();
-                return false;
-            }
-            return true;
-        });
-        return Boolean.TRUE.equals(finalized) ? FinalizationResult.CREATED : FinalizationResult.LEASE_LOST;
+    private FinalizationResult finalizeDatabase(OutputUpload upload, String objectKey) {
+        List<String> statuses = jdbcTemplate.query(
+                "SELECT status FROM app.tts_job WHERE id = ? FOR UPDATE",
+                (rs, rowNum) -> rs.getString("status"),
+                upload.jobId());
+        if (statuses.isEmpty()) {
+            return FinalizationResult.LEASE_LOST;
+        }
+        if ("READY".equals(statuses.getFirst())) {
+            return exactCompletedUpload(upload)
+                    ? FinalizationResult.ALREADY_FINALIZED
+                    : FinalizationResult.REPLAY_MISMATCH;
+        }
+        if (!ownsActiveLease(upload)) {
+            return FinalizationResult.LEASE_LOST;
+        }
+
+        jdbcTemplate.update("""
+                INSERT INTO app.file_asset (
+                    id, version, created_at, updated_at, kind, status,
+                    bucket, object_key, media_type, size_bytes, sha256,
+                    audio_profile, duration_ms)
+                VALUES (?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, 'TTS_AUDIO', 'READY',
+                        ?, ?, ?, ?, ?, ?, ?)
+                """,
+                upload.fileId(), storageProperties.getBucket(), objectKey, CONTENT_TYPE,
+                upload.sizeBytes(), upload.sha256(), upload.audioProfile(), upload.durationMs());
+
+        int updated = jdbcTemplate.update("""
+                UPDATE app.tts_job
+                   SET status = 'READY',
+                       output_asset_id = ?,
+                       lease_owner = NULL,
+                       lease_token = NULL,
+                       lease_until = NULL,
+                       finalized_by_worker = ?,
+                       finalized_lease_token = ?,
+                       finalized_at = CURRENT_TIMESTAMP,
+                       version = version + 1,
+                       updated_at = CURRENT_TIMESTAMP
+                 WHERE id = ?
+                   AND file_id = ?
+                   AND fingerprint = ?
+                   AND voice_model_id = ?
+                   AND lease_owner = ?
+                   AND lease_token = ?
+                   AND status IN ('CLAIMED', 'PROCESSING')
+                   AND lease_until >= CURRENT_TIMESTAMP
+                """,
+                upload.fileId(), upload.workerId(), upload.leaseToken(), upload.jobId(), upload.fileId(),
+                upload.fingerprint(), upload.voiceModelId(), upload.workerId(), upload.leaseToken());
+        if (updated != 1) {
+            throw new IllegalStateException("Locked TTS job lost its lease during finalization");
+        }
+        return FinalizationResult.CREATED;
+    }
+
+    private FinalizationResult completedState(OutputUpload upload) {
+        Integer ready = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM app.tts_job WHERE id = ? AND status = 'READY'",
+                Integer.class, upload.jobId());
+        if (ready == null || ready == 0) {
+            return null;
+        }
+        return exactCompletedUpload(upload)
+                ? FinalizationResult.ALREADY_FINALIZED
+                : FinalizationResult.REPLAY_MISMATCH;
+    }
+
+    private boolean exactCompletedUpload(OutputUpload upload) {
+        Integer count = jdbcTemplate.queryForObject("""
+                SELECT count(*)
+                  FROM app.tts_job j
+                  JOIN app.file_asset a ON a.id = j.output_asset_id
+                 WHERE j.id = ?
+                   AND j.status = 'READY'
+                   AND j.file_id = ?
+                   AND j.output_asset_id = ?
+                   AND j.fingerprint = ?
+                   AND j.voice_model_id = ?
+                   AND j.finalized_by_worker = ?
+                   AND j.finalized_lease_token = ?
+                   AND a.kind = 'TTS_AUDIO'
+                   AND a.status = 'READY'
+                   AND a.media_type = ?
+                   AND a.size_bytes = ?
+                   AND a.sha256 = ?
+                   AND a.audio_profile = ?
+                   AND a.duration_ms IS NOT DISTINCT FROM ?
+                """, Integer.class,
+                upload.jobId(), upload.fileId(), upload.fileId(), upload.fingerprint(), upload.voiceModelId(),
+                upload.workerId(), upload.leaseToken(), CONTENT_TYPE, upload.sizeBytes(), upload.sha256(),
+                upload.audioProfile(), upload.durationMs());
+        return count != null && count == 1;
     }
 
     private boolean ownsActiveLease(OutputUpload upload) {
@@ -116,6 +178,10 @@ public class TtsOutputFinalizationService {
         return count != null && count == 1;
     }
 
+    private static String objectKey(OutputUpload upload) {
+        return "tts/audio/" + upload.fileId() + "/" + upload.leaseToken() + ".mp3";
+    }
+
     private static void validateArtifact(OutputUpload upload) {
         Objects.requireNonNull(upload, "upload");
         if (!CONTENT_TYPE.equals(upload.contentType())) {
@@ -130,8 +196,7 @@ public class TtsOutputFinalizationService {
         if (upload.durationMs() != null && upload.durationMs() < 1) {
             throw new IllegalArgumentException("durationMs must be positive when supplied");
         }
-        String actual = sha256(upload.bytes());
-        if (!actual.equals(upload.sha256())) {
+        if (!sha256(upload.bytes()).equals(upload.sha256())) {
             throw new IllegalArgumentException("TTS output SHA-256 does not match payload");
         }
     }
@@ -144,7 +209,7 @@ public class TtsOutputFinalizationService {
         }
     }
 
-    public enum FinalizationResult { CREATED, LEASE_LOST }
+    public enum FinalizationResult { CREATED, ALREADY_FINALIZED, LEASE_LOST, REPLAY_MISMATCH }
 
     public record OutputUpload(
             UUID jobId,

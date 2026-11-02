@@ -91,9 +91,11 @@ public class TtsJobWorkerController {
             var result = outputService.finalizeOutput(new TtsOutputFinalizationService.OutputUpload(
                     jobId, workerId, fileId, leaseToken, fingerprint, voiceModelId, audioProfile,
                     sha256, sizeBytes, durationMs, file.getContentType(), file.getBytes()));
-            return result == TtsOutputFinalizationService.FinalizationResult.CREATED
-                    ? ResponseEntity.status(HttpStatus.CREATED).build()
-                    : ResponseEntity.status(HttpStatus.CONFLICT).build();
+            return switch (result) {
+                case CREATED -> ResponseEntity.status(HttpStatus.CREATED).build();
+                case ALREADY_FINALIZED -> ResponseEntity.ok().build();
+                case LEASE_LOST, REPLAY_MISMATCH -> ResponseEntity.status(HttpStatus.CONFLICT).build();
+            };
         } catch (IllegalArgumentException | IOException exception) {
             return ResponseEntity.badRequest().build();
         }
