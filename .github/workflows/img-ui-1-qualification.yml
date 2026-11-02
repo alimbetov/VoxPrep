@@ -8,6 +8,7 @@ on:
       - 'mobile/careerspeak_app/**'
       - 'contracts/**'
       - 'docs/implementation/IMG_UI_1_CONTENT_COVER.md'
+      - 'docs/implementation/P2_5_MANIFEST_CONTRACTS.md'
       - 'docs/implementation/P2_8_ASSET_RESOLVER.md'
       - '.github/workflows/img-ui-1-qualification.yml'
   workflow_dispatch:

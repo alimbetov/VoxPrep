@@ -24,20 +24,22 @@ The manifest boundary is framework-independent above `data/remote/**`. Raw JSON 
 
 ## Contract versions
 
-Initial Flutter support is explicit:
+The original P2.5 baseline introduced manifest schema version 1. The current Flutter decoder supports the compatible range:
 
 ```text
-manifest schemaVersion = 1
+manifest schemaVersion = 1..2
 app contract version    = 1
 ```
 
-A future manifest schema is not partially interpreted. It fails closed as `SCHEMA_UNSUPPORTED`, preserving the last compatible local `CURRENT` snapshot.
+A manifest schema newer than `supportedContentManifestSchemaVersion` is not partially interpreted. It fails closed as `SCHEMA_UNSUPPORTED`, preserving the last compatible local `CURRENT` snapshot.
 
 A root manifest whose `minimumAppContractVersion` is newer than the installed application fails as `APP_UPDATE_REQUIRED`.
 
-## Root manifest v1
+The learner OpenAPI contract must keep its root and pack `schemaVersion.maximum` aligned with the Flutter decoder. IMG-UI.1 corrected both to `2`.
 
-Concrete v1 wire shape:
+## Root manifest v1 baseline
+
+Concrete baseline wire shape:
 
 ```json
 {
@@ -85,7 +87,7 @@ Root invariants:
 
 Earlier P0 conceptual tombstone examples showed only `code + revision`. That is insufficient for the implemented mobile identity because P2.2 deliberately permits the same business code to exist under different `ContentType` values.
 
-Therefore manifest schema v1 uses:
+Therefore manifest contracts use:
 
 ```text
 contentCode
@@ -95,7 +97,7 @@ contentType
 
 for every content reference and tombstone. Flutter must never guess a destructive target from `contentCode` alone.
 
-## Pack manifest v1
+## Pack manifest baseline
 
 Endpoint:
 
@@ -105,7 +107,7 @@ GET /api/v1/content/packs/{code}/manifest
     &revision=<exact revision>
 ```
 
-Concrete v1 shape:
+Concrete baseline shape:
 
 ```json
 {
@@ -156,6 +158,46 @@ Pack invariants:
 6. `deliveryKey` is a relative immutable object key, never a CDN/origin URL;
 7. `checksumSha256` is the immutable binary integrity identity;
 8. `requiredOffline` controls explicit offline-bundle requirements and does not force normal metadata sync to download the bytes.
+
+### IMG-UI.1 optional content cover binding
+
+Content covers reuse the existing `assets + contentAssets` graph; they are not embedded URLs and do not add a second media model.
+
+```json
+{
+  "assets": [
+    {
+      "assetId": "cover-java-question-001",
+      "checksumSha256": "<sha256>",
+      "deliveryKey": "images/java/question-001.webp",
+      "sizeBytes": 48192,
+      "mediaType": "image/webp",
+      "requiredOffline": false
+    }
+  ],
+  "contentAssets": [
+    {
+      "contentCode": "JAVA_QUESTION_001",
+      "contentType": "interview",
+      "contentRevision": 3,
+      "assetId": "cover-java-question-001",
+      "role": "coverImage"
+    }
+  ]
+}
+```
+
+Additional cover invariants:
+
+1. `coverImage` is optional; absence is a valid publication state;
+2. one exact `(contentCode, contentType, contentRevision)` may bind at most one `coverImage`;
+3. cover media is limited to `image/webp`, `image/jpeg`, or `image/png` for IMG-UI.1;
+4. cover lookup is exact-revision; a client must never reuse a cover from another content revision;
+5. the client resolves the asset through `AssetResolver`; `deliveryKey` is never treated as a client URL;
+6. an unavailable or undecodable optional cover must not make otherwise valid learning content unavailable;
+7. learner presentation reserves no cover slot when the image is absent or cannot be rendered.
+
+The normative presentation and fallback rules are documented in `IMG_UI_1_CONTENT_COVER.md` and `contracts/content-cover-v1.yaml`.
 
 ## Root endpoint
 
@@ -217,10 +259,10 @@ P2.5 only makes those operations possible against one deterministic, validated c
 
 ## Acceptance
 
-P2.5 is accepted only when one exact clean SHA proves all of the following under the normal read-only CI workflow:
+The manifest boundary is accepted only when one exact clean SHA proves all of the following under the normal read-only CI workflow:
 
-1. root manifest v1 decodes into framework-independent immutable application models;
-2. future schema versions fail as `SCHEMA_UNSUPPORTED` before partial deeper decoding;
+1. every supported root manifest schema version decodes into framework-independent immutable application models;
+2. schema versions above the supported maximum fail as `SCHEMA_UNSUPPORTED` before partial deeper decoding;
 3. newer `minimumAppContractVersion` fails as `APP_UPDATE_REQUIRED`;
 4. root packs are unique by `(code, variant)`;
 5. tombstones require `(contentCode, contentType, revision, reason)`;
@@ -229,5 +271,7 @@ P2.5 is accepted only when one exact clean SHA proves all of the following under
 8. root ETag / conditional `304 Not Modified` behavior is explicit, and `304` without a request validator fails closed;
 9. invalid locale and unsafe request ETag fail before transport;
 10. production composition selects the HTTP manifest gateway behind `ContentManifestGateway`;
-11. no Drift schema change occurs and `schemaVersion` remains `1`;
-12. format, lockfile, Drift generated baseline, `flutter analyze`, and full `flutter test` are green on the exact P2.5 SHA.
+11. `coverImage` is optional, exact-revision, unambiguous, media-type constrained and uses the existing asset graph;
+12. no Drift schema change occurs solely for manifest decoding;
+13. the learner OpenAPI schema-version range remains aligned with Flutter's decoder;
+14. format, `flutter analyze`, and full `flutter test` qualification remain green for the owning implementation slice.
