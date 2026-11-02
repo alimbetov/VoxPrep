@@ -123,8 +123,10 @@ const _item = ContentItem(
   code: 'LONG_UI_CONTENT',
   type: ContentType.topic,
   title: _longTitle,
-  subtitle: 'Длинный подзаголовок с дополнительным контекстом, который должен переноситься без визуальных дефектов.',
-  description: 'Длинное описание учебного материала для проверки узких экранов, планшетов, desktop и крупного accessibility text scale без RenderFlex overflow.',
+  subtitle:
+      'Длинный подзаголовок с дополнительным контекстом, который должен переноситься без визуальных дефектов.',
+  description:
+      'Длинное описание учебного материала для проверки узких экранов, планшетов, desktop и крупного accessibility text scale без RenderFlex overflow.',
   category: 'JAVA',
   level: 'B2',
   minutes: 7,

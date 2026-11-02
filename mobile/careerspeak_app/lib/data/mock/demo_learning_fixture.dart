@@ -110,7 +110,8 @@ List<ContentPayload> buildDemoContentPayloads() {
       ),
       title: 'Explaining dependency injection',
       subtitle: 'Java interview communication',
-      description: 'Practice explaining dependency injection clearly and concisely in an interview.',
+      description:
+          'Practice explaining dependency injection clearly and concisely in an interview.',
       categoryCode: 'JAVA_INTERVIEW',
       category: 'Java Interview',
       levelCode: 'B2',
@@ -151,7 +152,8 @@ List<ContentPayload> buildDemoContentPayloads() {
       ),
       title: 'Professional communication basics',
       subtitle: 'Reusable demo learning material',
-      description: 'Practice concise explanations, structured answers and domain vocabulary.',
+      description:
+          'Practice concise explanations, structured answers and domain vocabulary.',
       categoryCode: 'PROFESSIONAL_ENGLISH',
       category: 'Professional English',
       levelCode: 'B1',
@@ -226,7 +228,8 @@ List<AssessmentQuestionRevision> buildDemoAssessmentQuestions() {
         ],
         correctOptionIndex: 0,
         skillCode: 'INTERVIEW_SPEAKING',
-        explanation: 'Dependency injection separates dependency construction from the object that consumes it.',
+        explanation:
+            'Dependency injection separates dependency construction from the object that consumes it.',
       ),
     ),
     AssessmentQuestionRevision(
@@ -245,7 +248,8 @@ List<AssessmentQuestionRevision> buildDemoAssessmentQuestions() {
         ],
         correctOptionIndex: 0,
         skillCode: 'PROFESSIONAL_SPEAKING',
-        explanation: 'A useful handover prioritizes the current concern and the background needed for safe continuity of care.',
+        explanation:
+            'A useful handover prioritizes the current concern and the background needed for safe continuity of care.',
       ),
     ),
   ];

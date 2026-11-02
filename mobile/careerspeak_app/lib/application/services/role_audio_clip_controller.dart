@@ -7,11 +7,12 @@ import '../ports/audio_playback_engine.dart';
 import '../result/result.dart';
 import 'asset_resolver.dart';
 
-typedef ResolveRoleAudioAsset = Future<Result<ResolvedAsset>> Function(
-  ContentIdentity content,
-  int revision,
-  ContentAudioRole role,
-);
+typedef ResolveRoleAudioAsset =
+    Future<Result<ResolvedAsset>> Function(
+      ContentIdentity content,
+      int revision,
+      ContentAudioRole role,
+    );
 
 final class RoleAudioClipState {
   const RoleAudioClipState({

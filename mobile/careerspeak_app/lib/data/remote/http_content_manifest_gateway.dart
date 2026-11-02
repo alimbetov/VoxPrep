@@ -111,7 +111,8 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
       return FailureResult<RootManifestFetch>(
         ApplicationFailure(
           code: 'ROOT_MANIFEST_CHECKSUM_MISMATCH',
-          message: 'The root manifest checksum does not match its canonical immutable body.',
+          message:
+              'The root manifest checksum does not match its canonical immutable body.',
           traceId: apiResponse.traceId,
           details: <String, Object?>{
             'declaredChecksum': manifest.checksum,
@@ -174,7 +175,8 @@ final class HttpContentManifestGateway implements ContentManifestGateway {
       return FailureResult<PackContentManifest>(
         ApplicationFailure(
           code: 'PACK_MANIFEST_CHECKSUM_MISMATCH',
-          message: 'The pack manifest checksum does not match its canonical immutable body.',
+          message:
+              'The pack manifest checksum does not match its canonical immutable body.',
           traceId: apiResponse.traceId,
           details: <String, Object?>{
             'declaredChecksum': manifest.checksum,

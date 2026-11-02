@@ -165,7 +165,8 @@ final class DriftPracticeTestRepository implements PracticeTestRepository {
         return FailureResult<PracticeTest?>(
           ApplicationFailure(
             code: 'CURRENT_PRACTICE_TEST_MISSING',
-            message: 'The CURRENT publication references a practice-test payload that is not staged locally.',
+            message:
+                'The CURRENT publication references a practice-test payload that is not staged locally.',
             details: <String, Object?>{
               'practiceTestCode': normalizedCode,
               'revision': revision,

@@ -64,7 +64,8 @@ final class HttpCataloguePayloadGateway implements CataloguePayloadGateway {
       return FailureResult<CataloguePayload>(
         ApplicationFailure(
           code: 'CATALOGUE_REVISION_MISMATCH',
-          message: 'The catalogue payload does not match the exact publication target.',
+          message:
+              'The catalogue payload does not match the exact publication target.',
           traceId: apiResponse.traceId,
           details: <String, Object?>{
             'expectedKind': target.kind.wireName,

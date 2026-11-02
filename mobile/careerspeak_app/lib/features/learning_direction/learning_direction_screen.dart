@@ -37,7 +37,8 @@ class LearningDirectionScreen extends StatelessWidget {
                 Expanded(
                   child: LearningDirectionSelectionPanel(
                     title: 'Choose your learning direction',
-                    subtitle: 'Changing the goal keeps your English level and support-language preferences.',
+                    subtitle:
+                        'Changing the goal keeps your English level and support-language preferences.',
                     onSelected: (_) {
                       if (context.canPop()) {
                         context.pop();

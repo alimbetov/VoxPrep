@@ -231,8 +231,9 @@ final class CareerSpeakDatabase extends _$CareerSpeakDatabase {
   }
 
   Future<void> _createLocaleSelectionSchemaV11() async {
-    final columns = await customSelect('PRAGMA table_info(app_preferences)')
-        .get();
+    final columns = await customSelect(
+      'PRAGMA table_info(app_preferences)',
+    ).get();
     final hasCountryCode = columns.any(
       (row) => row.read<String>('name') == 'country_code',
     );

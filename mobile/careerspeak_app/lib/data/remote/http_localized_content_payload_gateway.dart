@@ -42,7 +42,8 @@ final class HttpLocalizedContentPayloadGateway
       return FailureResult<LocalizedContentPayload>(
         ApplicationFailure(
           code: 'LOCALIZED_CONTENT_PAYLOAD_RESPONSE_INVALID',
-          message: 'The localized content payload endpoint returned an invalid status.',
+          message:
+              'The localized content payload endpoint returned an invalid status.',
           traceId: apiResponse.traceId,
           details: <String, Object?>{'statusCode': apiResponse.statusCode},
         ),
@@ -64,7 +65,8 @@ final class HttpLocalizedContentPayloadGateway
       return FailureResult<LocalizedContentPayload>(
         ApplicationFailure(
           code: 'LOCALIZED_CONTENT_PAYLOAD_MISMATCH',
-          message: 'The localized content payload does not match the requested revision.',
+          message:
+              'The localized content payload does not match the requested revision.',
           traceId: apiResponse.traceId,
           details: <String, Object?>{
             'expectedCode': target.identity.code,

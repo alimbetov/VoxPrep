@@ -284,8 +284,9 @@ class _ContinueLearningCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     value.title,
-                    style: Theme.of(context).textTheme.headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.w700),
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(value.subtitle),
@@ -460,8 +461,9 @@ class _StatCard extends StatelessWidget {
               const SizedBox(height: 14),
               Text(
                 value,
-                style: Theme.of(context).textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w700),
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 2),
               Text(label),

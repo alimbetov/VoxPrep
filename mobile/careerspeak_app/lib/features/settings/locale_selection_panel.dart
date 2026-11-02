@@ -123,14 +123,16 @@ class _LocaleSelectionPanelState extends ConsumerState<LocaleSelectionPanel> {
         if (!mounted) return;
         setState(() => _saving = false);
         if (sync case FailureResult(:final failure)) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text(failure.message)));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(failure.message)));
         }
         widget.onSaved?.call();
       case FailureResult<void>(:final failure):
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(failure.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(failure.message)));
     }
   }
 }

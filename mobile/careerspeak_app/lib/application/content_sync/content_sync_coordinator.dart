@@ -110,7 +110,8 @@ final class ContentSyncCoordinator {
         activeRunId,
         const ApplicationFailure(
           code: 'SYNC_REMOTE_RESPONSE_INVALID',
-          message: 'An unconditional root manifest request returned no manifest payload.',
+          message:
+              'An unconditional root manifest request returned no manifest payload.',
         ),
       );
     }
@@ -166,7 +167,8 @@ final class ContentSyncCoordinator {
           activeRunId,
           const ApplicationFailure(
             code: 'PUBLICATION_SNAPSHOT_STAGER_MISSING',
-            message: 'The publication declares tests or catalogues but no production snapshot stager is configured.',
+            message:
+                'The publication declares tests or catalogues but no production snapshot stager is configured.',
           ),
         );
       }

@@ -127,8 +127,9 @@ class _LearningDirectionSelectionPanelState
       case Success():
         widget.onSelected?.call(code);
       case FailureResult(:final failure):
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(failure.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(failure.message)));
     }
   }
 }

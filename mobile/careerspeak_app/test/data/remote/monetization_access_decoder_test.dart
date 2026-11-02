@@ -11,27 +11,27 @@ void main() {
   const registry = UniversalCatalogueDecoderRegistry();
 
   test('legacy v2 collection without accessLevel fails closed to FULL', () {
-    final decoded = registry.decode(
-      _payload(_collection()),
-    ) as List<LearningCollectionProjection>;
+    final decoded =
+        registry.decode(_payload(_collection()))
+            as List<LearningCollectionProjection>;
 
     expect(decoded.single.accessLevel, AccessLevel.full);
     expect(decoded.single.requiresFullAccess, isTrue);
   });
 
   test('explicit v3 FREE collection is decoded as FREE', () {
-    final decoded = registry.decode(
-      _payload(_collection(accessLevel: 'FREE')),
-    ) as List<LearningCollectionProjection>;
+    final decoded =
+        registry.decode(_payload(_collection(accessLevel: 'FREE')))
+            as List<LearningCollectionProjection>;
 
     expect(decoded.single.accessLevel, AccessLevel.free);
     expect(decoded.single.requiresFullAccess, isFalse);
   });
 
   test('explicit v3 FULL collection is decoded as FULL', () {
-    final decoded = registry.decode(
-      _payload(_collection(accessLevel: 'FULL')),
-    ) as List<LearningCollectionProjection>;
+    final decoded =
+        registry.decode(_payload(_collection(accessLevel: 'FULL')))
+            as List<LearningCollectionProjection>;
 
     expect(decoded.single.accessLevel, AccessLevel.full);
   });
@@ -55,9 +55,9 @@ void main() {
       accessLevel: 'FREE',
     );
 
-    final decoded = registry.decode(
-      _payload(first, additional: <Object>[second]),
-    ) as List<LearningCollectionProjection>;
+    final decoded =
+        registry.decode(_payload(first, additional: <Object>[second]))
+            as List<LearningCollectionProjection>;
 
     expect(decoded[0].accessLevel, AccessLevel.full);
     expect(decoded[1].accessLevel, AccessLevel.free);

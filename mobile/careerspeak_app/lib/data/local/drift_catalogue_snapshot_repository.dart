@@ -74,7 +74,8 @@ final class DriftCatalogueSnapshotRepository
         return const FailureResult<CataloguePayload?>(
           ApplicationFailure(
             code: 'CATALOGUE_READ_MODEL_INVALID',
-            message: 'Cached catalogue payload conflicts with CURRENT exact membership.',
+            message:
+                'Cached catalogue payload conflicts with CURRENT exact membership.',
           ),
         );
       }

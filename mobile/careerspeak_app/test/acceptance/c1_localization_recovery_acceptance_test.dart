@@ -10,60 +10,63 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('localized snapshot survives reopen and falls back offline without changing root identity', () async {
-    final directory = await Directory.systemTemp.createTemp(
-      'careerspeak-c1-localization-restart-',
-    );
-    addTearDown(() => directory.delete(recursive: true));
-    final file = File('${directory.path}/careerspeak.sqlite');
+  test(
+    'localized snapshot survives reopen and falls back offline without changing root identity',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'careerspeak-c1-localization-restart-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final file = File('${directory.path}/careerspeak.sqlite');
 
-    var database = CareerSpeakDatabase(NativeDatabase(file));
-    await _seedCurrentLocalizedSnapshot(database);
-    await database.close();
+      var database = CareerSpeakDatabase(NativeDatabase(file));
+      await _seedCurrentLocalizedSnapshot(database);
+      await database.close();
 
-    database = CareerSpeakDatabase(NativeDatabase(file));
-    addTearDown(database.close);
-    final repository = DriftLocalizedContentRepository(database);
+      database = CareerSpeakDatabase(NativeDatabase(file));
+      addTearDown(database.close);
+      final repository = DriftLocalizedContentRepository(database);
 
-    final russian = (await repository.resolve(
-      identity: _identity,
-      contentRevision: 1,
-      requestedLocale: 'ru',
-    )).getOrThrow();
-    expect(russian, isNotNull);
-    expect(russian!.resolvedLocale, 'ru');
-    expect(russian.fallbackKind, LocaleFallbackKind.exact);
-    expect(russian.title, 'Русский заголовок');
-    expect(russian.description, 'Canonical description');
-    expect(russian.translation, 'Русский перевод');
+      final russian = (await repository.resolve(
+        identity: _identity,
+        contentRevision: 1,
+        requestedLocale: 'ru',
+      )).getOrThrow();
+      expect(russian, isNotNull);
+      expect(russian!.resolvedLocale, 'ru');
+      expect(russian.fallbackKind, LocaleFallbackKind.exact);
+      expect(russian.title, 'Русский заголовок');
+      expect(russian.description, 'Canonical description');
+      expect(russian.translation, 'Русский перевод');
 
-    final regionalRussian = (await repository.resolve(
-      identity: _identity,
-      contentRevision: 1,
-      requestedLocale: 'ru-KZ',
-    )).getOrThrow();
-    expect(regionalRussian, isNotNull);
-    expect(regionalRussian!.resolvedLocale, 'ru');
-    expect(regionalRussian.fallbackKind, LocaleFallbackKind.configured);
-    expect(regionalRussian.title, 'Русский заголовок');
+      final regionalRussian = (await repository.resolve(
+        identity: _identity,
+        contentRevision: 1,
+        requestedLocale: 'ru-KZ',
+      )).getOrThrow();
+      expect(regionalRussian, isNotNull);
+      expect(regionalRussian!.resolvedLocale, 'ru');
+      expect(regionalRussian.fallbackKind, LocaleFallbackKind.configured);
+      expect(regionalRussian.title, 'Русский заголовок');
 
-    final kazakh = (await repository.resolve(
-      identity: _identity,
-      contentRevision: 1,
-      requestedLocale: 'kk',
-    )).getOrThrow();
-    expect(kazakh, isNotNull);
-    expect(kazakh!.resolvedLocale, 'en');
-    expect(kazakh.fallbackKind, LocaleFallbackKind.canonicalEnglish);
-    expect(kazakh.usesCanonicalEnglishOnly, isTrue);
-    expect(kazakh.title, 'Canonical title');
+      final kazakh = (await repository.resolve(
+        identity: _identity,
+        contentRevision: 1,
+        requestedLocale: 'kk',
+      )).getOrThrow();
+      expect(kazakh, isNotNull);
+      expect(kazakh!.resolvedLocale, 'en');
+      expect(kazakh.fallbackKind, LocaleFallbackKind.canonicalEnglish);
+      expect(kazakh.usesCanonicalEnglishOnly, isTrue);
+      expect(kazakh.title, 'Canonical title');
 
-    final root = await database
-        .select(database.contentManifestStates)
-        .getSingle();
-    expect(root.currentContentVersion, 42);
-    expect(root.currentManifestChecksum, _rootChecksum);
-  });
+      final root = await database
+          .select(database.contentManifestStates)
+          .getSingle();
+      expect(root.currentContentVersion, 42);
+      expect(root.currentManifestChecksum, _rootChecksum);
+    },
+  );
 
   test(
     'tombstoned canonical content stays invisible after file-backed reopen',

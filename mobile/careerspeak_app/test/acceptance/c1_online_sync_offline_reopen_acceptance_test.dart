@@ -22,75 +22,78 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('online localized sync survives restart and resolves offline by Backend fallback', () async {
-    final directory = await Directory.systemTemp.createTemp(
-      'careerspeak-c1-online-offline-',
-    );
-    addTearDown(() async {
-      if (await directory.exists()) {
-        await directory.delete(recursive: true);
-      }
-    });
-    final file = File('${directory.path}/careerspeak.sqlite');
-    final backend = _BackendFixture();
+  test(
+    'online localized sync survives restart and resolves offline by Backend fallback',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'careerspeak-c1-online-offline-',
+      );
+      addTearDown(() async {
+        if (await directory.exists()) {
+          await directory.delete(recursive: true);
+        }
+      });
+      final file = File('${directory.path}/careerspeak.sqlite');
+      final backend = _BackendFixture();
 
-    var database = CareerSpeakDatabase(NativeDatabase(file));
-    final coordinator = ContentSyncCoordinator(
-      journal: DriftSyncJournal(database),
-      manifestGateway: backend,
-      planner: const ContentSyncPlanner(),
-      executor: DriftSyncPlanExecutor(
-        database,
-        backend,
-        backend,
-        localizedPayloadGateway: _LocalizedGateway(backend),
-      ),
-    );
+      var database = CareerSpeakDatabase(NativeDatabase(file));
+      final coordinator = ContentSyncCoordinator(
+        journal: DriftSyncJournal(database),
+        manifestGateway: backend,
+        planner: const ContentSyncPlanner(),
+        executor: DriftSyncPlanExecutor(
+          database,
+          backend,
+          backend,
+          localizedPayloadGateway: _LocalizedGateway(backend),
+        ),
+      );
 
-    final sync = await coordinator.synchronize(
-      runId: 'c1-online-sync',
-      trigger: SyncTrigger.startup,
-      translationLocale: 'ru-KZ',
-    );
-    expect(sync, isA<Success<ContentSyncOutcome>>());
-    expect(backend.rootCalls, 1);
-    expect(backend.packCalls, <String>['canonical', 'locale:ru']);
-    expect(backend.canonicalPayloadCalls, 1);
-    expect(backend.localizedPayloadCalls, 1);
+      final sync = await coordinator.synchronize(
+        runId: 'c1-online-sync',
+        trigger: SyncTrigger.startup,
+        translationLocale: 'ru-KZ',
+      );
+      expect(sync, isA<Success<ContentSyncOutcome>>());
+      expect(backend.rootCalls, 1);
+      expect(backend.packCalls, <String>['canonical', 'locale:ru']);
+      expect(backend.canonicalPayloadCalls, 1);
+      expect(backend.localizedPayloadCalls, 1);
 
-    await database.close();
-    database = CareerSpeakDatabase(NativeDatabase(file));
-    addTearDown(database.close);
-    final offline = DriftLocalizedContentRepository(database);
+      await database.close();
+      database = CareerSpeakDatabase(NativeDatabase(file));
+      addTearDown(database.close);
+      final offline = DriftLocalizedContentRepository(database);
 
-    final regional = (await offline.resolve(
-      identity: _identity,
-      contentRevision: 1,
-      requestedLocale: 'ru-KZ',
-    )).getOrThrow();
-    expect(regional, isNotNull);
-    expect(regional!.resolvedLocale, 'ru');
-    expect(regional.fallbackKind, LocaleFallbackKind.configured);
-    expect(regional.title, 'Русский заголовок');
-    expect(regional.description, 'Canonical description');
-    expect(regional.translation, 'Русский перевод');
+      final regional = (await offline.resolve(
+        identity: _identity,
+        contentRevision: 1,
+        requestedLocale: 'ru-KZ',
+      )).getOrThrow();
+      expect(regional, isNotNull);
+      expect(regional!.resolvedLocale, 'ru');
+      expect(regional.fallbackKind, LocaleFallbackKind.configured);
+      expect(regional.title, 'Русский заголовок');
+      expect(regional.description, 'Canonical description');
+      expect(regional.translation, 'Русский перевод');
 
-    final kazakh = (await offline.resolve(
-      identity: _identity,
-      contentRevision: 1,
-      requestedLocale: 'kk',
-    )).getOrThrow();
-    expect(kazakh, isNotNull);
-    expect(kazakh!.resolvedLocale, 'en');
-    expect(kazakh.usesCanonicalEnglishOnly, isTrue);
-    expect(kazakh.title, 'Canonical title');
+      final kazakh = (await offline.resolve(
+        identity: _identity,
+        contentRevision: 1,
+        requestedLocale: 'kk',
+      )).getOrThrow();
+      expect(kazakh, isNotNull);
+      expect(kazakh!.resolvedLocale, 'en');
+      expect(kazakh.usesCanonicalEnglishOnly, isTrue);
+      expect(kazakh.title, 'Canonical title');
 
-    final root = await database
-        .select(database.contentManifestStates)
-        .getSingle();
-    expect(root.currentContentVersion, 501);
-    expect(root.currentManifestChecksum, _rootChecksum);
-  });
+      final root = await database
+          .select(database.contentManifestStates)
+          .getSingle();
+      expect(root.currentContentVersion, 501);
+      expect(root.currentManifestChecksum, _rootChecksum);
+    },
+  );
 }
 
 final class _BackendFixture

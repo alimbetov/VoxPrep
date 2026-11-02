@@ -11,80 +11,86 @@ void main() {
   const registry = UniversalCatalogueDecoderRegistry();
 
   test('decodes arbitrary future vertical ownership in learning goal', () {
-    final decoded = registry.decode(
-      _payload(CatalogueKind.learningGoals, <Object>[
-        <String, dynamic>{
-          'code': 'GOAL_ALPHA',
-          'verticalCode': 'FUTURE_VERTICAL_2030',
-          'title': 'Goal',
-          'description': 'Goal description',
-          'sortOrder': 0,
-          'active': true,
-        },
-      ]),
-    ) as List<LearningGoalProjection>;
+    final decoded =
+        registry.decode(
+              _payload(CatalogueKind.learningGoals, <Object>[
+                <String, dynamic>{
+                  'code': 'GOAL_ALPHA',
+                  'verticalCode': 'FUTURE_VERTICAL_2030',
+                  'title': 'Goal',
+                  'description': 'Goal description',
+                  'sortOrder': 0,
+                  'active': true,
+                },
+              ]),
+            )
+            as List<LearningGoalProjection>;
 
     expect(decoded.single.verticalCode, 'FUTURE_VERTICAL_2030');
   });
 
   test('decodes typed track without vertical-specific branching', () {
-    final decoded = registry.decode(
-      _payload(CatalogueKind.learningTracks, <Object>[
-        <String, dynamic>{
-          'code': 'TRACK_ALPHA',
-          'verticalCode': 'VERTICAL_ALPHA',
-          'goalCode': 'GOAL_ALPHA',
-          'title': 'Track',
-          'description': 'Track description',
-          'levelCode': 'B2',
-          'careerTrackCode': null,
-          'sortOrder': 0,
-          'active': true,
-        },
-      ]),
-    ) as List<LearningTrackProjection>;
+    final decoded =
+        registry.decode(
+              _payload(CatalogueKind.learningTracks, <Object>[
+                <String, dynamic>{
+                  'code': 'TRACK_ALPHA',
+                  'verticalCode': 'VERTICAL_ALPHA',
+                  'goalCode': 'GOAL_ALPHA',
+                  'title': 'Track',
+                  'description': 'Track description',
+                  'levelCode': 'B2',
+                  'careerTrackCode': null,
+                  'sortOrder': 0,
+                  'active': true,
+                },
+              ]),
+            )
+            as List<LearningTrackProjection>;
 
     expect(decoded.single.goalCode, 'GOAL_ALPHA');
     expect(decoded.single.verticalCode, 'VERTICAL_ALPHA');
   });
 
   test('decodes ordered content and test members in one stream', () {
-    final decoded = registry.decode(
-      _payload(CatalogueKind.learningCollections, <Object>[
-        <String, dynamic>{
-          'code': 'COLLECTION_ALPHA',
-          'verticalCode': 'VERTICAL_ALPHA',
-          'trackCode': 'TRACK_ALPHA',
-          'title': 'Collection',
-          'description': 'Collection description',
-          'sortOrder': 0,
-          'active': true,
-          'members': <Object>[
-            <String, dynamic>{
-              'position': 0,
-              'type': 'CONTENT',
-              'content': <String, dynamic>{
-                'contentCode': 'CONTENT_ALPHA',
-                'contentType': 'topic',
-                'revision': 2,
-                'checksum': _hash,
-              },
-              'practiceTest': null,
-            },
-            <String, dynamic>{
-              'position': 1,
-              'type': 'PRACTICE_TEST',
-              'content': null,
-              'practiceTest': <String, dynamic>{
-                'practiceTestCode': 'TEST_ALPHA',
-                'revision': 4,
-                'checksum': _hash,
-              },
-            },
-          ],
-        },
-      ]),
-    ) as List<LearningCollectionProjection>;
+    final decoded =
+        registry.decode(
+              _payload(CatalogueKind.learningCollections, <Object>[
+                <String, dynamic>{
+                  'code': 'COLLECTION_ALPHA',
+                  'verticalCode': 'VERTICAL_ALPHA',
+                  'trackCode': 'TRACK_ALPHA',
+                  'title': 'Collection',
+                  'description': 'Collection description',
+                  'sortOrder': 0,
+                  'active': true,
+                  'members': <Object>[
+                    <String, dynamic>{
+                      'position': 0,
+                      'type': 'CONTENT',
+                      'content': <String, dynamic>{
+                        'contentCode': 'CONTENT_ALPHA',
+                        'contentType': 'topic',
+                        'revision': 2,
+                        'checksum': _hash,
+                      },
+                      'practiceTest': null,
+                    },
+                    <String, dynamic>{
+                      'position': 1,
+                      'type': 'PRACTICE_TEST',
+                      'content': null,
+                      'practiceTest': <String, dynamic>{
+                        'practiceTestCode': 'TEST_ALPHA',
+                        'revision': 4,
+                        'checksum': _hash,
+                      },
+                    },
+                  ],
+                },
+              ]),
+            )
+            as List<LearningCollectionProjection>;
 
     expect(decoded.single.members, hasLength(2));
     expect(decoded.single.members[0].contentRef!.contentCode, 'CONTENT_ALPHA');

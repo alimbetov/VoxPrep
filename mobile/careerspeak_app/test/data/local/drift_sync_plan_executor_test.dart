@@ -135,82 +135,87 @@ void main() {
     expect(await database.select(database.favorites).get(), hasLength(1));
   });
 
-  test('commit conflict keeps staged payload hidden and preserves previous CURRENT', () async {
-    await _seedCurrentSnapshot(database, now);
+  test(
+    'commit conflict keeps staged payload hidden and preserves previous CURRENT',
+    () async {
+      await _seedCurrentSnapshot(database, now);
 
-    final target = _targetPack();
-    final tombstone = ContentTombstone(
-      identity: ContentIdentity(
-        code: 'JAVA_Q_001',
-        type: ContentType.interview,
-      ),
-      revision: 1,
-      reason: 'INACTIVE',
-    );
-    final root = _root(
-      contentVersion: 109,
-      pack: target,
-      tombstones: <ContentTombstone>[tombstone],
-    );
-    final plan = const ContentSyncPlanner()
-        .plan(
-          local: SyncLocalSnapshot(
-            currentContentVersion: 108,
-            currentManifestChecksum: _root108,
-            etag: null,
-            currentPacks: <PackRevisionRef>[
-              PackRevisionRef(
-                identity: PackIdentity(code: 'OLD_PACK', variant: 'canonical'),
-                revision: 1,
-                checksum: _root108,
-              ),
-            ],
-          ),
-          remote: root,
-        )
-        .getOrThrow();
-    final journal = DriftSyncJournal(database, now: () => now);
-    await _prepareRun(journal, plan);
+      final target = _targetPack();
+      final tombstone = ContentTombstone(
+        identity: ContentIdentity(
+          code: 'JAVA_Q_001',
+          type: ContentType.interview,
+        ),
+        revision: 1,
+        reason: 'INACTIVE',
+      );
+      final root = _root(
+        contentVersion: 109,
+        pack: target,
+        tombstones: <ContentTombstone>[tombstone],
+      );
+      final plan = const ContentSyncPlanner()
+          .plan(
+            local: SyncLocalSnapshot(
+              currentContentVersion: 108,
+              currentManifestChecksum: _root108,
+              etag: null,
+              currentPacks: <PackRevisionRef>[
+                PackRevisionRef(
+                  identity: PackIdentity(
+                    code: 'OLD_PACK',
+                    variant: 'canonical',
+                  ),
+                  revision: 1,
+                  checksum: _root108,
+                ),
+              ],
+            ),
+            remote: root,
+          )
+          .getOrThrow();
+      final journal = DriftSyncJournal(database, now: () => now);
+      await _prepareRun(journal, plan);
 
-    final executor = DriftSyncPlanExecutor(
-      database,
-      _PackGateway(_packManifest(target)),
-      const _PayloadGateway(),
-      now: () => now,
-    );
-    final result = await executor.execute(runId: 'run-1', plan: plan);
+      final executor = DriftSyncPlanExecutor(
+        database,
+        _PackGateway(_packManifest(target)),
+        const _PayloadGateway(),
+        now: () => now,
+      );
+      final result = await executor.execute(runId: 'run-1', plan: plan);
 
-    expect(result, isA<FailureResult<void>>());
-    expect(
-      (result as FailureResult<void>).failure.code,
-      'TOMBSTONE_TARGET_CONFLICT',
-    );
+      expect(result, isA<FailureResult<void>>());
+      expect(
+        (result as FailureResult<void>).failure.code,
+        'TOMBSTONE_TARGET_CONFLICT',
+      );
 
-    final manifestState = await database
-        .select(database.contentManifestStates)
-        .getSingle();
-    expect(manifestState.currentContentVersion, 108);
-    final oldPack = await (database.select(
-      database.contentPackRevisions,
-    )..where((row) => row.packCode.equals('OLD_PACK'))).getSingle();
-    expect(oldPack.state, 'CURRENT');
-    final oldContent = await (database.select(
-      database.localContentRecords,
-    )..where((row) => row.contentCode.equals('OLD_Q_001'))).getSingle();
-    expect(oldContent.snapshotState, 'CURRENT');
+      final manifestState = await database
+          .select(database.contentManifestStates)
+          .getSingle();
+      expect(manifestState.currentContentVersion, 108);
+      final oldPack = await (database.select(
+        database.contentPackRevisions,
+      )..where((row) => row.packCode.equals('OLD_PACK'))).getSingle();
+      expect(oldPack.state, 'CURRENT');
+      final oldContent = await (database.select(
+        database.localContentRecords,
+      )..where((row) => row.contentCode.equals('OLD_Q_001'))).getSingle();
+      expect(oldContent.snapshotState, 'CURRENT');
 
-    final stagedContent = await (database.select(
-      database.localContentRecords,
-    )..where((row) => row.contentCode.equals('JAVA_Q_001'))).getSingle();
-    expect(stagedContent.snapshotState, 'STAGED');
-    expect(
-      await (database.select(
-        database.contentCatalogReads,
-      )..where((row) => row.contentCode.equals('JAVA_Q_001'))).get(),
-      hasLength(1),
-    );
+      final stagedContent = await (database.select(
+        database.localContentRecords,
+      )..where((row) => row.contentCode.equals('JAVA_Q_001'))).getSingle();
+      expect(stagedContent.snapshotState, 'STAGED');
+      expect(
+        await (database.select(
+          database.contentCatalogReads,
+        )..where((row) => row.contentCode.equals('JAVA_Q_001'))).get(),
+        hasLength(1),
+      );
 
-    final visible = await database.customSelect('''
+      final visible = await database.customSelect('''
         SELECT r.content_code
         FROM content_catalog_reads r
         INNER JOIN local_content_records l
@@ -220,11 +225,12 @@ void main() {
         WHERE l.snapshot_state = 'CURRENT'
         ORDER BY r.content_code
       ''').get();
-    expect(
-      visible.map((row) => row.read<String>('content_code')).toList(),
-      <String>['OLD_Q_001'],
-    );
-  });
+      expect(
+        visible.map((row) => row.read<String>('content_code')).toList(),
+        <String>['OLD_Q_001'],
+      );
+    },
+  );
 
   test('payload mismatch fails before any local pack staging', () async {
     final target = _targetPack();

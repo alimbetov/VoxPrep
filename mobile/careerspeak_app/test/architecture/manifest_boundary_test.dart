@@ -28,7 +28,8 @@ void main() {
     expect(
       violations,
       isEmpty,
-      reason: 'Domain, application, and features must depend on content delivery contracts, not remote adapters.',
+      reason:
+          'Domain, application, and features must depend on content delivery contracts, not remote adapters.',
     );
   });
 }

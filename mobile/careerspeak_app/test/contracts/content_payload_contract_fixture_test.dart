@@ -11,8 +11,9 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   test('typed content payload fixture remains compatible with the decoder', () {
     final fixture = jsonDecode(
-      File('test/contracts/fixtures/content_payload_v1.json')
-          .readAsStringSync(),
+      File(
+        'test/contracts/fixtures/content_payload_v1.json',
+      ).readAsStringSync(),
     );
 
     const decoder = ContentPayloadDecoder();

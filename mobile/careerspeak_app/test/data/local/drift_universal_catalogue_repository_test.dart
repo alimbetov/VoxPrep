@@ -56,8 +56,9 @@ void main() {
           ),
         );
 
-        final second = await DriftUniversalCatalogueRepository(database)
-            .readCurrent();
+        final second = await DriftUniversalCatalogueRepository(
+          database,
+        ).readCurrent();
         expect(second, isA<Success<CurrentUniversalCatalogueSnapshot?>>());
         final switched =
             (second as Success<CurrentUniversalCatalogueSnapshot?>).value!;
@@ -82,8 +83,9 @@ void main() {
             ),
           );
 
-      final result = await DriftUniversalCatalogueRepository(database)
-          .readCurrent();
+      final result = await DriftUniversalCatalogueRepository(
+        database,
+      ).readCurrent();
       expect(result, isA<Success<CurrentUniversalCatalogueSnapshot?>>());
       expect(
         (result as Success<CurrentUniversalCatalogueSnapshot?>).value,
@@ -109,8 +111,9 @@ void main() {
               ),
             );
 
-        final result = await DriftUniversalCatalogueRepository(database)
-            .readCurrent();
+        final result = await DriftUniversalCatalogueRepository(
+          database,
+        ).readCurrent();
         expect(
           result,
           isA<FailureResult<CurrentUniversalCatalogueSnapshot?>>(),
