@@ -21,10 +21,7 @@ enum FullUnlockPurchasePhase {
 }
 
 final class FullUnlockPurchaseState {
-  const FullUnlockPurchaseState({
-    required this.phase,
-    required this.message,
-  });
+  const FullUnlockPurchaseState({required this.phase, required this.message});
 
   const FullUnlockPurchaseState.idle()
     : this(phase: FullUnlockPurchasePhase.idle, message: '');
@@ -194,8 +191,9 @@ final class FullUnlockPurchaseCoordinator {
     );
 
     final verificationResult = await _verificationRepository.verify(event);
-    if (verificationResult
-        case FailureResult<PurchaseVerification>(:final failure)) {
+    if (verificationResult case FailureResult<PurchaseVerification>(
+      :final failure,
+    )) {
       _emit(
         FullUnlockPurchaseState(
           phase: FullUnlockPurchasePhase.failed,

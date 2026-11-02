@@ -20,9 +20,7 @@ final class MockPurchaseVerificationRepository
   final DateTime Function() _now;
 
   @override
-  Future<Result<PurchaseVerification>> verify(
-    StorePurchaseEvent event,
-  ) async {
+  Future<Result<PurchaseVerification>> verify(StorePurchaseEvent event) async {
     final proof = event.serverVerificationData;
     final validRequest =
         event.requiresVerification &&

@@ -38,63 +38,70 @@ void main() {
       await unlocked;
 
       expect(access.snapshot?.accessLevel, AccessLevel.full);
-      expect(
-        calls,
-        <String>['verify:purchase-1', 'persist:FULL', 'complete:purchase-1'],
-      );
+      expect(calls, <String>[
+        'verify:purchase-1',
+        'persist:FULL',
+        'complete:purchase-1',
+      ]);
     });
 
-    test('verification rejection fails closed and never completes Store', () async {
-      final calls = <String>[];
-      final billing = _FakeBillingRepository(calls: calls);
-      final access = _FakeAccessSnapshotRepository(calls: calls);
-      final coordinator = FullUnlockPurchaseCoordinator(
-        billingRepository: billing,
-        verificationRepository: _FakeVerificationRepository(
-          calls: calls,
-          decision: PurchaseVerification.rejected(),
-        ),
-        accessSnapshotRepository: access,
-      );
-      addTearDown(coordinator.dispose);
-      coordinator.start();
-
-      final failed = coordinator.states.firstWhere(
-        (state) => state.phase == FullUnlockPurchasePhase.failed,
-      );
-      billing.emit(_purchasedEvent('purchase-2'));
-      await failed;
-
-      expect(access.snapshot, isNull);
-      expect(calls, <String>['verify:purchase-2']);
-    });
-
-    test('restore uses the same verification path and records source', () async {
-      final calls = <String>[];
-      final billing = _FakeBillingRepository(calls: calls);
-      final access = _FakeAccessSnapshotRepository(calls: calls);
-      final coordinator = FullUnlockPurchaseCoordinator(
-        billingRepository: billing,
-        verificationRepository: _FakeVerificationRepository(
-          calls: calls,
-          decision: PurchaseVerification.full(
-            verifiedAt: DateTime.utc(2026, 11, 2, 5),
+    test(
+      'verification rejection fails closed and never completes Store',
+      () async {
+        final calls = <String>[];
+        final billing = _FakeBillingRepository(calls: calls);
+        final access = _FakeAccessSnapshotRepository(calls: calls);
+        final coordinator = FullUnlockPurchaseCoordinator(
+          billingRepository: billing,
+          verificationRepository: _FakeVerificationRepository(
+            calls: calls,
+            decision: PurchaseVerification.rejected(),
           ),
-        ),
-        accessSnapshotRepository: access,
-      );
-      addTearDown(coordinator.dispose);
-      coordinator.start();
+          accessSnapshotRepository: access,
+        );
+        addTearDown(coordinator.dispose);
+        coordinator.start();
 
-      final unlocked = coordinator.states.firstWhere(
-        (state) => state.phase == FullUnlockPurchasePhase.unlocked,
-      );
-      billing.emit(_restoredEvent('restore-1'));
-      await unlocked;
+        final failed = coordinator.states.firstWhere(
+          (state) => state.phase == FullUnlockPurchasePhase.failed,
+        );
+        billing.emit(_purchasedEvent('purchase-2'));
+        await failed;
 
-      expect(access.snapshot?.source, AccessSnapshotSource.storeRestore);
-      expect(calls.last, 'complete:restore-1');
-    });
+        expect(access.snapshot, isNull);
+        expect(calls, <String>['verify:purchase-2']);
+      },
+    );
+
+    test(
+      'restore uses the same verification path and records source',
+      () async {
+        final calls = <String>[];
+        final billing = _FakeBillingRepository(calls: calls);
+        final access = _FakeAccessSnapshotRepository(calls: calls);
+        final coordinator = FullUnlockPurchaseCoordinator(
+          billingRepository: billing,
+          verificationRepository: _FakeVerificationRepository(
+            calls: calls,
+            decision: PurchaseVerification.full(
+              verifiedAt: DateTime.utc(2026, 11, 2, 5),
+            ),
+          ),
+          accessSnapshotRepository: access,
+        );
+        addTearDown(coordinator.dispose);
+        coordinator.start();
+
+        final unlocked = coordinator.states.firstWhere(
+          (state) => state.phase == FullUnlockPurchasePhase.unlocked,
+        );
+        billing.emit(_restoredEvent('restore-1'));
+        await unlocked;
+
+        expect(access.snapshot?.source, AccessSnapshotSource.storeRestore);
+        expect(calls.last, 'complete:restore-1');
+      },
+    );
 
     test('persistence failure leaves Store transaction incomplete', () async {
       final calls = <String>[];
@@ -206,8 +213,7 @@ final class _FakeVerificationRepository
   }
 }
 
-final class _FakeAccessSnapshotRepository
-    implements AccessSnapshotRepository {
+final class _FakeAccessSnapshotRepository implements AccessSnapshotRepository {
   _FakeAccessSnapshotRepository({required this.calls, this.replaceFailure});
 
   final List<String> calls;

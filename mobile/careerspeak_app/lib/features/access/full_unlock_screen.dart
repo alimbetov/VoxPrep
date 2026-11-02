@@ -96,9 +96,8 @@ class FullUnlockScreen extends ConsumerWidget {
 
   void _showImmediateFailure(BuildContext context, Result<void> result) {
     if (result case FailureResult<void>(:final failure)) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(failure.message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(failure.message)));
     }
   }
 }

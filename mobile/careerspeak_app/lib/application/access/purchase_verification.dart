@@ -32,10 +32,7 @@ final class PurchaseVerification {
   });
 
   factory PurchaseVerification.rejected() {
-    return PurchaseVerification(
-      verified: false,
-      accessLevel: AccessLevel.free,
-    );
+    return PurchaseVerification(verified: false, accessLevel: AccessLevel.free);
   }
 
   factory PurchaseVerification.full({required DateTime verifiedAt}) {

@@ -14,9 +14,7 @@ final class HttpPurchaseVerificationRepository
   final ApiClient _apiClient;
 
   @override
-  Future<Result<PurchaseVerification>> verify(
-    StorePurchaseEvent event,
-  ) async {
+  Future<Result<PurchaseVerification>> verify(StorePurchaseEvent event) async {
     final proof = event.serverVerificationData;
     if (!event.requiresVerification ||
         event.productId != fullUnlockProductId ||

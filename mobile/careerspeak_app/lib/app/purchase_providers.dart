@@ -39,13 +39,14 @@ final fullUnlockPurchaseCoordinatorProvider =
       return coordinator;
     });
 
-final fullUnlockPurchaseStateProvider =
-    StreamProvider<FullUnlockPurchaseState>((ref) async* {
-      final coordinator = ref.watch(fullUnlockPurchaseCoordinatorProvider);
-      await for (final state in coordinator.states) {
-        if (state.phase == FullUnlockPurchasePhase.unlocked) {
-          ref.invalidate(learnerAccessSnapshotProvider);
-        }
-        yield state;
+final fullUnlockPurchaseStateProvider = StreamProvider<FullUnlockPurchaseState>(
+  (ref) async* {
+    final coordinator = ref.watch(fullUnlockPurchaseCoordinatorProvider);
+    await for (final state in coordinator.states) {
+      if (state.phase == FullUnlockPurchasePhase.unlocked) {
+        ref.invalidate(learnerAccessSnapshotProvider);
       }
-    });
+      yield state;
+    }
+  },
+);
