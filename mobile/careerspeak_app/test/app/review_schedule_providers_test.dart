@@ -43,14 +43,34 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await container.read(reviewSchedulesProvider.future);
-      final before = container.read(dueReviewIdentitiesProvider);
-      expect(before.requireValue, isEmpty);
+      final firstDue = Completer<Set<ContentIdentity>>();
+      final subscription = container.listen(
+        dueReviewIdentitiesProvider,
+        (previous, next) {
+          next.when(
+            data: (value) {
+              if (!firstDue.isCompleted) firstDue.complete(value);
+            },
+            error: (error, stackTrace) {
+              if (!firstDue.isCompleted) {
+                firstDue.completeError(error, stackTrace);
+              }
+            },
+            loading: () {},
+          );
+        },
+        fireImmediately: true,
+      );
+      addTearDown(subscription.close);
+
+      final before = await firstDue.future;
+      expect(before, isEmpty);
       expect(scheduledDelay, const Duration(minutes: 5));
       expect(scheduledCallback, isNotNull);
 
       now = nextReviewAt;
       scheduledCallback!();
+      await Future<void>.delayed(Duration.zero);
 
       final atBoundary = container.read(dueReviewIdentitiesProvider);
       expect(atBoundary.requireValue, contains(identity));
@@ -90,9 +110,27 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    await container.read(reviewSchedulesProvider.future);
-    container.read(dueReviewIdentitiesProvider);
+    final firstDue = Completer<Set<ContentIdentity>>();
+    final subscription = container.listen(
+      dueReviewIdentitiesProvider,
+      (previous, next) {
+        next.when(
+          data: (value) {
+            if (!firstDue.isCompleted) firstDue.complete(value);
+          },
+          error: (error, stackTrace) {
+            if (!firstDue.isCompleted) {
+              firstDue.completeError(error, stackTrace);
+            }
+          },
+          loading: () {},
+        );
+      },
+      fireImmediately: true,
+    );
+    addTearDown(subscription.close);
 
+    await firstDue.future;
     expect(scheduledDelay, const Duration(minutes: 3));
   });
 }

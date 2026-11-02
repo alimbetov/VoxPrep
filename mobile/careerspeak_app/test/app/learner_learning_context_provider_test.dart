@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:careerspeak_app/app/catalogue_payload_providers.dart';
 import 'package:careerspeak_app/app/learner_selection_providers.dart';
 import 'package:careerspeak_app/application/content_delivery/learning_vertical.dart';
@@ -19,9 +21,9 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await _settle(container);
+      final context = await _readContext(container);
 
-      expect(container.read(learnerLearningContextProvider).value, (
+      expect(context, (
         verticalCode: 'VERT_A',
         verticalTitle: 'Vertical A',
         goalCode: 'GOAL_A',
@@ -39,9 +41,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await _settle(container);
-
-      expect(container.read(learnerLearningContextProvider).value, isNull);
+      expect(await _readContext(container), isNull);
     },
   );
 
@@ -54,9 +54,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await _settle(container);
-
-      expect(container.read(learnerLearningContextProvider).value, isNull);
+      expect(await _readContext(container), isNull);
     },
   );
 
@@ -69,9 +67,7 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      await _settle(container);
-
-      expect(container.read(learnerLearningContextProvider).value, isNull);
+      expect(await _readContext(container), isNull);
     },
   );
 }
@@ -93,10 +89,28 @@ ProviderContainer _container({
   );
 }
 
-Future<void> _settle(ProviderContainer container) async {
-  await container.read(learnerSelectionProvider.future);
-  await container.read(currentUniversalCatalogueProvider.future);
-  await Future<void>.delayed(Duration.zero);
+Future<LearnerLearningContext?> _readContext(ProviderContainer container) {
+  final completer = Completer<LearnerLearningContext?>();
+  late final ProviderSubscription<AsyncValue<LearnerLearningContext?>>
+  subscription;
+  subscription = container.listen(
+    learnerLearningContextProvider,
+    (previous, next) {
+      next.when(
+        data: (value) {
+          if (!completer.isCompleted) completer.complete(value);
+        },
+        error: (error, stackTrace) {
+          if (!completer.isCompleted) {
+            completer.completeError(error, stackTrace);
+          }
+        },
+        loading: () {},
+      );
+    },
+    fireImmediately: true,
+  );
+  return completer.future.whenComplete(subscription.close);
 }
 
 UniversalCatalogueGraph _graph({
