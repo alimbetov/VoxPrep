@@ -187,7 +187,7 @@ RESET ROLE;
 --rollback DROP TABLE app.content_revision;
 --rollback RESET ROLE;
 
---changeset voxprep:b1-p3-0002-content-revision-integrity
+--changeset voxprep:b1-p3-0002-content-revision-integrity splitStatements:false
 SET ROLE voxprep_owner;
 
 CREATE FUNCTION app.content_revision_next_number_guard()
