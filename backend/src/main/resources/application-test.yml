@@ -1,0 +1,13 @@
+spring:
+  config:
+    import: "configtree:${VOXPREP_SECRET_DIR:../infra/secrets/test/backend/}"
+  datasource:
+    url: ${VOXPREP_DB_URL:jdbc:postgresql://127.0.0.1:55432/voxprep_test}
+  liquibase:
+    url: ${VOXPREP_DB_URL:jdbc:postgresql://127.0.0.1:55432/voxprep_test}
+    change-log: classpath:/db/changelog/db.changelog-test.yaml
+    contexts: test
+
+voxprep:
+  storage:
+    endpoint: ${VOXPREP_STORAGE_ENDPOINT:http://127.0.0.1:19000}

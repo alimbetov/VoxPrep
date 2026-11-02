@@ -1,0 +1,73 @@
+spring:
+  application:
+    name: voxprep-backend
+  config:
+    import: "optional:configtree:/run/secrets/"
+
+  datasource:
+    url: ${VOXPREP_DB_URL:jdbc:postgresql://postgres:5432/voxprep}
+    username: ${VOXPREP_DB_RUNTIME_USERNAME:voxprep_backend}
+    password: ${postgres_backend_password}
+    hikari:
+      pool-name: VoxPrepHikariPool
+      minimum-idle: ${VOXPREP_DB_POOL_MIN_IDLE:2}
+      maximum-pool-size: ${VOXPREP_DB_POOL_MAX_SIZE:10}
+      connection-timeout: 3s
+      validation-timeout: 2s
+      idle-timeout: 10m
+      max-lifetime: 30m
+      keepalive-time: 5m
+
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: app
+        jdbc:
+          time_zone: UTC
+
+  liquibase:
+    enabled: true
+    change-log: classpath:/db/changelog/db.changelog-master.yaml
+    url: ${VOXPREP_DB_URL:jdbc:postgresql://postgres:5432/voxprep}
+    user: ${VOXPREP_DB_MIGRATOR_USERNAME:voxprep_migrator}
+    password: ${postgres_migrator_password}
+    default-schema: app
+    liquibase-schema: liquibase
+    drop-first: false
+
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      probes:
+        enabled: true
+      group:
+        liveness:
+          include: livenessState
+        readiness:
+          include: readinessState,db,rustFs
+
+voxprep:
+  storage:
+    endpoint: ${VOXPREP_STORAGE_ENDPOINT:http://rustfs:9000}
+    region: ${VOXPREP_STORAGE_REGION:us-east-1}
+    bucket: ${VOXPREP_STORAGE_BUCKET:voxprep-assets}
+    access-key: ${rustfs_backend_access_key}
+    secret-key: ${rustfs_backend_secret_key}
+    connect-timeout: ${VOXPREP_STORAGE_CONNECT_TIMEOUT:2s}
+    socket-timeout: ${VOXPREP_STORAGE_SOCKET_TIMEOUT:5s}
+    max-connections: ${VOXPREP_STORAGE_MAX_CONNECTIONS:50}

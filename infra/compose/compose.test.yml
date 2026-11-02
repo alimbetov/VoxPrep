@@ -15,6 +15,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql
       - ../postgres/init/00-bootstrap.sh:/docker-entrypoint-initdb.d/00-bootstrap.sh:ro
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-55432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 3s
@@ -43,6 +45,8 @@ services:
     volumes:
       - rustfs_data:/data
       - rustfs_logs:/var/log/rustfs
+    ports:
+      - "127.0.0.1:${RUSTFS_API_HOST_PORT:-19000}:9000"
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS http://localhost:9000/health/ready >/dev/null || exit 1"]
       interval: 3s

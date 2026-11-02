@@ -46,11 +46,16 @@ GRANT voxprep_owner TO voxprep_migrator;
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 
 CREATE SCHEMA IF NOT EXISTS app AUTHORIZATION voxprep_owner;
+CREATE SCHEMA IF NOT EXISTS liquibase AUTHORIZATION voxprep_owner;
+
+REVOKE ALL ON SCHEMA liquibase FROM PUBLIC;
+REVOKE ALL ON SCHEMA liquibase FROM voxprep_backend;
 
 GRANT CONNECT ON DATABASE :"db_name" TO voxprep_migrator;
 GRANT CONNECT ON DATABASE :"db_name" TO voxprep_backend;
 
 GRANT USAGE, CREATE ON SCHEMA app TO voxprep_migrator;
+GRANT USAGE, CREATE ON SCHEMA liquibase TO voxprep_migrator;
 GRANT USAGE ON SCHEMA app TO voxprep_backend;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA app TO voxprep_backend;
@@ -72,3 +77,4 @@ EOSQL
 
 echo "PostgreSQL bootstrap completed for database '$POSTGRES_DB'."
 echo "Runtime role: voxprep_backend; migration role: voxprep_migrator; owner role: voxprep_owner."
+echo "Schemas: app (application data), liquibase (migration metadata, runtime-inaccessible)."

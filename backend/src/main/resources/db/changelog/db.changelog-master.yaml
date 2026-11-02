@@ -1,0 +1,8 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0000-backend-foundation
+      author: voxprep
+      comment: Establish the migration pipeline without creating product-domain tables.
+      changes:
+        - sql:
+            sql: SELECT 1
