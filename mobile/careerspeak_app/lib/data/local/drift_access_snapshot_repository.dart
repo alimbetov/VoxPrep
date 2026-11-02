@@ -39,9 +39,7 @@ final class DriftAccessSnapshotRepository implements AccessSnapshotRepository {
           code: 'ACCESS_SNAPSHOT_READ_FAILED',
           message: 'Saved access state is temporarily unavailable.',
           retryable: true,
-          details: <String, Object?>{
-            'errorType': error.runtimeType.toString(),
-          },
+          details: <String, Object?>{'errorType': error.runtimeType.toString()},
         ),
       );
     }
@@ -76,9 +74,7 @@ final class DriftAccessSnapshotRepository implements AccessSnapshotRepository {
           code: 'ACCESS_SNAPSHOT_WRITE_FAILED',
           message: 'Verified access state could not be saved.',
           retryable: true,
-          details: <String, Object?>{
-            'errorType': error.runtimeType.toString(),
-          },
+          details: <String, Object?>{'errorType': error.runtimeType.toString()},
         ),
       );
     }
