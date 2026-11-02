@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
-import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/local/file_system_asset_store.dart';
 import 'package:flutter_test/flutter_test.dart';
 
