@@ -44,23 +44,22 @@ void main() {
       addTearDown(container.dispose);
 
       final firstDue = Completer<Set<ContentIdentity>>();
-      final subscription = container.listen(
-        dueReviewIdentitiesProvider,
-        (previous, next) {
-          next.when(
-            data: (value) {
-              if (!firstDue.isCompleted) firstDue.complete(value);
-            },
-            error: (error, stackTrace) {
-              if (!firstDue.isCompleted) {
-                firstDue.completeError(error, stackTrace);
-              }
-            },
-            loading: () {},
-          );
-        },
-        fireImmediately: true,
-      );
+      final subscription = container.listen(dueReviewIdentitiesProvider, (
+        previous,
+        next,
+      ) {
+        next.when(
+          data: (value) {
+            if (!firstDue.isCompleted) firstDue.complete(value);
+          },
+          error: (error, stackTrace) {
+            if (!firstDue.isCompleted) {
+              firstDue.completeError(error, stackTrace);
+            }
+          },
+          loading: () {},
+        );
+      }, fireImmediately: true);
       addTearDown(subscription.close);
 
       final before = await firstDue.future;
@@ -111,23 +110,22 @@ void main() {
     addTearDown(container.dispose);
 
     final firstDue = Completer<Set<ContentIdentity>>();
-    final subscription = container.listen(
-      dueReviewIdentitiesProvider,
-      (previous, next) {
-        next.when(
-          data: (value) {
-            if (!firstDue.isCompleted) firstDue.complete(value);
-          },
-          error: (error, stackTrace) {
-            if (!firstDue.isCompleted) {
-              firstDue.completeError(error, stackTrace);
-            }
-          },
-          loading: () {},
-        );
-      },
-      fireImmediately: true,
-    );
+    final subscription = container.listen(dueReviewIdentitiesProvider, (
+      previous,
+      next,
+    ) {
+      next.when(
+        data: (value) {
+          if (!firstDue.isCompleted) firstDue.complete(value);
+        },
+        error: (error, stackTrace) {
+          if (!firstDue.isCompleted) {
+            firstDue.completeError(error, stackTrace);
+          }
+        },
+        loading: () {},
+      );
+    }, fireImmediately: true);
     addTearDown(subscription.close);
 
     await firstDue.future;

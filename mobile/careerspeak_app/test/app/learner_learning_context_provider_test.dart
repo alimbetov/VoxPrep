@@ -93,23 +93,22 @@ Future<LearnerLearningContext?> _readContext(ProviderContainer container) {
   final completer = Completer<LearnerLearningContext?>();
   late final ProviderSubscription<AsyncValue<LearnerLearningContext?>>
   subscription;
-  subscription = container.listen(
-    learnerLearningContextProvider,
-    (previous, next) {
-      next.when(
-        data: (value) {
-          if (!completer.isCompleted) completer.complete(value);
-        },
-        error: (error, stackTrace) {
-          if (!completer.isCompleted) {
-            completer.completeError(error, stackTrace);
-          }
-        },
-        loading: () {},
-      );
-    },
-    fireImmediately: true,
-  );
+  subscription = container.listen(learnerLearningContextProvider, (
+    previous,
+    next,
+  ) {
+    next.when(
+      data: (value) {
+        if (!completer.isCompleted) completer.complete(value);
+      },
+      error: (error, stackTrace) {
+        if (!completer.isCompleted) {
+          completer.completeError(error, stackTrace);
+        }
+      },
+      loading: () {},
+    );
+  }, fireImmediately: true);
   return completer.future.whenComplete(subscription.close);
 }
 
