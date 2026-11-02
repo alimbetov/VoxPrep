@@ -12,6 +12,10 @@ on:
       - '.github/workflows/img-ui-1-qualification.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -26,8 +30,31 @@ jobs:
         working-directory: mobile/careerspeak_app
         run: flutter pub get
       - name: Format
+        id: format
         working-directory: mobile/careerspeak_app
-        run: dart format --output=none --set-exit-if-changed lib test
+        shell: bash
+        run: |
+          dart format lib test
+          if ! git diff --quiet -- lib test; then
+            git diff -- lib test > "$RUNNER_TEMP/img-ui-format.diff"
+            cat "$RUNNER_TEMP/img-ui-format.diff"
+            exit 1
+          fi
+      - name: Report format diagnostics
+        if: failure() && steps.format.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          {
+            echo '### IMG-UI.1 formatter diagnostics'
+            echo
+            echo '```diff'
+            head -c 50000 "$RUNNER_TEMP/img-ui-format.diff"
+            echo
+            echo '```'
+          } > "$RUNNER_TEMP/img-ui-format-comment.md"
+          gh pr comment 20 --body-file "$RUNNER_TEMP/img-ui-format-comment.md"
       - name: Analyze
         working-directory: mobile/careerspeak_app
         run: flutter analyze
@@ -51,5 +78,24 @@ jobs:
         working-directory: mobile/careerspeak_app
         run: flutter test test/application/content_delivery/content_cover_resolver_test.dart
       - name: IMG-UI.1 widget corruption qualification
+        id: widget
         working-directory: mobile/careerspeak_app
-        run: flutter test test/features/shared/content_cover_test.dart
+        shell: bash
+        run: |
+          set -o pipefail
+          flutter test test/features/shared/content_cover_test.dart 2>&1 \
+            | tee "$RUNNER_TEMP/img-ui-widget.log"
+      - name: Report widget diagnostics
+        if: failure() && steps.widget.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          {
+            echo '### IMG-UI.1 widget-test diagnostics'
+            echo
+            echo '```text'
+            tail -n 160 "$RUNNER_TEMP/img-ui-widget.log"
+            echo '```'
+          } > "$RUNNER_TEMP/img-ui-widget-comment.md"
+          gh pr comment 20 --body-file "$RUNNER_TEMP/img-ui-widget-comment.md"
