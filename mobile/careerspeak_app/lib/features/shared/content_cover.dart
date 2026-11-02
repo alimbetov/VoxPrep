@@ -6,8 +6,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/asset_resolver_providers.dart';
 import '../../domain/content_identity.dart';
 
-typedef ContentCoverImageProviderFactory =
-    ImageProvider<Object> Function(String localPath);
+typedef ContentCoverImageBuilder =
+    Widget Function({
+      required BuildContext context,
+      required String localPath,
+      required double? width,
+      required double? height,
+      required BoxFit fit,
+      required BorderRadius borderRadius,
+      required String? semanticLabel,
+    });
 
 /// Optional exact-revision content cover.
 ///
@@ -23,7 +31,7 @@ class ContentCover extends ConsumerWidget {
     this.fit = BoxFit.cover,
     this.borderRadius = BorderRadius.zero,
     this.semanticLabel,
-    @visibleForTesting this.imageProviderFactory,
+    @visibleForTesting this.imageBuilder,
     super.key,
   });
 
@@ -35,10 +43,11 @@ class ContentCover extends ConsumerWidget {
   final BorderRadius borderRadius;
   final String? semanticLabel;
 
-  /// Test seam for deterministic image-decoder failure qualification.
-  /// Production always uses [FileImage] over an already verified asset path.
+  /// Test seam for deterministic layout qualification without depending on the
+  /// native headless image codec. Production always uses [FileImage] over an
+  /// already checksum-verified asset path.
   @visibleForTesting
-  final ContentCoverImageProviderFactory? imageProviderFactory;
+  final ContentCoverImageBuilder? imageBuilder;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -52,11 +61,21 @@ class ContentCover extends ConsumerWidget {
       data: (asset) {
         if (asset == null) return const SizedBox.shrink();
 
-        final imageProvider =
-            imageProviderFactory?.call(asset.localPath) ??
-            FileImage(File(asset.localPath));
+        final testBuilder = imageBuilder;
+        if (testBuilder != null) {
+          return testBuilder(
+            context: context,
+            localPath: asset.localPath,
+            width: width,
+            height: height,
+            fit: fit,
+            borderRadius: borderRadius,
+            semanticLabel: semanticLabel,
+          );
+        }
+
         return Image(
-          image: imageProvider,
+          image: FileImage(File(asset.localPath)),
           width: width,
           height: height,
           fit: fit,
