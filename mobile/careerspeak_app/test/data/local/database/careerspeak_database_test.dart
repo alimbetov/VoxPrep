@@ -248,7 +248,7 @@ void main() {
     expect(await database.select(database.syncTombstones).get(), isEmpty);
   });
 
-  test('asset references cascade only when their owner is removed', () async {
+  test('asset bindings are independent of local content row lifecycle', () async {
     final now = DateTime.utc(2026, 10, 30, 10);
     const checksum =
         'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -325,7 +325,7 @@ void main() {
       database.localContentRecords,
     )..where((row) => row.contentCode.equals('JAVA_Q_001'))).go();
 
-    expect(await database.select(database.contentAssetRefs).get(), isEmpty);
+    expect(await database.select(database.contentAssetRefs).get(), hasLength(1));
     expect(await database.select(database.assetCatalog).get(), hasLength(1));
     expect(await database.select(database.packAssetRefs).get(), hasLength(1));
   });
