@@ -6,6 +6,8 @@ on:
       - feat/learner-product-ui-v1
     paths:
       - 'contracts/**'
+      - 'docs/architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md'
+      - 'docs/architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md'
       - 'docs/backend/**'
       - 'docs/mobile/**'
       - 'mobile/careerspeak_app/lib/app/**'
@@ -83,11 +85,17 @@ jobs:
           set -euo pipefail
           contract='../../contracts/learner-api-v2.yaml'
           baseline='../../docs/backend/BACKEND_API_CONTRACT_BASELINE.md'
+          drift='../../docs/backend/BACKEND_CONTRACT_DRIFT_AUDIT_2026-11-02.md'
           envdoc='../../docs/mobile/FLUTTER_ENVIRONMENTS.md'
+          cross='../../docs/architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md'
+          domain='../../docs/architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md'
 
           test -s "$contract"
           test -s "$baseline"
+          test -s "$drift"
           test -s "$envdoc"
+          test -s "$cross"
+          test -s "$domain"
 
           grep -Fq '/api/v1/installations:' "$contract"
           grep -Fq '/api/v1/content/manifest:' "$contract"
@@ -113,6 +121,13 @@ jobs:
           grep -Fq 'CAREERSPEAK_PRODUCTION_API_HOSTS' "$envdoc"
           grep -Fq 'Backend API DTO != JPA Entity' "$baseline"
           grep -Fq 'OPEN BACKEND CONTRACT QUESTIONS' "$baseline"
+
+          grep -Fq 'POST /api/v1/installations  → anonymous installation registration/re-registration' "$cross"
+          grep -Fq 'other /api/v1/**            → installation token' "$cross"
+          grep -Fq 'POST /api/v1/installations  → anonymous installation registration/re-registration' "$domain"
+          grep -Fq 'other /api/v1/**            → installation token' "$domain"
+          grep -Fq 'ApiErrorDto.code/message' "$drift"
+          grep -Fq 'Backend `ApiError.code/message` remain required and non-null' "$drift"
 
       - name: Contract-related regression suite
         shell: bash
