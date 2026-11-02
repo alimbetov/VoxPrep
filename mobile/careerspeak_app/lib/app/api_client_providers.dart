@@ -9,16 +9,14 @@ import '../application/services/installation_bootstrap_service.dart';
 import '../data/remote/http_api_client.dart';
 import '../data/remote/http_installation_registration_gateway.dart';
 import '../domain/application_preferences.dart';
+import 'app_configuration.dart';
 import 'app_preferences_providers.dart';
 import 'installation_identity_providers.dart';
 
-const _apiBaseUrl = String.fromEnvironment(
-  'CAREERSPEAK_API_BASE_URL',
-  defaultValue: 'https://api.careerspeak.invalid',
-);
-
+/// Compatibility projection for providers that only need the validated Backend
+/// origin. All build/runtime parsing remains centralized in AppConfiguration.
 final apiBaseUriProvider = Provider<Uri>((ref) {
-  return Uri.parse(_apiBaseUrl);
+  return ref.watch(appConfigurationProvider).requireApiBaseUri();
 });
 
 final httpClientProvider = Provider<http.Client>((ref) {
