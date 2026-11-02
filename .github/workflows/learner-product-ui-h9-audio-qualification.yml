@@ -6,6 +6,7 @@ on:
       - feat/learner-product-ui-v1
     paths:
       - '.github/workflows/learner-product-ui-h9-audio-qualification.yml'
+      - 'mobile/careerspeak_app/test/acceptance/content_detail_audio_redownload_e2e_test.dart'
 
 permissions:
   contents: read
