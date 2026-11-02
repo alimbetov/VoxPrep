@@ -173,8 +173,7 @@ void main() {
     );
 
     await expectLater(
-      database.customStatement(
-        '''
+      database.customStatement('''
         INSERT INTO learner_selection (
           id,
           selected_goal_code,
@@ -184,8 +183,7 @@ void main() {
           generation,
           updated_at
         ) VALUES (2, NULL, NULL, NULL, 0, 0, 0)
-        ''',
-      ),
+        '''),
       throwsA(anything),
     );
   });
