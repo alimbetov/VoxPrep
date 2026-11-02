@@ -124,9 +124,7 @@ void main() {
         mockBilling: 'true',
       );
       final container = ProviderContainer(
-        overrides: [
-          appConfigurationProvider.overrideWithValue(configuration),
-        ],
+        overrides: [appConfigurationProvider.overrideWithValue(configuration)],
       );
       addTearDown(container.dispose);
 
@@ -172,10 +170,8 @@ void main() {
 
     test('E13 invalid API URI is rejected', () {
       expect(
-        () => _configuration(
-          environment: 'development',
-          apiBaseUrl: 'not a uri',
-        ),
+        () =>
+            _configuration(environment: 'development', apiBaseUrl: 'not a uri'),
         throwsA(isA<AppConfigurationException>()),
       );
     });

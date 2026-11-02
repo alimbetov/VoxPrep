@@ -56,7 +56,10 @@ void main() {
   test('API base URI is projected from validated AppConfiguration', () {
     final container = createContainer();
 
-    expect(container.read(apiBaseUriProvider), Uri.parse('http://localhost:8080'));
+    expect(
+      container.read(apiBaseUriProvider),
+      Uri.parse('http://localhost:8080'),
+    );
   });
 }
 

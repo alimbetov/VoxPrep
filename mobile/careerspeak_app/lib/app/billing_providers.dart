@@ -26,7 +26,9 @@ final billingRepositoryProvider = Provider<BillingRepository>((ref) {
   return InAppPurchaseBillingRepository();
 });
 
-final fullUnlockStoreProductProvider = FutureProvider<StoreProduct>((ref) async {
+final fullUnlockStoreProductProvider = FutureProvider<StoreProduct>((
+  ref,
+) async {
   return (await ref.watch(billingRepositoryProvider).loadFullUnlockProduct())
       .getOrThrow();
 });
