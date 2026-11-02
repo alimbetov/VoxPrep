@@ -13,6 +13,7 @@ import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceModelEntity;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceModelRepository;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceRepository;
 import io.github.alimbetov.voxprep.backend.tts.support.TtsTestAssets;
+import jakarta.persistence.EntityManager;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
@@ -40,6 +41,8 @@ class TtsJobWorkerLifecycleIntegrationTest {
     private TtsJobRepository jobRepository;
     @Autowired
     private JdbcTemplate jdbcTemplate;
+    @Autowired
+    private EntityManager entityManager;
 
     @Test
     void heartbeatMovesClaimToProcessingAndExtendsLease() {
@@ -85,6 +88,8 @@ class TtsJobWorkerLifecycleIntegrationTest {
                         assertThat(value).isNull();
                     }
                 });
+
+        entityManager.clear();
         var reloaded = jobRepository.findById(job.getId()).orElseThrow();
         assertThat(reloaded.getStatus()).isEqualTo(TtsJobStatus.FAILED);
         assertThat(reloaded.getFailureCode()).isEqualTo("PIPER_EXIT_1");
