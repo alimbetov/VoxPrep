@@ -1,0 +1,39 @@
+name: Learner Product UI Format v18 Test
+
+on:
+  push:
+    branches:
+      - feat/learner-product-ui-v1
+    paths:
+      - '.github/workflows/learner-product-ui-format-v18-test.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/learner-product-ui-v1
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - run: dart format test/data/local/database/careerspeak_database_v18_qualification_test.dart
+      - name: Commit formatter output
+        working-directory: .
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mobile/careerspeak_app/test/data/local/database/careerspeak_database_v18_qualification_test.dart
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'style(drift): format v18 runtime qualification'
+          git push origin HEAD:feat/learner-product-ui-v1
