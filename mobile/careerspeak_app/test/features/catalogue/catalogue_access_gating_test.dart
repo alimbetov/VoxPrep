@@ -103,7 +103,7 @@ Future<void> _pump(
 }) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: <Override>[
+      overrides: [
         learnerAccessLevelProvider.overrideWithValue(learnerAccess),
         universalCatalogueRepositoryProvider.overrideWithValue(
           _Repository(_snapshot(collectionAccess)),
