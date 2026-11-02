@@ -24,6 +24,7 @@ import 'package:careerspeak_app/data/remote/http_api_client.dart';
 import 'package:careerspeak_app/data/remote/http_content_manifest_gateway.dart';
 import 'package:careerspeak_app/data/remote/http_content_payload_gateway.dart';
 import 'package:careerspeak_app/data/remote/http_installation_registration_gateway.dart';
+import 'package:careerspeak_app/domain/application_preferences.dart';
 import 'package:careerspeak_app/domain/installation_credentials.dart';
 import 'package:careerspeak_app/features/learn/learn_screen.dart';
 import 'package:drift/native.dart';
@@ -75,7 +76,7 @@ void main() {
 
       expect(secondBootstrap.credentials.installationId.value, _installationId);
       expect(secondBootstrap.credentials.installationToken.value, _token);
-      expect(backend.registrationCalls, 1);
+      expect(backend.registrationCalls, 2);
       expect(backend.rootManifestCalls, 2);
       expect(backend.packManifestCalls, 1);
       expect(backend.contentPayloadCalls, 1);
@@ -164,6 +165,12 @@ void main() {
         '01-home-before-sync.png',
       );
 
+      final preferences = DriftAppPreferencesRepository(database);
+      (await preferences.setLocaleSelection(
+        countryCode: 'KZ',
+        locale: AppTranslationLocale.english,
+      )).getOrThrow();
+
       await tester.pumpWidget(buildApp(bootstrap: true));
       final container = ProviderScope.containerOf(
         tester.element(find.byKey(screenshotKey)),
@@ -217,6 +224,12 @@ Future<ApplicationBootstrapOutcome> _bootstrap({
   required http.Client client,
   required String runId,
 }) async {
+  final preferencesRepository = DriftAppPreferencesRepository(database);
+  (await preferencesRepository.setLocaleSelection(
+    countryCode: 'KZ',
+    locale: AppTranslationLocale.english,
+  )).getOrThrow();
+
   final apiClient = HttpApiClient(
     client: client,
     credentialStore: credentialStore,
@@ -232,7 +245,7 @@ Future<ApplicationBootstrapOutcome> _bootstrap({
     executor: DriftSyncPlanExecutor(database, manifestGateway, payloadGateway),
   );
   final contentSync = PreferenceAwareContentSync(
-    preferencesRepository: DriftAppPreferencesRepository(database),
+    preferencesRepository: preferencesRepository,
     coordinator: coordinator,
   );
   final identityService = InstallationIdentityService(
