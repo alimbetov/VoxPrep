@@ -40,7 +40,8 @@ jobs:
             lib/data/remote/http_purchase_verification_repository.dart \
             lib/features/access/full_unlock_screen.dart \
             test/application/full_unlock_purchase_coordinator_test.dart \
-            test/data/http_purchase_verification_repository_test.dart
+            test/data/http_purchase_verification_repository_test.dart \
+            test/features/access/full_unlock_screen_test.dart
 
       - name: Commit formatter output
         run: |
@@ -61,6 +62,7 @@ jobs:
             lib/data/remote/http_purchase_verification_repository.dart \
             lib/features/access/full_unlock_screen.dart \
             test/application/full_unlock_purchase_coordinator_test.dart \
-            test/data/http_purchase_verification_repository_test.dart
+            test/data/http_purchase_verification_repository_test.dart \
+            test/features/access/full_unlock_screen_test.dart
           git commit -m 'style(monetization): format mock purchase flow'
           git push origin HEAD:feat/monetization-v1-spec
