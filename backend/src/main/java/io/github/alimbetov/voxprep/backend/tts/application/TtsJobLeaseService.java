@@ -1,5 +1,6 @@
 package io.github.alimbetov.voxprep.backend.tts.application;
 
+import io.github.alimbetov.voxprep.backend.tts.domain.TtsJobStatus;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -35,14 +36,8 @@ public class TtsJobLeaseService {
                    updated_at = CURRENT_TIMESTAMP
               FROM candidate
              WHERE job.id = candidate.id
-            RETURNING job.id,
-                      job.voice_model_id,
-                      job.input_text,
-                      job.input_sha256,
-                      job.lease_owner,
-                      job.lease_token,
-                      job.lease_until,
-                      job.attempt_count
+            RETURNING job.id, job.voice_model_id, job.input_text, job.input_sha256,
+                      job.lease_owner, job.lease_token, job.lease_until, job.attempt_count
             """;
 
     private final JdbcTemplate jdbcTemplate;
@@ -54,13 +49,9 @@ public class TtsJobLeaseService {
     @Transactional
     public Optional<TtsJobLeaseClaim> claimNext(String workerId, Duration leaseDuration) {
         String leaseOwner = required(workerId, "workerId", 128);
-        Objects.requireNonNull(leaseDuration, "leaseDuration");
-        if (leaseDuration.isZero() || leaseDuration.isNegative()) {
-            throw new IllegalArgumentException("leaseDuration must be positive");
-        }
-
+        Duration duration = positiveDuration(leaseDuration);
         UUID leaseToken = UUID.randomUUID();
-        Instant leaseUntil = Instant.now().plus(leaseDuration);
+        Instant leaseUntil = Instant.now().plus(duration);
         List<TtsJobLeaseClaim> claims = jdbcTemplate.query(
                 CLAIM_SQL,
                 (rs, rowNum) -> new TtsJobLeaseClaim(
@@ -78,6 +69,83 @@ public class TtsJobLeaseService {
         return claims.stream().findFirst();
     }
 
+    @Transactional
+    public Optional<TtsJobLeaseState> heartbeat(
+            UUID jobId,
+            String workerId,
+            UUID leaseToken,
+            Duration leaseDuration) {
+        Objects.requireNonNull(jobId, "jobId");
+        String leaseOwner = required(workerId, "workerId", 128);
+        Objects.requireNonNull(leaseToken, "leaseToken");
+        Instant leaseUntil = Instant.now().plus(positiveDuration(leaseDuration));
+
+        return jdbcTemplate.query("""
+                        UPDATE app.tts_job
+                           SET status = 'PROCESSING',
+                               lease_until = ?,
+                               version = version + 1,
+                               updated_at = CURRENT_TIMESTAMP
+                         WHERE id = ?
+                           AND lease_owner = ?
+                           AND lease_token = ?
+                           AND status IN ('CLAIMED', 'PROCESSING')
+                           AND lease_until >= CURRENT_TIMESTAMP
+                        RETURNING id, status, lease_owner, lease_token, lease_until, attempt_count
+                        """,
+                (rs, rowNum) -> new TtsJobLeaseState(
+                        rs.getObject("id", UUID.class),
+                        TtsJobStatus.valueOf(rs.getString("status")),
+                        rs.getString("lease_owner"),
+                        rs.getObject("lease_token", UUID.class),
+                        rs.getTimestamp("lease_until").toInstant(),
+                        rs.getInt("attempt_count")),
+                Timestamp.from(leaseUntil),
+                jobId,
+                leaseOwner,
+                leaseToken).stream().findFirst();
+    }
+
+    @Transactional
+    public boolean fail(
+            UUID jobId,
+            String workerId,
+            UUID leaseToken,
+            String failureCode,
+            String failureMessage) {
+        Objects.requireNonNull(jobId, "jobId");
+        String leaseOwner = required(workerId, "workerId", 128);
+        Objects.requireNonNull(leaseToken, "leaseToken");
+        String code = required(failureCode, "failureCode", 64);
+        String message = optional(failureMessage, "failureMessage", 2000);
+
+        return jdbcTemplate.update("""
+                UPDATE app.tts_job
+                   SET status = 'FAILED',
+                       lease_owner = NULL,
+                       lease_token = NULL,
+                       lease_until = NULL,
+                       failure_code = ?,
+                       failure_message = ?,
+                       failed_at = CURRENT_TIMESTAMP,
+                       version = version + 1,
+                       updated_at = CURRENT_TIMESTAMP
+                 WHERE id = ?
+                   AND lease_owner = ?
+                   AND lease_token = ?
+                   AND status IN ('CLAIMED', 'PROCESSING')
+                   AND lease_until >= CURRENT_TIMESTAMP
+                """, code, message, jobId, leaseOwner, leaseToken) == 1;
+    }
+
+    private static Duration positiveDuration(Duration value) {
+        Objects.requireNonNull(value, "leaseDuration");
+        if (value.isZero() || value.isNegative()) {
+            throw new IllegalArgumentException("leaseDuration must be positive");
+        }
+        return value;
+    }
+
     private static String required(String value, String field, int maxLength) {
         Objects.requireNonNull(value, field);
         String normalized = value.strip();
@@ -91,5 +159,12 @@ public class TtsJobLeaseService {
             throw new IllegalArgumentException(field + " exceeds max length " + maxLength);
         }
         return value;
+    }
+
+    private static String optional(String value, String field, int maxLength) {
+        if (value == null) {
+            return null;
+        }
+        return required(value, field, maxLength);
     }
 }

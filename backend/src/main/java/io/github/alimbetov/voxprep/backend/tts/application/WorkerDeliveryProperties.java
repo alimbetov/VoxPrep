@@ -16,6 +16,9 @@ public class WorkerDeliveryProperties {
     @NotNull
     private Duration urlTtl = Duration.ofMinutes(5);
 
+    @NotNull
+    private Duration leaseDuration = Duration.ofMinutes(2);
+
     public String getApiKey() {
         return apiKey;
     }
@@ -30,5 +33,13 @@ public class WorkerDeliveryProperties {
 
     public void setUrlTtl(Duration urlTtl) {
         this.urlTtl = urlTtl;
+    }
+
+    public Duration getLeaseDuration() {
+        return leaseDuration;
+    }
+
+    public void setLeaseDuration(Duration leaseDuration) {
+        this.leaseDuration = leaseDuration;
     }
 }

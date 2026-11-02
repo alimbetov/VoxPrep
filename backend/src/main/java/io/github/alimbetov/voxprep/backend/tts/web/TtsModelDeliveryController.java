@@ -2,9 +2,7 @@ package io.github.alimbetov.voxprep.backend.tts.web;
 
 import io.github.alimbetov.voxprep.backend.tts.application.TtsModelDelivery;
 import io.github.alimbetov.voxprep.backend.tts.application.TtsModelDeliveryService;
-import io.github.alimbetov.voxprep.backend.tts.application.WorkerDeliveryProperties;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
+import io.github.alimbetov.voxprep.backend.tts.application.WorkerApiKeyVerifier;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -22,20 +20,20 @@ public class TtsModelDeliveryController {
     public static final String WORKER_KEY_HEADER = "X-VoxPrep-Worker-Key";
 
     private final TtsModelDeliveryService deliveryService;
-    private final WorkerDeliveryProperties properties;
+    private final WorkerApiKeyVerifier apiKeyVerifier;
 
     public TtsModelDeliveryController(
             TtsModelDeliveryService deliveryService,
-            WorkerDeliveryProperties properties) {
+            WorkerApiKeyVerifier apiKeyVerifier) {
         this.deliveryService = deliveryService;
-        this.properties = properties;
+        this.apiKeyVerifier = apiKeyVerifier;
     }
 
     @GetMapping("/{voiceModelId}")
     public ResponseEntity<TtsModelDelivery> getModel(
             @PathVariable UUID voiceModelId,
             @RequestHeader(name = WORKER_KEY_HEADER, required = false) String workerKey) {
-        if (!authorized(workerKey)) {
+        if (!apiKeyVerifier.authorized(workerKey)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         try {
@@ -45,14 +43,5 @@ public class TtsModelDeliveryController {
         } catch (IllegalStateException exception) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
-    }
-
-    private boolean authorized(String supplied) {
-        if (supplied == null) {
-            return false;
-        }
-        return MessageDigest.isEqual(
-                properties.getApiKey().getBytes(StandardCharsets.UTF_8),
-                supplied.getBytes(StandardCharsets.UTF_8));
     }
 }

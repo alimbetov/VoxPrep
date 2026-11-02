@@ -74,3 +74,4 @@ voxprep:
   worker-delivery:
     api-key: ${VOXPREP_WORKER_API_KEY:${worker_api_key}}
     url-ttl: ${VOXPREP_WORKER_MODEL_URL_TTL:5m}
+    lease-duration: ${VOXPREP_WORKER_LEASE_DURATION:2m}

@@ -52,6 +52,15 @@ public class TtsJobEntity extends AbstractJpaEntity {
     @Column(name = "claimed_at")
     private Instant claimedAt;
 
+    @Column(name = "failure_code", length = 64)
+    private String failureCode;
+
+    @Column(name = "failure_message", length = 2000)
+    private String failureMessage;
+
+    @Column(name = "failed_at")
+    private Instant failedAt;
+
     protected TtsJobEntity() {
     }
 
@@ -62,45 +71,19 @@ public class TtsJobEntity extends AbstractJpaEntity {
         this.status = TtsJobStatus.PENDING;
     }
 
-    public TtsVoiceModelEntity getVoiceModel() {
-        return voiceModel;
-    }
-
-    public String getInputText() {
-        return inputText;
-    }
-
-    public String getInputSha256() {
-        return inputSha256;
-    }
-
-    public TtsJobStatus getStatus() {
-        return status;
-    }
-
-    public FileAssetEntity getOutputAsset() {
-        return outputAsset;
-    }
-
-    public int getAttemptCount() {
-        return attemptCount;
-    }
-
-    public String getLeaseOwner() {
-        return leaseOwner;
-    }
-
-    public UUID getLeaseToken() {
-        return leaseToken;
-    }
-
-    public Instant getLeaseUntil() {
-        return leaseUntil;
-    }
-
-    public Instant getClaimedAt() {
-        return claimedAt;
-    }
+    public TtsVoiceModelEntity getVoiceModel() { return voiceModel; }
+    public String getInputText() { return inputText; }
+    public String getInputSha256() { return inputSha256; }
+    public TtsJobStatus getStatus() { return status; }
+    public FileAssetEntity getOutputAsset() { return outputAsset; }
+    public int getAttemptCount() { return attemptCount; }
+    public String getLeaseOwner() { return leaseOwner; }
+    public UUID getLeaseToken() { return leaseToken; }
+    public Instant getLeaseUntil() { return leaseUntil; }
+    public Instant getClaimedAt() { return claimedAt; }
+    public String getFailureCode() { return failureCode; }
+    public String getFailureMessage() { return failureMessage; }
+    public Instant getFailedAt() { return failedAt; }
 
     private static String required(String value, String field, int maxLength) {
         Objects.requireNonNull(value, field);
