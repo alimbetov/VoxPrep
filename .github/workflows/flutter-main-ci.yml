@@ -64,6 +64,7 @@ jobs:
           flutter test test/data/local/database/careerspeak_database_test.dart --reporter expanded
           flutter test test/data/local/database/careerspeak_database_migration_test.dart --reporter expanded
           flutter test test/data/local/database/careerspeak_database_v18_qualification_test.dart --reporter expanded
+          flutter test test/app/app_configuration_test.dart --reporter expanded
           flutter test test/app/api_client_providers_test.dart --reporter expanded
           flutter test test/acceptance/p2_8_asset_resolution_test.dart --reporter expanded
           timeout 2m flutter test \

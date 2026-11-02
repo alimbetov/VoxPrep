@@ -96,7 +96,8 @@ void main() {
     });
 
     test('newer app contract requirement fails closed', () {
-      final manifest = _rootManifest()..['minimumAppContractVersion'] = 3;
+      final manifest = _rootManifest()
+        ..['minimumAppContractVersion'] = careerSpeakAppContractVersion + 1;
       final result = decoder.decodeRoot(manifest);
 
       expect(result, isA<FailureResult<RootContentManifest>>());

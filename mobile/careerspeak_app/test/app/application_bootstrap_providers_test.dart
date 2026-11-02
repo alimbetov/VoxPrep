@@ -1,4 +1,5 @@
 import 'package:careerspeak_app/app/api_client_providers.dart';
+import 'package:careerspeak_app/app/app_configuration.dart';
 import 'package:careerspeak_app/app/application_bootstrap_providers.dart';
 import 'package:careerspeak_app/app/bootstrap_status_frame.dart';
 import 'package:careerspeak_app/application/ports/api_client.dart';
@@ -11,8 +12,18 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   test('composition root selects HTTP installation registration adapter', () {
+    final configuration = AppConfiguration.fromBuildValues(
+      releaseMode: false,
+      appEnvironment: 'development',
+      apiBaseUrl: 'http://localhost:8080',
+      mockBilling: 'false',
+      mockPurchaseVerification: 'false',
+    );
     final container = ProviderContainer(
-      overrides: [apiClientProvider.overrideWithValue(_UnusedApiClient())],
+      overrides: [
+        appConfigurationProvider.overrideWithValue(configuration),
+        apiClientProvider.overrideWithValue(_UnusedApiClient()),
+      ],
     );
     addTearDown(container.dispose);
 

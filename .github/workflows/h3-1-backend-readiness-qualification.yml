@@ -1,0 +1,171 @@
+name: H3.1 Backend Readiness Qualification
+
+on:
+  push:
+    branches:
+      - feat/learner-product-ui-v1
+    paths:
+      - 'contracts/**'
+      - 'docs/architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md'
+      - 'docs/architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md'
+      - 'docs/backend/**'
+      - 'docs/mobile/**'
+      - 'mobile/careerspeak_app/lib/app/**'
+      - 'mobile/careerspeak_app/lib/data/remote/**'
+      - 'mobile/careerspeak_app/lib/application/ports/**'
+      - 'mobile/careerspeak_app/test/app/**'
+      - 'mobile/careerspeak_app/test/data/remote/**'
+      - '.github/workflows/h3-1-backend-readiness-qualification.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: h3-1-backend-readiness-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  h3-1:
+    name: h3-1
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Format
+        run: dart format --output=none --set-exit-if-changed lib test
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: H3.1 environment qualification
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter test test/app/app_configuration_test.dart --reporter expanded
+          flutter test test/app/api_client_providers_test.dart --reporter expanded
+
+      - name: Production wire qualification
+        shell: bash
+        run: |
+          set -euo pipefail
+          flutter test test/data/remote/http_installation_registration_gateway_test.dart --reporter expanded
+          flutter test test/data/remote/http_content_manifest_gateway_test.dart --reporter expanded
+          flutter test test/data/remote/http_content_payload_gateway_test.dart --reporter expanded
+          flutter test test/data/remote/http_localized_content_payload_gateway_test.dart --reporter expanded
+          flutter test test/data/remote/http_catalogue_payload_gateway_test.dart --reporter expanded
+          flutter test test/data/remote/http_assessment_payload_gateway_test.dart --reporter expanded
+          flutter test test/data/remote/http_asset_byte_source_test.dart --reporter expanded
+          flutter test test/data/remote/content_payload_all_kinds_test.dart --reporter expanded
+          flutter test test/data/remote/publication_manifest_wire_guard_test.dart --reporter expanded
+          flutter test test/data/remote/universal_catalogue_decoder_registry_test.dart --reporter expanded
+          flutter test test/data/remote/monetization_access_decoder_test.dart --reporter expanded
+
+      - name: Backend contract guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          contract='../../contracts/learner-api-v2.yaml'
+          baseline='../../docs/backend/BACKEND_API_CONTRACT_BASELINE.md'
+          drift='../../docs/backend/BACKEND_CONTRACT_DRIFT_AUDIT_2026-11-02.md'
+          envdoc='../../docs/mobile/FLUTTER_ENVIRONMENTS.md'
+          cross='../../docs/architecture/CAREERSPEAK_CROSS_SYSTEM_CONTRACT.md'
+          domain='../../docs/architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md'
+
+          test -s "$contract"
+          test -s "$baseline"
+          test -s "$drift"
+          test -s "$envdoc"
+          test -s "$cross"
+          test -s "$domain"
+
+          grep -Fq '/api/v1/installations:' "$contract"
+          grep -Fq '/api/v1/content/manifest:' "$contract"
+          grep -Fq '/api/v1/content/packs/{packCode}/manifest:' "$contract"
+          grep -Fq '/api/v1/content/{contentType}/{contentCode}/revisions/{revision}:' "$contract"
+          grep -Fq '/api/v1/content/{contentType}/{contentCode}/revisions/{contentRevision}/localizations/{locale}/revisions/{localizationRevision}:' "$contract"
+          grep -Fq '/api/v1/catalogues/{kind}/revisions/{revision}:' "$contract"
+          grep -Fq '/api/v1/assessment/practice-tests/{practiceTestCode}/revisions/{revision}:' "$contract"
+          grep -Fq '/api/v1/assessment/questions/{questionCode}/revisions/{revision}:' "$contract"
+          grep -Fq '/api/v1/media/assets/{assetId}/content:' "$contract"
+          grep -Fq '/api/v1/purchases/verify:' "$contract"
+
+          grep -Fq "./c2-content-catalog-v1.yaml#/components/schemas/TypedContentPayload" "$contract"
+          grep -Fq "./c3-assessment-v1.yaml#/components/schemas/PracticeTestRevision" "$contract"
+          grep -Fq "./c3-assessment-v1.yaml#/components/schemas/QuestionRevision" "$contract"
+          grep -Fq 'TypedContentPayload:' ../../contracts/c2-content-catalog-v1.yaml
+          grep -Fq 'PracticeTestRevision:' ../../contracts/c3-assessment-v1.yaml
+          grep -Fq 'QuestionRevision:' ../../contracts/c3-assessment-v1.yaml
+
+          grep -Fq 'CAREERSPEAK_APP_ENV' "$envdoc"
+          grep -Fq 'CAREERSPEAK_API_BASE_URL' "$envdoc"
+          grep -Fq 'CAREERSPEAK_STAGING_API_HOSTS' "$envdoc"
+          grep -Fq 'CAREERSPEAK_PRODUCTION_API_HOSTS' "$envdoc"
+          grep -Fq 'Backend API DTO != JPA Entity' "$baseline"
+          grep -Fq 'OPEN BACKEND CONTRACT QUESTIONS' "$baseline"
+
+          grep -Fq 'POST /api/v1/installations  → anonymous installation registration/re-registration' "$cross"
+          grep -Fq 'other /api/v1/**            → installation token' "$cross"
+          grep -Fq 'POST /api/v1/installations  → anonymous installation registration/re-registration' "$domain"
+          grep -Fq 'other /api/v1/**            → installation token' "$domain"
+          grep -Fq 'ApiErrorDto.code/message' "$drift"
+          grep -Fq 'Backend `ApiError.code/message` remain required and non-null' "$drift"
+
+      - name: Contract-related regression suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 8m flutter test \
+            test/app \
+            test/data/remote \
+            --concurrency=1 \
+            --reporter expanded
+
+      - name: Production E2E core
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 2m flutter test \
+            test/acceptance/p2_10_7_production_e2e_test.dart \
+            --plain-name 'fresh install sync survives file-backed reopen' \
+            --reporter expanded
+          timeout 2m flutter test \
+            test/acceptance/p2_10_7_production_e2e_test.dart \
+            --plain-name 'production learner UI renders synchronized Drift content' \
+            --reporter expanded
+
+      - name: Full core Flutter suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t test_files < <(
+            find test -type f -name '*_test.dart' \
+              ! -path 'test/acceptance/p2_10_7_production_e2e_test.dart' \
+              | sort
+          )
+          if (( ${#test_files[@]} == 0 )); then
+            echo 'No core tests discovered.' >&2
+            exit 1
+          fi
+          timeout 20m flutter test \
+            "${test_files[@]}" \
+            --concurrency=1 \
+            --reporter expanded

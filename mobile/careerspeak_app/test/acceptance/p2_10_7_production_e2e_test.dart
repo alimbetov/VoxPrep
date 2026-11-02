@@ -131,9 +131,7 @@ void main() {
       final backend = _LearnerApiFixture();
       final client = MockClient(backend.handle);
       final assetRootDirectory = (await tester.runAsync(
-        () => Directory.systemTemp.createTemp(
-          'careerspeak-p2-10-7-assets-',
-        ),
+        () => Directory.systemTemp.createTemp('careerspeak-p2-10-7-assets-'),
       ))!;
       addTearDown(database.close);
       addTearDown(client.close);

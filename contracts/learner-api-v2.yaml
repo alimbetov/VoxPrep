@@ -1,0 +1,711 @@
+openapi: 3.1.0
+info:
+  title: VoxPrep Learner API
+  version: 2.0.0
+  description: >-
+    Backend-ready aggregate wire contract consumed by the production Flutter
+    installation runtime. Contract document v2 keeps the existing /api/v1 HTTP
+    namespace: the document revision consolidates previously split additive v1
+    endpoints and current publication DTOs; it does not introduce a transport
+    breaking change. Backend DTOs are API models and MUST NOT be JPA entities.
+
+security:
+  - installationBearer: []
+
+paths:
+  /api/v1/installations:
+    post:
+      operationId: registerInstallation
+      description: Idempotent installation registration/re-registration.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstallationRegistrationRequest'
+      responses:
+        '200':
+          description: Installation token issued.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstallationRegistrationResponse'
+        '400': { $ref: '#/components/responses/ApiError' }
+        '409': { $ref: '#/components/responses/ApiError' }
+        '500': { $ref: '#/components/responses/ApiError' }
+
+  /api/v1/content/manifest:
+    get:
+      operationId: getRootContentManifest
+      description: >-
+        Returns one locale-independent immutable publication root. The canonical
+        checksum covers the immutable publication body; ETag is a transport
+        validator and does not replace checksum identity.
+      parameters:
+        - name: If-None-Match
+          in: header
+          required: false
+          schema: { type: string }
+      responses:
+        '200':
+          description: Current immutable root publication.
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RootContentManifest'
+        '304':
+          description: The supplied ETag still identifies CURRENT root.
+          headers:
+            ETag:
+              schema: { type: string }
+        '400': { $ref: '#/components/responses/ApiError' }
+        '401': { $ref: '#/components/responses/ApiError' }
+        '403': { $ref: '#/components/responses/ApiError' }
+        '500': { $ref: '#/components/responses/ApiError' }
+        '503': { $ref: '#/components/responses/ApiError' }
+
+  /api/v1/content/packs/{packCode}/manifest:
+    get:
+      operationId: getPackContentManifest
+      description: >-
+        Returns the exact immutable pack selected by root membership. variant and
+        revision are mandatory; the response identity and checksum MUST equal the
+        PackRevisionRef from the root.
+      parameters:
+        - name: packCode
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/BusinessCode' }
+        - name: variant
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/PackVariant' }
+        - name: revision
+          in: query
+          required: true
+          schema: { $ref: '#/components/schemas/PositiveRevision' }
+      responses:
+        '200':
+          description: Exact immutable pack manifest revision.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PackContentManifest' }
+        '400': { $ref: '#/components/responses/ApiError' }
+        '401': { $ref: '#/components/responses/ApiError' }
+        '403': { $ref: '#/components/responses/ApiError' }
+        '404': { $ref: '#/components/responses/ApiError' }
+        '500': { $ref: '#/components/responses/ApiError' }
+
+  /api/v1/content/{contentType}/{contentCode}/revisions/{revision}:
+    get:
+      operationId: getCanonicalContentPayload
+      parameters:
+        - name: contentType
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/ContentType' }
+        - name: contentCode
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/BusinessCode' }
+        - name: revision
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/PositiveRevision' }
+      responses:
+        '200':
+          description: Exact canonical typed learner payload revision.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ContentPayload' }
+        '400': { $ref: '#/components/responses/ApiError' }
+        '401': { $ref: '#/components/responses/ApiError' }
+        '403': { $ref: '#/components/responses/ApiError' }
+        '404': { $ref: '#/components/responses/ApiError' }
+        '500': { $ref: '#/components/responses/ApiError' }
+
+  /api/v1/content/{contentType}/{contentCode}/revisions/{contentRevision}/localizations/{locale}/revisions/{localizationRevision}:
+    get:
+      operationId: getLocalizedContentPayload
+      parameters:
+        - name: contentType
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/ContentType' }
+        - name: contentCode
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/BusinessCode' }
+        - name: contentRevision
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/PositiveRevision' }
+        - name: locale
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/LocaleCode' }
+        - name: localizationRevision
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/PositiveRevision' }
+      responses:
+        '200':
+          description: Exact immutable localized projection.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LocalizedContentPayload' }
+        '400': { $ref: '#/components/responses/ApiError' }
+        '401': { $ref: '#/components/responses/ApiError' }
+        '403': { $ref: '#/components/responses/ApiError' }
+        '404': { $ref: '#/components/responses/ApiError' }
+        '500': { $ref: '#/components/responses/ApiError' }
+
+  /api/v1/catalogues/{kind}/revisions/{revision}:
+    get:
+      operationId: getCatalogueRevision
+      description: >-
+        Returns one exact catalogue selected by root kind+revision+checksum.
+        The payload contains publication fields only: kind, revision, checksum,
+        items. Item schema is governed by the matching C2/C4 versioned contract.
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/CatalogueKind' }
+        - name: revision
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/PositiveRevision' }
+      responses:
+        '200':
+          description: Exact immutable catalogue revision.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CataloguePayload' }
+        '400': { $ref: '#/components/responses/ApiError' }
+        '401': { $ref: '#/components/responses/ApiError' }
+        '403': { $ref: '#/components/responses/ApiError' }
+        '404': { $ref: '#/components/responses/ApiError' }
+        '500': { $ref: '#/components/responses/ApiError' }
+
+  /api/v1/assessment/practice-tests/{practiceTestCode}/revisions/{revision}:
+    get:
+      operationId: getPracticeTestRevision
+      parameters:
+        - name: practiceTestCode
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/BusinessCode' }
+        - name: revision
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/PositiveRevision' }
+      responses:
+        '200':
+          description: Exact immutable practice-test revision.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PracticeTestRevision' }
+        '400': { $ref: '#/components/responses/ApiError' }
+        '401': { $ref: '#/components/responses/ApiError' }
+        '403': { $ref: '#/components/responses/ApiError' }
+        '404': { $ref: '#/components/responses/ApiError' }
+        '500': { $ref: '#/components/responses/ApiError' }
+
+  /api/v1/assessment/questions/{questionCode}/revisions/{revision}:
+    get:
+      operationId: getQuestionRevision
+      parameters:
+        - name: questionCode
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/BusinessCode' }
+        - name: revision
+          in: path
+          required: true
+          schema: { $ref: '#/components/schemas/PositiveRevision' }
+      responses:
+        '200':
+          description: Exact immutable question revision.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuestionRevision' }
+        '400': { $ref: '#/components/responses/ApiError' }
+        '401': { $ref: '#/components/responses/ApiError' }
+        '403': { $ref: '#/components/responses/ApiError' }
+        '404': { $ref: '#/components/responses/ApiError' }
+        '500': { $ref: '#/components/responses/ApiError' }
+
+  /api/v1/media/assets/{assetId}/content:
+    get:
+      operationId: downloadMediaAsset
+      description: >-
+        Streams learner-deliverable bytes through Backend. Backend resolves
+        FileAsset/deliveryKey/object-storage location internally. No redirect or
+        presigned object-storage URL is part of v1 learner delivery.
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Exact asset bytes.
+          headers:
+            Content-Length:
+              schema: { type: integer, minimum: 1 }
+            ETag:
+              schema: { type: string }
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+            audio/mpeg:
+              schema: { type: string, format: binary }
+            image/webp:
+              schema: { type: string, format: binary }
+            image/png:
+              schema: { type: string, format: binary }
+            image/jpeg:
+              schema: { type: string, format: binary }
+        '400': { $ref: '#/components/responses/ApiError' }
+        '401': { $ref: '#/components/responses/ApiError' }
+        '403': { $ref: '#/components/responses/ApiError' }
+        '404': { $ref: '#/components/responses/ApiError' }
+        '409': { $ref: '#/components/responses/ApiError' }
+        '429': { $ref: '#/components/responses/ApiError' }
+        '500': { $ref: '#/components/responses/ApiError' }
+        '503': { $ref: '#/components/responses/ApiError' }
+
+  /api/v1/purchases/verify:
+    post:
+      operationId: verifyStorePurchase
+      description: >-
+        Server-side verification of one Store purchase event. purchaseEventId is
+        an idempotency/replay identity. Repeating the same event with the same
+        semantic request returns the same processed result. Reusing it for a
+        different provider/product/proof fingerprint is a 409 conflict.
+        verificationData is opaque sensitive proof and MUST NOT be logged or
+        returned to Flutter.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PurchaseVerificationRequest' }
+      responses:
+        '200':
+          description: Verification processed; verified may be true or false.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PurchaseVerificationResponse' }
+        '400': { $ref: '#/components/responses/ApiError' }
+        '401': { $ref: '#/components/responses/ApiError' }
+        '403': { $ref: '#/components/responses/ApiError' }
+        '409':
+          description: purchaseEventId replay conflicts with an earlier semantic request.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+        '429': { $ref: '#/components/responses/ApiError' }
+        '500': { $ref: '#/components/responses/ApiError' }
+        '503':
+          description: Store/provider verification is temporarily unavailable; retry is allowed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiError' }
+
+components:
+  securitySchemes:
+    installationBearer:
+      type: http
+      scheme: bearer
+      description: Opaque Backend-issued installation token.
+
+  responses:
+    ApiError:
+      description: Typed API failure envelope.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/ApiError' }
+
+  schemas:
+    BusinessCode:
+      type: string
+      minLength: 1
+      pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$'
+
+    StableCode:
+      type: string
+      minLength: 1
+      pattern: '^[A-Z0-9][A-Z0-9._-]*$'
+
+    LocaleCode:
+      type: string
+      pattern: '^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$'
+
+    Sha256:
+      type: string
+      pattern: '^[0-9a-f]{64}$'
+
+    PositiveRevision:
+      type: integer
+      minimum: 1
+
+    CanonicalUtcInstant:
+      type: string
+      format: date-time
+      pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?Z$'
+
+    ContentType:
+      type: string
+      enum: [vocabulary, interview, topic, phrase, shadowing]
+
+    PackVariant:
+      type: string
+      pattern: '^(?:canonical|locale:[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*)$'
+
+    CatalogueKind:
+      type: string
+      enum:
+        - vertical-sections
+        - vertical-presentation
+        - verticals
+        - learning-goals
+        - learning-tracks
+        - learning-collections
+        - categories
+        - levels
+        - skills
+        - supported-locales
+        - tts-voices
+
+    InstallationRegistrationRequest:
+      type: object
+      additionalProperties: false
+      required: [installationId]
+      properties:
+        installationId: { type: string, minLength: 1 }
+
+    InstallationRegistrationResponse:
+      type: object
+      additionalProperties: false
+      required: [installationToken]
+      properties:
+        installationToken: { type: string, minLength: 1 }
+
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { type: string, minLength: 1 }
+        message: { type: string, minLength: 1 }
+        traceId:
+          type: [string, 'null']
+        details:
+          type: object
+          additionalProperties: true
+          default: {}
+
+    PackRevisionRef:
+      type: object
+      additionalProperties: false
+      required: [code, variant, revision, checksum]
+      properties:
+        code: { $ref: '#/components/schemas/BusinessCode' }
+        variant: { $ref: '#/components/schemas/PackVariant' }
+        revision: { $ref: '#/components/schemas/PositiveRevision' }
+        checksum: { $ref: '#/components/schemas/Sha256' }
+
+    PracticeTestRevisionRef:
+      type: object
+      additionalProperties: false
+      required: [practiceTestCode, revision, checksum]
+      properties:
+        practiceTestCode: { $ref: '#/components/schemas/BusinessCode' }
+        revision: { $ref: '#/components/schemas/PositiveRevision' }
+        checksum: { $ref: '#/components/schemas/Sha256' }
+
+    CatalogueRevisionRef:
+      type: object
+      additionalProperties: false
+      required: [kind, revision, checksum]
+      properties:
+        kind: { $ref: '#/components/schemas/CatalogueKind' }
+        revision: { $ref: '#/components/schemas/PositiveRevision' }
+        checksum: { $ref: '#/components/schemas/Sha256' }
+
+    LocaleFallbackRule:
+      type: object
+      additionalProperties: false
+      required: [locale, fallbackLocales]
+      properties:
+        locale: { $ref: '#/components/schemas/LocaleCode' }
+        fallbackLocales:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/LocaleCode' }
+
+    ContentTombstone:
+      type: object
+      additionalProperties: false
+      required: [contentCode, contentType, revision, reason]
+      properties:
+        contentCode: { $ref: '#/components/schemas/BusinessCode' }
+        contentType: { $ref: '#/components/schemas/ContentType' }
+        revision: { $ref: '#/components/schemas/PositiveRevision' }
+        reason: { type: string, minLength: 1 }
+
+    RootContentManifest:
+      type: object
+      additionalProperties: false
+      required:
+        - schemaVersion
+        - contentVersion
+        - minimumAppContractVersion
+        - publishedAt
+        - checksum
+        - packs
+        - practiceTests
+        - catalogues
+        - localeFallbacks
+        - tombstones
+      properties:
+        schemaVersion: { type: integer, minimum: 1, maximum: 2 }
+        contentVersion: { type: integer, minimum: 1 }
+        minimumAppContractVersion: { type: integer, minimum: 1 }
+        publishedAt: { $ref: '#/components/schemas/CanonicalUtcInstant' }
+        checksum: { $ref: '#/components/schemas/Sha256' }
+        packs:
+          type: array
+          items: { $ref: '#/components/schemas/PackRevisionRef' }
+        practiceTests:
+          type: array
+          items: { $ref: '#/components/schemas/PracticeTestRevisionRef' }
+        catalogues:
+          type: array
+          items: { $ref: '#/components/schemas/CatalogueRevisionRef' }
+        localeFallbacks:
+          type: array
+          items: { $ref: '#/components/schemas/LocaleFallbackRule' }
+        tombstones:
+          type: array
+          items: { $ref: '#/components/schemas/ContentTombstone' }
+
+    PackContentRef:
+      type: object
+      additionalProperties: false
+      required: [contentCode, contentType, revision, checksum]
+      properties:
+        contentCode: { $ref: '#/components/schemas/BusinessCode' }
+        contentType: { $ref: '#/components/schemas/ContentType' }
+        revision: { $ref: '#/components/schemas/PositiveRevision' }
+        checksum: { $ref: '#/components/schemas/Sha256' }
+        sortOrder:
+          type: [integer, 'null']
+          minimum: 0
+        publishedAt:
+          oneOf:
+            - { $ref: '#/components/schemas/CanonicalUtcInstant' }
+            - { type: 'null' }
+
+    LocalizedContentRef:
+      type: object
+      additionalProperties: false
+      required:
+        - contentCode
+        - contentType
+        - contentRevision
+        - locale
+        - localizationRevision
+        - checksum
+      properties:
+        contentCode: { $ref: '#/components/schemas/BusinessCode' }
+        contentType: { $ref: '#/components/schemas/ContentType' }
+        contentRevision: { $ref: '#/components/schemas/PositiveRevision' }
+        locale: { $ref: '#/components/schemas/LocaleCode' }
+        localizationRevision: { $ref: '#/components/schemas/PositiveRevision' }
+        checksum: { $ref: '#/components/schemas/Sha256' }
+
+    ManifestAssetDescriptor:
+      type: object
+      additionalProperties: false
+      required:
+        - assetId
+        - checksumSha256
+        - deliveryKey
+        - sizeBytes
+        - mediaType
+        - requiredOffline
+      properties:
+        assetId: { type: string, minLength: 1 }
+        checksumSha256: { $ref: '#/components/schemas/Sha256' }
+        deliveryKey:
+          type: string
+          minLength: 1
+          description: Backend storage metadata; never a Flutter URL/path/credential.
+        sizeBytes: { type: integer, minimum: 1 }
+        mediaType: { type: string, minLength: 1 }
+        requiredOffline: { type: boolean }
+
+    ContentAssetRef:
+      type: object
+      additionalProperties: false
+      required: [contentCode, contentType, contentRevision, assetId, role]
+      properties:
+        contentCode: { $ref: '#/components/schemas/BusinessCode' }
+        contentType: { $ref: '#/components/schemas/ContentType' }
+        contentRevision: { $ref: '#/components/schemas/PositiveRevision' }
+        assetId: { type: string, minLength: 1 }
+        role: { type: string, minLength: 1 }
+
+    PackContentManifest:
+      type: object
+      additionalProperties: false
+      required:
+        - schemaVersion
+        - code
+        - variant
+        - revision
+        - checksum
+        - contents
+        - localizations
+        - assets
+        - contentAssets
+      properties:
+        schemaVersion: { type: integer, minimum: 1, maximum: 2 }
+        code: { $ref: '#/components/schemas/BusinessCode' }
+        variant: { $ref: '#/components/schemas/PackVariant' }
+        revision: { $ref: '#/components/schemas/PositiveRevision' }
+        checksum: { $ref: '#/components/schemas/Sha256' }
+        contents:
+          type: array
+          items: { $ref: '#/components/schemas/PackContentRef' }
+        localizations:
+          type: array
+          items: { $ref: '#/components/schemas/LocalizedContentRef' }
+        assets:
+          type: array
+          items: { $ref: '#/components/schemas/ManifestAssetDescriptor' }
+        contentAssets:
+          type: array
+          items: { $ref: '#/components/schemas/ContentAssetRef' }
+
+    ContentPayload:
+      $ref: './c2-content-catalog-v1.yaml#/components/schemas/TypedContentPayload'
+
+    LocalizedContentPayload:
+      type: object
+      additionalProperties: false
+      required:
+        - contentCode
+        - contentType
+        - contentRevision
+        - locale
+        - localizationRevision
+        - checksum
+      properties:
+        contentCode: { $ref: '#/components/schemas/BusinessCode' }
+        contentType: { $ref: '#/components/schemas/ContentType' }
+        contentRevision: { $ref: '#/components/schemas/PositiveRevision' }
+        locale: { $ref: '#/components/schemas/LocaleCode' }
+        localizationRevision: { $ref: '#/components/schemas/PositiveRevision' }
+        checksum: { $ref: '#/components/schemas/Sha256' }
+        title: { type: [string, 'null'], minLength: 1 }
+        subtitle: { type: [string, 'null'], minLength: 1 }
+        description: { type: [string, 'null'], minLength: 1 }
+        translation: { type: [string, 'null'], minLength: 1 }
+        hint: { type: [string, 'null'], minLength: 1 }
+        explanation: { type: [string, 'null'], minLength: 1 }
+
+    CataloguePayload:
+      type: object
+      additionalProperties: false
+      required: [kind, revision, checksum, items]
+      properties:
+        kind: { $ref: '#/components/schemas/CatalogueKind' }
+        revision: { $ref: '#/components/schemas/PositiveRevision' }
+        checksum: { $ref: '#/components/schemas/Sha256' }
+        items:
+          type: array
+          items: { type: object }
+
+    PracticeTestRevision:
+      $ref: './c3-assessment-v1.yaml#/components/schemas/PracticeTestRevision'
+
+    QuestionRevision:
+      $ref: './c3-assessment-v1.yaml#/components/schemas/QuestionRevision'
+
+    StoreProvider:
+      type: string
+      enum: [GOOGLE_PLAY, APP_STORE]
+
+    AccessLevel:
+      type: string
+      enum: [FREE, FULL]
+
+    PurchaseVerificationRequest:
+      type: object
+      additionalProperties: false
+      required: [provider, productId, purchaseEventId, verificationData]
+      properties:
+        provider: { $ref: '#/components/schemas/StoreProvider' }
+        productId:
+          type: string
+          minLength: 1
+          description: Store product identifier; current Flutter verifies the configured lifetime FULL unlock product.
+        purchaseEventId:
+          type: string
+          minLength: 1
+          description: Stable replay/idempotency identity for one Store purchase/restoration event.
+        verificationData:
+          type: string
+          minLength: 1
+          writeOnly: true
+          description: Opaque Store verification proof. Never log, persist in plaintext unnecessarily, or echo.
+
+    PurchaseVerificationRejected:
+      type: object
+      additionalProperties: false
+      required: [verified]
+      properties:
+        verified: { const: false }
+
+    PurchaseVerificationAccepted:
+      type: object
+      additionalProperties: false
+      required: [verified, accessLevel, verifiedAt]
+      properties:
+        verified: { const: true }
+        accessLevel: { $ref: '#/components/schemas/AccessLevel' }
+        verifiedAt: { $ref: '#/components/schemas/CanonicalUtcInstant' }
+
+    PurchaseVerificationResponse:
+      oneOf:
+        - { $ref: '#/components/schemas/PurchaseVerificationRejected' }
+        - { $ref: '#/components/schemas/PurchaseVerificationAccepted' }
+
+x-source-contracts:
+  typed-content: c2-content-catalog-v1.yaml
+  catalogue-access: c2-content-catalog-v3.yaml
+  assessment: c3-assessment-v1.yaml
+  publication-v2: c4-catalogue-publication-v2.yaml
+  media: c2-content-audio-v1.yaml + content-cover-v1.yaml
+  localization: locale-configuration-v1.yaml
+
+x-publication-invariants:
+  - Root identity is schemaVersion + contentVersion + canonical checksum; ETag is transport metadata.
+  - Root membership owns exact pack, practice-test and catalogue revisions by immutable checksum.
+  - Pack checksum is calculated over its canonical immutable body and must equal the root target checksum.
+  - Catalogue response must contain only kind, revision, checksum and items; identity must equal the root CatalogueRevisionRef.
+  - Root schema v2 requires the universal catalogue kinds defined by c4-catalogue-publication-v2.yaml.
+  - FREE/FULL is explicit publication data for learning collections; missing accessLevel in legacy v2 bytes is interpreted fail-closed as FULL.
+  - Published revisions are immutable; changed payload, ordering or access classification requires a new exact revision/checksum.
+
+x-media-invariants:
+  - Flutter downloads only through GET /api/v1/media/assets/{assetId}/content.
+  - deliveryKey and object-storage credentials are Backend-internal.
+  - Backend v1 does not redirect learner media to RustFS/S3 and does not return presigned object-storage URLs.

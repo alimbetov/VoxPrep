@@ -1,4 +1,5 @@
 import 'package:careerspeak_app/app/api_client_providers.dart';
+import 'package:careerspeak_app/app/app_configuration.dart';
 import 'package:careerspeak_app/app/app_preferences_providers.dart';
 import 'package:careerspeak_app/app/installation_identity_providers.dart';
 import 'package:careerspeak_app/application/ports/app_preferences_repository.dart';
@@ -15,8 +16,16 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   ProviderContainer createContainer() {
+    final configuration = AppConfiguration.fromBuildValues(
+      releaseMode: false,
+      appEnvironment: 'development',
+      apiBaseUrl: 'http://localhost:8080',
+      mockBilling: 'false',
+      mockPurchaseVerification: 'false',
+    );
     final container = ProviderContainer(
       overrides: [
+        appConfigurationProvider.overrideWithValue(configuration),
         appPreferencesRepositoryProvider.overrideWithValue(
           const _TestPreferencesRepository(),
         ),
@@ -44,10 +53,13 @@ void main() {
     );
   });
 
-  test('default API base URL is deliberately non-routable', () {
+  test('API base URI is projected from validated AppConfiguration', () {
     final container = createContainer();
 
-    expect(container.read(apiBaseUriProvider).host, 'api.careerspeak.invalid');
+    expect(
+      container.read(apiBaseUriProvider),
+      Uri.parse('http://localhost:8080'),
+    );
   });
 }
 

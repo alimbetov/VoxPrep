@@ -40,11 +40,14 @@ TTS WORKER
 Security zones:
 
 ```text
-/admin/**           → ADMIN session
-/api/v1/**          → installation token
-/internal/v1/tts/** → worker token
-Backend storage     → private RustFS credentials
+/admin/**                   → ADMIN session
+POST /api/v1/installations  → anonymous installation registration/re-registration
+other /api/v1/**            → installation token
+/internal/v1/tts/**         → worker token
+Backend storage             → private RustFS credentials
 ```
+
+The anonymous installation endpoint is the credential-issuance boundary; it does not expose learner content or entitlement data. All other learner API operations require the Backend-issued installation credential unless a future versioned contract explicitly defines another exception.
 
 Flutter and Worker network I/O terminates at Spring Boot. RustFS is never a client-facing security zone.
 
