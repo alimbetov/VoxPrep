@@ -12,7 +12,9 @@ final accessSnapshotRepositoryProvider = Provider<AccessSnapshotRepository>((
   return DriftAccessSnapshotRepository(ref.watch(careerSpeakDatabaseProvider));
 });
 
-final learnerAccessSnapshotProvider = FutureProvider<AccessSnapshot?>((ref) async {
+final learnerAccessSnapshotProvider = FutureProvider<AccessSnapshot?>((
+  ref,
+) async {
   final repository = ref.watch(accessSnapshotRepositoryProvider);
   return (await repository.read()).getOrThrow();
 });
