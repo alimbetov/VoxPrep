@@ -93,7 +93,9 @@ class _FullUnlockScreenState extends ConsumerState<FullUnlockScreen> {
       Success<void>() => successMessage,
       FailureResult<void>(:final failure) => failure.message,
     };
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }
 
