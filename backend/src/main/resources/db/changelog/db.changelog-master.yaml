@@ -10,3 +10,5 @@ databaseChangeLog:
       file: db/changelog/b1-p2-catalogue-hierarchy.sql
   - include:
       file: db/changelog/b1-p3-content-revision.sql
+  - include:
+      file: db/changelog/b1-p4-collection-content-members.sql
