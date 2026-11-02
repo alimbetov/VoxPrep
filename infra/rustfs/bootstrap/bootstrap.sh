@@ -17,7 +17,14 @@ read_secret() {
 
 case "$RUSTFS_BUCKET" in
   *[!a-z0-9.-]*|'')
-    echo "Unsafe RustFS bucket name: $RUSTFS_BUCKET" >&2
+    echo "Unsafe RustFS bucket name" >&2
+    exit 1
+    ;;
+esac
+
+case "$RUSTFS_POLICY_NAME" in
+  *[!A-Za-z0-9._-]*|'')
+    echo "Unsafe RustFS policy name" >&2
     exit 1
     ;;
 esac
@@ -53,6 +60,4 @@ fi
 rc admin policy attach voxprep "$RUSTFS_POLICY_NAME" --user "$BACKEND_ACCESS_KEY"
 
 echo "RustFS bootstrap completed."
-echo "Bucket: $RUSTFS_BUCKET"
-echo "Backend IAM access key: $BACKEND_ACCESS_KEY"
-echo "Policy: $RUSTFS_POLICY_NAME"
+echo "Bucket and Backend IAM policy are ready."
