@@ -302,7 +302,8 @@ final class DriftUniversalCatalogueGraphMaterializer {
     Iterable<PackContentManifest> packManifests,
   ) {
     final exactPackKeys = <String>{
-      for (final ref in root.packs) _packKey(ref.identity, ref.revision, ref.checksum),
+      for (final ref in root.packs)
+        _packKey(ref.identity, ref.revision, ref.checksum),
     };
     final seenPackKeys = <String>{};
     final assetsById = <String, ManifestAssetDescriptor>{};
@@ -401,10 +402,7 @@ final class DriftUniversalCatalogueGraphMaterializer {
     return '${identity.code}\u0000${identity.variant}\u0000$revision\u0000$checksum';
   }
 
-  bool _sameAsset(
-    ManifestAssetDescriptor left,
-    ManifestAssetDescriptor right,
-  ) {
+  bool _sameAsset(ManifestAssetDescriptor left, ManifestAssetDescriptor right) {
     return left.assetId == right.assetId &&
         left.checksumSha256 == right.checksumSha256 &&
         left.deliveryKey == right.deliveryKey &&

@@ -307,11 +307,11 @@ final class _Scenario {
   Future<void> dispose(WidgetTester tester) async {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();
-    await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 20)),
-    );
-    await learnerState.dispose();
-    if (await directory.exists()) await directory.delete(recursive: true);
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      await learnerState.dispose().timeout(const Duration(seconds: 2));
+      if (await directory.exists()) await directory.delete(recursive: true);
+    });
   }
 }
 

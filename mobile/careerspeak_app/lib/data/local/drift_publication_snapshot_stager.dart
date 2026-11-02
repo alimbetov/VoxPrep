@@ -66,8 +66,9 @@ final class DriftPublicationSnapshotStager
     }
 
     final exactPackManifestsResult = await _fetchExactPackManifests(target);
-    if (exactPackManifestsResult
-        case FailureResult<List<PackContentManifest>>(:final failure)) {
+    if (exactPackManifestsResult case FailureResult<List<PackContentManifest>>(
+      :final failure,
+    )) {
       return FailureResult<void>(failure);
     }
     final exactPackManifests =
@@ -196,13 +197,12 @@ final class DriftPublicationSnapshotStager
     // Schema v1 remains supported by the legacy publication path. Schema v2+
     // additionally requires a fully decoded and graph-closed local projection.
     if (target.schemaVersion >= 2) {
-      final materialized = await DriftUniversalCatalogueGraphMaterializer(
-        _database,
-      ).materialize(
-        root: target,
-        payloads: cataloguePayloads,
-        packManifests: exactPackManifests,
-      );
+      final materialized =
+          await DriftUniversalCatalogueGraphMaterializer(_database).materialize(
+            root: target,
+            payloads: cataloguePayloads,
+            packManifests: _manifestGateway == null ? null : exactPackManifests,
+          );
       if (materialized case FailureResult<void>(:final failure)) {
         return FailureResult<void>(failure);
       }
