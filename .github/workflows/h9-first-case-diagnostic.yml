@@ -1,0 +1,56 @@
+name: H9 First Case Diagnostic
+
+on:
+  push:
+    branches:
+      - feat/learner-product-ui-v1
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostic:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: feat/learner-product-ui-v1
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - name: Dependencies
+        run: flutter pub get
+      - name: Instrument first adversarial case
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('test/acceptance/content_detail_audio_adversarial_e2e_test.dart')
+          s = p.read_text()
+          replacements = [
+            ("      await scenario.pump(tester);\n\n      await scenario.play(tester);", "      print('H9D after create');\n      await scenario.pump(tester);\n      print('H9D after pump');\n\n      await scenario.play(tester);\n      print('H9D after first play');", 1),
+            ("      await scenario.stop(tester);\n      await tester.runAsync(", "      await scenario.stop(tester);\n      print('H9D after stop');\n      await tester.runAsync(", 1),
+            ("      expect(corrupted, _badBytes);\n\n      await scenario.play(tester);", "      expect(corrupted, _badBytes);\n      print('H9D after corrupt io');\n\n      await scenario.play(tester);\n      print('H9D after replay');", 1),
+            ("      expect(find.text('Pause'), findsOneWidget);\n      await scenario.unmount(tester);", "      expect(find.text('Pause'), findsOneWidget);\n      print('H9D before unmount');\n      await scenario.unmount(tester);\n      print('H9D after unmount');", 1),
+          ]
+          for old, new, n in replacements:
+            if s.count(old) < n:
+              raise SystemExit(f'marker source not found: {old[:60]}')
+            s = s.replace(old, new, n)
+          p.write_text(s)
+          PY
+      - name: Run first adversarial case
+        run: |
+          timeout 90s flutter test \
+            test/acceptance/content_detail_audio_adversarial_e2e_test.dart \
+            --plain-name 'corrupted local audio is discarded and exact asset is redownloaded' \
+            --reporter expanded
