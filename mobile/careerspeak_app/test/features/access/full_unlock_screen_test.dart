@@ -70,9 +70,7 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [billingRepositoryProvider.overrideWithValue(billing)],
-      child: const MaterialApp(
-        home: Scaffold(body: FullUnlockScreen()),
-      ),
+      child: const MaterialApp(home: Scaffold(body: FullUnlockScreen())),
     ),
   );
   await tester.pumpAndSettle();
