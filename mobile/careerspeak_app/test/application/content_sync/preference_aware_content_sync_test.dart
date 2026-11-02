@@ -12,47 +12,44 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/sync_orchestration_fakes.dart';
 
 void main() {
-  test(
-    'persists selected BCP-47 locale in sync run without changing root identity',
-    () async {
-      final preferencesRepository = _FakePreferencesRepository(
-        ApplicationPreferences.defaults.copyWith(
-          countryCode: 'BR',
-          uiLocale: AppUiLocale('pt-BR'),
-          translationLocale: AppTranslationLocale.brazilianPortuguese,
+  test('persists selected BCP-47 locale in sync run without changing root identity', () async {
+    final preferencesRepository = _FakePreferencesRepository(
+      ApplicationPreferences.defaults.copyWith(
+        countryCode: 'BR',
+        uiLocale: AppUiLocale('pt-BR'),
+        translationLocale: AppTranslationLocale.brazilianPortuguese,
+      ),
+    );
+    final journal = FakeJournal(Success(emptySnapshot()));
+    final gateway = FakeGateway(
+      Success(
+        RootManifestChanged(
+          manifest: manifest(109, packs: <PackRevisionRef>[pack()]),
+          etag: 'etag',
         ),
-      );
-      final journal = FakeJournal(Success(emptySnapshot()));
-      final gateway = FakeGateway(
-        Success(
-          RootManifestChanged(
-            manifest: manifest(109, packs: <PackRevisionRef>[pack()]),
-            etag: 'etag',
-          ),
-        ),
-      );
-      final coordinator = ContentSyncCoordinator(
-        journal: journal,
-        manifestGateway: gateway,
-        planner: const ContentSyncPlanner(),
-        executor: FakeExecutor(),
-      );
-      final sync = PreferenceAwareContentSync(
-        preferencesRepository: preferencesRepository,
-        coordinator: coordinator,
-      );
+      ),
+    );
+    final coordinator = ContentSyncCoordinator(
+      journal: journal,
+      manifestGateway: gateway,
+      planner: const ContentSyncPlanner(),
+      executor: FakeExecutor(),
+    );
+    final sync = PreferenceAwareContentSync(
+      preferencesRepository: preferencesRepository,
+      coordinator: coordinator,
+    );
 
-      final result = await sync.synchronize(
-        runId: 'run-locale',
-        trigger: SyncTrigger.manual,
-      );
+    final result = await sync.synchronize(
+      runId: 'run-locale',
+      trigger: SyncTrigger.manual,
+    );
 
-      expect(result, isA<Success<ContentSyncOutcome>>());
-      expect(journal.translationLocales, <String>['pt-BR']);
-      expect(gateway.calls, 1);
-      expect(gateway.etags.single, isNull);
-    },
-  );
+    expect(result, isA<Success<ContentSyncOutcome>>());
+    expect(journal.translationLocales, <String>['pt-BR']);
+    expect(gateway.calls, 1);
+    expect(gateway.etags.single, isNull);
+  });
 
   test('onboarding state defers localized remote sync', () async {
     final preferencesRepository = _FakePreferencesRepository(

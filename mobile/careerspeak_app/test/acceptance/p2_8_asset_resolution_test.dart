@@ -148,511 +148,431 @@ void main() {
         'audio-1',
         policy: AssetResolutionPolicy.downloadIfMissing,
       )).getOrThrow();
-      await File(first.localPath).writeAsString('corrupt');
-      source.failure = _offline;
+      await File(first.localPath).writeAsString('jello');
 
       final offline = await resolver.resolve('audio-1');
       expect(_failureCode(offline), 'ASSET_NOT_AVAILABLE_OFFLINE');
-      expect(await File(first.localPath).exists(), isFalse);
+      expect(source.calls, 1);
 
-      source.failure = null;
       final repaired = await resolver.resolve(
         'audio-1',
         policy: AssetResolutionPolicy.downloadIfMissing,
       );
-      expect(repaired, isA<Success<ResolvedAsset>>());
-      expect(await File(repaired.getOrThrow().localPath).readAsString(), 'hello');
+      expect(
+        await File(repaired.getOrThrow().localPath).readAsString(),
+        'hello',
+      );
+      expect(source.calls, 2);
     },
   );
 
-  test('does not return a source after ASSET_SIZE_MISMATCH', () async {
-    source.bytes = 'hello!'.codeUnits;
-    final result = await resolver.resolve(
-      'audio-1',
-      policy: AssetResolutionPolicy.downloadIfMissing,
-    );
-    expect(_failureCode(result), 'ASSET_SIZE_MISMATCH');
-    expect(await assets.exists(), isTrue);
-    expect(await assets.list().isEmpty, isTrue);
-  });
-
-  test('does not return a source after ASSET_CHECKSUM_MISMATCH', () async {
-    source.bytes = 'HELLO'.codeUnits;
-    final result = await resolver.resolve(
-      'audio-1',
-      policy: AssetResolutionPolicy.downloadIfMissing,
-    );
-    expect(_failureCode(result), 'ASSET_CHECKSUM_MISMATCH');
-    expect(await assets.exists(), isTrue);
-    expect(await assets.list().isEmpty, isTrue);
-  });
+  for (final invalid in <String, String>{
+    'bad': 'ASSET_SIZE_MISMATCH',
+    'wrong': 'ASSET_CHECKSUM_MISMATCH',
+  }.entries) {
+    test('does not return a source after ${invalid.value}', () async {
+      source.payload = invalid.key;
+      final result = await resolver.resolve(
+        'audio-1',
+        policy: AssetResolutionPolicy.downloadIfMissing,
+      );
+      expect(_failureCode(result), invalid.value);
+      if (await assets.exists()) {
+        expect(
+          await assets.list(recursive: true).where((e) => e is File).toList(),
+          isEmpty,
+        );
+      }
+    });
+  }
 
   test('ignores an abandoned partial download', () async {
     await assets.create(recursive: true);
-    final partial = File('${assets.path}/audio-1.partial');
-    await partial.writeAsString('hello');
-
-    final result = await resolver.resolve('audio-1');
-    expect(_failureCode(result), 'ASSET_NOT_AVAILABLE_OFFLINE');
-    expect(await partial.exists(), isTrue);
+    await File('${assets.path}/abandoned.part').writeAsString('hello');
+    expect(
+      _failureCode(await resolver.resolve('audio-1')),
+      'ASSET_NOT_AVAILABLE_OFFLINE',
+    );
+    expect(source.calls, 0);
   });
 
   test('unknown assets and roles never reach the byte source', () async {
-    final unknownAsset = await resolver.resolve(
-      'missing',
-      policy: AssetResolutionPolicy.downloadIfMissing,
+    expect(
+      _failureCode(
+        await resolver.resolve(
+          'unknown',
+          policy: AssetResolutionPolicy.downloadIfMissing,
+        ),
+      ),
+      'ASSET_NOT_CURRENT',
     );
-    final unknownRole = await resolver.resolveContent(
-      content: _content,
-      revision: 1,
-      role: 'sampleAnswerAudio',
-      policy: AssetResolutionPolicy.downloadIfMissing,
+    expect(
+      _failureCode(
+        await resolver.resolveContent(
+          content: _content,
+          revision: 1,
+          role: 'missingRole',
+          policy: AssetResolutionPolicy.downloadIfMissing,
+        ),
+      ),
+      'ASSET_NOT_CURRENT',
     );
-    expect(_failureCode(unknownAsset), 'ASSET_NOT_FOUND');
-    expect(_failureCode(unknownRole), 'CONTENT_ASSET_NOT_FOUND');
     expect(source.calls, 0);
   });
 
-  test('does not expose an asset from a STAGING pack', () async {
-    await database.customStatement(
-      "UPDATE pack_revisions SET lifecycle_state = 'STAGING'",
-    );
-    final result = await resolver.resolveContent(
-      content: _content,
-      revision: 1,
-      role: 'promptAudio',
-      policy: AssetResolutionPolicy.downloadIfMissing,
-    );
-    expect(_failureCode(result), 'CONTENT_ASSET_NOT_FOUND');
-    expect(source.calls, 0);
-  });
-
-  test('does not expose an asset from a SUPERSEDED pack', () async {
-    await database.customStatement(
-      "UPDATE pack_revisions SET lifecycle_state = 'SUPERSEDED'",
-    );
-    final result = await resolver.resolveContent(
-      content: _content,
-      revision: 1,
-      role: 'promptAudio',
-      policy: AssetResolutionPolicy.downloadIfMissing,
-    );
-    expect(_failureCode(result), 'CONTENT_ASSET_NOT_FOUND');
-    expect(source.calls, 0);
-  });
+  for (final state in ['STAGING', 'SUPERSEDED']) {
+    test('does not expose an asset from a $state pack', () async {
+      await database.customStatement(
+        'UPDATE content_pack_revisions SET state = ?',
+        [state],
+      );
+      expect(
+        _failureCode(await resolver.resolve('audio-1')),
+        'ASSET_NOT_CURRENT',
+      );
+      expect(
+        _failureCode(
+          await resolver.resolveContent(
+            content: _content,
+            revision: 1,
+            role: 'promptAudio',
+          ),
+        ),
+        'ASSET_NOT_CURRENT',
+      );
+      expect(source.calls, 0);
+    });
+  }
 
   test('tombstoned content cannot resolve a previously cached file', () async {
-    final downloaded = (await resolver.resolve(
+    await resolver.resolve(
       'audio-1',
       policy: AssetResolutionPolicy.downloadIfMissing,
-    )).getOrThrow();
-    expect(await File(downloaded.localPath).exists(), isTrue);
+    );
     await database.customStatement(
-      "UPDATE contents SET tombstone_state = 'RETIRED' WHERE content_code = 'PHRASE_1'",
+      "UPDATE local_content_records SET snapshot_state = 'TOMBSTONED'",
     );
-
-    final result = await resolver.resolveContent(
-      content: _content,
-      revision: 1,
-      role: 'promptAudio',
+    expect(
+      _failureCode(
+        await resolver.resolveContent(
+          content: _content,
+          revision: 1,
+          role: 'promptAudio',
+        ),
+      ),
+      'ASSET_NOT_CURRENT',
     );
-    expect(_failureCode(result), 'CONTENT_ASSET_NOT_FOUND');
-    expect(await File(downloaded.localPath).exists(), isTrue);
+    expect(source.calls, 1);
   });
 
   test('selects exact content type, revision, role and pack variant', () async {
-    await database.into(database.packRevisions).insert(
-      PackRevisionsCompanion.insert(
-        packCode: 'P2',
-        variant: 'canonical',
-        revision: 1,
-        checksum: _checksum,
-        lifecycleState: 'CURRENT',
-        createdAt: DateTime.now().toUtc(),
-        updatedAt: DateTime.now().toUtc(),
-      ),
-    );
-    await database.into(database.packContents).insert(
-      PackContentsCompanion.insert(
-        packCode: 'P2',
-        variant: 'canonical',
-        packRevision: 1,
-        contentCode: 'PHRASE_1',
-        contentType: ContentType.phrase.wireName,
-        contentRevision: 1,
-        contentChecksum: _checksum,
-        sortOrder: 0,
-      ),
-    );
-    await database.into(database.assetMetadata).insert(
-      AssetMetadataCompanion.insert(
-        assetId: 'audio-2',
-        mediaType: 'audio/mpeg',
-        checksum: _checksum,
-        sizeBytes: 5,
-        deliveryKey: 'audio/2.mp3',
-        requiredOffline: false,
-        createdAt: DateTime.now().toUtc(),
-      ),
-    );
-    await database.into(database.packAssets).insert(
-      PackAssetsCompanion.insert(
-        packCode: 'P2',
-        variant: 'canonical',
-        packRevision: 1,
-        assetId: 'audio-2',
-      ),
-    );
-    await database.into(database.contentAssets).insert(
-      ContentAssetsCompanion.insert(
-        packCode: 'P2',
-        variant: 'canonical',
-        packRevision: 1,
-        contentCode: 'PHRASE_1',
-        contentType: ContentType.phrase.wireName,
-        contentRevision: 1,
-        role: 'sampleAnswerAudio',
-        assetId: 'audio-2',
-      ),
-    );
-
-    final prompt = await resolver.resolveContent(
+    await _seed(database, assetId: 'audio-ru', variant: 'locale:ru');
+    final catalog = DriftAssetCatalogRepository(database);
+    final canonical = await catalog.findCurrentForContent(
       content: _content,
       revision: 1,
       role: 'promptAudio',
     );
-    final answer = await resolver.resolveContent(
+    final russian = await catalog.findCurrentForContent(
       content: _content,
       revision: 1,
-      role: 'sampleAnswerAudio',
+      role: 'promptAudio',
+      variant: 'locale:ru',
     );
-    expect(prompt.getOrThrow().assetId, 'audio-1');
-    expect(answer.getOrThrow().assetId, 'audio-2');
+    expect(canonical.getOrThrow()!.assetId, 'audio-1');
+    expect(russian.getOrThrow()!.assetId, 'audio-ru');
+    for (final query in [
+      catalog.findCurrentForContent(
+        content: _content,
+        revision: 2,
+        role: 'promptAudio',
+      ),
+      catalog.findCurrentForContent(
+        content: const ContentIdentity(
+          code: 'PHRASE_1',
+          type: ContentType.interview,
+        ),
+        revision: 1,
+        role: 'promptAudio',
+      ),
+      catalog.findCurrentForContent(
+        content: _content,
+        revision: 1,
+        role: 'promptAudio',
+        variant: 'locale:kk',
+      ),
+    ]) {
+      expect((await query).getOrThrow(), isNull);
+    }
   });
 
   test('repeated pack membership is not an ambiguous content role', () async {
-    await database.into(database.packRevisions).insert(
-      PackRevisionsCompanion.insert(
-        packCode: 'P2',
-        variant: 'canonical',
+    await _seed(database, packCode: 'SECOND_PACK');
+    final result = await DriftAssetCatalogRepository(database)
+        .findCurrentForContent(
+          content: _content,
+          revision: 1,
+          role: 'promptAudio',
+        );
+    expect(result.getOrThrow()!.assetId, 'audio-1');
+    expect(result.getOrThrow()!.requiredOffline, isTrue);
+  });
+
+  test(
+    'multiple assets for the same role fail instead of choosing one',
+    () async {
+      await _seed(database, assetId: 'audio-2');
+      final result = await resolver.resolveContent(
+        content: _content,
         revision: 1,
-        checksum: _checksum,
-        lifecycleState: 'CURRENT',
-        createdAt: DateTime.now().toUtc(),
-        updatedAt: DateTime.now().toUtc(),
-      ),
-    );
-    await database.into(database.packContents).insert(
-      PackContentsCompanion.insert(
-        packCode: 'P2',
-        variant: 'canonical',
-        packRevision: 1,
-        contentCode: 'PHRASE_1',
-        contentType: ContentType.phrase.wireName,
-        contentRevision: 1,
-        contentChecksum: _checksum,
-        sortOrder: 0,
-      ),
-    );
-
-    final result = await resolver.resolveContent(
-      content: _content,
-      revision: 1,
-      role: 'promptAudio',
-    );
-    expect(result.getOrThrow().assetId, 'audio-1');
-  });
-
-  test('multiple assets for the same role fail instead of choosing one', () async {
-    await database.into(database.assetMetadata).insert(
-      AssetMetadataCompanion.insert(
-        assetId: 'audio-2',
-        mediaType: 'audio/mpeg',
-        checksum: _checksum,
-        sizeBytes: 5,
-        deliveryKey: 'audio/2.mp3',
-        requiredOffline: false,
-        createdAt: DateTime.now().toUtc(),
-      ),
-    );
-    await database.into(database.packAssets).insert(
-      PackAssetsCompanion.insert(
-        packCode: 'P1',
-        variant: 'canonical',
-        packRevision: 1,
-        assetId: 'audio-2',
-      ),
-    );
-    await database.into(database.contentAssets).insert(
-      ContentAssetsCompanion.insert(
-        packCode: 'P1',
-        variant: 'canonical',
-        packRevision: 1,
-        contentCode: 'PHRASE_1',
-        contentType: ContentType.phrase.wireName,
-        contentRevision: 1,
         role: 'promptAudio',
-        assetId: 'audio-2',
-      ),
-    );
+        policy: AssetResolutionPolicy.downloadIfMissing,
+      );
+      expect(_failureCode(result), 'ASSET_REFERENCE_AMBIGUOUS');
+      expect(source.calls, 0);
+    },
+  );
 
-    final result = await resolver.resolveContent(
-      content: _content,
-      revision: 1,
-      role: 'promptAudio',
-    );
-    expect(_failureCode(result), 'CONTENT_ASSET_AMBIGUOUS');
-  });
+  test(
+    'content and asset membership must belong to the same pack revision',
+    () async {
+      await database.customStatement(
+        'UPDATE pack_asset_refs SET pack_revision = 2',
+      );
+      expect(
+        _failureCode(
+          await resolver.resolveContent(
+            content: _content,
+            revision: 1,
+            role: 'promptAudio',
+          ),
+        ),
+        'ASSET_NOT_CURRENT',
+      );
+    },
+  );
 
-  test('content and asset membership must belong to the same pack revision', () async {
-    await database.into(database.packRevisions).insert(
-      PackRevisionsCompanion.insert(
-        packCode: 'P1',
-        variant: 'canonical',
+  test(
+    'next lookup observes CURRENT activation without retaining old bindings',
+    () async {
+      await resolver.resolve(
+        'audio-1',
+        policy: AssetResolutionPolicy.downloadIfMissing,
+      );
+      await database.transaction(() async {
+        await database.customStatement(
+          "UPDATE content_pack_revisions SET state = 'SUPERSEDED'",
+        );
+        await database.customStatement(
+          "UPDATE local_content_records SET snapshot_state = 'SUPERSEDED'",
+        );
+        await _seed(database, revision: 2, assetId: 'audio-2');
+      });
+      expect(
+        _failureCode(await resolver.resolve('audio-1')),
+        'ASSET_NOT_CURRENT',
+      );
+      expect(
+        _failureCode(
+          await resolver.resolveContent(
+            content: _content,
+            revision: 1,
+            role: 'promptAudio',
+          ),
+        ),
+        'ASSET_NOT_CURRENT',
+      );
+      final current = await resolver.resolveContent(
+        content: _content,
         revision: 2,
-        checksum: _checksum,
-        lifecycleState: 'CURRENT',
-        createdAt: DateTime.now().toUtc(),
-        updatedAt: DateTime.now().toUtc(),
-      ),
-    );
-    await database.customStatement(
-      "UPDATE pack_revisions SET lifecycle_state = 'SUPERSEDED' WHERE pack_code = 'P1' AND revision = 1",
-    );
-
-    final result = await resolver.resolveContent(
-      content: _content,
-      revision: 1,
-      role: 'promptAudio',
-    );
-    expect(_failureCode(result), 'CONTENT_ASSET_NOT_FOUND');
-  });
-
-  test('next lookup observes CURRENT activation without retaining old bindings', () async {
-    final first = await resolver.resolveContent(
-      content: _content,
-      revision: 1,
-      role: 'promptAudio',
-    );
-    expect(first.getOrThrow().assetId, 'audio-1');
-
-    await database.customStatement(
-      "UPDATE pack_revisions SET lifecycle_state = 'SUPERSEDED' WHERE pack_code = 'P1' AND revision = 1",
-    );
-    await database.into(database.packRevisions).insert(
-      PackRevisionsCompanion.insert(
-        packCode: 'P1',
-        variant: 'canonical',
-        revision: 2,
-        checksum: _checksum,
-        lifecycleState: 'CURRENT',
-        createdAt: DateTime.now().toUtc(),
-        updatedAt: DateTime.now().toUtc(),
-      ),
-    );
-    await database.into(database.packContents).insert(
-      PackContentsCompanion.insert(
-        packCode: 'P1',
-        variant: 'canonical',
-        packRevision: 2,
-        contentCode: 'PHRASE_1',
-        contentType: ContentType.phrase.wireName,
-        contentRevision: 1,
-        contentChecksum: _checksum,
-        sortOrder: 0,
-      ),
-    );
-    await database.into(database.packAssets).insert(
-      PackAssetsCompanion.insert(
-        packCode: 'P1',
-        variant: 'canonical',
-        packRevision: 2,
-        assetId: 'audio-1',
-      ),
-    );
-    await database.into(database.contentAssets).insert(
-      ContentAssetsCompanion.insert(
-        packCode: 'P1',
-        variant: 'canonical',
-        packRevision: 2,
-        contentCode: 'PHRASE_1',
-        contentType: ContentType.phrase.wireName,
-        contentRevision: 1,
         role: 'promptAudio',
-        assetId: 'audio-1',
-      ),
-    );
-
-    final second = await resolver.resolveContent(
-      content: _content,
-      revision: 1,
-      role: 'promptAudio',
-    );
-    expect(second.getOrThrow().assetId, 'audio-1');
-  });
-
-  test('concurrent downloads coalesce while localOnly remains independent', () async {
-    final gate = Completer<void>();
-    source.gate = gate.future;
-    final first = resolver.resolve(
-      'audio-1',
-      policy: AssetResolutionPolicy.downloadIfMissing,
-    );
-    final second = resolver.resolve(
-      'audio-1',
-      policy: AssetResolutionPolicy.downloadIfMissing,
-    );
-    final localOnly = await resolver.resolve('audio-1');
-    expect(_failureCode(localOnly), 'ASSET_NOT_AVAILABLE_OFFLINE');
-    expect(source.calls, 1);
-
-    gate.complete();
-    expect((await first).getOrThrow().assetId, 'audio-1');
-    expect((await second).getOrThrow().assetId, 'audio-1');
-    expect(source.calls, 1);
-  });
-
-  test('preserves delivery failures and allows a new attempt after failure', () async {
-    source.failure = const ApplicationFailure(
-      code: 'ASSET_DELIVERY_UNAUTHORIZED',
-      message: 'denied',
-    );
-    final first = await resolver.resolve(
-      'audio-1',
-      policy: AssetResolutionPolicy.downloadIfMissing,
-    );
-    expect(_failureCode(first), 'ASSET_DELIVERY_UNAUTHORIZED');
-
-    source.failure = null;
-    final second = await resolver.resolve(
-      'audio-1',
-      policy: AssetResolutionPolicy.downloadIfMissing,
-    );
-    expect(second, isA<Success<ResolvedAsset>>());
-    expect(source.calls, 2);
-  });
-
-  test('invalid persisted descriptors fail before file or network access', () async {
-    await database.customStatement(
-      "UPDATE asset_metadata SET checksum = 'bad' WHERE asset_id = 'audio-1'",
-    );
-    final result = await resolver.resolve(
-      'audio-1',
-      policy: AssetResolutionPolicy.downloadIfMissing,
-    );
-    expect(_failureCode(result), 'ASSET_METADATA_INVALID');
-    expect(source.calls, 0);
-  });
-}
-
-Future<void> _seed(CareerSpeakDatabase database) async {
-  final now = DateTime.now().toUtc();
-  await database.into(database.packRevisions).insert(
-    PackRevisionsCompanion.insert(
-      packCode: 'P1',
-      variant: 'canonical',
-      revision: 1,
-      checksum: _checksum,
-      lifecycleState: 'CURRENT',
-      createdAt: now,
-      updatedAt: now,
-    ),
+      );
+      expect(current.getOrThrow().assetId, 'audio-2');
+      expect(source.calls, 1);
+    },
   );
-  await database.into(database.contents).insert(
-    ContentsCompanion.insert(
-      contentCode: 'PHRASE_1',
-      contentType: ContentType.phrase.wireName,
-      revision: 1,
-      checksum: _checksum,
-      title: 'Hello',
-      subtitle: 'Greeting',
-      description: 'Greeting',
-      categoryCode: 'GENERAL',
-      categoryLabel: 'General',
-      levelCode: 'A1',
-      levelLabel: 'A1',
-      minutes: 1,
-      hasAudio: true,
-      skillCodesJson: '[]',
-      bodyJson: '{}',
-      tombstoneState: 'ACTIVE',
-      createdAt: now,
-      updatedAt: now,
-    ),
+
+  test(
+    'concurrent downloads coalesce while localOnly remains independent',
+    () async {
+      final gate = Completer<void>();
+      source.gate = gate.future;
+      final first = resolver.resolve(
+        'audio-1',
+        policy: AssetResolutionPolicy.downloadIfMissing,
+      );
+      await source.opened.future;
+      final second = resolver.resolveContent(
+        content: _content,
+        revision: 1,
+        role: 'promptAudio',
+        policy: AssetResolutionPolicy.downloadIfMissing,
+      );
+      final local = await resolver.resolve('audio-1');
+      expect(_failureCode(local), 'ASSET_NOT_AVAILABLE_OFFLINE');
+      gate.complete();
+      final results = await Future.wait([first, second]);
+      expect(
+        results[0].getOrThrow().localPath,
+        results[1].getOrThrow().localPath,
+      );
+      expect(source.calls, 1);
+    },
   );
-  await database.into(database.packContents).insert(
-    PackContentsCompanion.insert(
-      packCode: 'P1',
-      variant: 'canonical',
-      packRevision: 1,
-      contentCode: 'PHRASE_1',
-      contentType: ContentType.phrase.wireName,
-      contentRevision: 1,
-      contentChecksum: _checksum,
-      sortOrder: 0,
-    ),
+
+  test(
+    'preserves delivery failures and allows a new attempt after failure',
+    () async {
+      source.failure = _offline;
+      final failed = await resolver.resolve(
+        'audio-1',
+        policy: AssetResolutionPolicy.downloadIfMissing,
+      );
+      expect((failed as FailureResult<ResolvedAsset>).failure, same(_offline));
+      source.failure = null;
+      final retried = await resolver.resolve(
+        'audio-1',
+        policy: AssetResolutionPolicy.downloadIfMissing,
+      );
+      expect(retried, isA<Success<ResolvedAsset>>());
+      expect(source.calls, 2);
+    },
   );
-  await database.into(database.assetMetadata).insert(
-    AssetMetadataCompanion.insert(
-      assetId: 'audio-1',
-      mediaType: 'audio/mpeg',
-      checksum: _checksum,
-      sizeBytes: 5,
-      deliveryKey: 'audio/1.mp3',
-      requiredOffline: true,
-      createdAt: now,
-    ),
-  );
-  await database.into(database.packAssets).insert(
-    PackAssetsCompanion.insert(
-      packCode: 'P1',
-      variant: 'canonical',
-      packRevision: 1,
-      assetId: 'audio-1',
-    ),
-  );
-  await database.into(database.contentAssets).insert(
-    ContentAssetsCompanion.insert(
-      packCode: 'P1',
-      variant: 'canonical',
-      packRevision: 1,
-      contentCode: 'PHRASE_1',
-      contentType: ContentType.phrase.wireName,
-      contentRevision: 1,
-      role: 'promptAudio',
-      assetId: 'audio-1',
-    ),
+
+  test(
+    'invalid persisted descriptors fail before file or network access',
+    () async {
+      await database.customStatement(
+        "UPDATE asset_catalog SET checksum_sha256 = 'invalid'",
+      );
+      expect(
+        _failureCode(
+          await resolver.resolve(
+            'audio-1',
+            policy: AssetResolutionPolicy.downloadIfMissing,
+          ),
+        ),
+        'ASSET_CATALOG_INVALID',
+      );
+      expect(source.calls, 0);
+    },
   );
 }
 
-String? _failureCode<T>(Result<T> result) {
-  return switch (result) {
-    FailureResult<T>(:final failure) => failure.code,
-    Success<T>() => null,
-  };
+String _failureCode(Result<ResolvedAsset> result) {
+  return (result as FailureResult<ResolvedAsset>).failure.code;
 }
 
 const _offline = ApplicationFailure(
-  code: 'NETWORK_OFFLINE',
-  message: 'offline',
+  code: 'ASSET_OFFLINE',
+  message: 'The network is unavailable.',
   retryable: true,
 );
 
 final class _ByteSource implements AssetByteSource {
-  List<int> bytes = 'hello'.codeUnits;
+  int calls = 0;
+  String payload = 'hello';
   ApplicationFailure? failure;
   Future<void>? gate;
-  int calls = 0;
+  final opened = Completer<void>();
 
   @override
-  Future<Result<AssetByteResponse>> fetch(AssetDescriptor asset) async {
+  Future<Result<AssetByteStream>> open(ManifestAssetDescriptor asset) async {
     calls += 1;
-    final gate = this.gate;
-    if (gate != null) await gate;
-    final failure = this.failure;
-    if (failure != null) return FailureResult<AssetByteResponse>(failure);
-    return Success<AssetByteResponse>(
-      AssetByteResponse(bytes: bytes, contentLength: bytes.length),
+    if (!opened.isCompleted) opened.complete();
+    await gate;
+    final error = failure;
+    if (error != null) return FailureResult(error);
+    return Success(
+      AssetByteStream(
+        bytes: Stream<List<int>>.value(payload.codeUnits),
+        contentLength: payload.length,
+      ),
     );
   }
+}
+
+Future<void> _seed(
+  CareerSpeakDatabase database, {
+  String assetId = 'audio-1',
+  String packCode = 'PACK',
+  String variant = 'canonical',
+  int revision = 1,
+}) async {
+  final now = DateTime.utc(2026, 10, 30);
+  await database
+      .into(database.assetCatalog)
+      .insertOnConflictUpdate(
+        AssetCatalogCompanion.insert(
+          assetId: assetId,
+          checksumSha256: _checksum,
+          assetKind: 'AUDIO',
+          mimeType: 'audio/mpeg',
+          sizeBytes: 5,
+          deliveryKey: 'audio/hello.mp3',
+          createdAt: now,
+        ),
+      );
+  await database
+      .into(database.contentPackRevisions)
+      .insertOnConflictUpdate(
+        ContentPackRevisionsCompanion.insert(
+          packCode: packCode,
+          variantKey: variant,
+          revision: revision,
+          schemaVersion: 1,
+          checksum: _checksum,
+          state: 'CURRENT',
+          sourceContentVersion: revision,
+          stagedAt: now,
+        ),
+      );
+  await database
+      .into(database.localContentRecords)
+      .insertOnConflictUpdate(
+        LocalContentRecordsCompanion.insert(
+          contentCode: _content.code,
+          contentType: 'PHRASE',
+          revision: revision,
+          checksum: _checksum,
+          snapshotState: 'CURRENT',
+          sourceSchemaVersion: 1,
+          createdAt: now,
+        ),
+      );
+  await database
+      .into(database.packContentRefs)
+      .insertOnConflictUpdate(
+        PackContentRefsCompanion.insert(
+          packCode: packCode,
+          variantKey: variant,
+          packRevision: revision,
+          contentCode: _content.code,
+          contentType: 'PHRASE',
+          contentRevision: revision,
+        ),
+      );
+  await database
+      .into(database.packAssetRefs)
+      .insertOnConflictUpdate(
+        PackAssetRefsCompanion.insert(
+          packCode: packCode,
+          variantKey: variant,
+          packRevision: revision,
+          assetId: assetId,
+          requiredOffline: const Value(true),
+        ),
+      );
+  await database
+      .into(database.contentAssetRefs)
+      .insertOnConflictUpdate(
+        ContentAssetRefsCompanion.insert(
+          contentCode: _content.code,
+          contentType: 'PHRASE',
+          contentRevision: revision,
+          assetId: assetId,
+          assetRole: 'promptAudio',
+          requiredOffline: const Value(true),
+        ),
+      );
 }

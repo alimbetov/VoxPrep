@@ -26,8 +26,7 @@ const goldenTopic = ContentItem(
   type: ContentType.topic,
   title: 'Java Concurrency and Thread Safety',
   subtitle: 'Explain synchronization clearly during a backend interview',
-  description:
-      'Review race conditions, synchronization, visibility and practical trade-offs with concise professional English.',
+  description: 'Review race conditions, synchronization, visibility and practical trade-offs with concise professional English.',
   category: 'JAVA',
   level: 'B2',
   minutes: 8,
@@ -41,8 +40,7 @@ const goldenInterview = ContentItem(
   title: 'HashMap vs ConcurrentHashMap',
   subtitle:
       'Interview question with independent question and sample-answer audio',
-  description:
-      'Practice answering a realistic Java interview question, then compare your response with a concise sample answer.',
+  description: 'Practice answering a realistic Java interview question, then compare your response with a concise sample answer.',
   category: 'JAVA',
   level: 'B2',
   minutes: 5,
@@ -58,8 +56,7 @@ const goldenPracticeTest = PracticeTest(
   questions: [
     PracticeQuestion(
       code: 'Q1',
-      prompt:
-          'Which statement best explains why ConcurrentHashMap is preferred over HashMap for shared mutable state?',
+      prompt: 'Which statement best explains why ConcurrentHashMap is preferred over HashMap for shared mutable state?',
       options: [
         'It provides concurrency-oriented thread-safety semantics without requiring callers to synchronize every access.',
         'It stores every entry in a separate operating-system process.',
@@ -68,8 +65,7 @@ const goldenPracticeTest = PracticeTest(
       ],
       correctIndex: 0,
       skill: 'Java concurrency',
-      explanation:
-          'ConcurrentHashMap is designed for concurrent access and avoids the unsafe shared-state behavior of a plain HashMap.',
+      explanation: 'ConcurrentHashMap is designed for concurrent access and avoids the unsafe shared-state behavior of a plain HashMap.',
     ),
   ],
 );
@@ -98,8 +94,7 @@ CurrentUniversalCatalogueSnapshot goldenCatalogueSnapshot() {
           code: 'JAVA_INTERVIEW',
           sectionCode: 'ENGINEERING',
           title: 'Java Interview',
-          description:
-              'Backend interview preparation with questions, explanations, audio and practice.',
+          description: 'Backend interview preparation with questions, explanations, audio and practice.',
           iconAssetId: 'asset-java',
           sortOrder: 10,
           active: true,
@@ -108,8 +103,7 @@ CurrentUniversalCatalogueSnapshot goldenCatalogueSnapshot() {
           code: 'DEVOPS_INTERVIEW',
           sectionCode: 'ENGINEERING',
           title: 'DevOps Interview',
-          description:
-              'Infrastructure, delivery, containers and Kubernetes interview preparation.',
+          description: 'Infrastructure, delivery, containers and Kubernetes interview preparation.',
           iconAssetId: 'asset-devops',
           sortOrder: 20,
           active: true,
@@ -118,8 +112,7 @@ CurrentUniversalCatalogueSnapshot goldenCatalogueSnapshot() {
           code: 'MEDICAL_ENGLISH',
           sectionCode: 'ENGINEERING',
           title: 'Medical English',
-          description:
-              'Professional communication vocabulary and scenario-based English practice.',
+          description: 'Professional communication vocabulary and scenario-based English practice.',
           iconAssetId: 'asset-medical',
           sortOrder: 30,
           active: true,

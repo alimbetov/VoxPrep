@@ -63,9 +63,8 @@ void main() {
         );
 
     final repository = DriftAssetCatalogRepository(database);
-    final before = (await repository.findCurrentById(
-      'audio.future.1',
-    )).getOrThrow();
+    final before = (await repository.findCurrentById('audio.future.1'))
+        .getOrThrow();
     expect(before, isNull);
 
     await (database.update(
@@ -78,9 +77,8 @@ void main() {
       ),
     );
 
-    final asset = (await repository.findCurrentById(
-      'audio.future.1',
-    )).getOrThrow();
+    final asset = (await repository.findCurrentById('audio.future.1'))
+        .getOrThrow();
     expect(asset, isNotNull);
     expect(asset!.assetId, 'audio.future.1');
     expect(asset.requiredOffline, isTrue);

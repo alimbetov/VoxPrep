@@ -204,9 +204,8 @@ void main() {
       ) VALUES (1, 'TEST_A', 5, 0, '{"bad":-1}', 1, 1)
       ''');
 
-    final result = await DriftPracticeTestAttemptRepository(
-      database,
-    ).getActiveAttempt();
+    final result = await DriftPracticeTestAttemptRepository(database)
+        .getActiveAttempt();
 
     expect(result, isA<FailureResult<PracticeTestAttempt?>>());
     expect(

@@ -30,8 +30,10 @@ final reviewDueTimerFactoryProvider = Provider<ReviewDueTimerFactory>((ref) {
   return (delay, callback) => Timer(delay, callback);
 });
 
-typedef ReviewDueTimerFactory =
-    Timer Function(Duration delay, void Function() callback);
+typedef ReviewDueTimerFactory = Timer Function(
+  Duration delay,
+  void Function() callback,
+);
 
 final dueReviewIdentitiesProvider = Provider<AsyncValue<Set<ContentIdentity>>>((
   ref,

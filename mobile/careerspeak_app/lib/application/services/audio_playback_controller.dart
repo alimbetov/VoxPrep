@@ -8,11 +8,10 @@ import '../ports/learner_state_repository.dart';
 import '../result/result.dart';
 import 'asset_resolver.dart';
 
-typedef ResolveAudioAsset =
-    Future<Result<ResolvedAsset>> Function(
-      ContentIdentity content,
-      int revision,
-    );
+typedef ResolveAudioAsset = Future<Result<ResolvedAsset>> Function(
+  ContentIdentity content,
+  int revision,
+);
 
 enum AudioPlaybackPhase {
   idle,

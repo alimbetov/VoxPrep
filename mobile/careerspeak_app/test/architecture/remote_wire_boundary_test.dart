@@ -26,8 +26,7 @@ void main() {
     expect(
       violations,
       isEmpty,
-      reason:
-          'Remote DTOs, decoders and HTTP adapters must remain outside domain, application and feature presentation.',
+      reason: 'Remote DTOs, decoders and HTTP adapters must remain outside domain, application and feature presentation.',
     );
   });
 }

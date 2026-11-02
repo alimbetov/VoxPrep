@@ -158,9 +158,8 @@ final class _ReactiveLearnerStateRepository implements LearnerStateRepository {
   }) async {
     completedWrites++;
     lastCompletedRevision = lastRevisionSeen;
-    _markers[identity] = _state(
-      identity,
-    ).copyWith(completed: completed, lastRevisionSeen: lastRevisionSeen);
+    _markers[identity] = _state(identity)
+        .copyWith(completed: completed, lastRevisionSeen: lastRevisionSeen);
     _emit();
     return const Success<void>(null);
   }
@@ -171,9 +170,8 @@ final class _ReactiveLearnerStateRepository implements LearnerStateRepository {
     required bool listened,
     int? lastRevisionSeen,
   }) async {
-    _markers[identity] = _state(
-      identity,
-    ).copyWith(listened: listened, lastRevisionSeen: lastRevisionSeen);
+    _markers[identity] = _state(identity)
+        .copyWith(listened: listened, lastRevisionSeen: lastRevisionSeen);
     _emit();
     return const Success<void>(null);
   }

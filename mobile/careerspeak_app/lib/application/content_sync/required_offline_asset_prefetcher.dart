@@ -38,8 +38,7 @@ final class RequiredOfflineAssetPrefetcher {
         return FailureResult<void>(
           ApplicationFailure(
             code: 'REQUIRED_OFFLINE_PACK_MISMATCH',
-            message:
-                'Required-offline prefetch received a pack outside the exact publication target.',
+            message: 'Required-offline prefetch received a pack outside the exact publication target.',
             details: <String, Object?>{
               'packCode': target.identity.code,
               'variant': target.identity.variant,
@@ -59,8 +58,7 @@ final class RequiredOfflineAssetPrefetcher {
           return FailureResult<void>(
             ApplicationFailure(
               code: 'REQUIRED_OFFLINE_ASSET_UNAVAILABLE',
-              message:
-                  'A publication-required offline asset could not be verified locally.',
+              message: 'A publication-required offline asset could not be verified locally.',
               retryable: failure.retryable,
               traceId: failure.traceId,
               details: <String, Object?>{

@@ -23,176 +23,169 @@ const _catalogue109 =
     'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
 
 void main() {
-  test(
-    'C4.8 committed CURRENT survives real database reopen while staged next snapshot stays hidden',
-    () async {
-      final directory = await Directory.systemTemp.createTemp('c4_restart_');
-      final file = File('${directory.path}/careerspeak.sqlite');
-      final now = DateTime.utc(2026, 10, 31, 17);
+  test('C4.8 committed CURRENT survives real database reopen while staged next snapshot stays hidden', () async {
+    final directory = await Directory.systemTemp.createTemp('c4_restart_');
+    final file = File('${directory.path}/careerspeak.sqlite');
+    final now = DateTime.utc(2026, 10, 31, 17);
 
-      CareerSpeakDatabase? database;
-      try {
-        database = CareerSpeakDatabase(NativeDatabase(file));
-        await PublicationSnapshotStorage(database).ensureReady();
+    CareerSpeakDatabase? database;
+    try {
+      database = CareerSpeakDatabase(NativeDatabase(file));
+      await PublicationSnapshotStorage(database).ensureReady();
 
-        await _seedContent(
-          database,
-          contentVersion: 108,
-          packCode: 'JAVA_CURRENT',
-          contentRevision: 1,
-          checksum: _content108,
-          title: 'Committed v108',
-          now: now,
-        );
-        await _seedContent(
-          database,
-          contentVersion: 109,
-          packCode: 'JAVA_STAGED',
-          contentRevision: 2,
-          checksum: _content109,
-          title: 'Staged v109',
-          now: now,
-        );
-        await _seedCatalogue(
-          database,
-          contentVersion: 108,
-          revision: 1,
-          checksum: _catalogue108,
-          label: 'Published catalogue v108',
-          now: now,
-        );
-        await _seedCatalogue(
-          database,
-          contentVersion: 109,
-          revision: 2,
-          checksum: _catalogue109,
-          label: 'Staged catalogue v109',
-          now: now,
-        );
+      await _seedContent(
+        database,
+        contentVersion: 108,
+        packCode: 'JAVA_CURRENT',
+        contentRevision: 1,
+        checksum: _content108,
+        title: 'Committed v108',
+        now: now,
+      );
+      await _seedContent(
+        database,
+        contentVersion: 109,
+        packCode: 'JAVA_STAGED',
+        contentRevision: 2,
+        checksum: _content109,
+        title: 'Staged v109',
+        now: now,
+      );
+      await _seedCatalogue(
+        database,
+        contentVersion: 108,
+        revision: 1,
+        checksum: _catalogue108,
+        label: 'Published catalogue v108',
+        now: now,
+      );
+      await _seedCatalogue(
+        database,
+        contentVersion: 109,
+        revision: 2,
+        checksum: _catalogue109,
+        label: 'Staged catalogue v109',
+        now: now,
+      );
 
-        await database
-            .into(database.contentManifestStates)
-            .insert(
-              ContentManifestStatesCompanion.insert(
-                id: const Value(1),
-                schemaVersion: 1,
-                currentContentVersion: 108,
-                currentManifestChecksum: _root108,
-                updatedAt: now,
-              ),
-            );
+      await database
+          .into(database.contentManifestStates)
+          .insert(
+            ContentManifestStatesCompanion.insert(
+              id: const Value(1),
+              schemaVersion: 1,
+              currentContentVersion: 108,
+              currentManifestChecksum: _root108,
+              updatedAt: now,
+            ),
+          );
 
-        final beforeRestart = DriftContentRepository(database);
-        final beforePage =
-            (await beforeRestart.watchContent(const ContentQuery()).first)
-                .getOrThrow();
-        expect(beforePage.items, hasLength(1));
-        expect(beforePage.items.single.revision, 1);
-        expect(beforePage.items.single.title, 'Committed v108');
+      final beforeRestart = DriftContentRepository(database);
+      final beforePage =
+          (await beforeRestart.watchContent(const ContentQuery()).first)
+              .getOrThrow();
+      expect(beforePage.items, hasLength(1));
+      expect(beforePage.items.single.revision, 1);
+      expect(beforePage.items.single.title, 'Committed v108');
 
-        await database.close();
-        database = null;
+      await database.close();
+      database = null;
 
-        final reopened = CareerSpeakDatabase(NativeDatabase(file));
-        database = reopened;
-        await PublicationSnapshotStorage(reopened).ensureReady();
+      final reopened = CareerSpeakDatabase(NativeDatabase(file));
+      database = reopened;
+      await PublicationSnapshotStorage(reopened).ensureReady();
 
-        final contentRepository = DriftContentRepository(reopened);
-        final reopenedPage =
-            (await contentRepository.watchContent(const ContentQuery()).first)
-                .getOrThrow();
+      final contentRepository = DriftContentRepository(reopened);
+      final reopenedPage =
+          (await contentRepository.watchContent(const ContentQuery()).first)
+              .getOrThrow();
 
-        expect(reopenedPage.items, hasLength(1));
-        expect(reopenedPage.items.single.revision, 1);
-        expect(reopenedPage.items.single.title, 'Committed v108');
-        expect(
-          reopenedPage.items.where((item) => item.revision == 2),
-          isEmpty,
-          reason:
-              'staged v109 must not become visible merely because the app restarted',
-        );
+      expect(reopenedPage.items, hasLength(1));
+      expect(reopenedPage.items.single.revision, 1);
+      expect(reopenedPage.items.single.title, 'Committed v108');
+      expect(
+        reopenedPage.items.where((item) => item.revision == 2),
+        isEmpty,
+        reason: 'staged v109 must not become visible merely because the app restarted',
+      );
 
-        final catalogueRepository = DriftCatalogueSnapshotRepository(reopened);
-        final catalogue = (await catalogueRepository.readCurrent(
-          CatalogueKind.categories,
-        )).getOrThrow();
+      final catalogueRepository = DriftCatalogueSnapshotRepository(reopened);
+      final catalogue = (await catalogueRepository.readCurrent(
+        CatalogueKind.categories,
+      )).getOrThrow();
 
-        expect(catalogue, isNotNull);
-        expect(catalogue!.ref.revision, 1);
-        expect(catalogue.ref.checksum, _catalogue108);
-        expect(
-          (catalogue.items.single as Map<String, dynamic>)['label'],
-          'Published catalogue v108',
-        );
-      } finally {
-        await database?.close();
-        if (directory.existsSync()) {
-          await directory.delete(recursive: true);
-        }
+      expect(catalogue, isNotNull);
+      expect(catalogue!.ref.revision, 1);
+      expect(catalogue.ref.checksum, _catalogue108);
+      expect(
+        (catalogue.items.single as Map<String, dynamic>)['label'],
+        'Published catalogue v108',
+      );
+    } finally {
+      await database?.close();
+      if (directory.existsSync()) {
+        await directory.delete(recursive: true);
       }
-    },
-  );
+    }
+  });
 
-  test(
-    'C4.8 offline reopen keeps last committed snapshot authoritative until an explicit CURRENT switch',
-    () async {
-      final directory = await Directory.systemTemp.createTemp('c4_offline_');
-      final file = File('${directory.path}/careerspeak.sqlite');
-      final now = DateTime.utc(2026, 10, 31, 17, 30);
+  test('C4.8 offline reopen keeps last committed snapshot authoritative until an explicit CURRENT switch', () async {
+    final directory = await Directory.systemTemp.createTemp('c4_offline_');
+    final file = File('${directory.path}/careerspeak.sqlite');
+    final now = DateTime.utc(2026, 10, 31, 17, 30);
 
-      CareerSpeakDatabase? database;
-      try {
-        database = CareerSpeakDatabase(NativeDatabase(file));
-        await _seedContent(
-          database,
-          contentVersion: 108,
-          packCode: 'JAVA_CURRENT',
-          contentRevision: 1,
-          checksum: _content108,
-          title: 'Offline committed v108',
-          now: now,
-        );
-        await _seedContent(
-          database,
-          contentVersion: 109,
-          packCode: 'JAVA_STAGED',
-          contentRevision: 2,
-          checksum: _content109,
-          title: 'Backend advanced v109',
-          now: now,
-        );
-        await database
-            .into(database.contentManifestStates)
-            .insert(
-              ContentManifestStatesCompanion.insert(
-                id: const Value(1),
-                schemaVersion: 1,
-                currentContentVersion: 108,
-                currentManifestChecksum: _root108,
-                updatedAt: now,
-              ),
-            );
+    CareerSpeakDatabase? database;
+    try {
+      database = CareerSpeakDatabase(NativeDatabase(file));
+      await _seedContent(
+        database,
+        contentVersion: 108,
+        packCode: 'JAVA_CURRENT',
+        contentRevision: 1,
+        checksum: _content108,
+        title: 'Offline committed v108',
+        now: now,
+      );
+      await _seedContent(
+        database,
+        contentVersion: 109,
+        packCode: 'JAVA_STAGED',
+        contentRevision: 2,
+        checksum: _content109,
+        title: 'Backend advanced v109',
+        now: now,
+      );
+      await database
+          .into(database.contentManifestStates)
+          .insert(
+            ContentManifestStatesCompanion.insert(
+              id: const Value(1),
+              schemaVersion: 1,
+              currentContentVersion: 108,
+              currentManifestChecksum: _root108,
+              updatedAt: now,
+            ),
+          );
 
-        await database.close();
-        database = null;
+      await database.close();
+      database = null;
 
-        final reopened = CareerSpeakDatabase(NativeDatabase(file));
-        database = reopened;
-        final repository = DriftContentRepository(reopened);
-        final page = (await repository.watchContent(const ContentQuery()).first)
-            .getOrThrow();
+      final reopened = CareerSpeakDatabase(NativeDatabase(file));
+      database = reopened;
+      final repository = DriftContentRepository(reopened);
+      final page = (await repository.watchContent(const ContentQuery()).first)
+          .getOrThrow();
 
-        expect(page.items, hasLength(1));
-        expect(page.items.single.revision, 1);
-        expect(page.items.single.title, 'Offline committed v108');
-      } finally {
-        await database?.close();
-        if (directory.existsSync()) {
-          await directory.delete(recursive: true);
-        }
+      expect(page.items, hasLength(1));
+      expect(page.items.single.revision, 1);
+      expect(page.items.single.title, 'Offline committed v108');
+    } finally {
+      await database?.close();
+      if (directory.existsSync()) {
+        await directory.delete(recursive: true);
       }
-    },
-  );
+    }
+  });
 }
 
 Future<void> _seedContent(

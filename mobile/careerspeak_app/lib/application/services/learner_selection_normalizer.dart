@@ -106,9 +106,8 @@ final class LearnerSelectionNormalizer {
     final normalized = normalize(selection: selection, graph: graph).selection;
     final goalCode = normalized.selectedGoalCode;
     if (goalCode == null) return null;
-    return _firstOrNull(
-      graph.goals.where((item) => item.code == goalCode),
-    )?.verticalCode;
+    return _firstOrNull(graph.goals.where((item) => item.code == goalCode))
+        ?.verticalCode;
   }
 
   LearnerSelectionNormalization _clearGoalAndTrack(

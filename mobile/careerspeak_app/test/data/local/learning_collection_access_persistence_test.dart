@@ -34,9 +34,8 @@ void main() {
     await _insertCurrentPointer(database, 100);
     await _insertGraph(database, 100, accessLevel: 'FREE');
 
-    final result = await DriftUniversalCatalogueRepository(
-      database,
-    ).readCurrent();
+    final result = await DriftUniversalCatalogueRepository(database)
+        .readCurrent();
     expect(result, isA<Success<CurrentUniversalCatalogueSnapshot?>>());
     final snapshot =
         (result as Success<CurrentUniversalCatalogueSnapshot?>).value!;
@@ -51,9 +50,8 @@ void main() {
     await _insertCurrentPointer(database, 101);
     await _insertGraph(database, 101);
 
-    final result = await DriftUniversalCatalogueRepository(
-      database,
-    ).readCurrent();
+    final result = await DriftUniversalCatalogueRepository(database)
+        .readCurrent();
     expect(result, isA<Success<CurrentUniversalCatalogueSnapshot?>>());
     final snapshot =
         (result as Success<CurrentUniversalCatalogueSnapshot?>).value!;

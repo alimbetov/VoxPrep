@@ -59,18 +59,14 @@ void main() {
   });
 
   test('catalogue icons and audio use typed backend-only asset resolution', () {
-    final iconProvider = File(
-      'lib/app/asset_resolver_providers.dart',
-    ).readAsStringSync();
-    final audioProvider = File(
-      'lib/app/audio_playback_providers.dart',
-    ).readAsStringSync();
-    final downloadProviders = File(
-      'lib/app/asset_download_providers.dart',
-    ).readAsStringSync();
-    final byteSource = File(
-      'lib/data/remote/http_asset_byte_source.dart',
-    ).readAsStringSync();
+    final iconProvider = File('lib/app/asset_resolver_providers.dart')
+        .readAsStringSync();
+    final audioProvider = File('lib/app/audio_playback_providers.dart')
+        .readAsStringSync();
+    final downloadProviders = File('lib/app/asset_download_providers.dart')
+        .readAsStringSync();
+    final byteSource = File('lib/data/remote/http_asset_byte_source.dart')
+        .readAsStringSync();
 
     expect(iconProvider, contains('resolver.resolveImage('));
     expect(audioProvider, contains('resolver.resolveAudioContent('));

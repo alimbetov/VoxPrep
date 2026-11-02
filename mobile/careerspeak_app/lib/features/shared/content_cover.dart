@@ -6,16 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../app/asset_resolver_providers.dart';
 import '../../domain/content_identity.dart';
 
-typedef ContentCoverImageBuilder =
-    Widget Function({
-      required BuildContext context,
-      required String localPath,
-      required double? width,
-      required double? height,
-      required BoxFit fit,
-      required BorderRadius borderRadius,
-      required String? semanticLabel,
-    });
+typedef ContentCoverImageBuilder = Widget Function({
+  required BuildContext context,
+  required String localPath,
+  required double? width,
+  required double? height,
+  required BoxFit fit,
+  required BorderRadius borderRadius,
+  required String? semanticLabel,
+});
 
 /// Optional exact-revision content cover.
 ///

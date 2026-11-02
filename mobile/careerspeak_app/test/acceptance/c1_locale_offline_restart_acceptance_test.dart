@@ -23,102 +23,97 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test(
-    'canonical plus ru survive restart and kk falls back offline without root drift',
-    () async {
-      final directory = await Directory.systemTemp.createTemp(
-        'careerspeak-c1-locale-restart-',
-      );
-      addTearDown(() async {
-        if (await directory.exists()) {
-          await directory.delete(recursive: true);
-        }
-      });
-      final file = File('${directory.path}/careerspeak.sqlite');
+  test('canonical plus ru survive restart and kk falls back offline without root drift', () async {
+    final directory = await Directory.systemTemp.createTemp(
+      'careerspeak-c1-locale-restart-',
+    );
+    addTearDown(() async {
+      if (await directory.exists()) {
+        await directory.delete(recursive: true);
+      }
+    });
+    final file = File('${directory.path}/careerspeak.sqlite');
 
-      var database = CareerSpeakDatabase(NativeDatabase(file));
-      final published = await _publishCanonicalAndRussian(database);
-      expect(published, isA<Success<void>>());
+    var database = CareerSpeakDatabase(NativeDatabase(file));
+    final published = await _publishCanonicalAndRussian(database);
+    expect(published, isA<Success<void>>());
 
-      final preferences = DriftAppPreferencesRepository(database);
-      expect(
-        await preferences.setTranslationLocale(AppTranslationLocale.russian),
-        isA<Success<void>>(),
-      );
+    final preferences = DriftAppPreferencesRepository(database);
+    expect(
+      await preferences.setTranslationLocale(AppTranslationLocale.russian),
+      isA<Success<void>>(),
+    );
 
-      final beforeRestart = (await DriftSyncJournal(
-        database,
-      ).readLocalSnapshot()).getOrThrow();
-      expect(beforeRestart.currentContentVersion, 1);
-      expect(beforeRestart.currentManifestChecksum, _rootChecksum);
-      expect(beforeRestart.currentPacks, hasLength(2));
+    final beforeRestart = (await DriftSyncJournal(
+      database,
+    ).readLocalSnapshot()).getOrThrow();
+    expect(beforeRestart.currentContentVersion, 1);
+    expect(beforeRestart.currentManifestChecksum, _rootChecksum);
+    expect(beforeRestart.currentPacks, hasLength(2));
 
-      await database.close();
-      database = CareerSpeakDatabase(NativeDatabase(file));
-      addTearDown(database.close);
+    await database.close();
+    database = CareerSpeakDatabase(NativeDatabase(file));
+    addTearDown(database.close);
 
-      final reopenedPreferences = DriftAppPreferencesRepository(database);
-      final restored = (await reopenedPreferences.getPreferences())
-          .getOrThrow();
-      expect(restored.translationLocale.code, 'ru');
+    final reopenedPreferences = DriftAppPreferencesRepository(database);
+    final restored = (await reopenedPreferences.getPreferences()).getOrThrow();
+    expect(restored.translationLocale.code, 'ru');
 
-      final resolver = DriftLocalizedContentRepository(database);
-      final russian = (await resolver.resolve(
-        identity: _identity,
-        contentRevision: 1,
-        requestedLocale: restored.translationLocale.code,
-      )).getOrThrow();
-      expect(russian, isNotNull);
-      expect(russian!.resolvedLocale, 'ru');
-      expect(russian.fallbackKind, LocaleFallbackKind.exact);
-      expect(russian.title, 'Внедрение зависимостей');
-      expect(russian.translation, 'Объясните constructor injection.');
-      expect(russian.description, 'Canonical description');
+    final resolver = DriftLocalizedContentRepository(database);
+    final russian = (await resolver.resolve(
+      identity: _identity,
+      contentRevision: 1,
+      requestedLocale: restored.translationLocale.code,
+    )).getOrThrow();
+    expect(russian, isNotNull);
+    expect(russian!.resolvedLocale, 'ru');
+    expect(russian.fallbackKind, LocaleFallbackKind.exact);
+    expect(russian.title, 'Внедрение зависимостей');
+    expect(russian.translation, 'Объясните constructor injection.');
+    expect(russian.description, 'Canonical description');
 
-      expect(
-        await reopenedPreferences.setTranslationLocale(
-          AppTranslationLocale.kazakh,
-        ),
-        isA<Success<void>>(),
-      );
-      final switched = (await reopenedPreferences.getPreferences())
-          .getOrThrow();
-      expect(switched.translationLocale.code, 'kk');
+    expect(
+      await reopenedPreferences.setTranslationLocale(
+        AppTranslationLocale.kazakh,
+      ),
+      isA<Success<void>>(),
+    );
+    final switched = (await reopenedPreferences.getPreferences()).getOrThrow();
+    expect(switched.translationLocale.code, 'kk');
 
-      final kazakhOffline = (await resolver.resolve(
-        identity: _identity,
-        contentRevision: 1,
-        requestedLocale: switched.translationLocale.code,
-      )).getOrThrow();
-      expect(kazakhOffline, isNotNull);
-      expect(kazakhOffline!.resolvedLocale, 'en');
-      expect(kazakhOffline.fallbackKind, LocaleFallbackKind.canonicalEnglish);
-      expect(kazakhOffline.usesCanonicalEnglishOnly, isTrue);
-      expect(kazakhOffline.title, 'Dependency Injection');
-      expect(kazakhOffline.description, 'Canonical description');
-      expect(kazakhOffline.translation, isNull);
+    final kazakhOffline = (await resolver.resolve(
+      identity: _identity,
+      contentRevision: 1,
+      requestedLocale: switched.translationLocale.code,
+    )).getOrThrow();
+    expect(kazakhOffline, isNotNull);
+    expect(kazakhOffline!.resolvedLocale, 'en');
+    expect(kazakhOffline.fallbackKind, LocaleFallbackKind.canonicalEnglish);
+    expect(kazakhOffline.usesCanonicalEnglishOnly, isTrue);
+    expect(kazakhOffline.title, 'Dependency Injection');
+    expect(kazakhOffline.description, 'Canonical description');
+    expect(kazakhOffline.translation, isNull);
 
-      final afterLocaleSwitch = (await DriftSyncJournal(
-        database,
-      ).readLocalSnapshot()).getOrThrow();
-      expect(
-        afterLocaleSwitch.currentContentVersion,
-        beforeRestart.currentContentVersion,
-      );
-      expect(
-        afterLocaleSwitch.currentManifestChecksum,
-        beforeRestart.currentManifestChecksum,
-      );
-      expect(
-        afterLocaleSwitch.currentPacks
-            .map((pack) => pack.identity.toString())
-            .toSet(),
-        beforeRestart.currentPacks
-            .map((pack) => pack.identity.toString())
-            .toSet(),
-      );
-    },
-  );
+    final afterLocaleSwitch = (await DriftSyncJournal(
+      database,
+    ).readLocalSnapshot()).getOrThrow();
+    expect(
+      afterLocaleSwitch.currentContentVersion,
+      beforeRestart.currentContentVersion,
+    );
+    expect(
+      afterLocaleSwitch.currentManifestChecksum,
+      beforeRestart.currentManifestChecksum,
+    );
+    expect(
+      afterLocaleSwitch.currentPacks
+          .map((pack) => pack.identity.toString())
+          .toSet(),
+      beforeRestart.currentPacks
+          .map((pack) => pack.identity.toString())
+          .toSet(),
+    );
+  });
 }
 
 Future<Result<void>> _publishCanonicalAndRussian(

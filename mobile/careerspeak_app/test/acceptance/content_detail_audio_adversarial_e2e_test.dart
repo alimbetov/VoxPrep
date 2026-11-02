@@ -92,14 +92,19 @@ void main() {
       final path = scenario.engine.lastOpenedPath!;
 
       await scenario.expireAndEvict(tester);
-      final existsAfterEviction = await tester.runAsync(() => File(path).exists());
+      final existsAfterEviction = await tester.runAsync(
+        () => File(path).exists(),
+      );
       expect(existsAfterEviction, isFalse);
 
       scenario.source.online = false;
       await tester.tap(find.widgetWithText(FilledButton, 'Replay'));
       await _waitForCondition(tester, () => scenario.source.openCount == 4);
       await _pumpUntilVisible(tester, find.textContaining('offline'));
-      await _pumpUntilVisible(tester, find.widgetWithText(FilledButton, 'Play'));
+      await _pumpUntilVisible(
+        tester,
+        find.widgetWithText(FilledButton, 'Play'),
+      );
 
       expect(
         scenario.source.openCount,
@@ -140,10 +145,7 @@ void main() {
     scenario.source.online = true;
     await tester.tap(find.widgetWithText(FilledButton, 'Play'));
     await _waitForCondition(tester, () => scenario.engine.openCount == 2);
-    await _pumpUntilVisible(
-      tester,
-      find.widgetWithText(FilledButton, 'Pause'),
-    );
+    await _pumpUntilVisible(tester, find.widgetWithText(FilledButton, 'Pause'));
 
     expect(scenario.source.openCount, 5);
     expect(scenario.engine.openCount, 2);
@@ -276,11 +278,11 @@ final class _Scenario {
   Future<void> play(WidgetTester tester) async {
     final expectedOpenCount = engine.openCount + 1;
     await tester.tap(find.widgetWithText(FilledButton, 'Play'));
-    await _waitForCondition(tester, () => engine.openCount == expectedOpenCount);
-    await _pumpUntilVisible(
+    await _waitForCondition(
       tester,
-      find.widgetWithText(FilledButton, 'Pause'),
+      () => engine.openCount == expectedOpenCount,
     );
+    await _pumpUntilVisible(tester, find.widgetWithText(FilledButton, 'Pause'));
   }
 
   Future<void> stop(WidgetTester tester) async {

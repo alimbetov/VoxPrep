@@ -164,39 +164,33 @@ void main() {
       },
     );
 
-    test(
-      'wrong exact catalogue checksum is rejected and CURRENT survives',
-      () async {
-        final payloads = Map<String, CataloguePayload>.from(demoPayloads);
-        final original = _payloadOfKind(
-          payloads.values,
-          CatalogueKind.verticals,
-        );
-        final wrongRef = CatalogueRevisionRef(
-          kind: original.ref.kind,
-          revision: original.ref.revision,
-          checksum:
-              'abababababababababababababababababababababababababababababababab',
-        );
-        final wrong = CataloguePayload(
-          ref: wrongRef,
-          items: original.items,
-          wireJson: <String, Object?>{
-            ...original.wireJson,
-            'checksum': wrongRef.checksum,
-          },
-        );
-        payloads.remove(DemoCataloguePayloadGateway.keyOf(original.ref));
-        payloads[DemoCataloguePayloadGateway.keyOf(wrongRef)] = wrong;
+    test('wrong exact catalogue checksum is rejected and CURRENT survives', () async {
+      final payloads = Map<String, CataloguePayload>.from(demoPayloads);
+      final original = _payloadOfKind(payloads.values, CatalogueKind.verticals);
+      final wrongRef = CatalogueRevisionRef(
+        kind: original.ref.kind,
+        revision: original.ref.revision,
+        checksum:
+            'abababababababababababababababababababababababababababababababab',
+      );
+      final wrong = CataloguePayload(
+        ref: wrongRef,
+        items: original.items,
+        wireJson: <String, Object?>{
+          ...original.wireJson,
+          'checksum': wrongRef.checksum,
+        },
+      );
+      payloads.remove(DemoCataloguePayloadGateway.keyOf(original.ref));
+      payloads[DemoCataloguePayloadGateway.keyOf(wrongRef)] = wrong;
 
-        await _expectMaterializationFailure(
-          database,
-          _rootVersion(currentRoot, 6, checksumChar: '5'),
-          payloads.values,
-        );
-        await _expectCurrent(database, version: 1, verticalCount: 8);
-      },
-    );
+      await _expectMaterializationFailure(
+        database,
+        _rootVersion(currentRoot, 6, checksumChar: '5'),
+        payloads.values,
+      );
+      await _expectCurrent(database, version: 1, verticalCount: 8);
+    });
 
     test(
       'partial six-core manifest is rejected and CURRENT survives',
@@ -296,9 +290,8 @@ Future<void> _expectMaterializationFailure(
   RootContentManifest root,
   Iterable<CataloguePayload> payloads,
 ) async {
-  final result = await DriftUniversalCatalogueGraphMaterializer(
-    database,
-  ).materialize(root: root, payloads: payloads);
+  final result = await DriftUniversalCatalogueGraphMaterializer(database)
+      .materialize(root: root, payloads: payloads);
   expect(result, isA<FailureResult<void>>());
 }
 
@@ -307,9 +300,8 @@ Future<void> _expectCurrent(
   required int version,
   required int verticalCount,
 }) async {
-  final result = await DriftUniversalCatalogueRepository(
-    database,
-  ).readCurrent();
+  final result = await DriftUniversalCatalogueRepository(database)
+      .readCurrent();
   expect(result, isA<Success<CurrentUniversalCatalogueSnapshot?>>());
   final snapshot =
       (result as Success<CurrentUniversalCatalogueSnapshot?>).value;

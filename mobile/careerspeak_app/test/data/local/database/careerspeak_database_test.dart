@@ -15,86 +15,83 @@ void main() {
     await database.close();
   });
 
-  test(
-    'schema version 18 creates production foundation and learner runtime state',
-    () async {
-      await database.customSelect('SELECT 1').getSingle();
+  test('schema version 18 creates production foundation and learner runtime state', () async {
+    await database.customSelect('SELECT 1').getSingle();
 
-      expect(database.schemaVersion, 18);
+    expect(database.schemaVersion, 18);
 
-      final userVersion = await database
-          .customSelect('PRAGMA user_version')
-          .getSingle();
-      expect(userVersion.read<int>('user_version'), 18);
+    final userVersion = await database
+        .customSelect('PRAGMA user_version')
+        .getSingle();
+    expect(userVersion.read<int>('user_version'), 18);
 
-      final foreignKeys = await database
-          .customSelect('PRAGMA foreign_keys')
-          .getSingle();
-      expect(foreignKeys.read<int>('foreign_keys'), 1);
+    final foreignKeys = await database
+        .customSelect('PRAGMA foreign_keys')
+        .getSingle();
+    expect(foreignKeys.read<int>('foreign_keys'), 1);
 
-      final tableNames = database.allTables
-          .map((table) => table.actualTableName)
-          .toSet();
+    final tableNames = database.allTables
+        .map((table) => table.actualTableName)
+        .toSet();
 
-      expect(
-        tableNames,
-        containsAll(<String>{
-          'app_preferences',
-          'installation_runtime_states',
-          'content_manifest_states',
-          'sync_runs',
-          'sync_pack_updates',
-          'sync_tombstones',
-          'content_pack_revisions',
-          'local_content_records',
-          'pack_content_refs',
-          'pack_localization_refs',
-          'locale_fallback_rules',
-          'content_retirements',
-          'asset_catalog',
-          'content_asset_refs',
-          'pack_asset_refs',
-          'content_catalog_reads',
-          'localized_content_reads',
-          'favorites',
-          'content_learning_states',
-        }),
-      );
+    expect(
+      tableNames,
+      containsAll(<String>{
+        'app_preferences',
+        'installation_runtime_states',
+        'content_manifest_states',
+        'sync_runs',
+        'sync_pack_updates',
+        'sync_tombstones',
+        'content_pack_revisions',
+        'local_content_records',
+        'pack_content_refs',
+        'pack_localization_refs',
+        'locale_fallback_rules',
+        'content_retirements',
+        'asset_catalog',
+        'content_asset_refs',
+        'pack_asset_refs',
+        'content_catalog_reads',
+        'localized_content_reads',
+        'favorites',
+        'content_learning_states',
+      }),
+    );
 
-      for (final rawTable in <String>[
-        'asset_cache_retention',
-        'learner_selection',
-        'practice_test_active_attempt',
-        'learner_last_opened_content',
-        'practice_test_completions',
-        'content_review_states',
-        'learning_collection_access_reads',
-        'learner_access_snapshot',
-      ]) {
-        final row = await database
-            .customSelect(
-              "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
-              variables: <Variable<Object>>[Variable<String>(rawTable)],
-            )
-            .getSingleOrNull();
-        expect(row, isNotNull, reason: '$rawTable must exist in schema v18');
-      }
-
-      final accessSnapshotRows = await database
-          .customSelect('SELECT id FROM learner_access_snapshot')
-          .get();
-      expect(accessSnapshotRows, isEmpty);
-
-      final selection = await database
+    for (final rawTable in <String>[
+      'asset_cache_retention',
+      'learner_selection',
+      'practice_test_active_attempt',
+      'learner_last_opened_content',
+      'practice_test_completions',
+      'content_review_states',
+      'learning_collection_access_reads',
+      'learner_access_snapshot',
+    ]) {
+      final row = await database
           .customSelect(
-            'SELECT id, generation, level_decision_made FROM learner_selection WHERE id = 1',
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+            variables: <Variable<Object>>[Variable<String>(rawTable)],
           )
-          .getSingle();
-      expect(selection.read<int>('id'), 1);
-      expect(selection.read<int>('generation'), 0);
-      expect(selection.read<int>('level_decision_made'), 0);
-    },
-  );
+          .getSingleOrNull();
+      expect(row, isNotNull, reason: '$rawTable must exist in schema v18');
+    }
+
+    final accessSnapshotRows = await database
+        .customSelect('SELECT id FROM learner_access_snapshot')
+        .get();
+    expect(accessSnapshotRows, isEmpty);
+
+    final selection = await database
+        .customSelect(
+          'SELECT id, generation, level_decision_made FROM learner_selection WHERE id = 1',
+        )
+        .getSingle();
+    expect(selection.read<int>('id'), 1);
+    expect(selection.read<int>('generation'), 0);
+    expect(selection.read<int>('level_decision_made'), 0);
+  });
 
   test('all singleton foundation tables enforce id equals one', () async {
     final now = DateTime.utc(2026, 10, 30, 10);
@@ -218,8 +215,7 @@ void main() {
             packCode: 'JAVA_SENIOR',
             variantKey: 'canonical',
             targetRevision: 8,
-            targetChecksum:
-                'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+            targetChecksum: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
             state: 'PLANNED',
             updatedAt: now,
           ),

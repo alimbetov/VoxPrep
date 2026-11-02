@@ -84,8 +84,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
-            path:
-                '/catalogue/vertical/:verticalCode/goal/:goalCode/track/:trackCode',
+            path: '/catalogue/vertical/:verticalCode/goal/:goalCode/track/:trackCode',
             pageBuilder: (context, state) => _page(
               state: state,
               hierarchical: true,
@@ -97,8 +96,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
           GoRoute(
-            path:
-                '/catalogue/vertical/:verticalCode/goal/:goalCode/track/:trackCode/collection/:collectionCode',
+            path: '/catalogue/vertical/:verticalCode/goal/:goalCode/track/:trackCode/collection/:collectionCode',
             pageBuilder: (context, state) => _page(
               state: state,
               hierarchical: true,

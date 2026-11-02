@@ -24,8 +24,7 @@ final class InstallationRegistrationDecoder {
       return FailureResult<InstallationToken>(
         ApplicationFailure(
           code: 'INSTALLATION_REGISTRATION_RESPONSE_INVALID',
-          message:
-              'The server returned an invalid installation registration response.',
+          message: 'The server returned an invalid installation registration response.',
           details: <String, Object?>{
             'field': error.path,
             'reason': error.reason,
@@ -36,8 +35,7 @@ final class InstallationRegistrationDecoder {
       return FailureResult<InstallationToken>(
         ApplicationFailure(
           code: 'INSTALLATION_REGISTRATION_RESPONSE_INVALID',
-          message:
-              'The server returned an invalid installation registration response.',
+          message: 'The server returned an invalid installation registration response.',
           details: <String, Object?>{
             if (error.name != null) 'field': error.name,
             if (error.message != null) 'reason': error.message.toString(),

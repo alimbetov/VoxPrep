@@ -105,63 +105,60 @@ void main() {
     },
   );
 
-  test(
-    'same immutable root repairs a missing canonical learner payload',
-    () async {
-      final database = CareerSpeakDatabase(NativeDatabase.memory());
-      final credentialStore = _MemoryCredentialStore();
-      final backend = _RecoveryLearnerApiFixture();
-      final client = MockClient(backend.handle);
-      addTearDown(database.close);
-      addTearDown(client.close);
+  test('same immutable root repairs a missing canonical learner payload', () async {
+    final database = CareerSpeakDatabase(NativeDatabase.memory());
+    final credentialStore = _MemoryCredentialStore();
+    final backend = _RecoveryLearnerApiFixture();
+    final client = MockClient(backend.handle);
+    addTearDown(database.close);
+    addTearDown(client.close);
 
-      await _bootstrapSuccess(
-        database: database,
-        credentialStore: credentialStore,
-        client: client,
-        runId: 'repair-initial',
+    await _bootstrapSuccess(
+      database: database,
+      credentialStore: credentialStore,
+      client: client,
+      runId: 'repair-initial',
+    );
+    await _expectCurrentRevision(database, revision: 1, title: _titleV1);
+
+    await (database.delete(database.contentCatalogReads)..where(
+          (row) =>
+              row.contentCode.equals(_contentCode) &
+              row.contentType.equals('INTERVIEW') &
+              row.revision.equals(1),
+        ))
+        .go();
+
+    final broken = await DriftContentRepository(database)
+        .watchContent(const ContentQuery())
+        .first;
+    expect(broken, isA<FailureResult>());
+    expect(
+      (broken as FailureResult).failure.code,
+      'CONTENT_READ_MODEL_INVALID',
+    );
+
+    final packCallsBeforeRepair = backend.packManifestCalls;
+    final payloadCallsBeforeRepair = backend.contentPayloadCalls;
+    final repairResult = await _bootstrapResult(
+      database: database,
+      credentialStore: credentialStore,
+      client: client,
+      runId: 'repair-same-root',
+    );
+    if (repairResult case FailureResult<ApplicationBootstrapOutcome>(
+      :final failure,
+    )) {
+      fail(
+        'Same-root repair failed: ${failure.code}; details=${failure.details}',
       );
-      await _expectCurrentRevision(database, revision: 1, title: _titleV1);
+    }
 
-      await (database.delete(database.contentCatalogReads)..where(
-            (row) =>
-                row.contentCode.equals(_contentCode) &
-                row.contentType.equals('INTERVIEW') &
-                row.revision.equals(1),
-          ))
-          .go();
-
-      final broken = await DriftContentRepository(
-        database,
-      ).watchContent(const ContentQuery()).first;
-      expect(broken, isA<FailureResult>());
-      expect(
-        (broken as FailureResult).failure.code,
-        'CONTENT_READ_MODEL_INVALID',
-      );
-
-      final packCallsBeforeRepair = backend.packManifestCalls;
-      final payloadCallsBeforeRepair = backend.contentPayloadCalls;
-      final repairResult = await _bootstrapResult(
-        database: database,
-        credentialStore: credentialStore,
-        client: client,
-        runId: 'repair-same-root',
-      );
-      if (repairResult case FailureResult<ApplicationBootstrapOutcome>(
-        :final failure,
-      )) {
-        fail(
-          'Same-root repair failed: ${failure.code}; details=${failure.details}',
-        );
-      }
-
-      expect(backend.registrationCalls, 1);
-      expect(backend.packManifestCalls, packCallsBeforeRepair + 1);
-      expect(backend.contentPayloadCalls, payloadCallsBeforeRepair + 1);
-      await _expectCurrentRevision(database, revision: 1, title: _titleV1);
-    },
-  );
+    expect(backend.registrationCalls, 1);
+    expect(backend.packManifestCalls, packCallsBeforeRepair + 1);
+    expect(backend.contentPayloadCalls, payloadCallsBeforeRepair + 1);
+    await _expectCurrentRevision(database, revision: 1, title: _titleV1);
+  });
 
   test(
     'corrupt root journal fails closed without deleting CURRENT content',

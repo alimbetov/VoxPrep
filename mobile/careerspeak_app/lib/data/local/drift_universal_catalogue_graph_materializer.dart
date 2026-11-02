@@ -214,24 +214,24 @@ final class DriftUniversalCatalogueGraphMaterializer {
       return payload;
     }
 
-    final sections =
-        decoderRegistry.decode(exact(CatalogueKind.verticalSections))
-            as List<VerticalSectionProjection>;
-    final verticals =
-        decoderRegistry.decode(exact(CatalogueKind.verticals))
-            as List<LearningVerticalProjection>;
-    final presentation =
-        decoderRegistry.decode(exact(CatalogueKind.verticalPresentation))
-            as VerticalCataloguePresentation;
-    final goals =
-        decoderRegistry.decode(exact(CatalogueKind.learningGoals))
-            as List<LearningGoalProjection>;
-    final tracks =
-        decoderRegistry.decode(exact(CatalogueKind.learningTracks))
-            as List<LearningTrackProjection>;
-    final collections =
-        decoderRegistry.decode(exact(CatalogueKind.learningCollections))
-            as List<LearningCollectionProjection>;
+    final sections = decoderRegistry.decode(
+      exact(CatalogueKind.verticalSections),
+    ) as List<VerticalSectionProjection>;
+    final verticals = decoderRegistry.decode(
+      exact(CatalogueKind.verticals),
+    ) as List<LearningVerticalProjection>;
+    final presentation = decoderRegistry.decode(
+      exact(CatalogueKind.verticalPresentation),
+    ) as VerticalCataloguePresentation;
+    final goals = decoderRegistry.decode(
+      exact(CatalogueKind.learningGoals),
+    ) as List<LearningGoalProjection>;
+    final tracks = decoderRegistry.decode(
+      exact(CatalogueKind.learningTracks),
+    ) as List<LearningTrackProjection>;
+    final collections = decoderRegistry.decode(
+      exact(CatalogueKind.learningCollections),
+    ) as List<LearningCollectionProjection>;
 
     return UniversalCatalogueGraph(
       sections: sections,

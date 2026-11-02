@@ -34,9 +34,8 @@ void main() {
       await _seedIconAsset(database, mediaType: 'image/png');
 
       final root = _root(101);
-      final result = await DriftUniversalCatalogueGraphMaterializer(
-        database,
-      ).materialize(root: root, payloads: _payloads());
+      final result = await DriftUniversalCatalogueGraphMaterializer(database)
+          .materialize(root: root, payloads: _payloads());
 
       expect(result, isA<Success<void>>());
 
@@ -135,9 +134,8 @@ void main() {
         },
       ]);
 
-      final result = await DriftUniversalCatalogueGraphMaterializer(
-        database,
-      ).materialize(root: _root(102), payloads: payloads);
+      final result = await DriftUniversalCatalogueGraphMaterializer(database)
+          .materialize(root: _root(102), payloads: payloads);
 
       expect(result, isA<FailureResult<void>>());
       expect(
@@ -181,9 +179,8 @@ void main() {
           },
         );
 
-        final result = await DriftUniversalCatalogueGraphMaterializer(
-          database,
-        ).materialize(root: _root(103), payloads: payloads);
+        final result = await DriftUniversalCatalogueGraphMaterializer(database)
+            .materialize(root: _root(103), payloads: payloads);
 
         expect(result, isA<FailureResult<void>>());
         expect(
@@ -216,9 +213,8 @@ void main() {
         tombstones: const <ContentTombstone>[],
       );
 
-      final result = await DriftUniversalCatalogueGraphMaterializer(
-        database,
-      ).materialize(root: root, payloads: _payloads());
+      final result = await DriftUniversalCatalogueGraphMaterializer(database)
+          .materialize(root: root, payloads: _payloads());
 
       expect(result, isA<FailureResult<void>>());
       expect(
@@ -232,9 +228,8 @@ void main() {
       addTearDown(database.close);
       await database.customSelect('SELECT 1').getSingle();
 
-      final result = await DriftUniversalCatalogueGraphMaterializer(
-        database,
-      ).materialize(root: _root(105), payloads: _payloads());
+      final result = await DriftUniversalCatalogueGraphMaterializer(database)
+          .materialize(root: _root(105), payloads: _payloads());
 
       expect(result, isA<FailureResult<void>>());
       expect(
@@ -259,9 +254,8 @@ void main() {
         await database.customSelect('SELECT 1').getSingle();
         await _seedIconAsset(database, mediaType: 'audio/mpeg');
 
-        final result = await DriftUniversalCatalogueGraphMaterializer(
-          database,
-        ).materialize(root: _root(106), payloads: _payloads());
+        final result = await DriftUniversalCatalogueGraphMaterializer(database)
+            .materialize(root: _root(106), payloads: _payloads());
 
         expect(result, isA<FailureResult<void>>());
         expect(

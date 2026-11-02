@@ -31,8 +31,7 @@ void main() {
     expect(
       violations,
       isEmpty,
-      reason:
-          'Feature presentation must depend on domain/application contracts and composition providers, not concrete adapters.',
+      reason: 'Feature presentation must depend on domain/application contracts and composition providers, not concrete adapters.',
     );
   });
 }

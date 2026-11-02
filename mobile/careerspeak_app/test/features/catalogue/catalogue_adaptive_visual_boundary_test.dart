@@ -154,8 +154,7 @@ CurrentUniversalCatalogueSnapshot _snapshot(
       LearningGoalProjection(
         code: 'LONG_GOAL',
         verticalCode: 'LONG_VERTICAL',
-        title:
-            'Развитие уверенной профессиональной коммуникации в сложных технических сценариях',
+        title: 'Развитие уверенной профессиональной коммуникации в сложных технических сценариях',
         description: _longDescription,
         sortOrder: 0,
         active: true,
@@ -166,8 +165,7 @@ CurrentUniversalCatalogueSnapshot _snapshot(
         code: 'LONG_TRACK',
         verticalCode: 'LONG_VERTICAL',
         goalCode: 'LONG_GOAL',
-        title:
-            'Углублённый трек подготовки для senior-инженеров и технических лидеров',
+        title: 'Углублённый трек подготовки для senior-инженеров и технических лидеров',
         description: _longDescription,
         levelCode: 'ADVANCED_PROFESSIONAL_LEVEL_WITH_LONG_LABEL',
         sortOrder: 0,
@@ -179,8 +177,7 @@ CurrentUniversalCatalogueSnapshot _snapshot(
         code: 'LONG_COLLECTION',
         verticalCode: 'LONG_VERTICAL',
         trackCode: 'LONG_TRACK',
-        title:
-            'Большая практическая коллекция с развёрнутыми сценариями и пояснениями',
+        title: 'Большая практическая коллекция с развёрнутыми сценариями и пояснениями',
         description: _longDescription,
         sortOrder: 0,
         active: true,
@@ -188,8 +185,7 @@ CurrentUniversalCatalogueSnapshot _snapshot(
           LearningCollectionMember.content(
             position: 0,
             content: ContentRevisionRef(
-              contentCode:
-                  'VERY_LONG_BACKEND_OWNED_CONTENT_IDENTIFIER_FOR_VISUAL_BOUNDARY_TEST',
+              contentCode: 'VERY_LONG_BACKEND_OWNED_CONTENT_IDENTIFIER_FOR_VISUAL_BOUNDARY_TEST',
               contentType: ContentType.topic,
               revision: 12,
               checksum: _hash,
