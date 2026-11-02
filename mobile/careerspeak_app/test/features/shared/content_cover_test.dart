@@ -46,16 +46,15 @@ void main() {
     expect(find.byType(Image), findsNothing);
   });
 
-  testWidgets('corrupt image bytes collapse instead of showing a placeholder', (
+  testWidgets('decode failure collapses instead of showing a placeholder', (
     tester,
   ) async {
-    final file = File('${temporary.path}/corrupt.png');
-    await file.writeAsBytes(<int>[0, 1, 2, 3, 4]);
-
     await _pump(
       tester,
       binding: Success<ManifestAssetDescriptor?>(_descriptor()),
-      localPath: file.path,
+      localPath: '${temporary.path}/verified-cover.png',
+      imageProviderFactory: (_) =>
+          const AssetImage('assets/__img_ui_missing_decode_fixture__.png'),
     );
 
     expect(tester.getSize(find.byKey(_hostKey)), Size.zero);
@@ -72,6 +71,7 @@ void main() {
       tester,
       binding: Success<ManifestAssetDescriptor?>(_descriptor()),
       localPath: file.path,
+      needsRealIo: true,
     );
 
     expect(tester.getSize(find.byKey(_hostKey)), const Size(160, 80));
@@ -83,6 +83,8 @@ Future<void> _pump(
   WidgetTester tester, {
   required Result<ManifestAssetDescriptor?> binding,
   required String? localPath,
+  ContentCoverImageProviderFactory? imageProviderFactory,
+  bool needsRealIo = false,
 }) async {
   final store = _Store(localPath);
   final resolver = ContentCoverResolver(
@@ -107,11 +109,12 @@ Future<void> _pump(
           body: Center(
             child: Container(
               key: _hostKey,
-              child: const ContentCover(
+              child: ContentCover(
                 content: _content,
                 revision: 3,
                 width: 160,
                 height: 80,
+                imageProviderFactory: imageProviderFactory,
               ),
             ),
           ),
@@ -120,16 +123,13 @@ Future<void> _pump(
     ),
   );
 
-  // Image.file uses asynchronous file I/O and decoding. pumpAndSettle() is a
-  // poor fit for this fail-soft widget because an image codec can keep the
-  // binding non-settled even though the UI contract is already decided. Use a
-  // bounded real-I/O window followed by a fixed number of frames so corruption
-  // tests remain deterministic and can never hang the qualification workflow.
   await tester.pump();
-  await tester.runAsync(() async {
-    await Future<void>.delayed(const Duration(milliseconds: 120));
-  });
-  for (var frame = 0; frame < 4; frame++) {
+  if (needsRealIo) {
+    await tester.runAsync(() async {
+      await Future<void>.delayed(const Duration(milliseconds: 120));
+    });
+  }
+  for (var frame = 0; frame < 6; frame++) {
     await tester.pump(const Duration(milliseconds: 25));
   }
 }
