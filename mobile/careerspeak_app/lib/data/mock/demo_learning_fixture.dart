@@ -22,6 +22,9 @@ const demoMedicalTestChecksum =
     'dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd';
 const demoPackChecksum =
     'eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee';
+const demoCatalogueIconAssetId = 'demo-catalogue-icon';
+const _demoCatalogueIconChecksum =
+    '9999999999999999999999999999999999999999999999999999999999999999';
 const _javaQuestionChecksum =
     'ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
 const _medicalQuestionChecksum =
@@ -80,7 +83,16 @@ PackContentManifest buildDemoPackManifest() {
         sortOrder: 20,
       ),
     ],
-    assets: const <ManifestAssetDescriptor>[],
+    assets: [
+      ManifestAssetDescriptor(
+        assetId: demoCatalogueIconAssetId,
+        checksumSha256: _demoCatalogueIconChecksum,
+        deliveryKey: 'demo/catalogue-icon.png',
+        sizeBytes: 1,
+        mediaType: 'image/png',
+        requiredOffline: false,
+      ),
+    ],
     contentAssets: const <ContentAssetRef>[],
   );
 }
