@@ -51,6 +51,7 @@ jobs:
             test/application/content_delivery/collection_access_policy_test.dart
             test/application/content_delivery/content_visual_policy_test.dart
             test/application/content_delivery/monetization_access_level_test.dart
+            test/application/content_delivery/monetization_app_contract_version_test.dart
             test/contracts/c2_content_catalog_v3_access_contract_test.dart
             test/data/local/database/careerspeak_database_test.dart
             test/data/local/learning_collection_access_persistence_test.dart
@@ -79,6 +80,7 @@ jobs:
             test/application/content_delivery/collection_access_policy_test.dart
             test/application/content_delivery/content_visual_policy_test.dart
             test/application/content_delivery/monetization_access_level_test.dart
+            test/application/content_delivery/monetization_app_contract_version_test.dart
             test/contracts/c2_content_catalog_v3_access_contract_test.dart
             test/data/local/database/careerspeak_database_test.dart
             test/data/local/learning_collection_access_persistence_test.dart
@@ -96,9 +98,8 @@ jobs:
             test/application/content_delivery/collection_access_policy_test.dart \
             test/application/content_delivery/content_visual_policy_test.dart \
             test/application/content_delivery/monetization_access_level_test.dart \
-            test/application/content_delivery/content_manifest_test.dart \
+            test/application/content_delivery/monetization_app_contract_version_test.dart \
             test/contracts/c2_content_catalog_v3_access_contract_test.dart \
-            test/data/local/database/careerspeak_database_test.dart \
             test/data/local/learning_collection_access_persistence_test.dart \
             test/data/local/drift_universal_catalogue_graph_materializer_test.dart \
             test/data/local/drift_universal_catalogue_repository_test.dart \
