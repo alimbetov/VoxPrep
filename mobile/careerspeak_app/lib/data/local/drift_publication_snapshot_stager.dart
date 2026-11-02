@@ -6,6 +6,7 @@ import '../../application/assessment/assessment_revision_loader.dart';
 import '../../application/content_delivery/catalogue_payload.dart';
 import '../../application/content_delivery/content_manifest.dart';
 import '../../application/ports/catalogue_payload_gateway.dart';
+import '../../application/ports/content_manifest_gateway.dart';
 import '../../application/ports/publication_snapshot_stager.dart';
 import '../../application/result/result.dart';
 import 'database/careerspeak_database.dart';
@@ -18,12 +19,15 @@ final class DriftPublicationSnapshotStager
     this._database,
     this._assessmentLoader,
     this._catalogueGateway, {
+    ContentManifestGateway? manifestGateway,
     DateTime Function()? now,
-  }) : _now = now ?? (() => DateTime.now().toUtc());
+  }) : _manifestGateway = manifestGateway,
+       _now = now ?? (() => DateTime.now().toUtc());
 
   final CareerSpeakDatabase _database;
   final AssessmentRevisionLoader _assessmentLoader;
   final CataloguePayloadGateway _catalogueGateway;
+  final ContentManifestGateway? _manifestGateway;
   final DateTime Function() _now;
 
   @override
@@ -60,6 +64,14 @@ final class DriftPublicationSnapshotStager
       }
       cataloguePayloads.add((fetched as Success<CataloguePayload>).value);
     }
+
+    final exactPackManifestsResult = await _fetchExactPackManifests(target);
+    if (exactPackManifestsResult
+        case FailureResult<List<PackContentManifest>>(:final failure)) {
+      return FailureResult<void>(failure);
+    }
+    final exactPackManifests =
+        (exactPackManifestsResult as Success<List<PackContentManifest>>).value;
 
     try {
       await _database.transaction(() async {
@@ -155,7 +167,7 @@ final class DriftPublicationSnapshotStager
           );
         }
 
-        // Raw auxiliary tables are intentionally outside the generated Drift v8
+        // Raw auxiliary tables are intentionally outside the generated Drift
         // schema, so they do not invalidate active Drift watchers themselves.
         // If this is an idempotent repair of the already-CURRENT snapshot, touch
         // only runtime metadata to make UI streams re-evaluate exact membership.
@@ -186,12 +198,62 @@ final class DriftPublicationSnapshotStager
     if (target.schemaVersion >= 2) {
       final materialized = await DriftUniversalCatalogueGraphMaterializer(
         _database,
-      ).materialize(root: target, payloads: cataloguePayloads);
+      ).materialize(
+        root: target,
+        payloads: cataloguePayloads,
+        packManifests: exactPackManifests,
+      );
       if (materialized case FailureResult<void>(:final failure)) {
         return FailureResult<void>(failure);
       }
     }
 
     return const Success(null);
+  }
+
+  Future<Result<List<PackContentManifest>>> _fetchExactPackManifests(
+    RootContentManifest target,
+  ) async {
+    if (target.packs.isEmpty) {
+      return const Success<List<PackContentManifest>>(<PackContentManifest>[]);
+    }
+
+    final gateway = _manifestGateway;
+    if (gateway == null) {
+      // Backward-compatible path for legacy callers that only stage schema v1.
+      // Schema v2+ icon validation will fail closed unless pack metadata is
+      // already available in the local database.
+      return const Success<List<PackContentManifest>>(<PackContentManifest>[]);
+    }
+
+    final manifests = <PackContentManifest>[];
+    for (final ref in target.packs) {
+      final fetched = await gateway.fetchPackManifest(
+        identity: ref.identity,
+        revision: ref.revision,
+        checksum: ref.checksum,
+      );
+      switch (fetched) {
+        case FailureResult<PackContentManifest>(:final failure):
+          return FailureResult<List<PackContentManifest>>(failure);
+        case Success<PackContentManifest>(:final value):
+          if (value.identity != ref.identity ||
+              value.revision != ref.revision ||
+              value.checksum != ref.checksum) {
+            return const FailureResult<List<PackContentManifest>>(
+              ApplicationFailure(
+                code: 'PUBLICATION_SNAPSHOT_IDENTITY_CONFLICT',
+                message:
+                    'Fetched pack manifest does not match exact publication membership.',
+              ),
+            );
+          }
+          manifests.add(value);
+      }
+    }
+
+    return Success<List<PackContentManifest>>(
+      List<PackContentManifest>.unmodifiable(manifests),
+    );
   }
 }
