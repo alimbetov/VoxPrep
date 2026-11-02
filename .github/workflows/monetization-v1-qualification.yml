@@ -1,5 +1,6 @@
 name: Monetization v1 Qualification
 
+# M6A mock-backed purchase flow is included in exact-SHA qualification.
 on:
   push:
     branches:
