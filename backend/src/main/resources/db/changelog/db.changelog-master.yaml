@@ -8,3 +8,5 @@ databaseChangeLog:
             sql: SELECT 1
   - include:
       file: db/changelog/b1-p2-catalogue-hierarchy.sql
+  - include:
+      file: db/changelog/b1-p3-content-revision.sql
