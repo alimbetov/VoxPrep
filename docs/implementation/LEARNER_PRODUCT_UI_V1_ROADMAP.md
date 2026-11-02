@@ -90,12 +90,13 @@ This is repository governance, not application code.
 - RELEASE defaults to real adapters.
 - RELEASE explicitly compiled with mock flags fails closed and cannot manufacture FULL access.
 
-### H4 — Drift v18 qualification — IN PROGRESS
+### H4 — Drift v18 qualification — IMPLEMENTED, targeted GREEN
 
 - Production schema stays v18.
 - No v19 tables or migrations.
-- Database assertions and generated-schema reproducibility must match v18.
-- Historical migration fixtures are upgraded only as needed to validate migration into v18.
+- Database assertions and generated-schema reproducibility match v18.
+- Historical migration fixtures validate migration into v18, including raw auxiliary structures.
+- Final closure still requires the exact-SHA canonical full-suite gate.
 
 ### H5 — API composition tests — IMPLEMENTED, awaiting qualification
 
@@ -106,21 +107,21 @@ Current production composition is authoritative:
 
 Tests follow production composition; production is not rolled back for stale assertions.
 
-### H6 — Riverpod timeout tests — PENDING CI DIAGNOSIS
+### H6 — Riverpod timeout tests — IMPLEMENTED, targeted GREEN
 
-Repair only test subscription/container lifecycle where production providers are correct. Do not add new Riverpod abstractions without a demonstrated production defect.
+Test subscription/container lifecycle is qualified without introducing new Riverpod abstractions or weakening production provider semantics.
 
-### H7 — Publication identity fixtures — PENDING CI DIAGNOSIS
+### H7 — Publication identity fixtures — IMPLEMENTED, strict targeted GREEN
 
-Repair fixtures that violate current publication identity invariants. Do not weaken `PUBLICATION_SNAPSHOT_IDENTITY_CONFLICT` validation.
+Publication fixtures satisfy current immutable identity invariants. `PUBLICATION_SNAPSHOT_IDENTITY_CONFLICT` remains fail-closed, and V12 adversarial qualification is a blocking gate rather than a diagnostic-only check.
 
-### H8 — Adaptive UI tests — PENDING CI DIAGNOSIS
+### H8 — Adaptive UI tests — IMPLEMENTED, targeted GREEN
 
-Update tests for the current Material 3 adaptive shell and realistic viewports. Preserve `NavigationBar` / `NavigationRail` production design.
+Tests follow the current Material 3 adaptive shell and realistic viewports while preserving the production `NavigationBar` / `NavigationRail` design and text-scale boundaries.
 
-### H9 — Audio E2E lifecycle — PENDING CI DIAGNOSIS
+### H9 — Audio E2E lifecycle — IMPLEMENTED, awaiting exact-SHA qualification
 
-Isolate `content_detail_audio_redownload_e2e_test` hangs. Production changes are allowed only when the test proves a real timer/stream/session/provider lifecycle defect.
+The redownload path and adversarial audio scenarios use deterministic bounded waits. Real filesystem operations, including temporary-directory creation, execute in `WidgetTester.runAsync`, and widget teardown ownership is explicit. Production audio behavior was not weakened to satisfy the test harness.
 
 ### H10 — Full suite GREEN — REQUIRED
 
