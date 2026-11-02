@@ -1,0 +1,33 @@
+name: Learner Product UI H9 Audio Qualification
+
+on:
+  push:
+    branches:
+      - feat/learner-product-ui-v1
+    paths:
+      - '.github/workflows/learner-product-ui-h9-audio-qualification.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audio-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/learner-product-ui-v1
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: dart format --output=none --set-exit-if-changed test/acceptance/content_detail_audio_redownload_e2e_test.dart
+      - name: H9 audio E2E
+        shell: bash
+        run: timeout 2m flutter test test/acceptance/content_detail_audio_redownload_e2e_test.dart --reporter expanded
