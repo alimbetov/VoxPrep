@@ -17,7 +17,7 @@ jobs:
   flutter-main:
     name: flutter-main
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     defaults:
       run:
         working-directory: mobile/careerspeak_app
@@ -40,10 +40,17 @@ jobs:
         run: dart format --output=none --set-exit-if-changed lib test
 
       - name: Generated Drift check
+        shell: bash
         run: |
+          set -euo pipefail
           dart run build_runner build --delete-conflicting-outputs
           git diff --exit-code -- lib/data/local/database/careerspeak_database.g.dart
           grep -q 'int get schemaVersion => 18;' lib/data/local/database/careerspeak_database.dart
+          rm -f /tmp/drift_schema_v18.json
+          dart run drift_dev schema dump \
+            lib/data/local/database/careerspeak_database.dart \
+            /tmp/drift_schema_v18.json
+          diff -u drift_schemas/drift_schema_v18.json /tmp/drift_schema_v18.json
 
       - name: Analyze
         run: flutter analyze
@@ -51,13 +58,14 @@ jobs:
       - name: Hardening targeted tests
         shell: bash
         run: |
-          set -o pipefail
+          set -euo pipefail
           flutter test test/data/local/database/careerspeak_database_test.dart --reporter expanded
+          flutter test test/data/local/database/careerspeak_database_migration_test.dart --reporter expanded
           flutter test test/app/api_client_providers_test.dart --reporter expanded
           timeout 5m flutter test test/acceptance/content_detail_audio_redownload_e2e_test.dart --reporter expanded
 
       - name: Full test suite
         shell: bash
         run: |
-          set -o pipefail
+          set -euo pipefail
           timeout 20m flutter test --concurrency=1 --reporter expanded
