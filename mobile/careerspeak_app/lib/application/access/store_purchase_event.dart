@@ -7,13 +7,7 @@ enum StoreProvider {
   final String wireName;
 }
 
-enum StorePurchaseStatus {
-  pending,
-  purchased,
-  restored,
-  cancelled,
-  failed,
-}
+enum StorePurchaseStatus { pending, purchased, restored, cancelled, failed }
 
 final class StorePurchaseEvent {
   factory StorePurchaseEvent({
