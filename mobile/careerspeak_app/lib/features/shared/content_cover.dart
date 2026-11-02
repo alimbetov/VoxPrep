@@ -1,10 +1,14 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/asset_resolver_providers.dart';
 import '../../domain/content_identity.dart';
+
+typedef ContentCoverImageProviderFactory =
+    ImageProvider<Object> Function(String localPath);
 
 /// Optional exact-revision content cover.
 ///
@@ -20,6 +24,7 @@ class ContentCover extends ConsumerWidget {
     this.fit = BoxFit.cover,
     this.borderRadius = BorderRadius.zero,
     this.semanticLabel,
+    @visibleForTesting this.imageProviderFactory,
     super.key,
   });
 
@@ -30,6 +35,11 @@ class ContentCover extends ConsumerWidget {
   final BoxFit fit;
   final BorderRadius borderRadius;
   final String? semanticLabel;
+
+  /// Test seam for deterministic image-decoder failure qualification.
+  /// Production always uses [FileImage] over an already verified asset path.
+  @visibleForTesting
+  final ContentCoverImageProviderFactory? imageProviderFactory;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -43,8 +53,11 @@ class ContentCover extends ConsumerWidget {
       data: (asset) {
         if (asset == null) return const SizedBox.shrink();
 
-        return Image.file(
-          File(asset.localPath),
+        final imageProvider =
+            imageProviderFactory?.call(asset.localPath) ??
+            FileImage(File(asset.localPath));
+        return Image(
+          image: imageProvider,
           width: width,
           height: height,
           fit: fit,
