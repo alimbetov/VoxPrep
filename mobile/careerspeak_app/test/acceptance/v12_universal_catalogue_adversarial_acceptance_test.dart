@@ -56,6 +56,7 @@ void main() {
             payloads: demoPayloads,
             latency: Duration.zero,
           ),
+          manifestGateway: manifestGateway,
         ),
       );
 
@@ -272,6 +273,10 @@ void main() {
         },
       );
       final target = _rootVersion(currentRoot, 10, checksumChar: '9');
+      final manifestGateway = DemoContentManifestGateway(
+        cataloguePayloads: corrupted.values,
+        latency: Duration.zero,
+      );
       final stager = DriftPublicationSnapshotStager(
         database,
         AssessmentRevisionLoader(
@@ -282,6 +287,7 @@ void main() {
           payloads: corrupted,
           latency: Duration.zero,
         ),
+        manifestGateway: manifestGateway,
       );
 
       final staged = await stager.stage(target);
