@@ -11,7 +11,9 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import java.util.Objects;
+import java.util.UUID;
 
 @Entity
 @Table(name = "tts_job", schema = "app")
@@ -34,6 +36,21 @@ public class TtsJobEntity extends AbstractJpaEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "output_asset_id")
     private FileAssetEntity outputAsset;
+
+    @Column(name = "attempt_count", nullable = false)
+    private int attemptCount;
+
+    @Column(name = "lease_owner", length = 128)
+    private String leaseOwner;
+
+    @Column(name = "lease_token")
+    private UUID leaseToken;
+
+    @Column(name = "lease_until")
+    private Instant leaseUntil;
+
+    @Column(name = "claimed_at")
+    private Instant claimedAt;
 
     protected TtsJobEntity() {
     }
@@ -63,6 +80,26 @@ public class TtsJobEntity extends AbstractJpaEntity {
 
     public FileAssetEntity getOutputAsset() {
         return outputAsset;
+    }
+
+    public int getAttemptCount() {
+        return attemptCount;
+    }
+
+    public String getLeaseOwner() {
+        return leaseOwner;
+    }
+
+    public UUID getLeaseToken() {
+        return leaseToken;
+    }
+
+    public Instant getLeaseUntil() {
+        return leaseUntil;
+    }
+
+    public Instant getClaimedAt() {
+        return claimedAt;
     }
 
     private static String required(String value, String field, int maxLength) {
