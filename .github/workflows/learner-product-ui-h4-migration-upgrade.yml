@@ -1,0 +1,68 @@
+name: Learner Product UI H4 Migration v18
+
+on:
+  push:
+    branches:
+      - feat/learner-product-ui-v1
+    paths:
+      - '.github/workflows/learner-product-ui-h4-migration-upgrade.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  qualify-v18-migrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+
+    steps:
+      - name: Checkout branch head
+        uses: actions/checkout@v4
+        with:
+          ref: feat/learner-product-ui-v1
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Retarget migration qualification to v18
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('test/data/local/database/careerspeak_database_migration_test.dart')
+          text = path.read_text()
+          text = text.replace("../../../generated_migrations/schema_v8.dart' as v8;", "../../../generated_migrations/schema_v18.dart' as v18;")
+          text = text.replace('v8.DatabaseAtV8', 'v18.DatabaseAtV18')
+          text = text.replace('to v8', 'to v18')
+          text = text.replace('migrateAndValidate(database, 8)', 'migrateAndValidate(database, 18)')
+          path.write_text(text)
+
+      - name: Format migration qualification
+        run: dart format test/data/local/database/careerspeak_database_migration_test.dart
+
+      - name: Run v18 migration qualification
+        run: flutter test test/data/local/database/careerspeak_database_migration_test.dart --reporter expanded
+
+      - name: Commit qualified migration fixture update
+        working-directory: .
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add mobile/careerspeak_app/test/data/local/database/careerspeak_database_migration_test.dart
+          if git diff --cached --quiet; then
+            echo 'Migration qualification already targets schema v18.'
+            exit 0
+          fi
+          git commit -m 'test(drift): qualify historical migrations through v18'
+          git push origin HEAD:feat/learner-product-ui-v1
