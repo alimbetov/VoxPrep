@@ -8,9 +8,9 @@ final billingRepositoryProvider = Provider<BillingRepository>((ref) {
   return const UnavailableBillingRepository();
 });
 
-final fullUnlockStoreProductProvider = FutureProvider<StoreProduct>((ref) async {
-  return (await ref
-          .watch(billingRepositoryProvider)
-          .loadFullUnlockProduct())
+final fullUnlockStoreProductProvider = FutureProvider<StoreProduct>((
+  ref,
+) async {
+  return (await ref.watch(billingRepositoryProvider).loadFullUnlockProduct())
       .getOrThrow();
 });
