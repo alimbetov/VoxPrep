@@ -66,7 +66,14 @@ jobs:
           flutter test test/data/local/database/careerspeak_database_v18_qualification_test.dart --reporter expanded
           flutter test test/app/api_client_providers_test.dart --reporter expanded
           flutter test test/acceptance/p2_8_asset_resolution_test.dart --reporter expanded
-          timeout 4m flutter test test/acceptance/p2_10_7_production_e2e_test.dart --reporter expanded
+          timeout 2m flutter test \
+            test/acceptance/p2_10_7_production_e2e_test.dart \
+            --plain-name 'fresh install sync survives file-backed reopen' \
+            --reporter expanded
+          timeout 2m flutter test \
+            test/acceptance/p2_10_7_production_e2e_test.dart \
+            --plain-name 'production learner UI renders synchronized Drift content' \
+            --reporter expanded
           flutter test test/acceptance/c4_adversarial_atomicity_acceptance_test.dart --reporter expanded
           timeout 4m flutter test test/acceptance/v12_universal_catalogue_adversarial_acceptance_test.dart --reporter expanded
           timeout 4m flutter test \
@@ -78,4 +85,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout 20m flutter test --concurrency=1 --reporter expanded
+          mapfile -t test_files < <(
+            find test -type f -name '*_test.dart' \
+              ! -path 'test/acceptance/p2_10_7_production_e2e_test.dart' \
+              | sort
+          )
+          if (( ${#test_files[@]} == 0 )); then
+            echo 'No core tests discovered.' >&2
+            exit 1
+          fi
+          timeout 20m flutter test \
+            "${test_files[@]}" \
+            --concurrency=1 \
+            --reporter expanded
