@@ -17,7 +17,10 @@ void main() {
       ContentVisualRole.coverImage,
     );
     expect(ContentVisualRole.fromWireName('unknown'), isNull);
-    expect(ContentVisualPolicy.isPreviewSafe(ContentVisualRole.coverImage), isTrue);
+    expect(
+      ContentVisualPolicy.isPreviewSafe(ContentVisualRole.coverImage),
+      isTrue,
+    );
   });
 
   test('no cover image is a valid state', () {
@@ -117,7 +120,10 @@ void main() {
     expect(ContentVisualPolicy.isSupportedCoverMediaType('image/webp'), isTrue);
     expect(ContentVisualPolicy.isSupportedCoverMediaType('image/jpeg'), isTrue);
     expect(ContentVisualPolicy.isSupportedCoverMediaType('image/png'), isTrue);
-    expect(ContentVisualPolicy.isSupportedCoverMediaType('image/svg+xml'), isFalse);
+    expect(
+      ContentVisualPolicy.isSupportedCoverMediaType('image/svg+xml'),
+      isFalse,
+    );
     expect(ContentVisualPolicy.isSupportedCoverMediaType('video/mp4'), isFalse);
   });
 }
