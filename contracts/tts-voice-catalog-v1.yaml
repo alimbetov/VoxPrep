@@ -1,0 +1,140 @@
+schemaVersion: 1
+catalogId: careerspeak-piper-production-v1
+catalogVersion: 1
+status: PRODUCTION
+engine: piper
+defaultLocale: en_US
+defaultModelId: en_US-lessac-high
+
+selectionPolicy:
+  requireExactLocale: true
+  requireExactModelId: true
+  allowSilentVoiceSubstitution: false
+  allowCrossLocaleFallback: false
+
+artifactPinning:
+  requiredForEnabledModels: true
+  requiredAtProvisioning: true
+  requiredModelFields:
+    - revision
+    - modelSha256
+    - configSha256
+    - modelSizeBytes
+    - configSizeBytes
+  note: >
+    This catalog selects stable Piper model identities. Production provisioning
+    MUST resolve and persist immutable artifact revision, SHA-256 digests, and
+    sizes in tts_voice_model before a model becomes synthesis-eligible.
+
+provisioningPolicies:
+  STRICT:
+    productionReadinessGate: true
+    reconcileRequired: true
+    synthesisRequiresVerifiedModel: true
+  ENSURE_PRESENT:
+    productionReadinessGate: false
+    reconcileRequired: true
+    synthesisRequiresVerifiedModel: true
+  DISABLED:
+    productionReadinessGate: false
+    reconcileRequired: false
+    synthesisAllowed: false
+
+voices:
+  - locale: en_US
+    voice: lessac
+    quality: high
+    modelId: en_US-lessac-high
+    role: PRIMARY_US_ENGLISH
+    provisioning: STRICT
+    enabled: true
+
+  - locale: en_GB
+    voice: cori
+    quality: high
+    modelId: en_GB-cori-high
+    role: BRITISH_ENGLISH
+    provisioning: ENSURE_PRESENT
+    enabled: true
+
+  - locale: de_DE
+    voice: thorsten
+    quality: high
+    modelId: de_DE-thorsten-high
+    role: GERMAN
+    provisioning: STRICT
+    enabled: true
+
+  - locale: tr_TR
+    voice: dfki
+    quality: medium
+    modelId: tr_TR-dfki-medium
+    role: TURKISH
+    provisioning: STRICT
+    enabled: true
+
+  - locale: es_MX
+    voice: claude
+    quality: high
+    modelId: es_MX-claude-high
+    role: LATAM_SPANISH
+    provisioning: STRICT
+    enabled: true
+
+  - locale: es_ES
+    voice: davefx
+    quality: medium
+    modelId: es_ES-davefx-medium
+    role: SPAIN_SPANISH
+    provisioning: STRICT
+    enabled: true
+
+  - locale: fr_FR
+    voice: siwis
+    quality: medium
+    modelId: fr_FR-siwis-medium
+    role: FRENCH
+    provisioning: ENSURE_PRESENT
+    enabled: true
+
+  - locale: it_IT
+    voice: serena
+    quality: high
+    modelId: it_IT-serena-high
+    role: ITALIAN
+    provisioning: ENSURE_PRESENT
+    enabled: true
+
+  - locale: pt_BR
+    voice: faber
+    quality: medium
+    modelId: pt_BR-faber-medium
+    role: BRAZILIAN_PORTUGUESE
+    provisioning: ENSURE_PRESENT
+    enabled: true
+
+  - locale: ru_RU
+    voice: irina
+    quality: medium
+    modelId: ru_RU-irina-medium
+    role: RUSSIAN
+    provisioning: ENSURE_PRESENT
+    enabled: true
+
+  - locale: kk_KZ
+    voice: issai
+    quality: high
+    modelId: kk_KZ-issai-high
+    speakerId: 0
+    speakerName: ISSAI_KazakhTTS2_M2
+    role: KAZAKH
+    provisioning: ENSURE_PRESENT
+    enabled: true
+
+  - locale: uk_UA
+    voice: tetiana
+    quality: high
+    modelId: uk_UA-tetiana-high
+    role: UKRAINIAN
+    provisioning: DISABLED
+    enabled: false
