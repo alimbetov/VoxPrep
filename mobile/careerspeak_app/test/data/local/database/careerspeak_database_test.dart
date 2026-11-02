@@ -16,16 +16,16 @@ void main() {
   });
 
   test(
-    'schema version 17 creates production foundation and learner runtime state',
+    'schema version 18 creates production foundation and learner runtime state',
     () async {
       await database.customSelect('SELECT 1').getSingle();
 
-      expect(database.schemaVersion, 17);
+      expect(database.schemaVersion, 18);
 
       final userVersion = await database
           .customSelect('PRAGMA user_version')
           .getSingle();
-      expect(userVersion.read<int>('user_version'), 17);
+      expect(userVersion.read<int>('user_version'), 18);
 
       final foreignKeys = await database
           .customSelect('PRAGMA foreign_keys')
@@ -69,6 +69,7 @@ void main() {
         'practice_test_completions',
         'content_review_states',
         'learning_collection_access_reads',
+        'learner_access_snapshot',
       ]) {
         final row = await database
             .customSelect(
@@ -76,8 +77,13 @@ void main() {
               variables: <Variable<Object>>[Variable<String>(rawTable)],
             )
             .getSingleOrNull();
-        expect(row, isNotNull, reason: '$rawTable must exist in schema v17');
+        expect(row, isNotNull, reason: '$rawTable must exist in schema v18');
       }
+
+      final accessSnapshotRows = await database
+          .customSelect('SELECT id FROM learner_access_snapshot')
+          .get();
+      expect(accessSnapshotRows, isEmpty);
 
       final selection = await database
           .customSelect(
