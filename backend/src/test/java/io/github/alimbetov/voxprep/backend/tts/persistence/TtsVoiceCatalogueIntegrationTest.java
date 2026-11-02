@@ -3,12 +3,13 @@ package io.github.alimbetov.voxprep.backend.tts.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetRepository;
 import io.github.alimbetov.voxprep.backend.tts.domain.TtsEngine;
 import io.github.alimbetov.voxprep.backend.tts.domain.TtsVoiceModelStatus;
+import io.github.alimbetov.voxprep.backend.tts.support.TtsTestAssets;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -23,6 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 class TtsVoiceCatalogueIntegrationTest {
 
     @Autowired
+    private FileAssetRepository assetRepository;
+
+    @Autowired
     private TtsVoiceRepository voiceRepository;
 
     @Autowired
@@ -35,17 +39,16 @@ class TtsVoiceCatalogueIntegrationTest {
     void persistsActivePiperModelAndSelectsExactDefaultModel() {
         var voice = voiceRepository.saveAndFlush(voice("voice-primary"));
         var model = modelRepository.saveAndFlush(activeModel("model-primary", voice, 'a', 'b'));
-
         voice.selectDefaultModel(model);
         voiceRepository.saveAndFlush(voice);
 
         var loaded = voiceRepository.findByCode("voice-primary").orElseThrow();
         assertThat(loaded.getDefaultModel().getId()).isEqualTo(model.getId());
         assertThat(model.selectableForNewJobs()).isTrue();
-
-        List<TtsVoiceModelEntity> activeModels = modelRepository
-                .findAllByVoice_IdAndStatusOrderByCodeAsc(voice.getId(), TtsVoiceModelStatus.ACTIVE);
-        assertThat(activeModels).extracting(TtsVoiceModelEntity::getCode).containsExactly("model-primary");
+        assertThat(modelRepository.findAllByVoice_IdAndStatusOrderByCodeAsc(
+                        voice.getId(), TtsVoiceModelStatus.ACTIVE))
+                .extracting(TtsVoiceModelEntity::getCode)
+                .containsExactly("model-primary");
     }
 
     @Test
@@ -76,14 +79,15 @@ class TtsVoiceCatalogueIntegrationTest {
     @Test
     void nonActiveModelIsNotSelectableForNewJobs() {
         var voice = voiceRepository.saveAndFlush(voice("voice-review"));
+        var assets = TtsTestAssets.createModelAssets(assetRepository, "review", '1', '2');
         var model = new TtsVoiceModelEntity(
                 "model-review",
                 voice,
                 TtsEngine.PIPER,
                 "1.3.0",
                 "en_US-lessac-medium-v1",
-                UUID.randomUUID(),
-                UUID.randomUUID(),
+                assets.modelAssetId(),
+                assets.configAssetId(),
                 String.valueOf('1').repeat(64),
                 String.valueOf('2').repeat(64),
                 TtsVoiceModelStatus.READY_FOR_REVIEW,
@@ -105,7 +109,6 @@ class TtsVoiceCatalogueIntegrationTest {
                    and tablename in ('tts_voice', 'tts_voice_model')
                  order by tablename
                 """);
-
         assertThat(rows).hasSize(2);
         assertThat(rows).allSatisfy(row -> assertThat(row.get("tableowner")).isEqualTo("voxprep_owner"));
     }
@@ -121,19 +124,20 @@ class TtsVoiceCatalogueIntegrationTest {
                 true);
     }
 
-    private static TtsVoiceModelEntity activeModel(
+    private TtsVoiceModelEntity activeModel(
             String code,
             TtsVoiceEntity voice,
             char modelHash,
             char configHash) {
+        var assets = TtsTestAssets.createModelAssets(assetRepository, code, modelHash, configHash);
         return new TtsVoiceModelEntity(
                 code,
                 voice,
                 TtsEngine.PIPER,
                 "1.3.0",
                 "en_US-lessac-medium-v1",
-                UUID.randomUUID(),
-                UUID.randomUUID(),
+                assets.modelAssetId(),
+                assets.configAssetId(),
                 String.valueOf(modelHash).repeat(64),
                 String.valueOf(configHash).repeat(64),
                 TtsVoiceModelStatus.ACTIVE,

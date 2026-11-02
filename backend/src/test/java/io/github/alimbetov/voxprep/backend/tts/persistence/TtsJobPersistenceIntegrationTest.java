@@ -10,10 +10,10 @@ import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetRepository
 import io.github.alimbetov.voxprep.backend.tts.domain.TtsEngine;
 import io.github.alimbetov.voxprep.backend.tts.domain.TtsJobStatus;
 import io.github.alimbetov.voxprep.backend.tts.domain.TtsVoiceModelStatus;
+import io.github.alimbetov.voxprep.backend.tts.support.TtsTestAssets;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,45 +29,19 @@ class TtsJobPersistenceIntegrationTest {
 
     @Autowired
     private FileAssetRepository assetRepository;
-
     @Autowired
     private TtsVoiceRepository voiceRepository;
-
     @Autowired
     private TtsVoiceModelRepository modelRepository;
-
     @Autowired
     private TtsJobRepository jobRepository;
-
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @Test
     void persistsPendingJobAgainstExactVoiceModel() {
-        var voice = voiceRepository.saveAndFlush(new TtsVoiceEntity(
-                "voice-job",
-                "US English Lessac",
-                "en-US",
-                "US",
-                "FEMALE",
-                "NEUTRAL",
-                true));
-        var model = modelRepository.saveAndFlush(new TtsVoiceModelEntity(
-                "model-job",
-                voice,
-                TtsEngine.PIPER,
-                "1.3.0",
-                "en_US-lessac-medium-v1",
-                UUID.randomUUID(),
-                UUID.randomUUID(),
-                String.valueOf('a').repeat(64),
-                String.valueOf('b').repeat(64),
-                TtsVoiceModelStatus.ACTIVE,
-                "MIT",
-                "https://example.invalid/license",
-                true,
-                Instant.parse("2026-11-02T18:00:00Z")));
-
+        var voice = voiceRepository.saveAndFlush(voice("voice-job"));
+        var model = modelRepository.saveAndFlush(activeModel("model-job", voice, 'a', 'b'));
         var job = jobRepository.saveAndFlush(new TtsJobEntity(
                 model,
                 "Practice makes progress.",
@@ -85,36 +59,14 @@ class TtsJobPersistenceIntegrationTest {
     @Test
     void persistsStorageIdentityAndRejectsDuplicates() {
         assetRepository.saveAndFlush(asset("tts/model-a.onnx", 'd'));
-
         assertThatThrownBy(() -> assetRepository.saveAndFlush(asset("tts/model-a.onnx", 'e')))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test
     void databaseRejectsReadyJobWithoutOutputAsset() {
-        var voice = voiceRepository.saveAndFlush(new TtsVoiceEntity(
-                "voice-ready-guard",
-                "US English Lessac",
-                "en-US",
-                "US",
-                "FEMALE",
-                "NEUTRAL",
-                true));
-        var model = modelRepository.saveAndFlush(new TtsVoiceModelEntity(
-                "model-ready-guard",
-                voice,
-                TtsEngine.PIPER,
-                "1.3.0",
-                "en_US-lessac-medium-v1",
-                UUID.randomUUID(),
-                UUID.randomUUID(),
-                String.valueOf('f').repeat(64),
-                String.valueOf('0').repeat(64),
-                TtsVoiceModelStatus.ACTIVE,
-                "MIT",
-                "https://example.invalid/license",
-                true,
-                Instant.parse("2026-11-02T18:00:00Z")));
+        var voice = voiceRepository.saveAndFlush(voice("voice-ready-guard"));
+        var model = modelRepository.saveAndFlush(activeModel("model-ready-guard", voice, 'f', '0'));
         var job = jobRepository.saveAndFlush(new TtsJobEntity(
                 model,
                 "Guard READY output invariant.",
@@ -135,9 +87,31 @@ class TtsJobPersistenceIntegrationTest {
                    and tablename in ('file_asset', 'tts_job')
                  order by tablename
                 """);
-
         assertThat(rows).hasSize(2);
         assertThat(rows).allSatisfy(row -> assertThat(row.get("tableowner")).isEqualTo("voxprep_owner"));
+    }
+
+    private static TtsVoiceEntity voice(String code) {
+        return new TtsVoiceEntity(code, "US English Lessac", "en-US", "US", "FEMALE", "NEUTRAL", true);
+    }
+
+    private TtsVoiceModelEntity activeModel(String code, TtsVoiceEntity voice, char modelHash, char configHash) {
+        var assets = TtsTestAssets.createModelAssets(assetRepository, code, modelHash, configHash);
+        return new TtsVoiceModelEntity(
+                code,
+                voice,
+                TtsEngine.PIPER,
+                "1.3.0",
+                "en_US-lessac-medium-v1",
+                assets.modelAssetId(),
+                assets.configAssetId(),
+                String.valueOf(modelHash).repeat(64),
+                String.valueOf(configHash).repeat(64),
+                TtsVoiceModelStatus.ACTIVE,
+                "MIT",
+                "https://example.invalid/license",
+                true,
+                Instant.parse("2026-11-02T18:00:00Z"));
     }
 
     private static FileAssetEntity asset(String objectKey, char hash) {

@@ -2,6 +2,7 @@ package io.github.alimbetov.voxprep.backend.tts.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetRepository;
 import io.github.alimbetov.voxprep.backend.tts.domain.TtsEngine;
 import io.github.alimbetov.voxprep.backend.tts.domain.TtsVoiceModelStatus;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsJobEntity;
@@ -10,6 +11,7 @@ import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceEntity;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceModelEntity;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceModelRepository;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceRepository;
+import io.github.alimbetov.voxprep.backend.tts.support.TtsTestAssets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
@@ -33,19 +35,16 @@ class TtsJobLeaseIntegrationTest {
 
     @Autowired
     private TtsJobLeaseService leaseService;
-
+    @Autowired
+    private FileAssetRepository assetRepository;
     @Autowired
     private TtsVoiceRepository voiceRepository;
-
     @Autowired
     private TtsVoiceModelRepository modelRepository;
-
     @Autowired
     private TtsJobRepository jobRepository;
-
     @Autowired
     private JdbcTemplate jdbcTemplate;
-
     @Autowired
     private TransactionTemplate transactionTemplate;
 
@@ -56,6 +55,7 @@ class TtsJobLeaseIntegrationTest {
             jdbcTemplate.update("delete from app.tts_job");
             jdbcTemplate.update("delete from app.tts_voice_model");
             jdbcTemplate.update("delete from app.tts_voice");
+            jdbcTemplate.update("delete from app.file_asset");
         });
     }
 
@@ -67,10 +67,8 @@ class TtsJobLeaseIntegrationTest {
             var start = new CountDownLatch(1);
             var first = executor.submit(() -> claimAfterSignal("worker-a", ready, start));
             var second = executor.submit(() -> claimAfterSignal("worker-b", ready, start));
-
             assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
             start.countDown();
-
             var firstClaim = first.get(5, TimeUnit.SECONDS);
             var secondClaim = second.get(5, TimeUnit.SECONDS);
             assertThat(firstClaim.jobId()).isNotEqualTo(secondClaim.jobId());
@@ -84,18 +82,13 @@ class TtsJobLeaseIntegrationTest {
     @Test
     void activeLeaseIsNotClaimable() {
         UUID jobId = createPendingJobs("active", 1).getFirst();
-        UUID token = UUID.randomUUID();
         jdbcTemplate.update("""
                 update app.tts_job
-                   set status = 'CLAIMED',
-                       lease_owner = 'worker-active',
-                       lease_token = ?,
+                   set status = 'CLAIMED', lease_owner = 'worker-active', lease_token = ?,
                        lease_until = CURRENT_TIMESTAMP + INTERVAL '5 minutes',
-                       claimed_at = CURRENT_TIMESTAMP,
-                       attempt_count = 1
+                       claimed_at = CURRENT_TIMESTAMP, attempt_count = 1
                  where id = ?
-                """, token, jobId);
-
+                """, UUID.randomUUID(), jobId);
         assertThat(leaseService.claimNext("worker-other", Duration.ofMinutes(5))).isEmpty();
     }
 
@@ -105,15 +98,11 @@ class TtsJobLeaseIntegrationTest {
         UUID oldToken = UUID.randomUUID();
         jdbcTemplate.update("""
                 update app.tts_job
-                   set status = 'CLAIMED',
-                       lease_owner = 'worker-old',
-                       lease_token = ?,
+                   set status = 'CLAIMED', lease_owner = 'worker-old', lease_token = ?,
                        lease_until = CURRENT_TIMESTAMP - INTERVAL '1 minute',
-                       claimed_at = CURRENT_TIMESTAMP - INTERVAL '2 minutes',
-                       attempt_count = 1
+                       claimed_at = CURRENT_TIMESTAMP - INTERVAL '2 minutes', attempt_count = 1
                  where id = ?
                 """, oldToken, jobId);
-
         var claim = leaseService.claimNext("worker-new", Duration.ofMinutes(5)).orElseThrow();
         assertThat(claim.jobId()).isEqualTo(jobId);
         assertThat(claim.leaseOwner()).isEqualTo("worker-new");
@@ -121,10 +110,8 @@ class TtsJobLeaseIntegrationTest {
         assertThat(claim.attemptCount()).isEqualTo(2);
     }
 
-    private TtsJobLeaseClaim claimAfterSignal(
-            String workerId,
-            CountDownLatch ready,
-            CountDownLatch start) throws InterruptedException {
+    private TtsJobLeaseClaim claimAfterSignal(String workerId, CountDownLatch ready, CountDownLatch start)
+            throws InterruptedException {
         ready.countDown();
         if (!start.await(5, TimeUnit.SECONDS)) {
             throw new IllegalStateException("claim start signal timed out");
@@ -135,21 +122,16 @@ class TtsJobLeaseIntegrationTest {
     private List<UUID> createPendingJobs(String suffix, int count) {
         return transactionTemplate.execute(status -> {
             var voice = voiceRepository.saveAndFlush(new TtsVoiceEntity(
-                    "voice-lease-" + suffix,
-                    "US English Lessac",
-                    "en-US",
-                    "US",
-                    "FEMALE",
-                    "NEUTRAL",
-                    true));
+                    "voice-lease-" + suffix, "US English Lessac", "en-US", "US", "FEMALE", "NEUTRAL", true));
+            var assets = TtsTestAssets.createModelAssets(assetRepository, "lease-" + suffix, 'a', 'b');
             var model = modelRepository.saveAndFlush(new TtsVoiceModelEntity(
                     "model-lease-" + suffix,
                     voice,
                     TtsEngine.PIPER,
                     "1.3.0",
                     "en_US-lessac-medium-v1",
-                    UUID.randomUUID(),
-                    UUID.randomUUID(),
+                    assets.modelAssetId(),
+                    assets.configAssetId(),
                     String.valueOf('a').repeat(64),
                     String.valueOf('b').repeat(64),
                     TtsVoiceModelStatus.ACTIVE,
@@ -157,7 +139,6 @@ class TtsJobLeaseIntegrationTest {
                     "https://example.invalid/license",
                     true,
                     Instant.parse("2026-11-02T18:00:00Z")));
-
             return java.util.stream.IntStream.range(0, count)
                     .mapToObj(index -> jobRepository.saveAndFlush(new TtsJobEntity(
                             model,

@@ -56,11 +56,13 @@ write_if_missing "$TARGET_DIR/rustfs_root_access_key" "$(random_access_key)"
 write_if_missing "$TARGET_DIR/rustfs_root_secret_key" "$(random_hex 32)"
 write_if_missing "$TARGET_DIR/rustfs_backend_access_key" "$(random_access_key)"
 write_if_missing "$TARGET_DIR/rustfs_backend_secret_key" "$(random_hex 32)"
+write_if_missing "$TARGET_DIR/worker_api_key" "$(random_hex 32)"
 
 project_backend_secret postgres_migrator_password
 project_backend_secret postgres_backend_password
 project_backend_secret rustfs_backend_access_key
 project_backend_secret rustfs_backend_secret_key
+project_backend_secret worker_api_key
 
 echo "Local $ENVIRONMENT infrastructure secrets are ready under $TARGET_DIR"
 echo "Backend-only secret projection is ready under $BACKEND_DIR"
