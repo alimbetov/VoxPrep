@@ -54,13 +54,13 @@ void main() {
         selectedGoalCode: 'GOAL_A',
         selectedTrackCode: 'TRACK_A',
       ),
-      markers: const <ContentIdentity, ContentMarkerState>{
+      markers: <ContentIdentity, ContentMarkerState>{
         contentIdentity: ContentMarkerState(
           completed: true,
           lastRevisionSeen: 7,
         ),
       },
-      completedPracticeTests: const <PracticeTestCompletionKey>{
+      completedPracticeTests: <PracticeTestCompletionKey>{
         PracticeTestCompletionKey(practiceTestCode: 'TEST_A', revision: 5),
       },
     );
@@ -96,7 +96,7 @@ void main() {
         selectedGoalCode: 'GOAL_A',
         selectedTrackCode: 'TRACK_A',
       ),
-      markers: const <ContentIdentity, ContentMarkerState>{
+      markers: <ContentIdentity, ContentMarkerState>{
         contentIdentity: ContentMarkerState(
           completed: true,
           lastRevisionSeen: 7,

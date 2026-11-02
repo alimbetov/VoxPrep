@@ -130,7 +130,7 @@ final class DriftPracticeTestAttemptRepository
       }
 
       final now = _now().toUtc();
-      return saveActiveAttempt(
+      return await saveActiveAttempt(
         PracticeTestAttempt(
           practiceTestCode: code,
           practiceTestRevision: refs.single.read<int>('revision'),

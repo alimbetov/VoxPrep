@@ -81,12 +81,6 @@ final class DriftLastOpenedContentRepository
       );
     }
 
-    final next = LastOpenedContent(
-      identity: ContentIdentity(code: code, type: identity.type),
-      contentRevision: contentRevision,
-      openedAt: openedAt,
-    );
-
     try {
       await _database.customStatement(
         '''

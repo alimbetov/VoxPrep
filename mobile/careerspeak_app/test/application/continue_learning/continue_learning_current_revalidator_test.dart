@@ -118,7 +118,7 @@ void main() {
         ),
         graph: _graph(),
         selection: _selection(),
-        markers: const <ContentIdentity, ContentMarkerState>{
+        markers: <ContentIdentity, ContentMarkerState>{
           contentIdentity: ContentMarkerState(
             completed: true,
             lastRevisionSeen: 7,
@@ -148,7 +148,7 @@ void main() {
         ),
         graph: _graph(),
         selection: _selection(),
-        markers: const <ContentIdentity, ContentMarkerState>{
+        markers: <ContentIdentity, ContentMarkerState>{
           contentIdentity: ContentMarkerState(
             completed: true,
             lastRevisionSeen: 6,
@@ -213,7 +213,7 @@ void main() {
         graph: _graph(),
         selection: _selection(),
         markers: const <ContentIdentity, ContentMarkerState>{},
-        completedPracticeTests: const <PracticeTestCompletionKey>{
+        completedPracticeTests: <PracticeTestCompletionKey>{
           PracticeTestCompletionKey(practiceTestCode: 'TEST_A', revision: 5),
         },
       );
@@ -224,7 +224,7 @@ void main() {
         graph: _graph(),
         selection: _selection(),
         markers: const <ContentIdentity, ContentMarkerState>{},
-        completedPracticeTests: const <PracticeTestCompletionKey>{
+        completedPracticeTests: <PracticeTestCompletionKey>{
           PracticeTestCompletionKey(practiceTestCode: 'TEST_A', revision: 4),
         },
       );

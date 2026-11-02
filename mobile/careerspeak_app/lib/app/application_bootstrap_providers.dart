@@ -1,3 +1,4 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/ports/universal_catalogue_repository.dart';
@@ -66,3 +67,18 @@ final applicationBootstrapProvider =
 
       return result;
     });
+
+/// Eagerly watches the production bootstrap provider while keeping the app
+/// shell independently testable. This restores the acceptance-test host
+/// without coupling [CareerSpeakApp] itself to bootstrap orchestration.
+class ProductionBootstrapHost extends ConsumerWidget {
+  const ProductionBootstrapHost({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(applicationBootstrapProvider);
+    return child;
+  }
+}
