@@ -41,20 +41,30 @@ jobs:
           path = Path('mobile/careerspeak_app/test/acceptance/content_detail_audio_adversarial_e2e_test.dart')
           text = path.read_text()
 
-          pause = "      expect(find.text('Pause'), findsOneWidget);\n    },"
-          play = "      expect(find.text('Play'), findsOneWidget);\n    },"
-          if text.count(pause) != 2:
-              raise SystemExit(f'expected 2 Pause test endings, got {text.count(pause)}')
-          if text.count(play) != 2:
-              raise SystemExit(f'expected 2 Play test endings, got {text.count(play)}')
+          pause_wrapped = "      expect(find.text('Pause'), findsOneWidget);\n    },"
+          play_wrapped = "      expect(find.text('Play'), findsOneWidget);\n    },"
+          pause_inline = "    expect(find.text('Pause'), findsOneWidget);\n  });"
+
+          if text.count(pause_wrapped) != 1:
+              raise SystemExit(f'expected 1 wrapped Pause ending, got {text.count(pause_wrapped)}')
+          if text.count(play_wrapped) != 2:
+              raise SystemExit(f'expected 2 wrapped Play endings, got {text.count(play_wrapped)}')
+          if text.count(pause_inline) != 1:
+              raise SystemExit(f'expected 1 inline Pause ending, got {text.count(pause_inline)}')
 
           text = text.replace(
-              pause,
+              pause_wrapped,
               "      expect(find.text('Pause'), findsOneWidget);\n      await scenario.unmount(tester);\n    },",
+              1,
           )
           text = text.replace(
-              play,
+              play_wrapped,
               "      expect(find.text('Play'), findsOneWidget);\n      await scenario.unmount(tester);\n    },",
+          )
+          text = text.replace(
+              pause_inline,
+              "    expect(find.text('Pause'), findsOneWidget);\n    await scenario.unmount(tester);\n  });",
+              1,
           )
 
           marker = '''  Future<void> dispose() async {\n'''
