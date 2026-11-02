@@ -13,61 +13,64 @@ const _rootChecksum =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 void main() {
-  test('CURRENT root preserves persisted schema identity across app upgrades', () async {
-    final database = createTestDatabase();
-    addTearDown(database.close);
-    final now = DateTime.utc(2026, 11, 2, 9);
+  test(
+    'CURRENT root preserves persisted schema identity across app upgrades',
+    () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      final now = DateTime.utc(2026, 11, 2, 9);
 
-    await database.into(database.contentManifestStates).insert(
-      ContentManifestStatesCompanion.insert(
-        id: const Value(1),
+      await database.into(database.contentManifestStates).insert(
+        ContentManifestStatesCompanion.insert(
+          id: const Value(1),
+          schemaVersion: 1,
+          currentContentVersion: 108,
+          currentManifestChecksum: _rootChecksum,
+          etag: const Value('root-v1-108'),
+          updatedAt: now,
+        ),
+      );
+
+      final local = (await DriftSyncJournal(database).readLocalSnapshot())
+          .getOrThrow();
+      expect(local.currentSchemaVersion, 1);
+
+      final remoteV1 = RootContentManifest(
         schemaVersion: 1,
-        currentContentVersion: 108,
-        currentManifestChecksum: _rootChecksum,
-        etag: const Value('root-v1-108'),
-        updatedAt: now,
-      ),
-    );
+        contentVersion: 108,
+        minimumAppContractVersion: 1,
+        publishedAt: now,
+        checksum: _rootChecksum,
+        packs: const <PackRevisionRef>[],
+        tombstones: const <ContentTombstone>[],
+      );
+      final compatible = const ContentSyncPlanner().plan(
+        local: local,
+        remote: remoteV1,
+        remoteEtag: 'root-v1-108',
+      );
+      expect(compatible, isA<Success<SyncPlan>>());
+      expect((compatible as Success<SyncPlan>).value.isNoOp, isTrue);
 
-    final local = (await DriftSyncJournal(database).readLocalSnapshot())
-        .getOrThrow();
-    expect(local.currentSchemaVersion, 1);
-
-    final remoteV1 = RootContentManifest(
-      schemaVersion: 1,
-      contentVersion: 108,
-      minimumAppContractVersion: 1,
-      publishedAt: now,
-      checksum: _rootChecksum,
-      packs: const <PackRevisionRef>[],
-      tombstones: const <ContentTombstone>[],
-    );
-    final compatible = const ContentSyncPlanner().plan(
-      local: local,
-      remote: remoteV1,
-      remoteEtag: 'root-v1-108',
-    );
-    expect(compatible, isA<Success<SyncPlan>>());
-    expect((compatible as Success<SyncPlan>).value.isNoOp, isTrue);
-
-    final remoteV2 = RootContentManifest(
-      schemaVersion: supportedContentManifestSchemaVersion,
-      contentVersion: 108,
-      minimumAppContractVersion: 2,
-      publishedAt: now,
-      checksum: _rootChecksum,
-      packs: const <PackRevisionRef>[],
-      tombstones: const <ContentTombstone>[],
-    );
-    final conflict = const ContentSyncPlanner().plan(
-      local: local,
-      remote: remoteV2,
-      remoteEtag: 'root-v1-108',
-    );
-    expect(conflict, isA<FailureResult<SyncPlan>>());
-    expect(
-      (conflict as FailureResult<SyncPlan>).failure.code,
-      'PUBLICATION_SNAPSHOT_IDENTITY_CONFLICT',
-    );
-  });
+      final remoteV2 = RootContentManifest(
+        schemaVersion: supportedContentManifestSchemaVersion,
+        contentVersion: 108,
+        minimumAppContractVersion: 2,
+        publishedAt: now,
+        checksum: _rootChecksum,
+        packs: const <PackRevisionRef>[],
+        tombstones: const <ContentTombstone>[],
+      );
+      final conflict = const ContentSyncPlanner().plan(
+        local: local,
+        remote: remoteV2,
+        remoteEtag: 'root-v1-108',
+      );
+      expect(conflict, isA<FailureResult<SyncPlan>>());
+      expect(
+        (conflict as FailureResult<SyncPlan>).failure.code,
+        'PUBLICATION_SNAPSHOT_IDENTITY_CONFLICT',
+      );
+    },
+  );
 }
