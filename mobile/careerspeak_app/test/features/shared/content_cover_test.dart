@@ -119,7 +119,19 @@ Future<void> _pump(
       ),
     ),
   );
-  await tester.pumpAndSettle();
+
+  // Image.file uses asynchronous file I/O and decoding. pumpAndSettle() is a
+  // poor fit for this fail-soft widget because an image codec can keep the
+  // binding non-settled even though the UI contract is already decided. Use a
+  // bounded real-I/O window followed by a fixed number of frames so corruption
+  // tests remain deterministic and can never hang the qualification workflow.
+  await tester.pump();
+  await tester.runAsync(() async {
+    await Future<void>.delayed(const Duration(milliseconds: 120));
+  });
+  for (var frame = 0; frame < 4; frame++) {
+    await tester.pump(const Duration(milliseconds: 25));
+  }
 }
 
 ManifestAssetDescriptor _descriptor() {
