@@ -115,13 +115,13 @@ class CatalogueHierarchyIntegrationTest {
     }
 
     @Test
-    void parentDeletionIsRestrictedWhileChildrenExist() {
+    void parentDeletionIsRestrictedByDatabaseWhileChildrenExist() {
         var vertical = verticalRepository.saveAndFlush(vertical("VERTICAL_RESTRICT", 0));
         goalRepository.saveAndFlush(goal("GOAL_RESTRICT", vertical, 0));
 
-        verticalRepository.delete(vertical);
-
-        assertThatThrownBy(verticalRepository::flush)
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                        "delete from app.catalogue_vertical where id = ?",
+                        vertical.getId()))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
