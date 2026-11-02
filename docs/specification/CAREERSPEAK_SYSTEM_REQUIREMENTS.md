@@ -1,6 +1,6 @@
 # CareerSpeak / VoxPrep — System Requirements
 
-**Document version:** 0.17  
+**Document version:** 0.18  
 **Status:** Normative MVP baseline  
 **Target:** Android + iOS learner app, Spring Boot backend, TTS Worker
 
@@ -10,6 +10,7 @@ Normative documents:
 - [`CAREERSPEAK_MVP_DELIVERY_SCOPE.md`](CAREERSPEAK_MVP_DELIVERY_SCOPE.md)
 - [`CAREERSPEAK_MVP_FUNCTIONAL_BUSINESS_AUDIT_2026-11-01.md`](CAREERSPEAK_MVP_FUNCTIONAL_BUSINESS_AUDIT_2026-11-01.md)
 - [`CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md`](CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md)
+- [`CAREERSPEAK_CONTENT_STUDIO_REQUIREMENTS.md`](CAREERSPEAK_CONTENT_STUDIO_REQUIREMENTS.md)
 - [`CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md`](CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md)
 - [`CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md`](CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
 - [`../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md`](../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md)
@@ -45,6 +46,8 @@ TTS WORKER
 ### ADMIN
 
 One secured Content Studio account is sufficient for v1.
+
+The Content Studio is an internal B1 authoring surface, not a separate learner feature stream or independent MVP release gate. It provides the minimum visual/XML authoring capability required to populate Backend-owned catalogue/content truth safely and efficiently.
 
 ### FLUTTER INSTALLATION
 
@@ -147,9 +150,11 @@ Testcontainers
 Docker
 ```
 
+The v1 Content Studio stays inside this monolith under the secured `/admin/**` boundary. Its authoring baseline is server-rendered Spring MVC + Thymeleaf + HTMX, with MapStruct for compile-time structural mapping, restricted Lombok use, Spring Cache + Caffeine for bounded read-mostly caches, and Jackson XML/XSD/StAX for secure bulk authoring. It SHALL NOT introduce a separate React/Vue/Angular admin SPA or separate authoring service.
+
 Use native SQL where it materially helps, notably TTS claim/lease concurrency.
 
-Backend JPA entities are derived from backend invariants, not mirrored from Flutter DTOs.
+Backend JPA entities are derived from backend invariants, not mirrored from Flutter DTOs or authoring DTOs.
 
 Spring Boot is the sole remote learner/worker network boundary. RustFS is private Backend infrastructure accessed through Backend storage adapters.
 
@@ -267,6 +272,8 @@ Learner-deliverable = `PUBLISHED + ACTIVE`.
 
 Published revisions are immutable. Collection members, PracticeTest attempts and completion/history use exact revision identity.
 
+Visual/XML authoring MUST preserve these rules. A requested change to a published content revision creates a new mutable draft revision; it never mutates published learner-visible history in place.
+
 ---
 
 ## 8. Flutter lifecycle vocabulary
@@ -337,6 +344,8 @@ Required semantics:
 - failed/incomplete/corrupt publication exposes only previous valid CURRENT;
 - restart preserves/reconstructs the last valid activation deterministically;
 - exact revision/checksum identity is reproducible.
+
+Content Studio import/apply does not bypass this boundary and does not make DRAFT content learner-visible.
 
 ---
 
@@ -520,6 +529,7 @@ advanced SRS/FSRS/SM-2
 runtime STT/pronunciation scoring
 standalone Favorites feature stream
 user-managed Downloads feature stream
+separate authoring SPA/service
 ```
 
 ---
@@ -537,6 +547,8 @@ B1 Backend schema + modular-monolith implementation
  ↓
 A1 real Backend ↔ Flutter acceptance
 ```
+
+The Content Studio/XML authoring capability is subordinate to B1 and does not add a new delivery gate.
 
 A1 must prove:
 
