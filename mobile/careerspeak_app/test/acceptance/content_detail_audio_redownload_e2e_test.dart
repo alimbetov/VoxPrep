@@ -75,24 +75,30 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await _pumpUntilVisible(
+        tester,
+        find.widgetWithText(FilledButton, 'Play'),
+      );
 
       expect(source.openCount, 0);
-      expect(find.text('Play'), findsOneWidget);
 
       await tester.tap(find.widgetWithText(FilledButton, 'Play'));
-      await tester.pumpAndSettle();
+      await _pumpUntilVisible(
+        tester,
+        find.widgetWithText(FilledButton, 'Pause'),
+      );
 
       expect(source.openCount, 1);
       expect(engine.openCount, 1);
       expect(engine.lastOpenedPath, isNotNull);
       expect(await File(engine.lastOpenedPath!).readAsBytes(), _bytes);
-      expect(find.text('Pause'), findsOneWidget);
 
       engine.latestSession.complete();
-      await tester.pumpAndSettle();
+      await _pumpUntilVisible(
+        tester,
+        find.widgetWithText(FilledButton, 'Replay'),
+      );
 
-      expect(find.text('Replay'), findsOneWidget);
       expect(
         learnerState.current[ContentIdentity.fromItem(_topic)]?.listened,
         isTrue,
@@ -117,15 +123,32 @@ void main() {
       expect(await File(cachedPath).exists(), isFalse);
 
       await tester.tap(find.widgetWithText(FilledButton, 'Replay'));
-      await tester.pumpAndSettle();
+      await _pumpUntilVisible(
+        tester,
+        find.widgetWithText(FilledButton, 'Pause'),
+      );
 
       expect(source.openCount, 2);
       expect(engine.openCount, 2);
       expect(engine.lastOpenedPath, cachedPath);
       expect(await File(cachedPath).readAsBytes(), _bytes);
-      expect(find.text('Pause'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
     },
   );
+}
+
+Future<void> _pumpUntilVisible(
+  WidgetTester tester,
+  Finder finder, {
+  int maxPumps = 100,
+}) async {
+  for (var attempt = 0; attempt < maxPumps; attempt += 1) {
+    await tester.pump(const Duration(milliseconds: 10));
+    if (finder.evaluate().isNotEmpty) return;
+  }
+  throw TestFailure('Expected widget did not become visible: $finder');
 }
 
 const _topic = ContentItem(
