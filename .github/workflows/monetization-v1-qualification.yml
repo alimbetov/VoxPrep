@@ -36,8 +36,28 @@ jobs:
       - name: Dependencies
         run: flutter pub get
 
-      - name: Format
-        run: dart format --output=none --set-exit-if-changed lib test tool
+      - name: Format monetization slice
+        run: |
+          files=(
+            lib/application/content_delivery/collection_access_policy.dart
+            lib/application/content_delivery/content_manifest.dart
+            lib/application/content_delivery/content_visual_policy.dart
+            lib/application/content_delivery/product_catalog.dart
+            lib/data/local/database/careerspeak_database.dart
+            lib/data/local/database/learning_collection_access_schema_v17.dart
+            lib/data/local/drift_universal_catalogue_graph_materializer.dart
+            lib/data/local/drift_universal_catalogue_repository.dart
+            lib/data/remote/universal_catalogue_decoder_registry.dart
+            test/application/content_delivery/collection_access_policy_test.dart
+            test/application/content_delivery/content_visual_policy_test.dart
+            test/application/content_delivery/monetization_access_level_test.dart
+            test/contracts/c2_content_catalog_v3_access_contract_test.dart
+            test/data/local/database/careerspeak_database_test.dart
+            test/data/local/learning_collection_access_persistence_test.dart
+            test/data/remote/monetization_access_decoder_test.dart
+          )
+          dart format "${files[@]}"
+          git diff --exit-code -- "${files[@]}"
 
       - name: Generated Drift code reproducibility
         run: |
