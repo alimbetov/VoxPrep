@@ -25,6 +25,8 @@ jobs:
     steps:
       - name: Checkout exact SHA
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
@@ -63,7 +65,14 @@ jobs:
           flutter test test/data/local/database/careerspeak_database_migration_test.dart --reporter expanded
           flutter test test/data/local/database/careerspeak_database_v18_qualification_test.dart --reporter expanded
           flutter test test/app/api_client_providers_test.dart --reporter expanded
-          timeout 5m flutter test test/acceptance/content_detail_audio_redownload_e2e_test.dart --reporter expanded
+          flutter test test/acceptance/p2_8_asset_resolution_test.dart --reporter expanded
+          timeout 4m flutter test test/acceptance/p2_10_7_production_e2e_test.dart --reporter expanded
+          flutter test test/acceptance/c4_adversarial_atomicity_acceptance_test.dart --reporter expanded
+          timeout 4m flutter test test/acceptance/v12_universal_catalogue_adversarial_acceptance_test.dart --reporter expanded
+          timeout 4m flutter test \
+            test/acceptance/content_detail_audio_redownload_e2e_test.dart \
+            test/acceptance/content_detail_audio_adversarial_e2e_test.dart \
+            --reporter expanded
 
       - name: Full test suite
         shell: bash
