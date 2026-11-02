@@ -1,0 +1,72 @@
+name: Learner Product UI Drift v18 Baseline
+
+on:
+  push:
+    branches:
+      - feat/learner-product-ui-v1
+    paths:
+      - '.github/workflows/learner-product-ui-drift-v18.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  generate-v18:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+
+    steps:
+      - name: Checkout branch head
+        uses: actions/checkout@v4
+        with:
+          ref: feat/learner-product-ui-v1
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Rebuild generated Drift model
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Dump production schema v18
+        run: |
+          rm -f drift_schemas/drift_schema_v18.json
+          dart run drift_dev schema dump \
+            lib/data/local/database/careerspeak_database.dart \
+            drift_schemas/drift_schema_v18.json
+
+      - name: Generate migration fixtures through v18
+        run: |
+          rm -rf test/generated_migrations
+          dart run drift_dev schema generate \
+            --data-classes \
+            --companions \
+            drift_schemas/ \
+            test/generated_migrations/
+          dart format test/generated_migrations
+
+      - name: Commit schema v18 baseline
+        working-directory: .
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            mobile/careerspeak_app/drift_schemas/drift_schema_v18.json \
+            mobile/careerspeak_app/test/generated_migrations \
+            mobile/careerspeak_app/lib/data/local/database/careerspeak_database.g.dart
+          if git diff --cached --quiet; then
+            echo 'Drift v18 baseline is already reproducible.'
+            exit 0
+          fi
+          git commit -m 'test(drift): generate schema v18 migration baseline'
+          git push origin HEAD:feat/learner-product-ui-v1
