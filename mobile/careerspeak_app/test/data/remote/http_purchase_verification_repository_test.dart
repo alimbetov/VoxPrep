@@ -57,7 +57,9 @@ void main() {
     );
     final repository = HttpPurchaseVerificationRepository(apiClient: apiClient);
 
-    final verification = (await repository.verify(_purchasedEvent())).getOrThrow();
+    final verification = (await repository.verify(
+      _purchasedEvent(),
+    )).getOrThrow();
 
     expect(verification.verified, isFalse);
     expect(verification.accessLevel, AccessLevel.free);
