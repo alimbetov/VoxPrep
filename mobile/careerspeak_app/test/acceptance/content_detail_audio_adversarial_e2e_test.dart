@@ -69,6 +69,10 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Play'));
       await _waitForCondition(tester, () => scenario.source.openCount == 1);
       await _pumpUntilVisible(tester, find.textContaining('checksum'));
+      await _pumpUntilVisible(
+        tester,
+        find.widgetWithText(FilledButton, 'Play'),
+      );
 
       expect(scenario.source.openCount, 1);
       expect(scenario.engine.openCount, 0);
@@ -181,7 +185,10 @@ Future<void> _pumpUntilVisible(
   int maxPumps = 100,
 }) async {
   for (var attempt = 0; attempt < maxPumps; attempt += 1) {
-    await tester.pump(const Duration(milliseconds: 10));
+    await tester.runAsync(
+      () => Future<void>.delayed(const Duration(milliseconds: 10)),
+    );
+    await tester.pump();
     if (finder.evaluate().isNotEmpty) return;
   }
   throw TestFailure('Expected widget did not become visible: $finder');
