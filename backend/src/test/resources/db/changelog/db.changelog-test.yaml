@@ -21,3 +21,60 @@ databaseChangeLog:
                   type: varchar(255)
                   constraints:
                     nullable: false
+  - changeSet:
+      id: test-0002-persistence-foundation-probe
+      author: voxprep-test
+      context: test
+      comment: Qualify B1-P1 UUID, optimistic locking, audit timestamps, stable code, and string-enum persistence without creating a production probe table.
+      changes:
+        - createTable:
+            schemaName: app
+            tableName: persistence_foundation_probe
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+                    primaryKeyName: pk_persistence_foundation_probe
+              - column:
+                  name: version
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: stable_code
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: availability
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payload
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            schemaName: app
+            tableName: persistence_foundation_probe
+            columnNames: stable_code
+            constraintName: uk_persistence_foundation_probe__stable_code
+        - sql:
+            sql: >-
+              ALTER TABLE app.persistence_foundation_probe
+              ADD CONSTRAINT ck_persistence_foundation_probe__availability
+              CHECK (availability IN ('ACTIVE', 'INACTIVE'))
