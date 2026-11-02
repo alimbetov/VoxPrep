@@ -33,7 +33,7 @@ jobs:
       - name: Dependencies
         run: flutter pub get
 
-      - name: Repair adversarial audio test harness
+      - name: Repair adversarial audio UI polling
         shell: bash
         run: |
           set -euo pipefail
@@ -43,19 +43,11 @@ jobs:
           path = Path('test/acceptance/content_detail_audio_adversarial_e2e_test.dart')
           text = path.read_text()
 
-          old_checksum = '''      await _pumpUntilVisible(tester, find.textContaining('checksum'));\n\n      expect(scenario.source.openCount, 1);\n      expect(scenario.engine.openCount, 0);\n      expect(find.textContaining('checksum'), findsWidgets);\n      expect(find.text('Play'), findsOneWidget);'''
-          new_checksum = '''      await _pumpUntilVisible(tester, find.textContaining('checksum'));\n      await _pumpUntilVisible(\n        tester,\n        find.widgetWithText(FilledButton, 'Play'),\n      );\n\n      expect(scenario.source.openCount, 1);\n      expect(scenario.engine.openCount, 0);\n      expect(find.textContaining('checksum'), findsWidgets);\n      expect(find.text('Play'), findsOneWidget);'''
-          if text.count(old_checksum) != 1:
-              raise SystemExit('checksum assertion block not found exactly once')
-          text = text.replace(old_checksum, new_checksum, 1)
-
-          old_dispose = '''  @override\n  Future<void> dispose() async => _events.close();'''
-          new_dispose = '''  @override\n  Future<void> dispose() async {\n    // The controller already cancels its event subscription before dispose.\n    // Do not block the widget fake-async zone waiting for broadcast close.\n    unawaited(_events.close());\n  }'''
-          if text.count(old_dispose) != 1:
-              raise SystemExit('fake playback dispose not found exactly once')
-          text = text.replace(old_dispose, new_dispose, 1)
-
-          path.write_text(text)
+          old = '''  for (var attempt = 0; attempt < maxPumps; attempt += 1) {\n    await tester.pump(const Duration(milliseconds: 10));\n    if (finder.evaluate().isNotEmpty) return;\n  }'''
+          new = '''  for (var attempt = 0; attempt < maxPumps; attempt += 1) {\n    await tester.runAsync(\n      () => Future<void>.delayed(const Duration(milliseconds: 10)),\n    );\n    await tester.pump();\n    if (finder.evaluate().isNotEmpty) return;\n  }'''
+          if text.count(old) != 1:
+              raise SystemExit(f'expected one _pumpUntilVisible loop, got {text.count(old)}')
+          path.write_text(text.replace(old, new, 1))
           PY
 
       - name: Canonical format
@@ -79,5 +71,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add mobile/careerspeak_app/test/acceptance/content_detail_audio_adversarial_e2e_test.dart
-          git commit -m 'test(h9): align adversarial audio fake lifecycle'
+          git commit -m 'test(h9): let audio UI polling advance real async work'
           git push origin HEAD:feat/learner-product-ui-v1
