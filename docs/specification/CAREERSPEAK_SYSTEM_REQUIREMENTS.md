@@ -1,6 +1,6 @@
 # CareerSpeak / VoxPrep — System Requirements
 
-**Document version:** 0.18  
+**Document version:** 0.19  
 **Status:** Normative MVP baseline  
 **Target:** Android + iOS learner app, Spring Boot backend, TTS Worker
 
@@ -11,6 +11,8 @@ Normative documents:
 - [`CAREERSPEAK_MVP_FUNCTIONAL_BUSINESS_AUDIT_2026-11-01.md`](CAREERSPEAK_MVP_FUNCTIONAL_BUSINESS_AUDIT_2026-11-01.md)
 - [`CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md`](CAREERSPEAK_MOBILE_APPLICATION_REQUIREMENTS.md)
 - [`CAREERSPEAK_CONTENT_STUDIO_REQUIREMENTS.md`](CAREERSPEAK_CONTENT_STUDIO_REQUIREMENTS.md)
+- [`CAREERSPEAK_CONTENT_STUDIO_HARDENING_ADDENDUM.md`](CAREERSPEAK_CONTENT_STUDIO_HARDENING_ADDENDUM.md)
+- [`CAREERSPEAK_INFRASTRUCTURE_REQUIREMENTS.md`](CAREERSPEAK_INFRASTRUCTURE_REQUIREMENTS.md)
 - [`CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md`](CAREERSPEAK_ONBOARDING_PRODUCT_CONTRACT.md)
 - [`CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md`](CAREERSPEAK_GLOBALIZATION_REQUIREMENTS.md)
 - [`../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md`](../architecture/CAREERSPEAK_DOMAIN_CONTRACT_PLAN.md)
@@ -47,7 +49,7 @@ TTS WORKER
 
 One secured Content Studio account is sufficient for v1.
 
-The Content Studio is an internal B1 authoring surface, not a separate learner feature stream or independent MVP release gate. It provides the minimum visual/XML authoring capability required to populate Backend-owned catalogue/content truth safely and efficiently.
+The Content Studio is an internal B1 authoring surface, not a separate learner feature stream or independent MVP release gate. It provides the minimum visual/XML/asset authoring capability required to populate Backend-owned catalogue/content truth safely and efficiently.
 
 ### FLUTTER INSTALLATION
 
@@ -147,7 +149,7 @@ HikariCP
 OpenAPI
 Micrometer / Actuator
 Testcontainers
-Docker
+Docker / Docker Compose
 ```
 
 The v1 Content Studio stays inside this monolith under the secured `/admin/**` boundary. Its authoring baseline is server-rendered Spring MVC + Thymeleaf + HTMX, with MapStruct for compile-time structural mapping, restricted Lombok use, Spring Cache + Caffeine for bounded read-mostly caches, and Jackson XML/XSD/StAX for secure bulk authoring. It SHALL NOT introduce a separate React/Vue/Angular admin SPA or separate authoring service.
@@ -156,7 +158,7 @@ Use native SQL where it materially helps, notably TTS claim/lease concurrency.
 
 Backend JPA entities are derived from backend invariants, not mirrored from Flutter DTOs or authoring DTOs.
 
-Spring Boot is the sole remote learner/worker network boundary. RustFS is private Backend infrastructure accessed through Backend storage adapters.
+Spring Boot is the sole remote learner/worker network boundary. RustFS and PostgreSQL are private Backend infrastructure. Their DEV/TEST/PROD deployment, volumes, users, secrets, backup and restore requirements are defined by `CAREERSPEAK_INFRASTRUCTURE_REQUIREMENTS.md`.
 
 ---
 
@@ -272,7 +274,7 @@ Learner-deliverable = `PUBLISHED + ACTIVE`.
 
 Published revisions are immutable. Collection members, PracticeTest attempts and completion/history use exact revision identity.
 
-Visual/XML authoring MUST preserve these rules. A requested change to a published content revision creates a new mutable draft revision; it never mutates published learner-visible history in place.
+Visual/XML/asset authoring MUST preserve these rules. A requested change to a published content revision creates a new mutable draft revision; it never mutates published learner-visible history in place.
 
 ---
 
@@ -389,6 +391,8 @@ Backend controls learner media authorization
 verified local files remain usable offline
 ```
 
+B1 Content Studio SHALL include minimal private asset authoring required by the accepted learner cover path. It may upload/bind PNG, JPEG and WebP `coverImage` assets to an exact mutable draft revision, with bounded upload size, media verification, server-generated storage keys, SHA-256/size metadata and normal publication validation. Binary media is never embedded in XML and a published revision is never mutated in place.
+
 A Backend-issued direct/signed object-storage grant is not a v1 contract. Introducing it later requires a separately versioned contract and security/acceptance update.
 
 A user-managed Downloads dashboard is not an MVP release gate; offline verified asset availability is.
@@ -466,8 +470,11 @@ Security zones:
 /admin/**           → ADMIN session
 /api/v1/**          → installation token
 /internal/v1/tts/** → worker token
-Backend storage     → private RustFS credentials
+Backend storage     → scoped private RustFS credential
+PostgreSQL runtime  → least-privileged Backend DB role
 ```
+
+The production ADMIN credential is not a default/source-controlled password. Content Studio uses CSRF protection plus hardened session semantics: server-side logout/invalidation, session fixation protection and Secure/HttpOnly cookie policy in production. Production admin traffic uses TLS.
 
 Normative learner identity flow:
 
@@ -504,9 +511,47 @@ worker crash               → lease expires/reclaim
 401 repeated after recovery → fail closed without deleting learner state
 ```
 
+A Docker volume is not considered a backup. Production acceptance additionally requires a clean restore drill for PostgreSQL plus RustFS and representative publication/asset integrity verification.
+
 ---
 
-## 18. Explicit non-goals
+## 18. Infrastructure / persistence deployment
+
+B1 SHALL provide isolated `DEV`, `TEST` and `PROD` container infrastructure for PostgreSQL and RustFS.
+
+Baseline:
+
+```text
+PostgreSQL official stable 18.x image
+RustFS official stable 1.0.x image
+explicit version pins
+PROD digest pinning preferred
+separate contour volumes/networks/secrets
+private DB/object-store network boundary
+health checks
+backup + restore runbook
+```
+
+Credential split is mandatory:
+
+```text
+PostgreSQL superuser → bootstrap/maintenance only
+PostgreSQL migrator  → Liquibase
+PostgreSQL backend   → runtime DML
+
+RustFS root          → bootstrap/break-glass only
+RustFS backend IAM   → bucket/prefix-scoped runtime access
+```
+
+Spring Boot runtime SHALL NOT use the PostgreSQL superuser or RustFS root credentials.
+
+PROD persistent paths survive container recreation and are separated from backup storage. DEV/TEST reset operations are namespaced so they cannot target PROD volumes by default.
+
+The complete topology, directory and acceptance contract is normative in `CAREERSPEAK_INFRASTRUCTURE_REQUIREMENTS.md`.
+
+---
+
+## 19. Explicit non-goals
 
 Do not introduce in v1 without a new versioned requirement:
 
@@ -530,11 +575,12 @@ runtime STT/pronunciation scoring
 standalone Favorites feature stream
 user-managed Downloads feature stream
 separate authoring SPA/service
+custom PostgreSQL/RustFS images without a demonstrated packaging need
 ```
 
 ---
 
-## 19. Remaining delivery gates
+## 20. Remaining delivery gates
 
 The system contract is sufficient for this Flutter/BA branch. Full MVP production acceptance still requires:
 
@@ -544,11 +590,13 @@ C4 Atomic Publication
 C5 Installation / Security
  ↓
 B1 Backend schema + modular-monolith implementation
+   + Content Studio / asset authoring
+   + PostgreSQL/RustFS infrastructure baseline
  ↓
 A1 real Backend ↔ Flutter acceptance
 ```
 
-The Content Studio/XML authoring capability is subordinate to B1 and does not add a new delivery gate.
+The Content Studio/XML/asset authoring and container infrastructure capabilities are subordinate to B1 and do not add new delivery gates.
 
 A1 must prove:
 
