@@ -128,6 +128,7 @@ final class UniversalCatalogueDecoderRegistry {
       'trackCode',
       'title',
       'description',
+      'accessLevel',
       'sortOrder',
       'active',
       'members',
@@ -137,12 +138,20 @@ final class UniversalCatalogueDecoderRegistry {
       'members',
       'Learning collection',
     ).map(_decodeCollectionMember).toList(growable: false);
+    final accessLevelWire = _optionalString(
+      map,
+      'accessLevel',
+      'Learning collection',
+    );
     return LearningCollectionProjection(
       code: _string(map, 'code', 'Learning collection'),
       verticalCode: _string(map, 'verticalCode', 'Learning collection'),
       trackCode: _string(map, 'trackCode', 'Learning collection'),
       title: _string(map, 'title', 'Learning collection'),
       description: _string(map, 'description', 'Learning collection'),
+      accessLevel: accessLevelWire == null
+          ? AccessLevel.full
+          : AccessLevel.fromWireName(accessLevelWire),
       sortOrder: _int(map, 'sortOrder', 'Learning collection'),
       active: _bool(map, 'active', 'Learning collection'),
       members: members,
