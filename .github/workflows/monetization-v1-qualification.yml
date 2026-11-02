@@ -51,6 +51,7 @@ jobs:
             lib/application/content_delivery/product_catalog.dart
             lib/application/ports/access_snapshot_repository.dart
             lib/application/ports/billing_repository.dart
+            lib/data/billing/in_app_purchase_billing_repository.dart
             lib/data/billing/unavailable_billing_repository.dart
             lib/data/local/database/access_snapshot_schema_v18.dart
             lib/data/local/database/careerspeak_database.dart
@@ -68,6 +69,7 @@ jobs:
             test/application/content_delivery/monetization_access_level_test.dart
             test/application/content_delivery/monetization_app_contract_version_test.dart
             test/contracts/c2_content_catalog_v3_access_contract_test.dart
+            test/contracts/monetization_billing_dependency_contract_test.dart
             test/data/local/drift_access_snapshot_repository_test.dart
             test/data/local/learning_collection_access_persistence_test.dart
             test/data/remote/monetization_access_decoder_test.dart
@@ -97,6 +99,7 @@ jobs:
             lib/application/content_delivery/product_catalog.dart
             lib/application/ports/access_snapshot_repository.dart
             lib/application/ports/billing_repository.dart
+            lib/data/billing/in_app_purchase_billing_repository.dart
             lib/data/billing/unavailable_billing_repository.dart
             lib/data/local/database/access_snapshot_schema_v18.dart
             lib/data/local/database/careerspeak_database.dart
@@ -114,6 +117,7 @@ jobs:
             test/application/content_delivery/monetization_access_level_test.dart
             test/application/content_delivery/monetization_app_contract_version_test.dart
             test/contracts/c2_content_catalog_v3_access_contract_test.dart
+            test/contracts/monetization_billing_dependency_contract_test.dart
             test/data/local/drift_access_snapshot_repository_test.dart
             test/data/local/learning_collection_access_persistence_test.dart
             test/data/remote/monetization_access_decoder_test.dart
@@ -136,6 +140,7 @@ jobs:
             test/application/content_delivery/monetization_access_level_test.dart \
             test/application/content_delivery/monetization_app_contract_version_test.dart \
             test/contracts/c2_content_catalog_v3_access_contract_test.dart \
+            test/contracts/monetization_billing_dependency_contract_test.dart \
             test/data/local/drift_access_snapshot_repository_test.dart \
             test/data/local/learning_collection_access_persistence_test.dart \
             test/data/local/drift_universal_catalogue_graph_materializer_test.dart \
