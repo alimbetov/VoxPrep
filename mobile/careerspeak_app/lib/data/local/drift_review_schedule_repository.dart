@@ -8,27 +8,27 @@ import 'content_type_storage.dart';
 import 'database/careerspeak_database.dart';
 
 final class DriftReviewScheduleRepository implements ReviewScheduleRepository {
-  DriftReviewScheduleRepository(
-    this._database, {
-    DateTime Function()? now,
-  }) : _now = now ?? (() => DateTime.now().toUtc());
+  DriftReviewScheduleRepository(this._database, {DateTime Function()? now})
+    : _now = now ?? (() => DateTime.now().toUtc());
 
   final CareerSpeakDatabase _database;
   final DateTime Function() _now;
   final StreamController<Result<Map<ContentIdentity, ContentReviewState>>>
-      _changes = StreamController<
+  _changes =
+      StreamController<
         Result<Map<ContentIdentity, ContentReviewState>>
       >.broadcast();
 
   @override
-  Stream<Result<Map<ContentIdentity, ContentReviewState>>> watchSchedules()
-      async* {
+  Stream<Result<Map<ContentIdentity, ContentReviewState>>>
+  watchSchedules() async* {
     yield await getSchedules();
     yield* _changes.stream;
   }
 
   @override
-  Future<Result<Map<ContentIdentity, ContentReviewState>>> getSchedules() async {
+  Future<Result<Map<ContentIdentity, ContentReviewState>>>
+  getSchedules() async {
     try {
       final rows = await _database.customSelect('''
         SELECT
@@ -84,9 +84,7 @@ final class DriftReviewScheduleRepository implements ReviewScheduleRepository {
   }) async {
     final code = identity.code.trim();
     final next = nextReviewAt.toUtc();
-    if (code.isEmpty ||
-        reviewStage < 0 ||
-        next.millisecondsSinceEpoch <= 0) {
+    if (code.isEmpty || reviewStage < 0 || next.millisecondsSinceEpoch <= 0) {
       return const FailureResult<ContentReviewState>(
         ApplicationFailure(
           code: 'REVIEW_SCHEDULE_INVALID',
@@ -148,10 +146,7 @@ final class DriftReviewScheduleRepository implements ReviewScheduleRepository {
         DELETE FROM content_review_states
         WHERE content_code = ? AND content_type = ?
         ''',
-        <Object?>[
-          identity.code,
-          contentTypeToStorage(identity.type),
-        ],
+        <Object?>[identity.code, contentTypeToStorage(identity.type)],
       );
       final snapshot = await getSchedules();
       if (snapshot case Success<Map<ContentIdentity, ContentReviewState>>()) {

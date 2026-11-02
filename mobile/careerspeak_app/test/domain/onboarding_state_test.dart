@@ -23,10 +23,7 @@ void main() {
     test('explicit Not sure resumes at support language', () {
       expect(
         OnboardingState.initial.nextStep(
-          LearnerSelection(
-            selectedGoalCode: 'GOAL_A',
-            levelDecisionMade: true,
-          ),
+          LearnerSelection(selectedGoalCode: 'GOAL_A', levelDecisionMade: true),
         ),
         OnboardingStep.supportLanguage,
       );

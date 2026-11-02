@@ -46,7 +46,9 @@ class FullUnlockScreen extends ConsumerWidget {
                       child: Text(
                         'VOXPREP FULL',
                         style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onPrimaryContainer,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.8,
                         ),
@@ -187,9 +189,9 @@ class _StoreProductPanel extends StatelessWidget {
             Text(
               product.localizedPrice,
               key: const Key('full-unlock-localized-price'),
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 4),
             const Text('One-time purchase'),

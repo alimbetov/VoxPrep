@@ -37,9 +37,8 @@ class CareerSpeakApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      builder: (context, child) => BootstrapStatusFrame(
-        child: child ?? const SizedBox.shrink(),
-      ),
+      builder: (context, child) =>
+          BootstrapStatusFrame(child: child ?? const SizedBox.shrink()),
       routerConfig: router,
     );
   }

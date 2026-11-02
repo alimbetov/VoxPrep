@@ -12,8 +12,8 @@ void main() {
       addTearDown(database.close);
       final repository = DriftOnboardingStateRepository(database);
 
-      final initial = (await repository.getState() as Success<OnboardingState>)
-          .value;
+      final initial =
+          (await repository.getState() as Success<OnboardingState>).value;
       expect(initial.completed, isFalse);
       expect(initial.generation, 0);
 
@@ -26,8 +26,8 @@ void main() {
       expect(state.generation, 1);
 
       final reopened = DriftOnboardingStateRepository(database);
-      final persisted = (await reopened.getState() as Success<OnboardingState>)
-          .value;
+      final persisted =
+          (await reopened.getState() as Success<OnboardingState>).value;
       expect(persisted.completed, isTrue);
       expect(persisted.generation, 1);
     });
@@ -37,10 +37,7 @@ void main() {
       addTearDown(database.close);
       final repository = DriftOnboardingStateRepository(database);
 
-      await repository.compareAndSet(
-        expectedGeneration: 0,
-        completed: true,
-      );
+      await repository.compareAndSet(expectedGeneration: 0, completed: true);
       final stale = await repository.compareAndSet(
         expectedGeneration: 0,
         completed: false,
@@ -51,8 +48,8 @@ void main() {
         (stale as FailureResult<OnboardingState>).failure.code,
         'ONBOARDING_STATE_CONFLICT',
       );
-      final current = (await repository.getState() as Success<OnboardingState>)
-          .value;
+      final current =
+          (await repository.getState() as Success<OnboardingState>).value;
       expect(current.completed, isTrue);
     });
   });

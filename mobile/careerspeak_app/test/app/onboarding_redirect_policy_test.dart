@@ -5,20 +5,14 @@ void main() {
   group('onboardingRedirect', () {
     test('does not redirect while onboarding state is loading', () {
       expect(
-        onboardingRedirect(
-          onboardingCompleted: null,
-          matchedLocation: '/',
-        ),
+        onboardingRedirect(onboardingCompleted: null, matchedLocation: '/'),
         isNull,
       );
     });
 
     test('incomplete onboarding redirects normal routes to onboarding', () {
       expect(
-        onboardingRedirect(
-          onboardingCompleted: false,
-          matchedLocation: '/',
-        ),
+        onboardingRedirect(onboardingCompleted: false, matchedLocation: '/'),
         '/onboarding',
       );
       expect(
@@ -42,10 +36,7 @@ void main() {
 
     test('completed onboarding leaves normal routes alone', () {
       expect(
-        onboardingRedirect(
-          onboardingCompleted: true,
-          matchedLocation: '/',
-        ),
+        onboardingRedirect(onboardingCompleted: true, matchedLocation: '/'),
         isNull,
       );
       expect(

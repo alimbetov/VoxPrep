@@ -56,10 +56,7 @@ void main() {
         graph: _graph(),
       );
 
-      expect(
-        result.reasons,
-        {LearnerSelectionNormalizationReason.goalMissing},
-      );
+      expect(result.reasons, {LearnerSelectionNormalizationReason.goalMissing});
       expect(result.selection.selectedGoalCode, isNull);
       expect(result.selection.selectedTrackCode, isNull);
       expect(result.selection.selfAssessedLevelCode, 'B2');
@@ -78,10 +75,9 @@ void main() {
         graph: _graph(goalActive: false, includeSiblingGoal: true),
       );
 
-      expect(
-        result.reasons,
-        {LearnerSelectionNormalizationReason.goalInactive},
-      );
+      expect(result.reasons, {
+        LearnerSelectionNormalizationReason.goalInactive,
+      });
       expect(result.selection.selectedGoalCode, isNull);
       expect(result.selection.selectedTrackCode, isNull);
       expect(result.selection.selectedGoalCode, isNot('OTHER_GOAL'));
@@ -96,10 +92,9 @@ void main() {
         graph: _graph(verticalActive: false),
       );
 
-      expect(
-        result.reasons,
-        {LearnerSelectionNormalizationReason.verticalInactive},
-      );
+      expect(result.reasons, {
+        LearnerSelectionNormalizationReason.verticalInactive,
+      });
       expect(result.selection.selectedGoalCode, isNull);
       expect(result.selection.selectedTrackCode, isNull);
     });
@@ -113,10 +108,9 @@ void main() {
         graph: _graph(),
       );
 
-      expect(
-        result.reasons,
-        {LearnerSelectionNormalizationReason.trackMissing},
-      );
+      expect(result.reasons, {
+        LearnerSelectionNormalizationReason.trackMissing,
+      });
       expect(result.selection.selectedGoalCode, 'JOB_INTERVIEW');
       expect(result.selection.selectedTrackCode, isNull);
     });
@@ -130,10 +124,9 @@ void main() {
         graph: _graph(trackActive: false),
       );
 
-      expect(
-        result.reasons,
-        {LearnerSelectionNormalizationReason.trackInactive},
-      );
+      expect(result.reasons, {
+        LearnerSelectionNormalizationReason.trackInactive,
+      });
       expect(result.selection.selectedGoalCode, 'JOB_INTERVIEW');
       expect(result.selection.selectedTrackCode, isNull);
     });
@@ -147,10 +140,9 @@ void main() {
         graph: _graph(includeSiblingGoal: true),
       );
 
-      expect(
-        result.reasons,
-        {LearnerSelectionNormalizationReason.trackWrongGoal},
-      );
+      expect(result.reasons, {
+        LearnerSelectionNormalizationReason.trackWrongGoal,
+      });
       expect(result.selection.selectedGoalCode, 'JOB_INTERVIEW');
       expect(result.selection.selectedTrackCode, isNull);
     });

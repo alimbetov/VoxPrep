@@ -204,12 +204,13 @@ void main() {
     final client = InstallationAuthRecoveryApiClient(
       delegate: delegate,
       credentialStore: store,
-      renewCredentials: () async => const FailureResult<InstallationCredentials>(
-        ApplicationFailure(
-          code: 'INSTALLATION_REVOKED',
-          message: 'installation revoked',
-        ),
-      ),
+      renewCredentials: () async =>
+          const FailureResult<InstallationCredentials>(
+            ApplicationFailure(
+              code: 'INSTALLATION_REVOKED',
+              message: 'installation revoked',
+            ),
+          ),
     );
 
     final result = await client.send(

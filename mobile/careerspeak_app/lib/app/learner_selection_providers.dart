@@ -27,7 +27,9 @@ final learnerSelectionNormalizerProvider = Provider<LearnerSelectionNormalizer>(
   (ref) => const LearnerSelectionNormalizer(),
 );
 
-final learnerSelectionServiceProvider = Provider<LearnerSelectionService>((ref) {
+final learnerSelectionServiceProvider = Provider<LearnerSelectionService>((
+  ref,
+) {
   return LearnerSelectionService(
     repository: ref.watch(learnerSelectionRepositoryProvider),
     normalizer: ref.watch(learnerSelectionNormalizerProvider),
@@ -39,43 +41,41 @@ final learnerSelectionProvider = StreamProvider<LearnerSelection>((ref) {
   return repository.watchSelection().map((result) => result.getOrThrow());
 });
 
-final learnerLearningContextProvider = Provider<AsyncValue<LearnerLearningContext?>>(
-  (ref) {
-    final selection = ref.watch(learnerSelectionProvider);
-    final catalogue = ref.watch(currentUniversalCatalogueProvider);
+final learnerLearningContextProvider =
+    Provider<AsyncValue<LearnerLearningContext?>>((ref) {
+      final selection = ref.watch(learnerSelectionProvider);
+      final catalogue = ref.watch(currentUniversalCatalogueProvider);
 
-    return selection.when(
-      loading: () => const AsyncLoading<LearnerLearningContext?>(),
-      error: (error, stack) => AsyncError<LearnerLearningContext?>(error, stack),
-      data: (current) => catalogue.when(
+      return selection.when(
         loading: () => const AsyncLoading<LearnerLearningContext?>(),
         error: (error, stack) =>
             AsyncError<LearnerLearningContext?>(error, stack),
-        data: (snapshot) {
-          final goalCode = current.selectedGoalCode;
-          if (goalCode == null || snapshot == null) {
-            return const AsyncData<LearnerLearningContext?>(null);
-          }
+        data: (current) => catalogue.when(
+          loading: () => const AsyncLoading<LearnerLearningContext?>(),
+          error: (error, stack) =>
+              AsyncError<LearnerLearningContext?>(error, stack),
+          data: (snapshot) {
+            final goalCode = current.selectedGoalCode;
+            if (goalCode == null || snapshot == null) {
+              return const AsyncData<LearnerLearningContext?>(null);
+            }
 
-          final graph = snapshot.graph;
-          for (final goal in graph.goals) {
-            if (goal.code != goalCode || !goal.active) continue;
-            for (final vertical in graph.verticals) {
-              if (vertical.code == goal.verticalCode && vertical.active) {
-                return AsyncData<LearnerLearningContext?>(
-                  (
+            final graph = snapshot.graph;
+            for (final goal in graph.goals) {
+              if (goal.code != goalCode || !goal.active) continue;
+              for (final vertical in graph.verticals) {
+                if (vertical.code == goal.verticalCode && vertical.active) {
+                  return AsyncData<LearnerLearningContext?>((
                     verticalCode: vertical.code,
                     verticalTitle: vertical.title,
                     goalCode: goal.code,
                     goalTitle: goal.title,
-                  ),
-                );
+                  ));
+                }
               }
             }
-          }
-          return const AsyncData<LearnerLearningContext?>(null);
-        },
-      ),
-    );
-  },
-);
+            return const AsyncData<LearnerLearningContext?>(null);
+          },
+        ),
+      );
+    });

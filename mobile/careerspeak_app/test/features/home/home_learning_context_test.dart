@@ -17,10 +17,7 @@ void main() {
   testWidgets('O4 Home exposes choose-direction state when no goal exists', (
     tester,
   ) async {
-    await _pumpHome(
-      tester,
-      const AsyncData<LearnerLearningContext?>(null),
-    );
+    await _pumpHome(tester, const AsyncData<LearnerLearningContext?>(null));
 
     expect(find.text('Choose learning direction'), findsOneWidget);
     expect(find.text('Choose'), findsOneWidget);
@@ -31,14 +28,12 @@ void main() {
   ) async {
     await _pumpHome(
       tester,
-      const AsyncData<LearnerLearningContext?>(
-        (
-          verticalCode: 'JAVA',
-          verticalTitle: 'Java Interview',
-          goalCode: 'JOB_INTERVIEW',
-          goalTitle: 'Pass Java backend interviews',
-        ),
-      ),
+      const AsyncData<LearnerLearningContext?>((
+        verticalCode: 'JAVA',
+        verticalTitle: 'Java Interview',
+        goalCode: 'JOB_INTERVIEW',
+        goalTitle: 'Pass Java backend interviews',
+      )),
     );
 
     expect(find.text('Java Interview'), findsOneWidget);

@@ -168,7 +168,8 @@ class CatalogueTrackScreen extends ConsumerWidget {
         eyebrow: goal.title.toUpperCase(),
         title: track.title,
         description: track.description,
-        emptyMessage: 'No learning collections are available for this track yet.',
+        emptyMessage:
+            'No learning collections are available for this track yet.',
         children: [
           for (final collection in collections)
             _HierarchyCard(
@@ -225,15 +226,21 @@ class CatalogueCollectionScreen extends ConsumerWidget {
       final graph = snapshot.graph;
       final vertical = _activeVertical(graph, verticalCode);
       if (vertical == null) {
-        return const _NotFound(message: 'This learning collection is unavailable.');
+        return const _NotFound(
+          message: 'This learning collection is unavailable.',
+        );
       }
       final goal = _activeGoal(graph, vertical.code, goalCode);
       if (goal == null) {
-        return const _NotFound(message: 'This learning collection is unavailable.');
+        return const _NotFound(
+          message: 'This learning collection is unavailable.',
+        );
       }
       final track = _activeTrack(graph, vertical.code, goal.code, trackCode);
       if (track == null) {
-        return const _NotFound(message: 'This learning collection is unavailable.');
+        return const _NotFound(
+          message: 'This learning collection is unavailable.',
+        );
       }
       final collection = graph.collections
           .where(
@@ -245,7 +252,9 @@ class CatalogueCollectionScreen extends ConsumerWidget {
           )
           .firstOrNull;
       if (collection == null) {
-        return const _NotFound(message: 'This learning collection is unavailable.');
+        return const _NotFound(
+          message: 'This learning collection is unavailable.',
+        );
       }
       if (CollectionAccessPolicy.requiresUnlock(
         learnerAccess: learnerAccess,
@@ -398,10 +407,7 @@ class _HierarchyPage extends StatelessWidget {
             ),
           )
         else
-          for (final child in children) ...[
-            child,
-            const SizedBox(height: 12),
-          ],
+          for (final child in children) ...[child, const SizedBox(height: 12)],
       ],
     );
   }
@@ -474,9 +480,7 @@ class _HierarchyCard extends StatelessWidget {
                               ),
                               child: Text(
                                 'FULL',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelSmall
+                                style: Theme.of(context).textTheme.labelSmall
                                     ?.copyWith(
                                       color: scheme.onTertiaryContainer,
                                       fontWeight: FontWeight.w700,
@@ -500,16 +504,17 @@ class _HierarchyCard extends StatelessWidget {
                     Row(
                       children: [
                         Icon(
-                          locked ? Icons.lock_outline : Icons.arrow_forward_rounded,
+                          locked
+                              ? Icons.lock_outline
+                              : Icons.arrow_forward_rounded,
                           size: 18,
                           color: scheme.primary,
                         ),
                         const SizedBox(width: 6),
                         Text(
                           locked ? 'Unlock to continue' : actionLabel,
-                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                            color: scheme.primary,
-                          ),
+                          style: Theme.of(context).textTheme.labelLarge
+                              ?.copyWith(color: scheme.primary),
                         ),
                       ],
                     ),
@@ -554,7 +559,10 @@ class _ContentCollectionMemberCard extends ConsumerWidget {
       code: content.contentCode,
       type: content.contentType,
     );
-    final resolved = ref.watch(contentByIdentityProvider(identity)).asData?.value;
+    final resolved = ref
+        .watch(contentByIdentityProvider(identity))
+        .asData
+        ?.value;
     final exact = resolved?.revision == content.revision ? resolved : null;
     final title = exact?.title ?? _contentTypeLabel(content.contentType);
     final subtitle = exact?.subtitle ?? 'Learning content';
@@ -584,10 +592,11 @@ class _ContentCollectionMemberCard extends ConsumerWidget {
                       children: [
                         Text(
                           content.contentType.name.toUpperCase(),
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          style: Theme.of(context).textTheme.labelSmall
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.primary,
+                                fontWeight: FontWeight.w700,
+                              ),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -619,7 +628,9 @@ class _PracticeTestMemberCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final reference = member.practiceTestRef!;
-    final test = ref.watch(practiceTestByCodeProvider(reference.practiceTestCode));
+    final test = ref.watch(
+      practiceTestByCodeProvider(reference.practiceTestCode),
+    );
     final resolved = test.asData?.value;
     final title = resolved?.title ?? 'Practice test';
     final subtitle = resolved == null
@@ -728,7 +739,10 @@ class _FullAccessRequired extends StatelessWidget {
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: const Padding(
-                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
                       child: Text('FULL'),
                     ),
                   ),

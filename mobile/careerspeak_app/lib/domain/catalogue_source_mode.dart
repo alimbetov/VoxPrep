@@ -1,4 +1,1 @@
-enum CatalogueSourceMode {
-  production,
-  demo,
-}
+enum CatalogueSourceMode { production, demo }

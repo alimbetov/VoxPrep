@@ -50,7 +50,8 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         data: (values) {
           final due = dueReviewItems.asData?.value ?? const <ContentItem>[];
           final scheduleValues =
-              schedules.asData?.value ?? const <ContentIdentity, ContentReviewState>{};
+              schedules.asData?.value ??
+              const <ContentIdentity, ContentReviewState>{};
           final items = _itemsFor(page.items, values, due);
           return ListView(
             padding: const EdgeInsets.all(24),
@@ -113,7 +114,9 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
                   _DueReviewItem(
                     item: item,
                     schedule: scheduleValues[ContentIdentity.fromItem(item)],
-                    submitting: _submitting.contains(ContentIdentity.fromItem(item)),
+                    submitting: _submitting.contains(
+                      ContentIdentity.fromItem(item),
+                    ),
                     onOutcome: (outcome) => _recordOutcome(item, outcome),
                   )
               else
@@ -133,7 +136,9 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
 
     setState(() => _submitting.add(identity));
     try {
-      final result = await ref.read(reviewSchedulerProvider).recordOutcome(
+      final result = await ref
+          .read(reviewSchedulerProvider)
+          .recordOutcome(
             identity: identity,
             currentStage: schedule.reviewStage,
             outcome: outcome,

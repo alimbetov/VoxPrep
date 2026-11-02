@@ -11,10 +11,8 @@ import 'publication_snapshot_storage.dart';
 
 final class DriftPracticeTestAttemptRepository
     implements PracticeTestAttemptRepository {
-  DriftPracticeTestAttemptRepository(
-    this._database, {
-    DateTime Function()? now,
-  }) : _now = now ?? (() => DateTime.now().toUtc());
+  DriftPracticeTestAttemptRepository(this._database, {DateTime Function()? now})
+    : _now = now ?? (() => DateTime.now().toUtc());
 
   final CareerSpeakDatabase _database;
   final DateTime Function() _now;
@@ -215,10 +213,7 @@ final class DriftPracticeTestAttemptRepository
           throw const FormatException('invalid practice-test completion row');
         }
         completed.add(
-          PracticeTestCompletionKey(
-            practiceTestCode: code,
-            revision: revision,
-          ),
+          PracticeTestCompletionKey(practiceTestCode: code, revision: revision),
         );
       }
       return Success<Set<PracticeTestCompletionKey>>(

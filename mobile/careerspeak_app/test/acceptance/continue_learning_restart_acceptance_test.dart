@@ -65,7 +65,9 @@ void main() {
       database,
       now: () => startedAt.add(const Duration(minutes: 10)),
     );
-    final reopenedLastOpenedRepository = DriftLastOpenedContentRepository(database);
+    final reopenedLastOpenedRepository = DriftLastOpenedContentRepository(
+      database,
+    );
     final restoredAttempt =
         (await reopenedAttemptRepository.getActiveAttempt()
                 as Success<PracticeTestAttempt?>)
@@ -176,8 +178,7 @@ void main() {
     );
     expect(
       afterSubmit.incompleteMembers.where(
-        (candidate) =>
-            candidate.target is ContinueLearningPracticeTestTarget,
+        (candidate) => candidate.target is ContinueLearningPracticeTestTarget,
       ),
       isEmpty,
     );
@@ -191,8 +192,7 @@ void main() {
     final database = CareerSpeakDatabase(NativeDatabase(file));
     addTearDown(database.close);
 
-    await database.customStatement(
-      '''
+    await database.customStatement('''
       INSERT INTO practice_test_active_attempt (
         id,
         practice_test_code,
@@ -202,8 +202,7 @@ void main() {
         started_at,
         updated_at
       ) VALUES (1, 'TEST_A', 5, 0, '{"bad":-1}', 1, 1)
-      ''',
-    );
+      ''');
 
     final result = await DriftPracticeTestAttemptRepository(
       database,

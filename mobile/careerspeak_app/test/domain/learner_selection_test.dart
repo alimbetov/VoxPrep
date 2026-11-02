@@ -47,10 +47,7 @@ void main() {
     });
 
     test('generation cannot be negative', () {
-      expect(
-        () => LearnerSelection(generation: -1),
-        throwsArgumentError,
-      );
+      expect(() => LearnerSelection(generation: -1), throwsArgumentError);
     });
   });
 }

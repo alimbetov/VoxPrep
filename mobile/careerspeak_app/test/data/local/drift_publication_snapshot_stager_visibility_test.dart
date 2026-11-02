@@ -51,15 +51,17 @@ void main() {
       );
 
       final now = DateTime.utc(2026, 11, 1, 10);
-      await database.into(database.contentManifestStates).insert(
-        ContentManifestStatesCompanion.insert(
-          id: const Value(1),
-          schemaVersion: 1,
-          currentContentVersion: 1,
-          currentManifestChecksum: _rootV1,
-          updatedAt: now,
-        ),
-      );
+      await database
+          .into(database.contentManifestStates)
+          .insert(
+            ContentManifestStatesCompanion.insert(
+              id: const Value(1),
+              schemaVersion: 1,
+              currentContentVersion: 1,
+              currentManifestChecksum: _rootV1,
+              updatedAt: now,
+            ),
+          );
       await database.customStatement(
         '''
         INSERT INTO publication_practice_test_refs
@@ -136,8 +138,9 @@ void main() {
       );
       final catalogueRepository = DriftCatalogueSnapshotRepository(database);
 
-      final beforeTest = (await practiceRepository.getByCode('JAVA_TEST'))
-          .getOrThrow();
+      final beforeTest = (await practiceRepository.getByCode(
+        'JAVA_TEST',
+      )).getOrThrow();
       final beforeCatalogue = (await catalogueRepository.readCurrent(
         CatalogueKind.categories,
       )).getOrThrow();
@@ -151,24 +154,28 @@ void main() {
         'Java v1',
       );
 
-      final stagedTestRefs = await database.customSelect(
-        'SELECT revision FROM publication_practice_test_refs '
-        'WHERE content_version = 2 AND practice_test_code = ?',
-        variables: <Variable<Object>>[const Variable<String>('JAVA_TEST')],
-      ).get();
-      final stagedCatalogueRefs = await database.customSelect(
-        'SELECT revision FROM publication_catalogue_refs '
-        'WHERE content_version = 2 AND catalogue_kind = ?',
-        variables: <Variable<Object>>[
-          Variable<String>(CatalogueKind.categories.wireName),
-        ],
-      ).get();
+      final stagedTestRefs = await database
+          .customSelect(
+            'SELECT revision FROM publication_practice_test_refs '
+            'WHERE content_version = 2 AND practice_test_code = ?',
+            variables: <Variable<Object>>[const Variable<String>('JAVA_TEST')],
+          )
+          .get();
+      final stagedCatalogueRefs = await database
+          .customSelect(
+            'SELECT revision FROM publication_catalogue_refs '
+            'WHERE content_version = 2 AND catalogue_kind = ?',
+            variables: <Variable<Object>>[
+              Variable<String>(CatalogueKind.categories.wireName),
+            ],
+          )
+          .get();
       expect(stagedTestRefs.single.read<int>('revision'), 2);
       expect(stagedCatalogueRefs.single.read<int>('revision'), 2);
 
-      await (database.update(database.contentManifestStates)
-            ..where((row) => row.id.equals(1)))
-          .write(
+      await (database.update(
+        database.contentManifestStates,
+      )..where((row) => row.id.equals(1))).write(
         ContentManifestStatesCompanion(
           currentContentVersion: const Value(2),
           currentManifestChecksum: const Value(_rootV2),
@@ -176,8 +183,9 @@ void main() {
         ),
       );
 
-      final afterTest = (await practiceRepository.getByCode('JAVA_TEST'))
-          .getOrThrow();
+      final afterTest = (await practiceRepository.getByCode(
+        'JAVA_TEST',
+      )).getOrThrow();
       final afterCatalogue = (await catalogueRepository.readCurrent(
         CatalogueKind.categories,
       )).getOrThrow();

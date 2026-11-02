@@ -130,35 +130,38 @@ void main() {
       expect(result.incompleteMembers, isEmpty);
     });
 
-    test('completion of an older revision does not complete CURRENT revision', () {
-      final result = revalidator.revalidate(
-        proposed: ContinueLearningInput(
-          unfinishedLastOpenedContent: _lastOpened(revision: 7),
-          incompleteMembers: const <ContinueLearningMemberCandidate>[
-            ContinueLearningMemberCandidate(
-              collectionCode: 'COLLECTION_A',
-              collectionSortOrder: 0,
-              position: 0,
-              target: ContinueLearningContentTarget(
-                identity: contentIdentity,
-                revision: 7,
+    test(
+      'completion of an older revision does not complete CURRENT revision',
+      () {
+        final result = revalidator.revalidate(
+          proposed: ContinueLearningInput(
+            unfinishedLastOpenedContent: _lastOpened(revision: 7),
+            incompleteMembers: const <ContinueLearningMemberCandidate>[
+              ContinueLearningMemberCandidate(
+                collectionCode: 'COLLECTION_A',
+                collectionSortOrder: 0,
+                position: 0,
+                target: ContinueLearningContentTarget(
+                  identity: contentIdentity,
+                  revision: 7,
+                ),
               ),
-            ),
-          ],
-        ),
-        graph: _graph(),
-        selection: _selection(),
-        markers: <ContentIdentity, ContentMarkerState>{
-          contentIdentity: ContentMarkerState(
-            completed: true,
-            lastRevisionSeen: 6,
+            ],
           ),
-        },
-      );
+          graph: _graph(),
+          selection: _selection(),
+          markers: <ContentIdentity, ContentMarkerState>{
+            contentIdentity: ContentMarkerState(
+              completed: true,
+              lastRevisionSeen: 6,
+            ),
+          },
+        );
 
-      expect(result.unfinishedLastOpenedContent, isNotNull);
-      expect(result.incompleteMembers, hasLength(1));
-    });
+        expect(result.unfinishedLastOpenedContent, isNotNull);
+        expect(result.incompleteMembers, hasLength(1));
+      },
+    );
 
     test('fails closed for inactive or stale selected hierarchy', () {
       final result = revalidator.revalidate(
@@ -249,10 +252,8 @@ ContinueLearningInput _practiceTestOnlyInput() {
   );
 }
 
-LearnerSelection _selection() => LearnerSelection(
-  selectedGoalCode: 'GOAL_A',
-  selectedTrackCode: 'TRACK_A',
-);
+LearnerSelection _selection() =>
+    LearnerSelection(selectedGoalCode: 'GOAL_A', selectedTrackCode: 'TRACK_A');
 
 PracticeTestAttempt _attempt({required int revision}) {
   final now = DateTime.utc(2026, 11, 1, 10);

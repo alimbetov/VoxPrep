@@ -8,10 +8,8 @@ enum OnboardingStep {
 }
 
 final class OnboardingState {
-  const OnboardingState({
-    required this.completed,
-    required this.generation,
-  }) : assert(generation >= 0);
+  const OnboardingState({required this.completed, required this.generation})
+    : assert(generation >= 0);
 
   static const initial = OnboardingState(completed: false, generation: 0);
 
