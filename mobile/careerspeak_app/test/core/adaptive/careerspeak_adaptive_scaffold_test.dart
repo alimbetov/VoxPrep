@@ -149,19 +149,11 @@ Future<void> _pumpScaffold(
       builder: (context, appChild) {
         final mediaQuery = MediaQuery.of(context);
         return MediaQuery(
-          data: mediaQuery.copyWith(
-            textScaler: TextScaler.linear(textScale),
-          ),
-          child: Directionality(
-            textDirection: textDirection,
-            child: appChild!,
-          ),
+          data: mediaQuery.copyWith(textScaler: TextScaler.linear(textScale)),
+          child: Directionality(textDirection: textDirection, child: appChild!),
         );
       },
-      home: CareerSpeakAdaptiveScaffold(
-        location: location,
-        child: child,
-      ),
+      home: CareerSpeakAdaptiveScaffold(location: location, child: child),
     ),
   );
   await tester.pumpAndSettle();
