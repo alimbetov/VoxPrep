@@ -1,5 +1,21 @@
 import '../../domain/content_item.dart';
 
+enum AccessLevel {
+  free('FREE'),
+  full('FULL');
+
+  const AccessLevel(this.wireName);
+
+  final String wireName;
+
+  static AccessLevel fromWireName(String value) {
+    for (final level in values) {
+      if (level.wireName == value) return level;
+    }
+    throw FormatException('Unsupported access level: $value');
+  }
+}
+
 final class ContentRevisionRef {
   factory ContentRevisionRef({
     required String contentCode,
@@ -214,6 +230,7 @@ final class LearningCollectionProjection {
     required String trackCode,
     required String title,
     required String description,
+    AccessLevel accessLevel = AccessLevel.full,
     required int sortOrder,
     required bool active,
     required List<LearningCollectionMember> members,
@@ -239,6 +256,7 @@ final class LearningCollectionProjection {
       trackCode: _stableCode(trackCode, 'trackCode'),
       title: _nonBlank(title, 'title'),
       description: _nonBlank(description, 'description'),
+      accessLevel: accessLevel,
       sortOrder: _sortOrder(sortOrder),
       active: active,
       members: List<LearningCollectionMember>.unmodifiable(members),
@@ -251,6 +269,7 @@ final class LearningCollectionProjection {
     required this.trackCode,
     required this.title,
     required this.description,
+    required this.accessLevel,
     required this.sortOrder,
     required this.active,
     required this.members,
@@ -261,9 +280,12 @@ final class LearningCollectionProjection {
   final String trackCode;
   final String title;
   final String description;
+  final AccessLevel accessLevel;
   final int sortOrder;
   final bool active;
   final List<LearningCollectionMember> members;
+
+  bool get requiresFullAccess => accessLevel == AccessLevel.full;
 }
 
 final class TaxonomyProjection {
