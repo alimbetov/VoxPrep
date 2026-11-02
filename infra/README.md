@@ -59,9 +59,9 @@ docker compose \
 Expected DEV endpoints:
 
 ```text
-PostgreSQL    127.0.0.1:5432
-RustFS S3     127.0.0.1:9000
-RustFS Console 127.0.0.1:9001
+PostgreSQL      127.0.0.1:5432
+RustFS S3       127.0.0.1:9000
+RustFS Console  127.0.0.1:9001
 ```
 
 The one-shot `rustfs-bootstrap` service should exit with code `0` after creating the private bucket, Backend IAM user and policy.
@@ -94,8 +94,8 @@ Passwords are read from `infra/secrets/<environment>/...` for DEV/TEST and from 
 ## RustFS identities
 
 ```text
-root credential       bootstrap/break-glass only
-Backend IAM credential normal object access
+root credential         bootstrap/break-glass only
+Backend IAM credential  normal object access
 ```
 
 The Backend IAM user receives only the versioned `voxprep-backend-rw` policy for the configured bucket. Flutter and the TTS Worker do not receive RustFS credentials.
@@ -165,6 +165,8 @@ sudo install -d -m 0700 /etc/voxprep/secrets/prod
 
 Populate all required production secret files manually or through the deployment secret manager. Do not use the DEV/TEST generator for production credentials.
 
+For the current plain Docker Compose deployment, keep the parent secret directory `0700` and the individual file-backed secret files `0444`. Compose bind-mounts the files directly, and PostgreSQL/RustFS run as non-root users that must be able to read those mounts. The protected parent directory prevents normal host users from traversing to the files. Native orchestrator secrets can use tighter per-secret ownership/mode controls later.
+
 Validate before startup:
 
 ```bash
@@ -213,13 +215,13 @@ INFRA-2 PostgreSQL bootstrap roles/schema
 INFRA-3 RustFS bucket/IAM policy bootstrap
 local DEV/TEST secret generation
 health checks
+CI runtime qualification
 ```
 
 Still pending:
 
 ```text
 INFRA-4 Spring Boot config-tree wiring
-INFRA-5 automated infrastructure qualification in CI
 INFRA-6 backup scripts/runbook
 INFRA-7 clean backup -> destroy -> restore -> integrity acceptance
 PROD image digest pinning after deployment image resolution
