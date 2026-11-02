@@ -12,11 +12,11 @@ const _hash =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 void main() {
-  test('schema v17 creates bounded FREE/FULL access read model', () async {
+  test('schema v18 keeps bounded FREE/FULL collection access read model', () async {
     final database = createTestDatabase();
     addTearDown(database.close);
 
-    expect(database.schemaVersion, 17);
+    expect(database.schemaVersion, 18);
     final table = await database
         .customSelect(
           "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'learning_collection_access_reads'",
