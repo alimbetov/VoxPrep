@@ -111,7 +111,8 @@ final class _FakeBillingRepository implements BillingRepository {
   StoreProduct? lastPurchasedProduct;
 
   @override
-  Future<Result<StoreProduct>> loadFullUnlockProduct() async => Success(product);
+  Future<Result<StoreProduct>> loadFullUnlockProduct() async =>
+      Success(product);
 
   @override
   Stream<StorePurchaseEvent> watchPurchaseEvents() => _events.stream;
