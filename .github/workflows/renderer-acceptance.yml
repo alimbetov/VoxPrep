@@ -1,0 +1,55 @@
+name: Renderer Acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'mobile/careerspeak_app/**'
+      - '.github/workflows/renderer-acceptance.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'mobile/careerspeak_app/**'
+      - '.github/workflows/renderer-acceptance.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: renderer-acceptance-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  renderer-e2e:
+    name: renderer-e2e
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Dependencies
+        run: flutter pub get
+
+      - name: Renderer snapshot acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 3m flutter test \
+            test/acceptance/p2_10_7_production_e2e_test.dart \
+            --plain-name 'production app syncs from mock backend across renderer snapshots' \
+            --reporter expanded
