@@ -22,9 +22,7 @@ import 'onboarding_redirect_policy.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final onboardingCompleted = ref.watch(
-    onboardingStateProvider.select(
-      (state) => state.asData?.value.completed,
-    ),
+    onboardingStateProvider.select((state) => state.asData?.value.completed),
   );
 
   return GoRouter(
