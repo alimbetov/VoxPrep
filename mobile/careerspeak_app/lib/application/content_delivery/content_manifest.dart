@@ -4,7 +4,7 @@ import 'catalogue_revision_ref.dart';
 import 'product_catalog.dart';
 
 const supportedContentManifestSchemaVersion = 2;
-const careerSpeakAppContractVersion = 2;
+const careerSpeakAppContractVersion = 3;
 
 final class PackIdentity {
   factory PackIdentity({required String code, required String variant}) {
