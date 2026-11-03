@@ -8,6 +8,7 @@ import io.github.alimbetov.voxprep.backend.tts.persistence.TtsJobRepository;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceModelRepository;
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -91,7 +92,7 @@ public class TtsJobPreparationService {
     }
 
     private void lockFingerprint(String fingerprint) {
-        jdbcTemplate.execute(connection -> {
+        jdbcTemplate.execute((ConnectionCallback<Void>) connection -> {
             try (var statement = connection.prepareStatement(
                     "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))")) {
                 statement.setString(1, fingerprint);
