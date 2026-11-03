@@ -46,8 +46,8 @@ public class TtsProvisioningProperties {
         @NotBlank private String modelVersion;
         @NotBlank private String modelUrl;
         @NotBlank private String configUrl;
-        @Pattern(regexp = "[0-9a-f]{64}") private String modelSha256;
-        @Pattern(regexp = "[0-9a-f]{64}") private String configSha256;
+        @NotBlank @Pattern(regexp = "[0-9a-f]{64}") private String modelSha256;
+        @NotBlank @Pattern(regexp = "[0-9a-f]{64}") private String configSha256;
         @NotBlank private String licenseName;
         @NotBlank private String licenseReference;
 
