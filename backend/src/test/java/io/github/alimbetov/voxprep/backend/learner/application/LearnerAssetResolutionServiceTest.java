@@ -132,6 +132,11 @@ class LearnerAssetResolutionServiceTest {
     }
 
     private void givenPublication() {
+        // Default published catalogue does not advertise this asset as an icon.
+        // Tests for real frozen icons override this exact response.
+        when(wire.catalogue("verticals", 1)).thenReturn(
+                new LearnerWirePublicationService.WireResponse(
+                        Map.of("items", List.of()), "a".repeat(64)));
         var identity = new ContentRevisionIdentity(new BusinessCode("HELLO"), ContentType.PHRASE,
                 new RevisionNumber(1));
         var ref = new PublicationExactContentRef(identity, new Sha256Digest("b".repeat(64)));
