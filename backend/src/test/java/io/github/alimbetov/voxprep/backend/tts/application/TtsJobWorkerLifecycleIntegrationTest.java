@@ -29,6 +29,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class TtsJobWorkerLifecycleIntegrationTest {
 
+    private static final String SOURCE_PROVIDER = "huggingface";
+    private static final String SOURCE_REPOSITORY = "rhasspy/piper-voices";
+    private static final String SOURCE_REVISION = "a517d785c98755ae1bb6c1bffd48a83e10c2f36f";
+
     @Autowired
     private TtsJobLeaseService leaseService;
     @Autowired
@@ -121,6 +125,9 @@ class TtsJobWorkerLifecycleIntegrationTest {
                 assets.configAssetId(),
                 String.valueOf('a').repeat(64),
                 String.valueOf('b').repeat(64),
+                SOURCE_PROVIDER,
+                SOURCE_REPOSITORY,
+                SOURCE_REVISION,
                 TtsVoiceModelStatus.ACTIVE,
                 "MIT",
                 "https://example.invalid/license",

@@ -30,6 +30,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class TtsOutputReplayIntegrationTest {
 
+    private static final String SOURCE_PROVIDER = "huggingface";
+    private static final String SOURCE_REPOSITORY = "rhasspy/piper-voices";
+    private static final String SOURCE_REVISION = "a517d785c98755ae1bb6c1bffd48a83e10c2f36f";
+
     @Autowired private TtsOutputFinalizationService outputService;
     @Autowired private TtsJobLeaseService leaseService;
     @Autowired private FileAssetRepository assetRepository;
@@ -92,8 +96,9 @@ class TtsOutputReplayIntegrationTest {
         var model = modelRepository.saveAndFlush(new TtsVoiceModelEntity(
                 "model-replay-" + suffix, voice, TtsEngine.PIPER, "1.3.0", "replay-v1",
                 assets.modelAssetId(), assets.configAssetId(), String.valueOf('a').repeat(64),
-                String.valueOf('b').repeat(64), TtsVoiceModelStatus.ACTIVE, "MIT",
-                "https://example.invalid/license", true, Instant.parse("2026-11-02T18:00:00Z")));
+                String.valueOf('b').repeat(64), SOURCE_PROVIDER, SOURCE_REPOSITORY, SOURCE_REVISION,
+                TtsVoiceModelStatus.ACTIVE, "MIT", "https://example.invalid/license", true,
+                Instant.parse("2026-11-02T18:00:00Z")));
         UUID fileId = UUID.randomUUID();
         String fingerprint = String.valueOf('c').repeat(64);
         var job = new TtsJobEntity(model, "Replay-safe output.", String.valueOf('d').repeat(64));
