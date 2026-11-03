@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface PublicationWireDocumentRepository extends JpaRepository<PublicationWireDocumentEntity, UUID> {
 
+    boolean existsByRelease_Id(UUID releaseId);
+
     Optional<PublicationWireDocumentEntity> findByRelease_IdAndKindAndResourceCodeAndVariantAndRevision(
             UUID releaseId,
             PublicationWireDocumentKind kind,
