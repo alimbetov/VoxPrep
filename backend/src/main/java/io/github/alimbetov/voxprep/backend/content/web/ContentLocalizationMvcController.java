@@ -50,7 +50,9 @@ public class ContentLocalizationMvcController {
 
     @GetMapping("/revisions/{contentId}/localizations/new")
     public String createForm(@PathVariable UUID contentId, Model model) {
-        return form(model, contentId, null, new LocalizationForm());
+        var form = new LocalizationForm();
+        form.setExpectedVersion(0L);
+        return form(model, contentId, null, form);
     }
 
     @PostMapping("/revisions/{contentId}/localizations")
