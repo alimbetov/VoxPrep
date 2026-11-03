@@ -44,3 +44,7 @@ databaseChangeLog:
       file: db/changelog/b5-p1-tts-model-provenance.sql
   - include:
       file: db/changelog/b5-p2-tts-active-model-policy.sql
+  - include:
+      file: db/changelog/b6-p1-publication-foundation.sql
+  - include:
+      file: db/changelog/b6-p2-publication-candidate-manifest.sql
