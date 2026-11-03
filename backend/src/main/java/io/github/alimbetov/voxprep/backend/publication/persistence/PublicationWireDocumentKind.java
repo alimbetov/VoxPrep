@@ -4,5 +4,6 @@ package io.github.alimbetov.voxprep.backend.publication.persistence;
 public enum PublicationWireDocumentKind {
     ROOT,
     PACK,
-    CATALOGUE
+    CATALOGUE,
+    ASSESSMENT
 }
