@@ -157,13 +157,22 @@ public class TtsVoiceModelEntity extends AbstractJpaEntity {
             String licenseReference,
             boolean commercialUseReviewed,
             Instant approvedAt) {
-        this.status = Objects.requireNonNull(status, "status");
-        this.licenseName = TtsVoiceEntity.optional(licenseName, "licenseName", 256);
-        this.licenseReference = TtsVoiceEntity.optional(licenseReference, "licenseReference", 1024);
-        this.commercialUseReviewed = commercialUseReviewed;
-        if (requiresApprovalTimestamp(status) && approvedAt == null) {
+        TtsVoiceModelStatus requiredStatus = Objects.requireNonNull(status, "status");
+        String normalizedLicenseName = TtsVoiceEntity.optional(licenseName, "licenseName", 256);
+        String normalizedLicenseReference = TtsVoiceEntity.optional(licenseReference, "licenseReference", 1024);
+        if (requiresApprovalTimestamp(requiredStatus) && approvedAt == null) {
             throw new IllegalArgumentException("approvedAt is required for approved/active/deprecated model");
         }
+        validateActivationPolicy(
+                requiredStatus,
+                normalizedLicenseName,
+                normalizedLicenseReference,
+                commercialUseReviewed,
+                approvedAt);
+        this.status = requiredStatus;
+        this.licenseName = normalizedLicenseName;
+        this.licenseReference = normalizedLicenseReference;
+        this.commercialUseReviewed = commercialUseReviewed;
         this.approvedAt = approvedAt;
     }
 
@@ -171,72 +180,45 @@ public class TtsVoiceModelEntity extends AbstractJpaEntity {
         return status == TtsVoiceModelStatus.ACTIVE && voice.isEnabled();
     }
 
-    public String getCode() {
-        return code;
-    }
+    public String getCode() { return code; }
+    public TtsVoiceEntity getVoice() { return voice; }
+    public TtsEngine getEngine() { return engine; }
+    public String getEngineVersion() { return engineVersion; }
+    public String getModelVersion() { return modelVersion; }
+    public UUID getModelAssetId() { return modelAssetId; }
+    public UUID getConfigAssetId() { return configAssetId; }
+    public String getModelSha256() { return modelSha256; }
+    public String getConfigSha256() { return configSha256; }
+    public String getSourceProvider() { return sourceProvider; }
+    public String getSourceRepository() { return sourceRepository; }
+    public String getSourceRevision() { return sourceRevision; }
+    public TtsVoiceModelStatus getStatus() { return status; }
+    public String getLicenseName() { return licenseName; }
+    public String getLicenseReference() { return licenseReference; }
+    public boolean isCommercialUseReviewed() { return commercialUseReviewed; }
+    public Instant getApprovedAt() { return approvedAt; }
 
-    public TtsVoiceEntity getVoice() {
-        return voice;
-    }
-
-    public TtsEngine getEngine() {
-        return engine;
-    }
-
-    public String getEngineVersion() {
-        return engineVersion;
-    }
-
-    public String getModelVersion() {
-        return modelVersion;
-    }
-
-    public UUID getModelAssetId() {
-        return modelAssetId;
-    }
-
-    public UUID getConfigAssetId() {
-        return configAssetId;
-    }
-
-    public String getModelSha256() {
-        return modelSha256;
-    }
-
-    public String getConfigSha256() {
-        return configSha256;
-    }
-
-    public String getSourceProvider() {
-        return sourceProvider;
-    }
-
-    public String getSourceRepository() {
-        return sourceRepository;
-    }
-
-    public String getSourceRevision() {
-        return sourceRevision;
-    }
-
-    public TtsVoiceModelStatus getStatus() {
-        return status;
-    }
-
-    public String getLicenseName() {
-        return licenseName;
-    }
-
-    public String getLicenseReference() {
-        return licenseReference;
-    }
-
-    public boolean isCommercialUseReviewed() {
-        return commercialUseReviewed;
-    }
-
-    public Instant getApprovedAt() {
-        return approvedAt;
+    private void validateActivationPolicy(
+            TtsVoiceModelStatus status,
+            String licenseName,
+            String licenseReference,
+            boolean commercialUseReviewed,
+            Instant approvedAt) {
+        if (status != TtsVoiceModelStatus.ACTIVE) {
+            return;
+        }
+        if (sourceProvider == null || sourceRepository == null || sourceRevision == null) {
+            throw new IllegalArgumentException("ACTIVE TTS model requires pinned source provenance");
+        }
+        if (licenseName == null || licenseReference == null) {
+            throw new IllegalArgumentException("ACTIVE TTS model requires license metadata");
+        }
+        if (!commercialUseReviewed) {
+            throw new IllegalArgumentException("ACTIVE TTS model requires commercial-use review");
+        }
+        if (approvedAt == null) {
+            throw new IllegalArgumentException("ACTIVE TTS model requires approvedAt");
+        }
     }
 
     private static boolean requiresApprovalTimestamp(TtsVoiceModelStatus status) {
