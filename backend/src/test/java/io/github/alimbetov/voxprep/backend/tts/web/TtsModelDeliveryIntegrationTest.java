@@ -37,6 +37,10 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 @Transactional
 class TtsModelDeliveryIntegrationTest {
 
+    private static final String SOURCE_PROVIDER = "huggingface";
+    private static final String SOURCE_REPOSITORY = "rhasspy/piper-voices";
+    private static final String SOURCE_REVISION = "a517d785c98755ae1bb6c1bffd48a83e10c2f36f";
+
     @Autowired private WebApplicationContext context;
     @Autowired private WorkerDeliveryProperties workerProperties;
     @Autowired private FileAssetRepository assetRepository;
@@ -62,8 +66,10 @@ class TtsModelDeliveryIntegrationTest {
                 FileAssetKind.TTS_CONFIG);
         var model = modelRepository.saveAndFlush(new TtsVoiceModelEntity(
                 "model-http-contract", voice, TtsEngine.PIPER, "1.3.0", "http-v1",
-                modelAsset.getId(), configAsset.getId(), modelHash, configHash, TtsVoiceModelStatus.ACTIVE,
-                "MIT", "https://example.invalid/license", true, Instant.parse("2026-11-02T18:00:00Z")));
+                modelAsset.getId(), configAsset.getId(), modelHash, configHash,
+                SOURCE_PROVIDER, SOURCE_REPOSITORY, SOURCE_REVISION,
+                TtsVoiceModelStatus.ACTIVE, "MIT", "https://example.invalid/license", true,
+                Instant.parse("2026-11-02T18:00:00Z")));
 
         mockMvc.perform(get("/internal/v1/tts/models/{id}/model", model.getId()))
                 .andExpect(status().isUnauthorized());
