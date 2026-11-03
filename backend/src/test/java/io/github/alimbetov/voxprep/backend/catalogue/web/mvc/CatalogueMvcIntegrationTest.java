@@ -1,6 +1,7 @@
 package io.github.alimbetov.voxprep.backend.catalogue.web.mvc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -13,6 +14,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import io.github.alimbetov.voxprep.backend.catalogue.application.CatalogueAdminQueryService;
+import io.github.alimbetov.voxprep.backend.catalogue.application.CatalogueAuthoringConflictException;
 import io.github.alimbetov.voxprep.backend.catalogue.application.CatalogueAuthoringService;
 import io.github.alimbetov.voxprep.backend.catalogue.domain.CatalogueCode;
 import io.github.alimbetov.voxprep.backend.catalogue.domain.CollectionAccessLevel;
@@ -158,6 +160,33 @@ class CatalogueMvcIntegrationTest {
                 .andExpect(content().string(containsString("Update conflict")));
 
         assertThat(query.getGoal(goal.id()).parentId()).isEqualTo(original.vertical().getId());
+    }
+
+    @Test
+    void trackAndCollectionParentsAreImmutableAtApplicationBoundary() {
+        var original = hierarchy("IMM" + token());
+        var foreign = hierarchy("FIM" + token());
+        var track = query.getTrack(original.track().getId());
+
+        assertThatThrownBy(() -> authoring.updateTrack(
+                        track.id(), track.version(), foreign.goal().getId(), track.title(), track.description(),
+                        new CatalogueCode(track.levelCode()), new CatalogueCode(track.careerTrackCode()),
+                        track.sortOrder(), AvailabilityStatus.valueOf(track.availability())))
+                .isInstanceOf(CatalogueAuthoringConflictException.class);
+        assertThat(query.getTrack(track.id()).parentId()).isEqualTo(original.goal().getId());
+
+        var collectionEntity = authoring.createCollection(
+                new CatalogueCode("COL" + token()), original.track().getId(), "Immutable collection",
+                "Collection for parent immutability acceptance", CollectionAccessLevel.FREE, 1,
+                AvailabilityStatus.ACTIVE);
+        var collection = query.getCollection(collectionEntity.getId());
+
+        assertThatThrownBy(() -> authoring.updateCollection(
+                        collection.id(), collection.version(), foreign.track().getId(), collection.title(),
+                        collection.description(), CollectionAccessLevel.valueOf(collection.accessLevel()),
+                        collection.sortOrder(), AvailabilityStatus.valueOf(collection.availability())))
+                .isInstanceOf(CatalogueAuthoringConflictException.class);
+        assertThat(query.getCollection(collection.id()).parentId()).isEqualTo(original.track().getId());
     }
 
     @Test
