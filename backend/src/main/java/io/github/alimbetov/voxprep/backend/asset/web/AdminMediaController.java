@@ -6,7 +6,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.UUID;
 import org.springframework.http.CacheControl;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -47,7 +46,7 @@ public class AdminMediaController {
                 .contentType(MediaType.parseMediaType(content.mediaType()))
                 .contentLength(content.bytes().length)
                 .cacheControl(CacheControl.noStore())
-                .header(HttpHeaders.X_CONTENT_TYPE_OPTIONS, "nosniff")
+                .header("X-Content-Type-Options", "nosniff")
                 .body(content.bytes());
     }
 }
