@@ -32,8 +32,7 @@ public class InstallationAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        var path = request.getRequestURI();
-        return !LearnerApiRoutePolicy.isProtectedPath(path);
+        return !LearnerApiRoutePolicy.isProtected(request);
     }
 
     @Override
