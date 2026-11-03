@@ -91,10 +91,14 @@ public class TtsJobPreparationService {
     }
 
     private void lockFingerprint(String fingerprint) {
-        jdbcTemplate.queryForObject(
-                "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))",
-                Long.class,
-                fingerprint);
+        jdbcTemplate.execute(connection -> {
+            try (var statement = connection.prepareStatement(
+                    "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))")) {
+                statement.setString(1, fingerprint);
+                statement.execute();
+            }
+            return null;
+        });
     }
 
     private static String required(String value, String field) {
