@@ -2,66 +2,64 @@ package io.github.alimbetov.voxprep.backend.asset.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetKind;
 import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetStatus;
-import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetEntity;
 import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetRepository;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.time.Duration;
-import java.util.HexFormat;
+import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Pageable;
 
-@ActiveProfiles("test")
-@SpringBootTest
+@ExtendWith(MockitoExtension.class)
 class FileAssetRecoveryBatchIntegrationTest {
 
-    @Autowired private FileAssetRepository assets;
-    @Autowired private FileAssetRecoveryBatchService batch;
-    @MockitoBean private ObjectStoragePort storage;
+    @Mock private FileAssetRepository assets;
+    @Mock private FileAssetRecoveryService recovery;
 
     @Test
-    void boundedBatchProcessesOnlyOneCandidateAndReportsOutcome() throws Exception {
-        var first = registered("h2-batch-first");
-        var second = registered("h2-batch-second");
-        byte[] firstBytes = "h2-batch-first".getBytes(StandardCharsets.UTF_8);
-        byte[] secondBytes = "h2-batch-second".getBytes(StandardCharsets.UTF_8);
-        when(storage.read(first.getBucket(), first.getObjectKey())).thenReturn(firstBytes);
-        when(storage.read(second.getBucket(), second.getObjectKey())).thenReturn(secondBytes);
+    void boundedBatchScansOnlySelectedIdsAndReportsOutcomes() {
+        var first = UUID.randomUUID();
+        var second = UUID.randomUUID();
+        when(assets.findStaleAssetIds(eq(FileAssetStatus.REGISTERED), any(), any(Pageable.class)))
+                .thenReturn(List.of(first, second));
+        when(recovery.reconcile(first, Duration.ofMinutes(5)))
+                .thenReturn(FileAssetRecoveryService.RecoveryResult.RECOVERED_READY);
+        when(recovery.reconcile(second, Duration.ofMinutes(5)))
+                .thenReturn(FileAssetRecoveryService.RecoveryResult.STORAGE_UNAVAILABLE);
 
-        var result = batch.reconcileStale(Duration.ofMillis(1), 1);
-        assertThat(result.inspected()).isEqualTo(1);
-        assertThat(result.outcomes().values().stream().mapToInt(Integer::intValue).sum()).isEqualTo(1);
-        var states = java.util.List.of(
-                assets.findById(first.getId()).orElseThrow().getStatus(),
-                assets.findById(second.getId()).orElseThrow().getStatus());
-        assertThat(states).contains(FileAssetStatus.REGISTERED);
-        assertThat(states).contains(FileAssetStatus.READY);
+        var batch = new FileAssetRecoveryBatchService(assets, recovery);
+        var result = batch.reconcileStale(Duration.ofMinutes(5), 2);
+
+        assertThat(result.inspected()).isEqualTo(2);
+        assertThat(result.outcomes())
+                .containsEntry(FileAssetRecoveryService.RecoveryResult.RECOVERED_READY, 1)
+                .containsEntry(FileAssetRecoveryService.RecoveryResult.STORAGE_UNAVAILABLE, 1);
+        var page = ArgumentCaptor.forClass(Pageable.class);
+        verify(assets).findStaleAssetIds(eq(FileAssetStatus.REGISTERED), any(), page.capture());
+        assertThat(page.getValue().getPageSize()).isEqualTo(2);
+        verify(recovery).reconcile(first, Duration.ofMinutes(5));
+        verify(recovery).reconcile(second, Duration.ofMinutes(5));
     }
 
     @Test
-    void rejectsUnlimitedScansAndZeroMinimumAge() {
+    void rejectsUnlimitedScansAndZeroMinimumAgeWithoutDatabaseCalls() {
+        var batch = new FileAssetRecoveryBatchService(assets, recovery);
         assertThatThrownBy(() -> batch.reconcileStale(Duration.ZERO, 1))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> batch.reconcileStale(Duration.ofMinutes(5), 101))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> batch.reconcileStale(Duration.ofMinutes(5), 0))
                 .isInstanceOf(IllegalArgumentException.class);
-    }
-
-    private FileAssetEntity registered(String text) throws Exception {
-        byte[] payload = text.getBytes(StandardCharsets.UTF_8);
-        return assets.saveAndFlush(new FileAssetEntity(
-                FileAssetKind.TTS_AUDIO, FileAssetStatus.REGISTERED,
-                "voxprep-assets", "h2/batch/" + UUID.randomUUID() + ".mp3",
-                "audio/mpeg", payload.length,
-                HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(payload))));
+        verify(assets, never()).findStaleAssetIds(any(), any(), any());
     }
 }
