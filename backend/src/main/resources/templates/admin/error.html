@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/fragments/shell :: layout(${errorTitle}, ${activeSection}, ~{::main})}">
+<main>
+    <div class="card studio-card">
+        <div class="card-body p-4">
+            <div class="text-secondary small mb-2" th:text="${errorStatus}">500</div>
+            <h1 class="h3" th:text="${errorTitle}">Content Studio error</h1>
+            <p class="text-secondary" th:text="${errorMessage}">The request could not be completed.</p>
+            <a class="btn btn-outline-dark" th:href="@{/admin}">Back to dashboard</a>
+        </div>
+    </div>
+</main>
+</html>

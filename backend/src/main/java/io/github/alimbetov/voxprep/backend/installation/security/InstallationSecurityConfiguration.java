@@ -9,6 +9,8 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AnonymousAuthenticationFilter;
@@ -17,11 +19,17 @@ import org.springframework.security.web.authentication.AnonymousAuthenticationFi
 public class InstallationSecurityConfiguration {
 
     @Bean
+    PasswordEncoder adminPasswordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
     UserDetailsService adminUserDetailsService(
             @Value("${voxprep.security.admin.username:admin}") String username,
-            @Value("${voxprep.security.admin.password:}") String password) {
+            @Value("${voxprep.security.admin.password:}") String password,
+            PasswordEncoder adminPasswordEncoder) {
         var admin = User.withUsername(username)
-                .password("{noop}" + password)
+                .password(adminPasswordEncoder.encode(password == null ? "" : password))
                 .roles("ADMIN")
                 .disabled(password == null || password.isBlank())
                 .build();

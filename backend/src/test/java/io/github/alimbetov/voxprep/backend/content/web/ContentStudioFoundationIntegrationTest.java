@@ -1,5 +1,6 @@
 package io.github.alimbetov.voxprep.backend.content.web;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -10,14 +11,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import jakarta.persistence.OptimisticLockException;
+import java.util.NoSuchElementException;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.web.context.WebApplicationContext;
 
 @ActiveProfiles("test")
@@ -25,6 +34,8 @@ import org.springframework.web.context.WebApplicationContext;
 class ContentStudioFoundationIntegrationTest {
 
     @Autowired private WebApplicationContext context;
+    @Autowired private PasswordEncoder passwordEncoder;
+    @Autowired private UserDetailsService userDetailsService;
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -42,8 +53,18 @@ class ContentStudioFoundationIntegrationTest {
     }
 
     @Test
-    void adminSessionRendersDashboardAndNormativeNavigation() throws Exception {
-        mockMvc.perform(get("/admin").with(user("admin").roles("ADMIN")))
+    void realAdminLoginCreatesSessionAndRendersSharedLayout() throws Exception {
+        MvcResult login = mockMvc.perform(post("/login")
+                        .with(csrf())
+                        .param("username", "admin")
+                        .param("password", "777"))
+                .andExpect(status().isFound())
+                .andReturn();
+
+        assertThat(login.getRequest().getSession(false)).isInstanceOf(MockHttpSession.class);
+        var session = (MockHttpSession) login.getRequest().getSession(false);
+
+        mockMvc.perform(get("/admin").session(session))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("VoxPrep Content Studio")))
                 .andExpect(content().string(containsString("Dashboard")))
@@ -51,11 +72,30 @@ class ContentStudioFoundationIntegrationTest {
                 .andExpect(content().string(containsString("Content")))
                 .andExpect(content().string(containsString("Localization")))
                 .andExpect(content().string(containsString("Publication")))
-                .andExpect(content().string(containsString("Imports")));
+                .andExpect(content().string(containsString("Imports")))
+                .andExpect(content().string(containsString("name=\"_csrf\"")))
+                .andExpect(content().string(containsString("htmx:configRequest")));
 
-        mockMvc.perform(get("/admin/publication").with(user("admin").roles("ADMIN")))
+        mockMvc.perform(get("/admin/publication").session(session))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Publication readiness")));
+    }
+
+    @Test
+    void invalidPasswordIsRejected() throws Exception {
+        mockMvc.perform(post("/login")
+                        .with(csrf())
+                        .param("username", "admin")
+                        .param("password", "wrong"))
+                .andExpect(status().isFound())
+                .andExpect(header().string(HttpHeaders.LOCATION, containsString("/login?error")));
+    }
+
+    @Test
+    void configuredAdminCredentialIsEncoded() {
+        var admin = userDetailsService.loadUserByUsername("admin");
+        assertThat(admin.getPassword()).doesNotStartWith("{noop}");
+        assertThat(passwordEncoder.matches("777", admin.getPassword())).isTrue();
     }
 
     @Test
@@ -65,14 +105,46 @@ class ContentStudioFoundationIntegrationTest {
     }
 
     @Test
-    void mvcStateChangingEndpointRemainsCsrfProtected() throws Exception {
+    void adminApiRemainsBasicAndDoesNotRedirectToMvcLogin() throws Exception {
+        mockMvc.perform(get("/admin/api/v1/content/revisions/{id}", UUID.randomUUID()))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().doesNotExist(HttpHeaders.LOCATION))
+                .andExpect(header().string(HttpHeaders.WWW_AUTHENTICATE, containsString("Basic")));
+    }
+
+    @Test
+    void mvcStateChangingRequestsRequireCsrfIncludingHtmxHeaderFlow() throws Exception {
         mockMvc.perform(post("/logout").with(user("admin").roles("ADMIN")))
                 .andExpect(status().isForbidden());
 
         mockMvc.perform(post("/logout")
+                        .header("HX-Request", "true")
                         .with(user("admin").roles("ADMIN"))
-                        .with(csrf()))
+                        .with(csrf().asHeader()))
                 .andExpect(status().isFound())
                 .andExpect(header().string(HttpHeaders.LOCATION, containsString("/login?logout")));
+    }
+
+    @Test
+    void localWebjarAssetsResolveWithoutAdminAuthentication() throws Exception {
+        mockMvc.perform(get("/webjars/bootstrap/5.3.8/css/bootstrap.min.css"))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/webjars/htmx.org/2.0.10/dist/htmx.min.js"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void safeMvcExceptionBoundaryUses404And409WithoutLeakingExceptionMessages() {
+        var handler = new AdminContentStudioExceptionHandler();
+
+        var notFound = handler.notFound(new NoSuchElementException("sensitive repository detail"));
+        assertThat(notFound.getStatus()).isEqualTo(HttpStatus.NOT_FOUND);
+        assertThat(notFound.getViewName()).isEqualTo("admin/error");
+        assertThat(notFound.getModel().values()).noneMatch(value -> String.valueOf(value).contains("sensitive"));
+
+        var conflict = handler.conflict(new OptimisticLockException("database row detail"));
+        assertThat(conflict.getStatus()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(conflict.getViewName()).isEqualTo("admin/error");
+        assertThat(conflict.getModel().values()).noneMatch(value -> String.valueOf(value).contains("database"));
     }
 }
