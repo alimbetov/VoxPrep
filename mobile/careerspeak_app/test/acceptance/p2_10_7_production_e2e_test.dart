@@ -164,36 +164,44 @@ void main() {
         ),
       );
 
+      debugPrint('RENDERER_CHECKPOINT widget-pump-start');
       await tester.pumpWidget(app);
+      debugPrint('RENDERER_CHECKPOINT widget-pump-done');
       expect(find.byKey(screenshotKey), findsOneWidget);
       final container = ProviderScope.containerOf(
         tester.element(find.byKey(screenshotKey)),
       );
+      debugPrint('RENDERER_CHECKPOINT bootstrap-start');
       final bootstrapResult = await tester.runAsync(
         () => container.read(applicationBootstrapProvider.future),
       );
       expect(bootstrapResult, isNotNull);
       bootstrapResult!.getOrThrow();
+      debugPrint('RENDERER_CHECKPOINT bootstrap-done');
       expect(backend.registrationCalls, 1);
       expect(backend.rootManifestCalls, 1);
       expect(backend.packManifestCalls, 1);
       expect(backend.contentPayloadCalls, 1);
       await tester.pump();
       await _captureScreenshot(tester, screenshotKey, '01-home-after-sync.png');
+      debugPrint('RENDERER_CHECKPOINT home-captured');
 
       container.read(routerProvider).go('/learn');
       await tester.pump();
       await _pumpUntil(tester, find.byType(SearchBar));
       await _pumpUntil(tester, find.text('Dependency Injection'));
+      debugPrint('RENDERER_CHECKPOINT learn-ready');
       expect(find.text('Dependency Injection'), findsOneWidget);
       await _captureScreenshot(
         tester,
         screenshotKey,
         '02-learn-after-sync.png',
       );
+      debugPrint('RENDERER_CHECKPOINT learn-captured');
 
       await tester.tap(find.text('Dependency Injection'));
       await _pumpUntil(tester, find.text('Overview'));
+      debugPrint('RENDERER_CHECKPOINT detail-ready');
       expect(
         find.text('Explain constructor injection and its tradeoffs.'),
         findsOneWidget,
@@ -203,10 +211,12 @@ void main() {
         screenshotKey,
         '03-detail-after-sync.png',
       );
+      debugPrint('RENDERER_CHECKPOINT detail-captured');
 
       // Dispose ProviderScope and its Drift subscriptions before closing the
       // database in tearDown. This also proves the E2E owns no dangling work.
       await tester.pumpWidget(const SizedBox.shrink());
+      debugPrint('RENDERER_CHECKPOINT cleanup-widget-disposed');
       await tester.pump();
     },
   );
@@ -323,7 +333,9 @@ Future<void> _captureScreenshot(
     isFalse,
     reason: '$fileName must be fully painted before renderer snapshot.',
   );
+  debugPrint('RENDERER_CHECKPOINT screenshot-$fileName-start');
   final image = boundary.toImageSync(pixelRatio: 1);
+  debugPrint('RENDERER_CHECKPOINT screenshot-$fileName-done');
   try {
     expect(
       image.width,
