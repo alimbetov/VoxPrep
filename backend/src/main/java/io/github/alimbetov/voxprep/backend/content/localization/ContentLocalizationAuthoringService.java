@@ -7,6 +7,7 @@ import io.github.alimbetov.voxprep.backend.sharedkernel.Sha256Digest;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -117,6 +118,13 @@ public class ContentLocalizationAuthoringService {
                 source.getTranslation(),
                 source.getHint(),
                 source.getExplanation())));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Snapshot> listByContent(UUID contentRevisionId) {
+        requireContent(contentRevisionId);
+        return repository.findAllByContentRevisionIdOrderByLocaleAscLocalizationRevisionNumberDesc(contentRevisionId)
+                .stream().map(ContentLocalizationAuthoringService::snapshot).toList();
     }
 
     @Transactional(readOnly = true)
