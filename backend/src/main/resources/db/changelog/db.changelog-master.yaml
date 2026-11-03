@@ -48,3 +48,5 @@ databaseChangeLog:
       file: db/changelog/b6-p1-publication-foundation.sql
   - include:
       file: db/changelog/b6-p2-publication-candidate-manifest.sql
+  - include:
+      file: db/changelog/b7-r3-tts-semantic-idempotency.sql
