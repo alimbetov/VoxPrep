@@ -16,11 +16,6 @@ public class ContentStudioController {
         return "admin/dashboard";
     }
 
-    @GetMapping("/content")
-    public String content(Model model) {
-        return section(model, "content", "Content", "Content revision editing will be wired in MVC-R3.");
-    }
-
     @GetMapping("/localization")
     public String localization(Model model) {
         return section(model, "localization", "Localization", "Localization authoring will be wired in MVC-R4.");
