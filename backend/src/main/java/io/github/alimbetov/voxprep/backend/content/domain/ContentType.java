@@ -7,7 +7,9 @@ public enum ContentType {
     INTERVIEW("interview"),
     TOPIC("topic"),
     PHRASE("phrase"),
-    SHADOWING("shadowing");
+    SHADOWING("shadowing"),
+    QUESTION("question"),
+    PRACTICE_TEST("practice_test");
 
     private final String wireName;
 

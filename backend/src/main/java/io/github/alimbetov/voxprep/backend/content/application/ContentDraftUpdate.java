@@ -1,12 +1,14 @@
 package io.github.alimbetov.voxprep.backend.content.application;
 
 import io.github.alimbetov.voxprep.backend.catalogue.domain.CatalogueCode;
+import io.github.alimbetov.voxprep.backend.content.persistence.QuestionOptionEmbeddable;
 import io.github.alimbetov.voxprep.backend.content.persistence.ShadowingSegmentEmbeddable;
 import io.github.alimbetov.voxprep.backend.content.persistence.TopicSectionEmbeddable;
 import io.github.alimbetov.voxprep.backend.sharedkernel.AvailabilityStatus;
 import io.github.alimbetov.voxprep.backend.sharedkernel.Sha256Digest;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 public record ContentDraftUpdate(
         Sha256Digest checksum,
@@ -29,7 +31,8 @@ public record ContentDraftUpdate(
         Objects.requireNonNull(body, "body");
     }
 
-    public sealed interface Body permits VocabularyBody, InterviewBody, TopicBody, PhraseBody, ShadowingBody {
+    public sealed interface Body permits VocabularyBody, InterviewBody, TopicBody, PhraseBody, ShadowingBody,
+            QuestionBody, PracticeTestBody {
     }
 
     public record VocabularyBody(
@@ -71,6 +74,24 @@ public record ContentDraftUpdate(
             List<ShadowingSegmentEmbeddable> segments) implements Body {
         public ShadowingBody {
             segments = List.copyOf(Objects.requireNonNull(segments, "segments"));
+        }
+    }
+
+    public record QuestionBody(
+            String questionText,
+            String explanation,
+            List<QuestionOptionEmbeddable> options) implements Body {
+        public QuestionBody {
+            options = List.copyOf(Objects.requireNonNull(options, "options"));
+        }
+    }
+
+    public record PracticeTestBody(
+            String instructions,
+            int passingScorePercent,
+            List<UUID> questionRevisionIds) implements Body {
+        public PracticeTestBody {
+            questionRevisionIds = List.copyOf(Objects.requireNonNull(questionRevisionIds, "questionRevisionIds"));
         }
     }
 }

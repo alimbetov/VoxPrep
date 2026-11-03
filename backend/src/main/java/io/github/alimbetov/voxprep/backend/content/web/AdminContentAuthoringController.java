@@ -5,6 +5,7 @@ import io.github.alimbetov.voxprep.backend.content.application.ContentAdminQuery
 import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringService;
 import io.github.alimbetov.voxprep.backend.content.application.ContentDraftUpdate;
 import io.github.alimbetov.voxprep.backend.content.application.ContentRevisionSnapshot;
+import io.github.alimbetov.voxprep.backend.content.persistence.QuestionOptionEmbeddable;
 import io.github.alimbetov.voxprep.backend.content.persistence.ShadowingSegmentEmbeddable;
 import io.github.alimbetov.voxprep.backend.content.persistence.TopicSectionEmbeddable;
 import io.github.alimbetov.voxprep.backend.sharedkernel.AvailabilityStatus;
@@ -155,7 +156,13 @@ public class AdminContentAuthoringController {
             String phrase,
             String usage,
             String transcript,
-            List<ShadowingSegmentRequest> segments) {
+            List<ShadowingSegmentRequest> segments,
+            String questionText,
+            String explanation,
+            List<QuestionOptionRequest> options,
+            String instructions,
+            Integer passingScorePercent,
+            List<UUID> questionRevisionIds) {
 
         ContentDraftUpdate.Body toCommand() {
             return switch (type.toLowerCase(Locale.ROOT)) {
@@ -175,6 +182,16 @@ public class AdminContentAuthoringController {
                                 .map(value -> new ShadowingSegmentEmbeddable(
                                         value.text(), value.startMs(), value.endMs()))
                                 .toList());
+                case "question" -> new ContentDraftUpdate.QuestionBody(
+                        questionText,
+                        explanation,
+                        requireList(options, "options").stream()
+                                .map(value -> new QuestionOptionEmbeddable(value.key(), value.text(), value.correct()))
+                                .toList());
+                case "practice_test", "practice-test" -> new ContentDraftUpdate.PracticeTestBody(
+                        instructions,
+                        requireInteger(passingScorePercent, "passingScorePercent"),
+                        requireList(questionRevisionIds, "questionRevisionIds"));
                 default -> throw new IllegalArgumentException("Unsupported content body type: " + type);
             };
         }
@@ -185,6 +202,13 @@ public class AdminContentAuthoringController {
             }
             return values;
         }
+
+        private static int requireInteger(Integer value, String name) {
+            if (value == null) {
+                throw new IllegalArgumentException(name + " is required");
+            }
+            return value;
+        }
     }
 
     public record TopicSectionRequest(@NotBlank String heading, @NotBlank String text) {
@@ -194,5 +218,11 @@ public class AdminContentAuthoringController {
             @NotBlank String text,
             Integer startMs,
             Integer endMs) {
+    }
+
+    public record QuestionOptionRequest(
+            @NotBlank String key,
+            @NotBlank String text,
+            boolean correct) {
     }
 }

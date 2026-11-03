@@ -5,6 +5,8 @@ import io.github.alimbetov.voxprep.backend.content.domain.ContentType;
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.content.persistence.InterviewContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.content.persistence.PhraseContentRevisionEntity;
+import io.github.alimbetov.voxprep.backend.content.persistence.PracticeTestContentRevisionEntity;
+import io.github.alimbetov.voxprep.backend.content.persistence.QuestionContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.content.persistence.ShadowingContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.content.persistence.TopicContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.content.persistence.VocabularyContentRevisionEntity;
@@ -75,10 +77,20 @@ public record ContentRevisionSnapshot(
                     .map(segment -> new ShadowingSegment(segment.getText(), segment.getStartMs(), segment.getEndMs()))
                     .toList());
         }
+        if (entity instanceof QuestionContentRevisionEntity value) {
+            return new QuestionBody(value.getQuestionText(), value.getExplanation(), value.getOptions().stream()
+                    .map(option -> new QuestionOption(option.getKey(), option.getText(), option.isCorrect()))
+                    .toList());
+        }
+        if (entity instanceof PracticeTestContentRevisionEntity value) {
+            return new PracticeTestBody(
+                    value.getInstructions(), value.getPassingScorePercent(), value.getQuestionRevisionIds());
+        }
         throw new IllegalArgumentException("Unsupported content revision type: " + entity.getClass().getName());
     }
 
-    public sealed interface Body permits VocabularyBody, InterviewBody, TopicBody, PhraseBody, ShadowingBody {
+    public sealed interface Body permits VocabularyBody, InterviewBody, TopicBody, PhraseBody, ShadowingBody,
+            QuestionBody, PracticeTestBody {
     }
 
     public record VocabularyBody(String term, String definition, String partOfSpeech, List<String> examples) implements Body {
@@ -100,5 +112,15 @@ public record ContentRevisionSnapshot(
     }
 
     public record ShadowingSegment(String text, Integer startMs, Integer endMs) {
+    }
+
+    public record QuestionBody(String questionText, String explanation, List<QuestionOption> options) implements Body {
+    }
+
+    public record QuestionOption(String key, String text, boolean correct) {
+    }
+
+    public record PracticeTestBody(String instructions, int passingScorePercent, List<UUID> questionRevisionIds)
+            implements Body {
     }
 }

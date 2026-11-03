@@ -5,6 +5,8 @@ import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionEn
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
 import io.github.alimbetov.voxprep.backend.content.persistence.InterviewContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.content.persistence.PhraseContentRevisionEntity;
+import io.github.alimbetov.voxprep.backend.content.persistence.PracticeTestContentRevisionEntity;
+import io.github.alimbetov.voxprep.backend.content.persistence.QuestionContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.content.persistence.ShadowingContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.content.persistence.TopicContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.content.persistence.VocabularyContentRevisionEntity;
@@ -244,6 +246,19 @@ public class ContentAuthoringService {
                 }
                 value.replaceDraftBody(body.transcript(), body.segments(), update.checksum());
             }
+            case QuestionContentRevisionEntity value -> {
+                if (!(update.body() instanceof ContentDraftUpdate.QuestionBody body)) {
+                    throw new IllegalArgumentException("Question revision requires question body");
+                }
+                value.replaceDraftBody(body.questionText(), body.explanation(), body.options(), update.checksum());
+            }
+            case PracticeTestContentRevisionEntity value -> {
+                if (!(update.body() instanceof ContentDraftUpdate.PracticeTestBody body)) {
+                    throw new IllegalArgumentException("Practice test revision requires practice-test body");
+                }
+                value.replaceDraftBody(
+                        body.instructions(), body.passingScorePercent(), body.questionRevisionIds(), update.checksum());
+            }
             default -> throw new IllegalArgumentException("Unsupported content revision type: " + revision.getClass().getName());
         }
     }
@@ -283,6 +298,21 @@ public class ContentAuthoringService {
                     value.getTitle(), value.getSubtitle(), value.getDescription(),
                     value.getCategoryCode(), value.getLevelCode(), value.getMinutes(), value.getSkillCodes(),
                     value.getAvailability(), value.getTranscript(), value.getSegments());
+        }
+        if (source instanceof QuestionContentRevisionEntity value) {
+            return new QuestionContentRevisionEntity(
+                    value.getContentCode(), nextNumber, value.getChecksum(),
+                    value.getTitle(), value.getSubtitle(), value.getDescription(),
+                    value.getCategoryCode(), value.getLevelCode(), value.getMinutes(), value.getSkillCodes(),
+                    value.getAvailability(), value.getQuestionText(), value.getExplanation(), value.getOptions());
+        }
+        if (source instanceof PracticeTestContentRevisionEntity value) {
+            return new PracticeTestContentRevisionEntity(
+                    value.getContentCode(), nextNumber, value.getChecksum(),
+                    value.getTitle(), value.getSubtitle(), value.getDescription(),
+                    value.getCategoryCode(), value.getLevelCode(), value.getMinutes(), value.getSkillCodes(),
+                    value.getAvailability(), value.getInstructions(), value.getPassingScorePercent(),
+                    value.getQuestionRevisionIds());
         }
         throw new IllegalArgumentException("Unsupported content revision type: " + source.getClass().getName());
     }

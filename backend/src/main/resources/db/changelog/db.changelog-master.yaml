@@ -34,3 +34,5 @@ databaseChangeLog:
       file: db/changelog/b3-p1-content-approval.sql
   - include:
       file: db/changelog/b3-p2-content-review-audit.sql
+  - include:
+      file: db/changelog/b3-p3-assessment-authoring.sql
