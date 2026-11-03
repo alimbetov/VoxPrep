@@ -39,7 +39,15 @@ jobs:
         run: flutter pub get
 
       - name: Format
-        run: dart format --output=none --set-exit-if-changed lib test
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! dart format --output=none --set-exit-if-changed lib test; then
+            dart format --output=write lib test
+            echo 'Dart formatting differs from committed source:'
+            git --no-pager diff -- lib test
+            exit 1
+          fi
 
       - name: Generated Drift check
         shell: bash

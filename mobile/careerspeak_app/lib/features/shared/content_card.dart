@@ -51,9 +51,12 @@ class ContentCard extends ConsumerWidget {
         onTap: onTap ?? () => context.push(contentDetailLocation(identity)),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               CircleAvatar(child: Icon(_iconFor(item.type))),
               const SizedBox(width: 16),
               Expanded(
@@ -66,8 +69,7 @@ class ContentCard extends ConsumerWidget {
                     ),
                     const SizedBox(height: 4),
                     CareerSpeakLearningText(item.subtitle),
-                    const SizedBox(height: 10),
-                    ContentMarkerChips(state: markerState),
+
                   ],
                 ),
               ),
@@ -105,6 +107,10 @@ class ContentCard extends ConsumerWidget {
                   ),
                 ),
               ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ContentMarkerChips(state: markerState),
             ],
           ),
         ),
