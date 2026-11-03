@@ -114,12 +114,12 @@ class ContentMvcIntegrationTest {
         current.replaceDraftMetadata(
                 new Sha256Digest("b".repeat(64)),
                 "Concurrent title",
-                current.getSubtitle(),
-                current.getDescription(),
-                current.getCategoryCode(),
-                current.getLevelCode(),
-                current.getMinutes(),
-                current.getSkillCodes());
+                "Vocabulary subtitle",
+                "Vocabulary description",
+                new CatalogueCode("VOCABULARY"),
+                new CatalogueCode("B2"),
+                4,
+                List.of(new CatalogueCode("SPEAKING")));
         repository.saveAndFlush(current);
 
         mockMvc.perform(post("/admin/content/revisions/{id}", revision.getId())
