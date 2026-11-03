@@ -7,15 +7,17 @@ import io.github.alimbetov.voxprep.backend.asset.persistence.ContentAssetBinding
 import io.github.alimbetov.voxprep.backend.asset.persistence.ContentAssetBindingRepository;
 import io.github.alimbetov.voxprep.backend.content.application.ContentRevisionSnapshot;
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionEntity;
+import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
+import io.github.alimbetov.voxprep.backend.publication.domain.PublicationExactContentRef;
 import io.github.alimbetov.voxprep.backend.tts.application.ContentTtsPlanner;
 import io.github.alimbetov.voxprep.backend.tts.application.TtsFingerprint;
 import io.github.alimbetov.voxprep.backend.tts.application.TtsOutputFinalizationService;
 import io.github.alimbetov.voxprep.backend.tts.domain.AudioRequirement;
 import io.github.alimbetov.voxprep.backend.tts.domain.ContentAudioPolicy;
 import io.github.alimbetov.voxprep.backend.tts.domain.ContentAudioPolicyEntry;
+import io.github.alimbetov.voxprep.backend.tts.domain.TtsJobStatus;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsJobEntity;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsJobRepository;
-import io.github.alimbetov.voxprep.backend.tts.domain.TtsJobStatus;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -27,16 +29,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 public class JpaPublicationMediaValidator implements PublicationMediaValidator {
 
+    private final ContentRevisionRepository contentRevisionRepository;
     private final ContentAssetBindingRepository bindingRepository;
     private final TtsJobRepository ttsJobRepository;
     private final ContentAudioPolicy audioPolicy;
     private final ContentTtsPlanner planner;
 
     public JpaPublicationMediaValidator(
+            ContentRevisionRepository contentRevisionRepository,
             ContentAssetBindingRepository bindingRepository,
             TtsJobRepository ttsJobRepository,
             ContentAudioPolicy audioPolicy,
             ContentTtsPlanner planner) {
+        this.contentRevisionRepository = Objects.requireNonNull(contentRevisionRepository, "contentRevisionRepository");
         this.bindingRepository = Objects.requireNonNull(bindingRepository, "bindingRepository");
         this.ttsJobRepository = Objects.requireNonNull(ttsJobRepository, "ttsJobRepository");
         this.audioPolicy = Objects.requireNonNull(audioPolicy, "audioPolicy");
@@ -45,9 +50,13 @@ public class JpaPublicationMediaValidator implements PublicationMediaValidator {
 
     @Override
     @Transactional(readOnly = true)
-    public List<PublicationValidationIssue> validate(ContentRevisionEntity revision) {
-        Objects.requireNonNull(revision, "revision");
-        String refKey = revision.getIdentity().canonicalKey();
+    public List<PublicationValidationIssue> validate(PublicationExactContentRef ref) {
+        Objects.requireNonNull(ref, "ref");
+        ContentRevisionEntity revision = contentRevisionRepository.findExact(ref.identity()).orElse(null);
+        if (revision == null) {
+            return List.of();
+        }
+        String refKey = ref.identityKey();
         List<PublicationValidationIssue> issues = new ArrayList<>();
         List<ContentAssetBindingEntity> bindings =
                 bindingRepository.findAllByContentRevision_IdOrderByRoleAsc(revision.getId());
