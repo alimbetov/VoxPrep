@@ -43,6 +43,9 @@ public class ContentAssetBindingService {
         Objects.requireNonNull(role, "role");
         Objects.requireNonNull(fileAssetId, "fileAssetId");
 
+        // Serialize same-revision/role insert and replacement across backend instances.
+        contentRevisionRepository.lockRevisionIdForUpdate(contentRevisionId)
+                .orElseThrow(() -> new IllegalArgumentException("Content revision not found: " + contentRevisionId));
         var revision = contentRevisionRepository.findById(contentRevisionId)
                 .orElseThrow(() -> new IllegalArgumentException("Content revision not found: " + contentRevisionId));
         if (revision.getPublishedAt() != null) {
@@ -57,9 +60,9 @@ public class ContentAssetBindingService {
         if (existing.isPresent()) {
             var binding = existing.orElseThrow();
             binding.replaceFileAsset(asset, sourceFingerprint);
-            return bindingRepository.save(binding);
+            return bindingRepository.saveAndFlush(binding);
         }
-        return bindingRepository.save(new ContentAssetBindingEntity(revision, role, asset, sourceFingerprint));
+        return bindingRepository.saveAndFlush(new ContentAssetBindingEntity(revision, role, asset, sourceFingerprint));
     }
 
     @Transactional(readOnly = true)
