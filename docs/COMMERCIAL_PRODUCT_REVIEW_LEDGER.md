@@ -58,3 +58,11 @@ Detailed evidence and CI notes: [COMMERCIAL_TECHNICAL_CONSISTENCY_REVIEW.md](COM
 | CI-001 | P0 | CONFIRMED CI FAILURE | Renderer Acceptance on f3ea3398 failed with exit 124 from 3-minute Flutter renderer test timeout; root cause unknown | Diagnose, fix and rerun exact SHA |
 
 **Gate:** security route/entitlement/privacy findings take precedence over new MVC features; do not mark the branch release-ready. XML-R1 remains DEFERRED. Original GAP-001..018 remain tracked above.
+
+## SEC-FIX-1 implementation started (2026-11-03)
+
+- Source implementation SHA `f0d4286b8ac9467581e22244fe93bf6c1dcddfb7` (exact SHA at review time): `LearnerApiRoutePolicy` shared by `InstallationAuthenticationFilter.shouldNotFilter` and `InstallationSecurityConfiguration` authorization matcher.
+- Repairs singular `/api/v1/catalogue` and plural `/api/v1/assessments/**` routing mismatches; uses segment-aware matches and servlet-context-aware path handling. Legacy aliases remain protected.
+- Added `LearnerApiRoutePolicyTest` and `InstallationAuthenticationFilterRouteTest` to check route matching and unauthenticated 401 before dispatch.
+- **Status: CODE IMPLEMENTED, NOT CI ACCEPTED.** Exact-SHA GitHub Actions must complete successfully, and full `MockMvc` filter-chain tests (including authenticated/blocked/revoked credentials, POST semantics and any other learner endpoints) remain mandatory.
+- **SEC-002 premium authorization remains OPEN**. Matching an installation token is not proof of entitlement. Do not release or merge based on SEC-FIX-1 alone.
