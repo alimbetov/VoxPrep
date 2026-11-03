@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -37,6 +38,7 @@ class ContentLocalizationMvcIntegrationTest {
     @Autowired private WebApplicationContext context;
     @Autowired private ContentRevisionRepository contents;
     @Autowired private ContentLocalizationAuthoringService localizations;
+    @Autowired private JdbcTemplate jdbc;
     private MockMvc mvc;
 
     @BeforeEach
@@ -129,6 +131,117 @@ class ContentLocalizationMvcIntegrationTest {
                 .andExpect(content().string(containsString("Update conflict")));
 
         assertThat(localizations.get(first.id()).title()).isEqualTo("Courant");
+    }
+
+    @Test
+    void localizationLifecycleWritesAuthenticatedAuditAndNextDraft() throws Exception {
+        var revision = contents.saveAndFlush(vocabulary());
+        var initial = localizations.create(revision.getId(), "kk-KZ",
+                new Sha256Digest("a".repeat(64)),
+                new ContentLocalizationAuthoringService.Fields(
+                        "Алғашқы нұсқа", null, null, "Аударма", null, null));
+        var id = initial.id();
+
+        mvc.perform(get("/admin/content/localizations/{id}/edit", id)
+                        .with(user("reviewer").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Submit for review")));
+
+        mvc.perform(post("/admin/content/localizations/{id}/review", id)
+                        .with(user("reviewer").roles("ADMIN")).with(csrf())
+                        .param("expectedVersion", Long.toString(initial.version()))
+                        .param("reason", "translation checked")
+                        .param("comment", "ready for approval"))
+                .andExpect(status().isFound());
+        var pending = localizations.get(id);
+        assertThat(pending.lifecycle()).isEqualTo(ContentLocalizationLifecycleStatus.READY_FOR_REVIEW);
+
+        mvc.perform(get("/admin/content/localizations/{id}/edit", id)
+                        .with(user("approver").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Approve localization")));
+
+        mvc.perform(post("/admin/content/localizations/{id}/approve", id)
+                        .with(user("approver").roles("ADMIN")).with(csrf())
+                        .param("expectedVersion", Long.toString(pending.version()))
+                        .param("reason", "approved translation")
+                        .param("comment", "release-ready"))
+                .andExpect(status().isFound());
+
+        var approved = localizations.get(id);
+        assertThat(approved.lifecycle()).isEqualTo(ContentLocalizationLifecycleStatus.APPROVED);
+        assertThat(approved.approvedAt()).isNotNull();
+
+        var audit = jdbc.queryForList(
+                "select action, actor, reason from app.content_localization_review_audit "
+                        + "where localization_revision_id = ? order by occurred_at, action",
+                id);
+        assertThat(audit).hasSize(2);
+        assertThat(audit).anySatisfy(row -> {
+            assertThat(row.get("action")).isEqualTo("SUBMITTED_FOR_REVIEW");
+            assertThat(row.get("actor")).isEqualTo("reviewer");
+            assertThat(row.get("reason")).isEqualTo("translation checked");
+        });
+        assertThat(audit).anySatisfy(row -> {
+            assertThat(row.get("action")).isEqualTo("APPROVED");
+            assertThat(row.get("actor")).isEqualTo("approver");
+        });
+
+        mvc.perform(post("/admin/content/localizations/{id}/next", id)
+                        .with(user("editor").roles("ADMIN")).with(csrf())
+                        .param("expectedVersion", Long.toString(approved.version())))
+                .andExpect(status().isFound())
+                .andExpect(header().string(HttpHeaders.LOCATION,
+                        containsString("/admin/content/localizations/")));
+
+        var versions = localizations.listByContent(revision.getId());
+        assertThat(versions).hasSize(2);
+        assertThat(versions).anySatisfy(value -> {
+            if (value.localizationRevisionNumber() == 2) {
+                assertThat(value.lifecycle()).isEqualTo(ContentLocalizationLifecycleStatus.DRAFT);
+                assertThat(value.locale()).isEqualTo("kk-KZ");
+            }
+        });
+    }
+
+    @Test
+    void invalidLifecycleAndForgedLocaleFailClosed() throws Exception {
+        var revision = contents.saveAndFlush(vocabulary());
+        var initial = localizations.create(revision.getId(), "fr",
+                new Sha256Digest("a".repeat(64)),
+                new ContentLocalizationAuthoringService.Fields("Titre", null, null, null, null, null));
+
+        mvc.perform(post("/admin/content/localizations/{id}/approve", initial.id())
+                        .with(user("approver").roles("ADMIN")).with(csrf())
+                        .param("expectedVersion", Long.toString(initial.version())))
+                .andExpect(status().isConflict());
+        assertThat(localizations.get(initial.id()).lifecycle())
+                .isEqualTo(ContentLocalizationLifecycleStatus.DRAFT);
+
+        mvc.perform(post("/admin/content/localizations/{id}/review", initial.id())
+                        .with(user("reviewer").roles("ADMIN"))
+                        .param("expectedVersion", Long.toString(initial.version())))
+                .andExpect(status().isForbidden());
+
+        mvc.perform(post("/admin/content/localizations/{id}", initial.id())
+                        .with(user("editor").roles("ADMIN")).with(csrf())
+                        .param("expectedVersion", Long.toString(initial.version()))
+                        .param("locale", "en-US")
+                        .param("title", "Forged"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Localization locale cannot be changed")));
+        assertThat(localizations.get(initial.id()).title()).isEqualTo("Titre");
+
+        mvc.perform(post("/admin/content/localizations/{id}/review", initial.id())
+                        .with(user("reviewer").roles("ADMIN")).with(csrf())
+                        .param("expectedVersion", Long.toString(initial.version() + 1)))
+                .andExpect(status().isConflict());
+
+        var auditRows = jdbc.queryForObject(
+                "select count(*) from app.content_localization_review_audit "
+                        + "where localization_revision_id = ?",
+                Integer.class, initial.id());
+        assertThat(auditRows).isZero();
     }
 
     private static VocabularyContentRevisionEntity vocabulary() {
