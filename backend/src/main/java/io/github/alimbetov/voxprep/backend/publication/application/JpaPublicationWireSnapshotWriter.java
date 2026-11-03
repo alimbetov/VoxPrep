@@ -11,6 +11,8 @@ import io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningGoalRep
 import io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningTrackRepository;
 import io.github.alimbetov.voxprep.backend.catalogue.persistence.VerticalRepository;
 import io.github.alimbetov.voxprep.backend.content.domain.ContentType;
+import io.github.alimbetov.voxprep.backend.content.persistence.PracticeTestContentRevisionEntity;
+import io.github.alimbetov.voxprep.backend.content.persistence.QuestionContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.content.localization.ContentLocalizationLifecycleStatus;
 import io.github.alimbetov.voxprep.backend.content.localization.ContentLocalizationRevisionRepository;
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
@@ -107,6 +109,8 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
                 throw new IllegalStateException("duplicate exact publication identity");
             }
         }
+
+        validateAssessmentOwnership(refs, published);
 
         var sectionItems = new ArrayList<Map<String, Object>>();
         var verticalItems = new ArrayList<Map<String, Object>>();
@@ -219,7 +223,9 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
                                     continue;
                                 }
                                 var list = translatedByLocale.computeIfAbsent(localized.getLocale(), ignored -> new ArrayList<>());
-                                if (list.stream().anyMatch(item -> revision.getContentCode().value().equals(item.get("contentCode")))) {
+                                if (list.stream().anyMatch(item ->
+                                        revision.getContentCode().value().equals(item.get("contentCode"))
+                                                && ref.identity().contentType().wireName().equals(item.get("contentType")))) {
                                     continue; // latest APPROVED as-of the publication timestamp
                                 }
                                 list.add(object("contentCode", ref.identity().contentCode().value(),
@@ -332,6 +338,53 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
                     doc.checksum(), encode(payload)));
         }
         documents.flush();
+    }
+
+    /**
+     * Prevents publishing unowned questions, dangling assessment references,
+     * or question choices incompatible with the Flutter singleChoice contract.
+     */
+    private void validateAssessmentOwnership(
+            List<PublicationExactContentRef> refs,
+            Map<String, PublicationExactContentRef> published) {
+        Set<String> questionOwners = new HashSet<>();
+        for (var ref : refs) {
+            if (ref.identity().contentType() != ContentType.PRACTICE_TEST) {
+                continue;
+            }
+            var rawTest = revisions.findExact(ref.identity())
+                    .orElseThrow(() -> new IllegalStateException("published practice test is missing"));
+            if (!(rawTest instanceof PracticeTestContentRevisionEntity test)
+                    || !rawTest.getIdentity().equals(ref.identity())
+                    || !rawTest.getChecksum().equals(ref.checksum())) {
+                throw new IllegalStateException("published practice test is inconsistent");
+            }
+            for (UUID id : test.getQuestionRevisionIds()) {
+                var rawQuestion = revisions.findById(id)
+                        .orElseThrow(() -> new IllegalStateException("published question reference is dangling"));
+                if (!(rawQuestion instanceof QuestionContentRevisionEntity question)) {
+                    throw new IllegalStateException("practice test references non-question revision");
+                }
+                var exact = published.get(key(question.getIdentity()));
+                if (exact == null || !question.getChecksum().equals(exact.checksum())) {
+                    throw new IllegalStateException("practice test references unpublished question");
+                }
+                if (question.getSkillCodes().size() != 1
+                        || question.getOptions().size() < 2
+                        || question.getOptions().stream()
+                                .filter(io.github.alimbetov.voxprep.backend.content.persistence.QuestionOptionEmbeddable::isCorrect)
+                                .count() != 1) {
+                    throw new IllegalStateException("question does not satisfy Flutter singleChoice contract");
+                }
+                questionOwners.add(key(exact));
+            }
+        }
+        for (var ref : refs) {
+            if (ref.identity().contentType() == ContentType.QUESTION
+                    && !questionOwners.contains(key(ref))) {
+                throw new IllegalStateException("published question has no published practice-test owner");
+            }
+        }
     }
 
     private static LinkedHashMap<String, Object> packBody(
