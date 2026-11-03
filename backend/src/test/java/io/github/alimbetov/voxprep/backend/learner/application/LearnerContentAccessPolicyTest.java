@@ -54,7 +54,8 @@ class LearnerContentAccessPolicyTest {
     void exactPublishedFreeCollectionIsAccessibleWithoutPurchase() {
         authenticated();
         published();
-        when(members.findAllByContentRevision_Id(REVISION)).thenReturn(List.of(member(CollectionAccessLevel.FREE)));
+        var free = member(CollectionAccessLevel.FREE);
+        when(members.findAllByContentRevision_Id(REVISION)).thenReturn(List.of(free));
 
         policy.requireAccessible("phrase", "LESSON_01");
 
@@ -65,7 +66,8 @@ class LearnerContentAccessPolicyTest {
     void fullCollectionCannotBeReadWithoutVerifiedPurchase() {
         authenticated();
         published();
-        when(members.findAllByContentRevision_Id(REVISION)).thenReturn(List.of(member(CollectionAccessLevel.FULL)));
+        var full = member(CollectionAccessLevel.FULL);
+        when(members.findAllByContentRevision_Id(REVISION)).thenReturn(List.of(full));
 
         assertThatThrownBy(() -> policy.requireAccessible("phrase", "LESSON_01"))
                 .isInstanceOf(LearnerPremiumAccessDeniedException.class);
@@ -75,7 +77,8 @@ class LearnerContentAccessPolicyTest {
     void independentlyVerifiedFullUnlockAuthorizesFullCollection() {
         authenticated();
         published();
-        when(members.findAllByContentRevision_Id(REVISION)).thenReturn(List.of(member(CollectionAccessLevel.FULL)));
+        var full = member(CollectionAccessLevel.FULL);
+        when(members.findAllByContentRevision_Id(REVISION)).thenReturn(List.of(full));
         when(entitlements.hasVerifiedLifetimeUnlock(INSTALLATION)).thenReturn(true);
 
         policy.requireAccessible("phrase", "LESSON_01");
@@ -87,8 +90,9 @@ class LearnerContentAccessPolicyTest {
     void mixedFreeAndFullMembershipRequiresFullUnlock() {
         authenticated();
         published();
-        when(members.findAllByContentRevision_Id(REVISION)).thenReturn(List.of(
-                member(CollectionAccessLevel.FREE), member(CollectionAccessLevel.FULL)));
+        var free = member(CollectionAccessLevel.FREE);
+        var full = member(CollectionAccessLevel.FULL);
+        when(members.findAllByContentRevision_Id(REVISION)).thenReturn(List.of(free, full));
 
         assertThatThrownBy(() -> policy.requireAccessible("phrase", "LESSON_01"))
                 .isInstanceOf(LearnerPremiumAccessDeniedException.class);
