@@ -44,10 +44,14 @@ class JpaPublicationContentFreezerIntegrationTest {
                 "Could you tell me more?",
                 "Usage",
                 List.of("Example")));
+
         revision.markReadyForAudio();
+        contentRevisionRepository.saveAndFlush(revision);
         revision.markReadyForReview();
+        contentRevisionRepository.saveAndFlush(revision);
         revision.approve(Instant.parse("2026-11-03T12:00:00Z"));
         contentRevisionRepository.saveAndFlush(revision);
+
         PublicationExactContentRef ref = new PublicationExactContentRef(revision.getIdentity(), revision.getChecksum());
         Instant publishedAt = Instant.parse("2026-11-03T13:00:00Z");
 
