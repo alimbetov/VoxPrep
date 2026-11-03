@@ -53,7 +53,7 @@ public final class FlutterPublicationCanonicalHash {
         return sha256(mapper, body);
     }
 
-    private static List<Map<String, Object>> projectList(
+    private static List<LinkedHashMap<String, Object>> projectList(
             Map<String, Object> source, String field, List<String> keys) {
         if (!(source.get(field) instanceof List<?> raw)) {
             throw new IllegalArgumentException("manifest list is missing: " + field);
