@@ -39,8 +39,8 @@ class InstallationIdentityIntegrationTest {
     void repeatRegistrationRotatesTokenAndInvalidatesPreviousToken() {
         UUID installationId = UUID.randomUUID();
 
-        var first = registrationService.register(installationId);
-        var second = registrationService.register(installationId);
+        var first = registrationService.register(installationId, null);
+        var second = registrationService.register(installationId, "Bearer " + first.installationToken());
 
         assertThat(second.installationId()).isEqualTo(installationId);
         assertThat(second.installationToken()).isNotEqualTo(first.installationToken());
@@ -58,7 +58,7 @@ class InstallationIdentityIntegrationTest {
     @Test
     void blockedAndRevokedInstallationsAreRejectedFailClosed() {
         UUID blockedId = UUID.randomUUID();
-        var blockedRegistration = registrationService.register(blockedId);
+        var blockedRegistration = registrationService.register(blockedId, null);
         var blocked = repository.findByInstallationId(blockedId).orElseThrow();
         blocked.block();
         repository.saveAndFlush(blocked);
@@ -68,7 +68,7 @@ class InstallationIdentityIntegrationTest {
                         exception -> assertThat(exception.getCode()).isEqualTo("INSTALLATION_BLOCKED"));
 
         UUID revokedId = UUID.randomUUID();
-        var revokedRegistration = registrationService.register(revokedId);
+        var revokedRegistration = registrationService.register(revokedId, null);
         var revoked = repository.findByInstallationId(revokedId).orElseThrow();
         revoked.revoke();
         repository.saveAndFlush(revoked);
@@ -79,35 +79,79 @@ class InstallationIdentityIntegrationTest {
     }
 
     @Test
-    void concurrentFirstRegistrationCreatesSingleIdentityAndOnlyLatestTokenRemainsValid() throws Exception {
+    void existingInstallationCannotBeRotatedWithoutCorrectPreviousToken() {
+        UUID installationId = UUID.randomUUID();
+        var first = registrationService.register(installationId, null);
+        UUID anotherId = UUID.randomUUID();
+        var another = registrationService.register(anotherId, null);
+
+        assertThatThrownBy(() -> registrationService.register(installationId, null))
+                .isInstanceOf(InstallationAuthenticationException.class);
+        assertThatThrownBy(() -> registrationService.register(installationId, "Bearer invalid"))
+                .isInstanceOf(InstallationAuthenticationException.class);
+        assertThatThrownBy(() -> registrationService.register(
+                        installationId, "Bearer " + another.installationToken()))
+                .isInstanceOf(InstallationAuthenticationException.class);
+
+        assertThat(authenticationService.authenticate(first.installationToken()).installationId())
+                .isEqualTo(installationId);
+        var rotated = registrationService.register(installationId, "Bearer " + first.installationToken());
+        assertThatThrownBy(() -> registrationService.register(
+                        installationId, "Bearer " + first.installationToken()))
+                .isInstanceOf(InstallationAuthenticationException.class);
+        assertThat(authenticationService.authenticate(rotated.installationToken()).installationId())
+                .isEqualTo(installationId);
+    }
+
+    @Test
+    void blockedAndRevokedInstallationsCannotRotateEvenWithPreviousToken() {
+        UUID blockedId = UUID.randomUUID();
+        var blockedToken = registrationService.register(blockedId, null);
+        var blocked = repository.findByInstallationId(blockedId).orElseThrow();
+        blocked.block();
+        repository.saveAndFlush(blocked);
+        assertThatThrownBy(() -> registrationService.register(
+                        blockedId, "Bearer " + blockedToken.installationToken()))
+                .isInstanceOf(InstallationAuthenticationException.class);
+
+        UUID revokedId = UUID.randomUUID();
+        var revokedToken = registrationService.register(revokedId, null);
+        var revoked = repository.findByInstallationId(revokedId).orElseThrow();
+        revoked.revoke();
+        repository.saveAndFlush(revoked);
+        assertThatThrownBy(() -> registrationService.register(
+                        revokedId, "Bearer " + revokedToken.installationToken()))
+                .isInstanceOf(InstallationAuthenticationException.class);
+    }
+
+    @Test
+    void concurrentAnonymousRegistrationOfSameUuidGrantsOnlyFirstClaim() throws Exception {
         UUID installationId = UUID.randomUUID();
         var start = new CountDownLatch(1);
 
         try (var executor = Executors.newFixedThreadPool(2)) {
-            var firstFuture = executor.submit(() -> {
+            java.util.concurrent.Callable<Object> attempt = () -> {
                 start.await();
-                return registrationService.register(installationId);
-            });
-            var secondFuture = executor.submit(() -> {
-                start.await();
-                return registrationService.register(installationId);
-            });
+                try {
+                    return registrationService.register(installationId, null);
+                } catch (InstallationAuthenticationException rejected) {
+                    return rejected;
+                }
+            };
+            var firstFuture = executor.submit(attempt);
+            var secondFuture = executor.submit(attempt);
 
             start.countDown();
-            var registrations = List.of(firstFuture.get(), secondFuture.get());
-
+            var results = List.of(firstFuture.get(), secondFuture.get());
+            assertThat(results.stream().filter(
+                    InstallationRegistrationService.RegistrationResult.class::isInstance)).hasSize(1);
+            assertThat(results.stream().filter(InstallationAuthenticationException.class::isInstance)).hasSize(1);
             assertThat(repository.count()).isEqualTo(1);
-            assertThat(registrations)
-                    .extracting(InstallationRegistrationService.RegistrationResult::installationId)
-                    .containsOnly(installationId);
-            assertThat(registrations)
-                    .extracting(InstallationRegistrationService.RegistrationResult::installationToken)
-                    .doesNotHaveDuplicates();
-
-            long acceptedTokens = registrations.stream()
-                    .filter(registration -> authenticates(registration.installationToken()))
-                    .count();
-            assertThat(acceptedTokens).isEqualTo(1);
+            var first = results.stream()
+                    .filter(InstallationRegistrationService.RegistrationResult.class::isInstance)
+                    .map(InstallationRegistrationService.RegistrationResult.class::cast)
+                    .findFirst().orElseThrow();
+            assertThat(authenticates(first.installationToken())).isTrue();
         }
     }
 
