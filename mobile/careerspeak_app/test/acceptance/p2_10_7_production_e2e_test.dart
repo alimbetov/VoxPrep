@@ -6,6 +6,7 @@ import 'package:careerspeak_app/app/asset_download_providers.dart';
 import 'package:careerspeak_app/app/careerspeak_app.dart';
 import 'package:careerspeak_app/app/installation_identity_providers.dart';
 import 'package:careerspeak_app/app/learner_state_providers.dart';
+import 'package:careerspeak_app/app/onboarding_providers.dart';
 import 'package:careerspeak_app/app/router.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_coordinator.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_planner.dart';
@@ -177,6 +178,16 @@ void main() {
       );
       expect(bootstrapResult, isNotNull);
       debugPrint('RENDERER_CHECKPOINT bootstrap-done');
+
+      // The screenshot acceptance starts after a completed onboarding flow.
+      // Persist that state through the production controller, not through a
+      // mocked router override; otherwise /learn legitimately redirects.
+      final onboarding = await tester.runAsync(
+        () => container.read(onboardingControllerProvider).skip(),
+      );
+      expect(onboarding, isNotNull);
+      onboarding!.getOrThrow();
+      debugPrint('RENDERER_CHECKPOINT onboarding-completed');
 
       const screenshotKey = Key('production-e2e-screenshot');
       final app = UncontrolledProviderScope(
