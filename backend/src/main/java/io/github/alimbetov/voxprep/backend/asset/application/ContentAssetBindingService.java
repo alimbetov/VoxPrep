@@ -45,6 +45,9 @@ public class ContentAssetBindingService {
 
         var revision = contentRevisionRepository.findById(contentRevisionId)
                 .orElseThrow(() -> new IllegalArgumentException("Content revision not found: " + contentRevisionId));
+        if (revision.getPublishedAt() != null) {
+            throw new IllegalStateException("Published content revision asset bindings are immutable");
+        }
         var asset = fileAssetRepository.findById(fileAssetId)
                 .orElseThrow(() -> new IllegalArgumentException("File asset not found: " + fileAssetId));
 
