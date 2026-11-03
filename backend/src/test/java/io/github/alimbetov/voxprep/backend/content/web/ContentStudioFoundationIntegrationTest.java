@@ -3,6 +3,7 @@ package io.github.alimbetov.voxprep.backend.content.web;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -147,6 +148,24 @@ class ContentStudioFoundationIntegrationTest {
                         .with(user("admin").roles("ADMIN"))
                         .param("expectedVersion", "0"))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void localizationRestRejectsInvalidLocaleAndOversizedReviewReason() throws Exception {
+        var id = UUID.randomUUID();
+        mockMvc.perform(post("/admin/api/v1/content/localizations")
+                        .with(httpBasic("admin", "777"))
+                        .contentType("application/json")
+                        .content("{\"contentRevisionId\":\"" + id
+                                + "\",\"locale\":\"bad!locale\",\"title\":\"Title\"}"))
+                .andExpect(status().isBadRequest());
+
+        mockMvc.perform(post("/admin/api/v1/content/localizations/{id}/review", id)
+                        .with(httpBasic("admin", "777"))
+                        .contentType("application/json")
+                        .content("{\"expectedVersion\":0,\"reason\":\""
+                                + "x".repeat(513) + "\"}"))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
