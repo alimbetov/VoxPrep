@@ -13,9 +13,6 @@ import io.github.alimbetov.voxprep.backend.publication.persistence.PublicationRe
 import io.github.alimbetov.voxprep.backend.publication.persistence.PublicationWireDocumentEntity;
 import io.github.alimbetov.voxprep.backend.publication.persistence.PublicationWireDocumentKind;
 import io.github.alimbetov.voxprep.backend.publication.persistence.PublicationWireDocumentRepository;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,7 +64,7 @@ class LearnerWirePublicationServiceTest {
     void exactPackMustBelongToFrozenRootAndMatchItsChecksum() throws Exception {
         publishedRoot();
         var pack = packBody();
-        String checksum = sha(pack);
+        String checksum = FlutterPublicationCanonicalHash.pack(json, pack);
         pack.put("checksum", checksum);
         stub(PublicationWireDocumentKind.PACK, "COLLECTION_A", "canonical", 3, pack, checksum);
         var response = service.pack("COLLECTION_A", "canonical", 3);
@@ -120,7 +117,7 @@ class LearnerWirePublicationServiceTest {
     void rootWithMissingUniversalCatalogueIsRejected() throws Exception {
         var root = rootBody();
         root.put("catalogues", List.of());
-        String checksum = sha(root);
+        String checksum = FlutterPublicationCanonicalHash.root(json, root);
         root.put("checksum", checksum);
         stub(PublicationWireDocumentKind.ROOT, "root", "-", 3, root, checksum);
         assertThatThrownBy(service::root)
@@ -142,7 +139,7 @@ class LearnerWirePublicationServiceTest {
         root.put("minimumAppContractVersion", 3);
         root.put("publishedAt", "2026-11-03T12:00:00Z");
         root.put("packs", List.of(Map.of("code", "COLLECTION_A", "variant", "canonical",
-                "revision", 3, "checksum", "b".repeat(64))));
+                "revision", 3, "checksum", FlutterPublicationCanonicalHash.pack(json, packBody()))));
         root.put("practiceTests", List.of());
         root.put("catalogues", List.of(
                 catalogueRef("vertical-sections"),
@@ -183,8 +180,5 @@ class LearnerWirePublicationServiceTest {
                 RELEASE, kind, code, variant, revision)).thenReturn(Optional.of(document));
     }
 
-    private String sha(Map<String, Object> body) throws Exception {
-        byte[] bytes = json.writeValueAsString(body).getBytes(StandardCharsets.UTF_8);
-        return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
-    }
+
 }
