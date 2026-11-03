@@ -36,6 +36,10 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     binding_role varchar(32);
+    revision_type varchar(32);
+    asset_kind varchar(32);
+    asset_status varchar(32);
+    asset_media_type varchar(128);
 BEGIN
     IF NEW.status <> 'READY'
        OR NEW.output_asset_id IS NULL
@@ -56,6 +60,35 @@ BEGIN
 
     IF binding_role IS NULL THEN
         RAISE EXCEPTION 'Unsupported finalized TTS audio role: %', NEW.audio_role
+            USING ERRCODE = '23514';
+    END IF;
+
+    SELECT content_type
+      INTO revision_type
+      FROM app.content_revision
+     WHERE id = NEW.content_revision_id;
+
+    IF NOT (
+        (revision_type = 'vocabulary' AND binding_role = 'PRONUNCIATION')
+        OR (revision_type = 'phrase' AND binding_role = 'PRONUNCIATION')
+        OR (revision_type = 'interview' AND binding_role IN ('QUESTION', 'SAMPLE_ANSWER'))
+        OR (revision_type = 'topic' AND binding_role = 'NARRATION')
+        OR (revision_type = 'shadowing' AND binding_role = 'SHADOWING')
+    ) THEN
+        RAISE EXCEPTION 'TTS audio role % is not allowed for content type %', NEW.audio_role, revision_type
+            USING ERRCODE = '23514';
+    END IF;
+
+    SELECT kind, status, media_type
+      INTO asset_kind, asset_status, asset_media_type
+      FROM app.file_asset
+     WHERE id = NEW.output_asset_id;
+
+    IF asset_kind IS DISTINCT FROM 'TTS_AUDIO'
+       OR asset_status IS DISTINCT FROM 'READY'
+       OR asset_media_type IS NULL
+       OR asset_media_type NOT LIKE 'audio/%' THEN
+        RAISE EXCEPTION 'Finalized TTS binding requires READY TTS_AUDIO audio/* asset'
             USING ERRCODE = '23514';
     END IF;
 
