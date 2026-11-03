@@ -42,3 +42,5 @@ databaseChangeLog:
       file: db/changelog/b4-p1-media-asset-kinds.sql
   - include:
       file: db/changelog/b5-p1-tts-model-provenance.sql
+  - include:
+      file: db/changelog/b5-p2-tts-active-model-policy.sql
