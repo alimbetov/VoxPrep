@@ -28,6 +28,7 @@ public class PublicationPublisher {
     private final PublicationCandidateValidator validator;
     private final PublicationContentVersionAllocator versionAllocator;
     private final PublicationContentFreezer contentFreezer;
+    private final PublicationWireSnapshotWriter wireWriter;
 
     public PublicationPublisher(
             PublicationCandidateRepository candidateRepository,
@@ -43,7 +44,20 @@ public class PublicationPublisher {
                 currentRepository,
                 validator,
                 versionAllocator,
-                PublicationContentFreezer.noOp());
+                PublicationContentFreezer.noOp(),
+                PublicationWireSnapshotWriter.noOp());
+    }
+
+    public PublicationPublisher(
+            PublicationCandidateRepository candidateRepository,
+            PublicationCandidateManifestRefRepository manifestRepository,
+            PublicationReleaseRepository releaseRepository,
+            PublicationCurrentRepository currentRepository,
+            PublicationCandidateValidator validator,
+            PublicationContentVersionAllocator versionAllocator,
+            PublicationContentFreezer contentFreezer) {
+        this(candidateRepository, manifestRepository, releaseRepository, currentRepository,
+                validator, versionAllocator, contentFreezer, PublicationWireSnapshotWriter.noOp());
     }
 
     @Autowired
@@ -54,7 +68,8 @@ public class PublicationPublisher {
             PublicationCurrentRepository currentRepository,
             PublicationCandidateValidator validator,
             PublicationContentVersionAllocator versionAllocator,
-            PublicationContentFreezer contentFreezer) {
+            PublicationContentFreezer contentFreezer,
+            PublicationWireSnapshotWriter wireWriter) {
         this.candidateRepository = Objects.requireNonNull(candidateRepository, "candidateRepository");
         this.manifestRepository = Objects.requireNonNull(manifestRepository, "manifestRepository");
         this.releaseRepository = Objects.requireNonNull(releaseRepository, "releaseRepository");
@@ -62,6 +77,7 @@ public class PublicationPublisher {
         this.validator = Objects.requireNonNull(validator, "validator");
         this.versionAllocator = Objects.requireNonNull(versionAllocator, "versionAllocator");
         this.contentFreezer = Objects.requireNonNull(contentFreezer, "contentFreezer");
+        this.wireWriter = Objects.requireNonNull(wireWriter, "wireWriter");
     }
 
     @Transactional
@@ -105,6 +121,10 @@ public class PublicationPublisher {
                 candidate.getRootSha256(),
                 publishedAt);
         releaseRepository.saveAndFlush(release);
+
+        // Invariant: CURRENT never points to a release lacking the immutable Flutter
+        // manifest, all six catalogues and a complete FREE/FULL access projection.
+        wireWriter.freeze(release, manifest, publishedAt);
 
         current.switchTo(release, publishedAt);
         currentRepository.save(current);
