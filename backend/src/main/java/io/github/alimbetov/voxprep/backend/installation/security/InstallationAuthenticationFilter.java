@@ -20,13 +20,6 @@ import tools.jackson.databind.ObjectMapper;
 @Component
 public class InstallationAuthenticationFilter extends OncePerRequestFilter {
 
-    private static final List<String> PROTECTED_PREFIXES = List.of(
-            "/api/v1/content/",
-            "/api/v1/catalogues/",
-            "/api/v1/assessment/",
-            "/api/v1/media/",
-            "/api/v1/purchases/");
-
     private final InstallationAuthenticationService authenticationService;
     private final ObjectMapper objectMapper;
 
@@ -40,7 +33,7 @@ public class InstallationAuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         var path = request.getRequestURI();
-        return PROTECTED_PREFIXES.stream().noneMatch(path::startsWith);
+        return !LearnerApiRoutePolicy.isProtectedPath(path);
     }
 
     @Override
