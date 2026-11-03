@@ -16,7 +16,10 @@
                 <span th:text="${revision.lifecycle}">DRAFT</span>
             </p>
         </div>
-        <a class="btn btn-outline-secondary" th:href="@{/admin/content}">Back to content</a>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-primary" th:href="@{/admin/content/revisions/{id}/localizations(id=${revision.id})}">Localizations</a>
+            <a class="btn btn-outline-secondary" th:href="@{/admin/content}">Back to content</a>
+        </div>
     </div>
 
     <div th:if="${flashSuccess}" class="alert alert-success" th:text="${flashSuccess}"></div>
