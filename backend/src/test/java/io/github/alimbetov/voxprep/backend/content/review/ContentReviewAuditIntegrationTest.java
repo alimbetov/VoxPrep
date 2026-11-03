@@ -11,7 +11,6 @@ import io.github.alimbetov.voxprep.backend.sharedkernel.AvailabilityStatus;
 import io.github.alimbetov.voxprep.backend.sharedkernel.BusinessCode;
 import io.github.alimbetov.voxprep.backend.sharedkernel.RevisionNumber;
 import io.github.alimbetov.voxprep.backend.sharedkernel.Sha256Digest;
-import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -63,7 +62,11 @@ class ContentReviewAuditIntegrationTest {
                 "READY_FOR_EDITORIAL_REVIEW",
                 "Language and structure checked");
 
-        var approvedAt = Instant.parse("2026-11-03T04:00:00Z");
+        var submittedAudit = auditRepository
+                .findAllByContentRevisionIdOrderByOccurredAtAscIdAsc(revision.getId())
+                .getFirst();
+        var approvedAt = submittedAudit.getOccurredAt().plusSeconds(1);
+
         authoringService.approve(
                 revision.getId(),
                 approvedAt,
