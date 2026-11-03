@@ -31,12 +31,12 @@ final class ContentMvcForms {
 
         @NotBlank
         @Size(max = CatalogueCode.MAX_LENGTH)
-        @Pattern(regexp = CatalogueCode.PATTERN)
+        @Pattern(regexp = CatalogueCode.REGEXP)
         private String categoryCode;
 
         @NotBlank
         @Size(max = CatalogueCode.MAX_LENGTH)
-        @Pattern(regexp = CatalogueCode.PATTERN)
+        @Pattern(regexp = CatalogueCode.REGEXP)
         private String levelCode;
 
         @Min(1)
