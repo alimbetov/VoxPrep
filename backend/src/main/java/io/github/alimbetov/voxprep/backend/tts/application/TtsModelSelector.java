@@ -11,8 +11,12 @@ public record TtsModelSelector(String locale, String voice, String quality) {
         quality = required(quality, "quality").toLowerCase(Locale.ROOT);
     }
 
+    public String voiceCode() {
+        return locale + "." + voice;
+    }
+
     public String modelCode() {
-        return locale + "." + voice + "." + quality;
+        return voiceCode() + "." + quality;
     }
 
     private static String required(String value, String field) {
