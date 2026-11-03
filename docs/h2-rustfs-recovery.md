@@ -74,3 +74,30 @@ Acceptance:
 
 Remaining: end-to-end fault injection, automatic triggering policy, metrics/alerts,
 streaming read size limit, orphan inventory and guarded cleanup.
+
+
+## H2.3 streaming integrity and advisory orphan inventory
+
+- `ObjectStoragePort.openRead` supports streaming verification, and the RustFS
+  adapter uses `S3Client.getObject` without allocating an object-sized byte array.
+- `FileAssetRecoveryService` reads in 8 KiB chunks and applies a hard 64 MiB
+  per-object verification cap. Metadata larger than the cap or a stream exceeding
+  the cap returns `TOO_LARGE` while keeping the database row `REGISTERED`.
+  A truncated or failed network stream returns `STORAGE_UNAVAILABLE` and
+  preserves the retryable state. No object is deleted.
+- `RustFsOrphanInventoryService.scan(prefix, continuationToken, pageSize)`
+  lists at most 100 keys for an explicit prefix, checks whether a matching
+  `file_asset` record exists, and returns *suspected* orphan entries. A suspected
+  orphan is never proof of safe deletion because concurrent uploads, replication,
+  and external producer paths may make the inventory temporarily inconsistent.
+- The orphan-inventory service is internal only: no public endpoint or
+  background sweep has been enabled.
+- Fault-injection integration acceptance simulates stream failure then successful
+  retry, size-limit rejection and idempotent completion using real PostgreSQL
+  transactions and a controlled storage boundary. This **does not** qualify an
+  actual RustFS container stop/restart or a network-partition deployment.
+- Production follow-up: use a fault-injection job with a real RustFS container
+  (kill RustFS after REGISTERED/upload, restart it, then reconcile), establish
+  metrics/backlog thresholds, and require retention windows, repeated scans and
+  human approval before any destructive orphan cleanup. Large TTS model objects
+  require a separately budgeted streaming path.
