@@ -8,9 +8,14 @@ import io.github.alimbetov.voxprep.backend.content.persistence.PhraseContentRevi
 import io.github.alimbetov.voxprep.backend.content.persistence.ShadowingContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.content.persistence.TopicContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.content.persistence.VocabularyContentRevisionEntity;
+import io.github.alimbetov.voxprep.backend.content.review.ContentReviewAction;
+import io.github.alimbetov.voxprep.backend.content.review.ContentReviewAuditEntity;
+import io.github.alimbetov.voxprep.backend.content.review.ContentReviewAuditRepository;
 import io.github.alimbetov.voxprep.backend.sharedkernel.RevisionNumber;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,9 +24,23 @@ import org.springframework.transaction.annotation.Transactional;
 public class ContentAuthoringService {
 
     private final ContentRevisionRepository repository;
+    private final ContentReviewAuditRepository reviewAuditRepository;
+    private final Clock clock;
 
-    public ContentAuthoringService(ContentRevisionRepository repository) {
+    @Autowired
+    public ContentAuthoringService(
+            ContentRevisionRepository repository,
+            ContentReviewAuditRepository reviewAuditRepository) {
+        this(repository, reviewAuditRepository, Clock.systemUTC());
+    }
+
+    ContentAuthoringService(
+            ContentRevisionRepository repository,
+            ContentReviewAuditRepository reviewAuditRepository,
+            Clock clock) {
         this.repository = repository;
+        this.reviewAuditRepository = reviewAuditRepository;
+        this.clock = clock;
     }
 
     @Transactional
@@ -50,16 +69,39 @@ public class ContentAuthoringService {
 
     @Transactional
     public ContentRevisionEntity submitForReview(UUID revisionId) {
+        return submitForReview(revisionId, "system", null, null);
+    }
+
+    @Transactional
+    public ContentRevisionEntity submitForReview(
+            UUID revisionId,
+            String actor,
+            String reason,
+            String comment) {
         var revision = requireRevision(revisionId);
         revision.markReadyForReview();
-        return save(revision);
+        var saved = save(revision);
+        appendAudit(saved.getId(), ContentReviewAction.SUBMITTED_FOR_REVIEW, actor, reason, comment, clock.instant());
+        return saved;
     }
 
     @Transactional
     public ContentRevisionEntity approve(UUID revisionId, Instant approvedAt) {
+        return approve(revisionId, approvedAt, "system", null, null);
+    }
+
+    @Transactional
+    public ContentRevisionEntity approve(
+            UUID revisionId,
+            Instant approvedAt,
+            String actor,
+            String reason,
+            String comment) {
         var revision = requireRevision(revisionId);
         revision.approve(approvedAt);
-        return save(revision);
+        var saved = save(revision);
+        appendAudit(saved.getId(), ContentReviewAction.APPROVED, actor, reason, comment, approvedAt);
+        return saved;
     }
 
     private ContentRevisionEntity requireRevision(UUID revisionId) {
@@ -73,6 +115,17 @@ public class ContentAuthoringService {
         } catch (OptimisticLockingFailureException exception) {
             throw new ContentAuthoringConflictException("Content revision was modified by another editor", exception);
         }
+    }
+
+    private void appendAudit(
+            UUID revisionId,
+            ContentReviewAction action,
+            String actor,
+            String reason,
+            String comment,
+            Instant occurredAt) {
+        reviewAuditRepository.saveAndFlush(new ContentReviewAuditEntity(
+                revisionId, action, actor, reason, comment, occurredAt));
     }
 
     private static ContentRevisionEntity cloneAsDraft(ContentRevisionEntity source, RevisionNumber nextNumber) {
