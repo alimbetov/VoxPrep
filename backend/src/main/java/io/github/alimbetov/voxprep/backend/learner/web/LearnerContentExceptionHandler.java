@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
     LearnerWireManifestController.class,
     LearnerAssetDownloadController.class,
     LearnerAssessmentController.class,
+    LearnerExactQuestionController.class,
     LearnerMediaController.class
 })
 public class LearnerContentExceptionHandler {
