@@ -59,6 +59,7 @@ public class ContentAssetBindingService {
         return bindingRepository.save(new ContentAssetBindingEntity(revision, role, asset, sourceFingerprint));
     }
 
+    @Transactional(readOnly = true)
     public BindingState state(UUID contentRevisionId, ContentAssetRole role, String expectedFingerprint) {
         Objects.requireNonNull(contentRevisionId, "contentRevisionId");
         Objects.requireNonNull(role, "role");
