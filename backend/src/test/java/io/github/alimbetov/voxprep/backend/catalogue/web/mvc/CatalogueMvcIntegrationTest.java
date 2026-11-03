@@ -8,11 +8,17 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import io.github.alimbetov.voxprep.backend.catalogue.application.CatalogueAdminQueryService;
 import io.github.alimbetov.voxprep.backend.catalogue.application.CatalogueAuthoringService;
 import io.github.alimbetov.voxprep.backend.catalogue.domain.CatalogueCode;
+import io.github.alimbetov.voxprep.backend.catalogue.domain.CollectionAccessLevel;
+import io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningGoalEntity;
+import io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningTrackEntity;
+import io.github.alimbetov.voxprep.backend.catalogue.persistence.VerticalEntity;
 import io.github.alimbetov.voxprep.backend.sharedkernel.AvailabilityStatus;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,7 +46,7 @@ class CatalogueMvcIntegrationTest {
 
     @Test
     void adminCanCreateCompleteCatalogueHierarchyThroughMvc() throws Exception {
-        String suffix = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        String suffix = token();
         String verticalCode = "V" + suffix;
         String goalCode = "G" + suffix;
         String trackCode = "T" + suffix;
@@ -95,7 +101,9 @@ class CatalogueMvcIntegrationTest {
                         .param("accessLevel", "FREE")
                         .param("sortOrder", "1")
                         .param("availability", "ACTIVE"))
-                .andExpect(status().isFound());
+                .andExpect(status().isFound())
+                .andExpect(redirectedUrl("/admin/catalogue?verticalId=" + vertical.id()
+                        + "&goalId=" + goal.id() + "&trackId=" + track.id()));
 
         assertThat(query.listCollections(track.id()))
                 .anySatisfy(item -> {
@@ -116,6 +124,97 @@ class CatalogueMvcIntegrationTest {
     }
 
     @Test
+    void deepestSelectionCanonicalizesInconsistentHierarchy() throws Exception {
+        var canonical = hierarchy("CAN" + token());
+        var foreign = hierarchy("FOR" + token());
+
+        mockMvc.perform(get("/admin/catalogue")
+                        .with(user("admin").roles("ADMIN"))
+                        .param("verticalId", foreign.vertical().getId().toString())
+                        .param("goalId", foreign.goal().getId().toString())
+                        .param("trackId", canonical.track().getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("selectedVerticalId", canonical.vertical().getId()))
+                .andExpect(model().attribute("selectedGoalId", canonical.goal().getId()))
+                .andExpect(model().attribute("selectedTrackId", canonical.track().getId()));
+    }
+
+    @Test
+    void forgedParentOnUpdateIsRejectedAndOriginalParentRemains() throws Exception {
+        var original = hierarchy("ORG" + token());
+        var foreign = hierarchy("ALT" + token());
+        var goal = query.getGoal(original.goal().getId());
+
+        mockMvc.perform(post("/admin/catalogue/goals/{id}", goal.id())
+                        .with(user("admin").roles("ADMIN")).with(csrf())
+                        .param("expectedVersion", Long.toString(goal.version()))
+                        .param("code", goal.code())
+                        .param("verticalId", foreign.vertical().getId().toString())
+                        .param("title", "Forged move")
+                        .param("description", goal.description())
+                        .param("sortOrder", Integer.toString(goal.sortOrder()))
+                        .param("availability", goal.availability()))
+                .andExpect(status().isConflict())
+                .andExpect(content().string(containsString("Update conflict")));
+
+        assertThat(query.getGoal(goal.id()).parentId()).isEqualTo(original.vertical().getId());
+    }
+
+    @Test
+    void invalidCatalogueCodeIsRejectedByMvcValidation() throws Exception {
+        mockMvc.perform(post("/admin/catalogue/verticals")
+                        .with(user("admin").roles("ADMIN")).with(csrf())
+                        .param("expectedVersion", "0")
+                        .param("code", "lower-case")
+                        .param("sectionCode", "CAREER")
+                        .param("title", "Invalid code")
+                        .param("description", "Must stay in form validation")
+                        .param("iconAssetId", "icon")
+                        .param("sortOrder", "1")
+                        .param("availability", "ACTIVE"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeHasFieldErrors("form", "code"))
+                .andExpect(content().string(containsString("Create vertical")));
+    }
+
+    @Test
+    void duplicateCatalogueCodeReturnsSafeConflict() throws Exception {
+        String code = "DUP" + token();
+        authoring.createVertical(
+                new CatalogueCode(code), new CatalogueCode("CAREER"), "Existing", "Existing vertical", "icon", 1,
+                AvailabilityStatus.ACTIVE);
+
+        mockMvc.perform(post("/admin/catalogue/verticals")
+                        .with(user("admin").roles("ADMIN")).with(csrf())
+                        .param("expectedVersion", "0")
+                        .param("code", code)
+                        .param("sectionCode", "CAREER")
+                        .param("title", "Duplicate")
+                        .param("description", "Duplicate vertical")
+                        .param("iconAssetId", "icon")
+                        .param("sortOrder", "2")
+                        .param("availability", "ACTIVE"))
+                .andExpect(status().isConflict())
+                .andExpect(content().string(containsString("Update conflict")))
+                .andExpect(content().string(containsString("Reload and try again")));
+    }
+
+    @Test
+    void catalogueMutationWithoutCsrfIsForbidden() throws Exception {
+        mockMvc.perform(post("/admin/catalogue/verticals")
+                        .with(user("admin").roles("ADMIN"))
+                        .param("expectedVersion", "0")
+                        .param("code", "CSRF" + token())
+                        .param("sectionCode", "CAREER")
+                        .param("title", "CSRF")
+                        .param("description", "CSRF rejection")
+                        .param("iconAssetId", "icon")
+                        .param("sortOrder", "1")
+                        .param("availability", "ACTIVE"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void invalidFormRendersValidationAndStaleUpdateReturnsSafeConflict() throws Exception {
         mockMvc.perform(post("/admin/catalogue/verticals")
                         .with(user("admin").roles("ADMIN")).with(csrf())
@@ -131,7 +230,7 @@ class CatalogueMvcIntegrationTest {
                 .andExpect(content().string(containsString("Create vertical")));
 
         var entity = authoring.createVertical(
-                new CatalogueCode("STALE" + UUID.randomUUID().toString().substring(0, 6).toUpperCase()),
+                new CatalogueCode("STALE" + token()),
                 new CatalogueCode("CAREER"), "Stale test", "Conflict test", "icon", 1, AvailabilityStatus.ACTIVE);
         var snapshot = query.getVertical(entity.getId());
 
@@ -149,4 +248,24 @@ class CatalogueMvcIntegrationTest {
                 .andExpect(content().string(containsString("Update conflict")))
                 .andExpect(content().string(containsString("Reload and try again")));
     }
+
+    private Hierarchy hierarchy(String prefix) {
+        VerticalEntity vertical = authoring.createVertical(
+                new CatalogueCode(prefix + "V"), new CatalogueCode("CAREER"), prefix + " vertical",
+                "Vertical for MVC hardening acceptance", "icon", 1, AvailabilityStatus.ACTIVE);
+        LearningGoalEntity goal = authoring.createGoal(
+                new CatalogueCode(prefix + "G"), vertical.getId(), prefix + " goal",
+                "Goal for MVC hardening acceptance", 1, AvailabilityStatus.ACTIVE);
+        LearningTrackEntity track = authoring.createTrack(
+                new CatalogueCode(prefix + "T"), goal.getId(), prefix + " track",
+                "Track for MVC hardening acceptance", new CatalogueCode("B2"), new CatalogueCode("JAVA"), 1,
+                AvailabilityStatus.ACTIVE);
+        return new Hierarchy(vertical, goal, track);
+    }
+
+    private static String token() {
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
+    }
+
+    private record Hierarchy(VerticalEntity vertical, LearningGoalEntity goal, LearningTrackEntity track) {}
 }
