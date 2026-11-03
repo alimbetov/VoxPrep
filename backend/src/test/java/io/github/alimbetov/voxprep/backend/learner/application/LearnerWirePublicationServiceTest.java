@@ -126,7 +126,7 @@ class LearnerWirePublicationServiceTest {
 
     private String publishedRoot() throws Exception {
         var root = rootBody();
-        String checksum = sha(root);
+        String checksum = FlutterPublicationCanonicalHash.root(json, root);
         root.put("checksum", checksum);
         stub(PublicationWireDocumentKind.ROOT, "root", "-", 3, root, checksum);
         return checksum;
