@@ -52,6 +52,17 @@ public class InstallationEntity extends AbstractJpaEntity {
         this.tokenIssuedAt = Objects.requireNonNull(tokenIssuedAt, "tokenIssuedAt");
     }
 
+    public void block() {
+        if (status == InstallationStatus.REVOKED) {
+            throw new IllegalStateException("REVOKED installation cannot be blocked");
+        }
+        status = InstallationStatus.BLOCKED;
+    }
+
+    public void revoke() {
+        status = InstallationStatus.REVOKED;
+    }
+
     public UUID getInstallationId() {
         return installationId;
     }
