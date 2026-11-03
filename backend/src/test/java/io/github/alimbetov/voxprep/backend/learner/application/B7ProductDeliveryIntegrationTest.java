@@ -9,6 +9,17 @@ import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetStatus;
 import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetEntity;
 import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetRepository;
 import io.github.alimbetov.voxprep.backend.catalogue.domain.CatalogueCode;
+import io.github.alimbetov.voxprep.backend.catalogue.domain.CollectionAccessLevel;
+import io.github.alimbetov.voxprep.backend.catalogue.persistence.VerticalEntity;
+import io.github.alimbetov.voxprep.backend.catalogue.persistence.VerticalRepository;
+import io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningGoalEntity;
+import io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningGoalRepository;
+import io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningTrackEntity;
+import io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningTrackRepository;
+import io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningCollectionEntity;
+import io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningCollectionRepository;
+import io.github.alimbetov.voxprep.backend.catalogue.persistence.CollectionContentMemberEntity;
+import io.github.alimbetov.voxprep.backend.catalogue.persistence.CollectionContentMemberRepository;
 import io.github.alimbetov.voxprep.backend.content.application.ContentRevisionSnapshot;
 import io.github.alimbetov.voxprep.backend.content.domain.ContentLifecycleStatus;
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
@@ -57,6 +68,12 @@ class B7ProductDeliveryIntegrationTest {
 
     @Autowired private ContentRevisionRepository contentRevisionRepository;
     @Autowired private FileAssetRepository assetRepository;
+    @Autowired private VerticalRepository verticalRepository;
+    @Autowired private LearningGoalRepository goalRepository;
+    @Autowired private LearningTrackRepository trackRepository;
+    @Autowired private LearningCollectionRepository collectionRepository;
+    @Autowired private CollectionContentMemberRepository memberRepository;
+    @Autowired private LearnerWirePublicationService wirePublicationService;
     @Autowired private ContentAssetBindingService bindingService;
     @Autowired private TtsVoiceRepository voiceRepository;
     @Autowired private TtsVoiceModelRepository modelRepository;
@@ -128,6 +145,24 @@ class B7ProductDeliveryIntegrationTest {
         revision.approve(Instant.parse("2026-11-03T14:00:00Z"));
         contentRevisionRepository.saveAndFlush(revision);
 
+        // The real Flutter publication contract requires a stable, ordered
+        // collection membership. A bare content revision is not a learner pack.
+        var vertical = verticalRepository.saveAndFlush(new VerticalEntity(
+                new CatalogueCode("R6_CAREER"), new CatalogueCode("R6_TECH"),
+                "Career", "Interview preparation", "r6-icon", 0, AvailabilityStatus.ACTIVE));
+        var goal = goalRepository.saveAndFlush(new LearningGoalEntity(
+                new CatalogueCode("R6_INTERVIEW"), vertical,
+                "Interviews", "Interview goal", 0, AvailabilityStatus.ACTIVE));
+        var track = trackRepository.saveAndFlush(new LearningTrackEntity(
+                new CatalogueCode("R6_ENGLISH"), goal, "English interview",
+                "Interview speaking", new CatalogueCode("B1"), null,
+                0, AvailabilityStatus.ACTIVE));
+        var collection = collectionRepository.saveAndFlush(new LearningCollectionEntity(
+                new CatalogueCode("R6_FREE"), track, "First block",
+                "Free opening lesson", CollectionAccessLevel.FREE,
+                0, AvailabilityStatus.ACTIVE));
+        memberRepository.saveAndFlush(new CollectionContentMemberEntity(collection, 0, revision));
+
         PublicationExactContentRef ref = new PublicationExactContentRef(revision.getIdentity(), revision.getChecksum());
         PublicationCandidateEntity candidate = candidateRepository.saveAndFlush(
                 new PublicationCandidateEntity(PublicationCandidateStatus.DRAFT));
@@ -144,6 +179,18 @@ class B7ProductDeliveryIntegrationTest {
         var current = currentPublicationResolver.resolve();
         assertThat(current.contentVersion()).isEqualTo(published.contentVersion());
         assertThat(current.refs()).containsExactly(ref);
+
+        // No mocks: exact release-scoped wire root, pack and collection JSON
+        // are available from the same publisher transaction.
+        var root = wirePublicationService.root();
+        assertThat(root.body()).containsEntry("schemaVersion", 2);
+        assertThat((List<?>) root.body().get("catalogues")).hasSize(6);
+        var pack = wirePublicationService.pack("R6_FREE", "canonical",
+                (int) published.contentVersion());
+        assertThat((List<?>) pack.body().get("contents")).hasSize(1);
+        var collectionSnapshot = wirePublicationService.catalogue(
+                "learning-collections", (int) published.contentVersion());
+        assertThat((List<?>) collectionSnapshot.body().get("items")).hasSize(1);
 
         var content = learnerContentService.get("phrase", "R6_PHRASE");
         assertThat(content.contentVersion()).isEqualTo(published.contentVersion());
