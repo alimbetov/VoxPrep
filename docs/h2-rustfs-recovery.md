@@ -101,3 +101,35 @@ streaming read size limit, orphan inventory and guarded cleanup.
   metrics/backlog thresholds, and require retention windows, repeated scans and
   human approval before any destructive orphan cleanup. Large TTS model objects
   require a separately budgeted streaming path.
+
+
+## H2.4 real restart qualification
+
+`.github/workflows/h2-rustfs-restart-acceptance.yml` provisions isolated
+PostgreSQL/RustFS, creates a REGISTERED file asset while uploading bytes into
+the real S3-compatible store, then **SIGKILLs RustFS** before an independent
+Spring Boot process calls `FileAssetRecoveryService.reconcile`. It must
+return STORAGE_UNAVAILABLE without mutating the database state. RustFS is
+restarted with the same persistent Compose volumes, then a third independent
+test invocation verifies RECOVERED_READY followed by ALREADY_SETTLED.
+The staged test is disabled for ordinary Maven test suites unless explicitly
+enabled through `-Dh2.restart.acceptance=true`.
+
+This acceptance proves the storage-outage/crash-restart boundary only when
+the exact-head GitHub workflow is green; it does not prove arbitrary
+network partition, multi-node failover or disk data loss.
+
+## H2.5 orphan handling safety contract
+
+`RustFsOrphanInventoryService` is an internal, read-only paginated scanner.
+The result `suspectedOrphan=true` means only that a key did not match
+`file_asset(bucket, object_key)` at the moment of lookup. It is not authorization
+for garbage collection. Production deletion must be separately approved,
+age-graced, repeat-inventoried, key/version-checked and subject to an audit trail.
+There is no destructive orphan cleanup or background scheduler in this slice.
+
+H2 streaming verification is hard-capped at 64 MiB of object data and uses
+8 KiB chunks. Objects above budget remain REGISTERED (TOO_LARGE) rather
+than being auto-quarantined. Additional production qualification should prove
+the same safety invariants for large model assets using independently budgeted
+streaming.
