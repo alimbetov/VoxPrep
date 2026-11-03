@@ -40,7 +40,9 @@ jobs:
           cache-dependency-path: backend/pom.xml
 
       - name: Execute A01-A11 real Piper acceptance
-        run: bash infra/acceptance/b8-real-tts.sh
+        run: |
+          umask 000
+          bash infra/acceptance/b8-real-tts.sh
 
       - name: Show diagnostics on failure
         if: failure()
