@@ -54,7 +54,6 @@ class LearnerMediaServiceTest {
         UUID assetId = UUID.randomUUID();
         when(assetRepository.findById(assetId)).thenReturn(Optional.of(asset));
         when(asset.getKind()).thenReturn(FileAssetKind.TTS_MODEL);
-        when(asset.getStatus()).thenReturn(FileAssetStatus.READY);
 
         assertThatThrownBy(() -> service.describe(assetId))
                 .isInstanceOf(LearnerMediaService.MediaUnavailableException.class);
