@@ -97,8 +97,7 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
         Objects.requireNonNull(release, "release");
         Objects.requireNonNull(refs, "refs");
         Objects.requireNonNull(publishedAt, "publishedAt");
-        if (refs.isEmpty() || !documents.findAll().stream()
-                .noneMatch(document -> document.getRelease().getId().equals(release.getId()))) {
+        if (refs.isEmpty() || documents.existsByRelease_Id(release.getId())) {
             throw new IllegalStateException("publication must have content and no existing frozen wire documents");
         }
 
@@ -121,6 +120,9 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
         Set<String> covered = new HashSet<>();
         var allVerticals = verticals.findAllByOrderBySortOrderAscCodeAsc();
         for (var vertical : allVerticals) {
+            if (!active(vertical.getAvailability())) {
+                continue;
+            }
             var verticalCode = vertical.getCode().value();
             var sectionCode = vertical.getSectionCode().value();
             if (sectionCodes.add(sectionCode)) {
@@ -136,11 +138,17 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
                     "iconAssetId", vertical.getIconAssetId(),
                     "sortOrder", vertical.getSortOrder(), "active", active(vertical.getAvailability())));
             for (var goal : goals.findAllByVertical_IdOrderBySortOrderAscCodeAsc(vertical.getId())) {
+                if (!active(goal.getAvailability())) {
+                    continue;
+                }
                 var goalCode = goal.getCode().value();
                 goalItems.add(object("code", goalCode, "verticalCode", verticalCode,
                         "title", goal.getTitle(), "description", goal.getDescription(),
                         "sortOrder", goal.getSortOrder(), "active", active(goal.getAvailability())));
                 for (var track : tracks.findAllByGoal_IdOrderBySortOrderAscCodeAsc(goal.getId())) {
+                    if (!active(track.getAvailability())) {
+                        continue;
+                    }
                     var trackCode = track.getCode().value();
                     trackItems.add(object("code", trackCode, "verticalCode", verticalCode,
                             "goalCode", goalCode, "title", track.getTitle(),
@@ -150,6 +158,9 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
                                     ? null : track.getCareerTrackCode().value(),
                             "sortOrder", track.getSortOrder(), "active", active(track.getAvailability())));
                     for (var collection : collections.findAllByTrack_IdOrderBySortOrderAscCodeAsc(track.getId())) {
+                        if (!active(collection.getAvailability())) {
+                            continue;
+                        }
                         var collectionCode = collection.getCode().value();
                         var memberItems = new ArrayList<Map<String, Object>>();
                         var packContents = new ArrayList<Map<String, Object>>();
@@ -158,10 +169,7 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
                         var translatedByLocale = new LinkedHashMap<String, List<Map<String, Object>>>();
                         List<CollectionContentMemberEntity> sortedMembers =
                                 members.findAllByCollectionIdOrderByPositionAsc(collection.getId());
-                        boolean fullBranch = active(vertical.getAvailability())
-                                && active(goal.getAvailability())
-                                && active(track.getAvailability())
-                                && active(collection.getAvailability());
+                        boolean fullBranch = true; // inactive branches are excluded before projection.
                         if (fullBranch && sortedMembers.isEmpty()) {
                             throw new IllegalStateException("active collection has no published members: " + collectionCode);
                         }
