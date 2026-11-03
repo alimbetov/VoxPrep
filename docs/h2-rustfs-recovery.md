@@ -47,3 +47,30 @@ with a controlled storage port:
 
 Do not claim H2 is closed until exact-SHA CI is green and the remaining items
 are deliberately qualified.
+
+
+## H2.2 bounded on-demand reconciliation
+
+`FileAssetRecoveryBatchService.reconcileStale(minimumAge, batchSize)` finds old
+REGISTERED asset IDs using a deterministic `created_at, id` ordering.
+`minimumAge` must be positive and `batchSize` must be within 1..100.
+It delegates each ID to the H2.1 verification/row-lock service and returns an
+outcome summary for each explicit invocation.
+
+This is *not* a scheduled task: operations must explicitly invoke this service
+through a trusted backend entry point or a future controlled worker. It does not
+list or delete RustFS objects. Its scope is known database records, not orphan
+objects with no database row.
+
+The bounded selection prevents unbounded per-invocation processing, but does
+not cap total bytes read from RustFS. Add a streaming verification interface and
+byte budgets before turning on unattended production sweeps.
+
+Acceptance:
+- stable query, oldest first, with `Pageable` cap
+- input bounds are rejected before database access
+- result counters include successful recovery and storage-unavailable outcomes
+- tests remain isolated from other suites' committed PostgreSQL fixtures
+
+Remaining: end-to-end fault injection, automatic triggering policy, metrics/alerts,
+streaming read size limit, orphan inventory and guarded cleanup.
