@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:careerspeak_app/app/api_client_providers.dart';
-import 'package:careerspeak_app/app/application_bootstrap_providers.dart';
 import 'package:careerspeak_app/app/asset_download_providers.dart';
 import 'package:careerspeak_app/app/careerspeak_app.dart';
 import 'package:careerspeak_app/app/installation_identity_providers.dart';
