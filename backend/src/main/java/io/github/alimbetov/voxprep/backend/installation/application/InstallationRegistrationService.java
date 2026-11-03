@@ -2,13 +2,10 @@ package io.github.alimbetov.voxprep.backend.installation.application;
 
 import io.github.alimbetov.voxprep.backend.installation.persistence.InstallationEntity;
 import io.github.alimbetov.voxprep.backend.installation.persistence.InstallationRepository;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import io.github.alimbetov.voxprep.backend.installation.security.InstallationTokenHasher;
 import java.security.SecureRandom;
 import java.time.Clock;
 import java.util.Base64;
-import java.util.HexFormat;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -40,7 +37,7 @@ public class InstallationRegistrationService {
     @Transactional
     public RegistrationResult register(UUID installationId) {
         String token = generateToken();
-        String tokenSha256 = sha256(token);
+        String tokenSha256 = InstallationTokenHasher.sha256(token);
         var issuedAt = clock.instant();
 
         InstallationEntity installation = repository.findByInstallationId(installationId).orElse(null);
@@ -58,15 +55,6 @@ public class InstallationRegistrationService {
         byte[] bytes = new byte[TOKEN_BYTES];
         secureRandom.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
-    private static String sha256(String value) {
-        try {
-            var digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(value.getBytes(StandardCharsets.UTF_8)));
-        } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("SHA-256 must be available", exception);
-        }
     }
 
     public record RegistrationResult(UUID installationId, String installationToken, java.time.Instant issuedAt) {
