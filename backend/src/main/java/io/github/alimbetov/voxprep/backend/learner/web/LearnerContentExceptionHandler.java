@@ -1,6 +1,8 @@
 package io.github.alimbetov.voxprep.backend.learner.web;
 
 import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentNotFoundException;
+import io.github.alimbetov.voxprep.backend.learner.application.LearnerPremiumAccessDeniedException;
+import io.github.alimbetov.voxprep.backend.asset.web.LearnerMediaController;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.Map;
@@ -11,13 +13,19 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(assignableTypes = {
     LearnerContentController.class,
-    LearnerAssessmentController.class
+    LearnerAssessmentController.class,
+    LearnerMediaController.class
 })
 public class LearnerContentExceptionHandler {
 
     @ExceptionHandler(LearnerContentNotFoundException.class)
     ResponseEntity<Map<String, Object>> notFound(RuntimeException exception, HttpServletRequest request) {
         return error(HttpStatus.NOT_FOUND, "LEARNER_CONTENT_NOT_FOUND", exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(LearnerPremiumAccessDeniedException.class)
+    ResponseEntity<Map<String, Object>> premiumLocked(RuntimeException exception, HttpServletRequest request) {
+        return error(HttpStatus.FORBIDDEN, "PREMIUM_UNLOCK_REQUIRED", "Lifetime unlock is required", request);
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

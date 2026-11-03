@@ -1,6 +1,7 @@
 package io.github.alimbetov.voxprep.backend.asset.web;
 
 import io.github.alimbetov.voxprep.backend.asset.application.LearnerMediaService;
+import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentAccessPolicy;
 import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentNotFoundException;
 import io.github.alimbetov.voxprep.backend.learner.application.LearnerPublishedMediaService;
 import io.github.alimbetov.voxprep.backend.learner.web.LearnerHttpCache;
@@ -24,9 +25,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class LearnerMediaController {
 
     private final LearnerPublishedMediaService service;
+    private final LearnerContentAccessPolicy accessPolicy;
 
-    public LearnerMediaController(LearnerPublishedMediaService service) {
+    public LearnerMediaController(
+            LearnerPublishedMediaService service,
+            LearnerContentAccessPolicy accessPolicy) {
         this.service = service;
+        this.accessPolicy = accessPolicy;
     }
 
     @GetMapping("/{contentType}/{contentCode}/media")
@@ -34,6 +39,7 @@ public class LearnerMediaController {
             @PathVariable String contentType,
             @PathVariable String contentCode,
             @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
+        accessPolicy.requireAccessible(contentType, contentCode);
         List<LearnerPublishedMediaService.MediaAssetSnapshot> media = service.listMedia(contentType, contentCode);
         String etag = mediaListEtag(contentType, contentCode, media);
         return LearnerHttpCache.revalidate(media, etag, ifNoneMatch);
@@ -45,6 +51,7 @@ public class LearnerMediaController {
             @PathVariable String contentCode,
             @PathVariable UUID assetId,
             @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
+        accessPolicy.requireAccessible(contentType, contentCode);
         LearnerMediaService.MediaDescriptor descriptor = service.requireMedia(contentType, contentCode, assetId);
         return contentResponse(descriptor, ifNoneMatch);
     }
@@ -54,6 +61,7 @@ public class LearnerMediaController {
             @PathVariable String contentType,
             @PathVariable String contentCode,
             @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
+        accessPolicy.requireAccessible(contentType, contentCode);
         List<LearnerPublishedMediaService.AudioAssetSnapshot> audio = service.listAudio(contentType, contentCode);
         String etag = audioListEtag(contentType, contentCode, audio);
         return LearnerHttpCache.revalidate(audio, etag, ifNoneMatch);
@@ -65,6 +73,7 @@ public class LearnerMediaController {
             @PathVariable String contentCode,
             @PathVariable UUID assetId,
             @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
+        accessPolicy.requireAccessible(contentType, contentCode);
         LearnerMediaService.MediaDescriptor descriptor = service.requireAudio(contentType, contentCode, assetId);
         return contentResponse(descriptor, ifNoneMatch);
     }

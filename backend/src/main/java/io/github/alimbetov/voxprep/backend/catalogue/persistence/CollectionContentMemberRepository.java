@@ -10,4 +10,6 @@ public interface CollectionContentMemberRepository
     List<CollectionContentMemberEntity> findAllByCollectionIdOrderByPositionAsc(UUID collectionId);
 
     boolean existsByCollectionIdAndContentRevisionId(UUID collectionId, UUID contentRevisionId);
+
+    List<CollectionContentMemberEntity> findAllByContentRevision_Id(UUID contentRevisionId);
 }

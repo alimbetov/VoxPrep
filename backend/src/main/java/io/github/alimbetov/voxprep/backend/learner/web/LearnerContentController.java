@@ -1,5 +1,6 @@
 package io.github.alimbetov.voxprep.backend.learner.web;
 
+import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentAccessPolicy;
 import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentService;
 import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentSnapshot;
 import io.github.alimbetov.voxprep.backend.learner.application.LearnerLocalizationService;
@@ -17,13 +18,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/content")
 public class LearnerContentController {
 
+    private final LearnerContentAccessPolicy accessPolicy;
     private final LearnerContentService contentService;
     private final LearnerLocalizationService localizationService;
 
     public LearnerContentController(
             LearnerContentService contentService,
-            LearnerLocalizationService localizationService) {
+            LearnerLocalizationService localizationService,
+            LearnerContentAccessPolicy accessPolicy) {
         this.contentService = contentService;
+        this.accessPolicy = accessPolicy;
         this.localizationService = localizationService;
     }
 
@@ -32,6 +36,7 @@ public class LearnerContentController {
             @PathVariable String contentType,
             @PathVariable String contentCode,
             @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
+        accessPolicy.requireAccessible(contentType, contentCode);
         LearnerContentSnapshot snapshot = contentService.get(contentType, contentCode);
         String etag = LearnerHttpCache.weakEtag(
                 "content",
@@ -50,6 +55,7 @@ public class LearnerContentController {
             @PathVariable String contentCode,
             @RequestParam String locale,
             @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
+        accessPolicy.requireAccessible(contentType, contentCode);
         LearnerLocalizationSnapshot snapshot = localizationService.get(contentType, contentCode, locale);
         String etag = LearnerHttpCache.weakEtag(
                 "localization",
