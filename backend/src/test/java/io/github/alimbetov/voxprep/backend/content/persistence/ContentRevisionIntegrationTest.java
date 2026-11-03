@@ -175,6 +175,7 @@ class ContentRevisionIntegrationTest {
         var published = publish(vocabulary(code("published-java"), 1, checksum('a')));
 
         assertThat(published.getLifecycle()).isEqualTo(ContentLifecycleStatus.PUBLISHED);
+        assertThat(published.getApprovedAt()).isNotNull();
         assertThat(published.getPublishedAt()).isNotNull();
 
         assertThatThrownBy(() -> published.replaceDraftMetadata(
@@ -220,9 +221,9 @@ class ContentRevisionIntegrationTest {
                 insert into app.content_revision(
                     id, version, created_at, updated_at, content_code, content_type, revision_number,
                     lifecycle, checksum_sha256, title, subtitle, description, category_code, level_code,
-                    minutes, availability, published_at)
+                    minutes, availability, approved_at, published_at)
                 values (?, 0, now(), now(), ?, 'topic', 1, 'DRAFT', ?, 'Title', 'Subtitle', 'Description',
-                        'TOPIC', 'B2', 5, 'ACTIVE', null)
+                        'TOPIC', 'B2', 5, 'ACTIVE', null, null)
                 """, incompleteId, incompleteCode, checksum('b').value());
 
         assertThatThrownBy(() -> jdbcTemplate.update(
@@ -266,6 +267,8 @@ class ContentRevisionIntegrationTest {
         current.markReadyForAudio();
         current = repository.saveAndFlush(current);
         current.markReadyForReview();
+        current = repository.saveAndFlush(current);
+        current.approve(Instant.parse("2026-11-02T11:30:00Z"));
         current = repository.saveAndFlush(current);
         current.publish(Instant.parse("2026-11-02T12:00:00Z"));
         return (VocabularyContentRevisionEntity) repository.saveAndFlush(current);
