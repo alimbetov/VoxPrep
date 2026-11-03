@@ -16,8 +16,15 @@ paths:
   /api/v1/installations:
     post:
       operationId: registerInstallation
-      description: Idempotent installation registration/re-registration.
-      security: []
+      description: >-
+        Initial registration of an unclaimed installationId is anonymous.
+        Re-registration of an existing ACTIVE installation rotates its credential
+        only when the request presents its current Bearer token. Missing, stale,
+        blocked or revoked credentials fail with 401 and MUST NOT trigger an
+        anonymous retry using the existing installationId.
+      security:
+        - {}
+        - installationBearer: []
       requestBody:
         required: true
         content:
@@ -32,6 +39,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/InstallationRegistrationResponse'
         '400': { $ref: '#/components/responses/ApiError' }
+        '401': { $ref: '#/components/responses/ApiError' }
         '409': { $ref: '#/components/responses/ApiError' }
         '500': { $ref: '#/components/responses/ApiError' }
 

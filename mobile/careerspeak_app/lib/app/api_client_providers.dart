@@ -51,6 +51,7 @@ final installationRegistrationGatewayProvider =
     Provider<InstallationRegistrationGateway>((ref) {
       return HttpInstallationRegistrationGateway(
         apiClient: ref.watch(rawApiClientProvider),
+        credentialStore: ref.watch(installationCredentialStoreProvider),
       );
     });
 
