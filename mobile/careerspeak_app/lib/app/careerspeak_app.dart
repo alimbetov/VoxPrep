@@ -10,7 +10,9 @@ import 'router.dart';
 import 'theme/careerspeak_theme.dart';
 
 class CareerSpeakApp extends ConsumerWidget {
-  const CareerSpeakApp({super.key});
+  const CareerSpeakApp({this.bootstrapEnabled = false, super.key});
+
+  final bool bootstrapEnabled;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -37,8 +39,12 @@ class CareerSpeakApp extends ConsumerWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      builder: (context, child) =>
-          BootstrapStatusFrame(child: child ?? const SizedBox.shrink()),
+      builder: (context, child) {
+        final appChild = child ?? const SizedBox.shrink();
+        return bootstrapEnabled
+            ? BootstrapStatusFrame(child: appChild)
+            : appChild;
+      },
       routerConfig: router,
     );
   }
