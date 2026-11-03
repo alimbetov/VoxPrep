@@ -9,7 +9,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-@RestControllerAdvice(assignableTypes = LearnerContentController.class)
+@RestControllerAdvice(assignableTypes = {
+    LearnerContentController.class,
+    LearnerAssessmentController.class
+})
 public class LearnerContentExceptionHandler {
 
     @ExceptionHandler(LearnerContentNotFoundException.class)
