@@ -7,7 +7,11 @@ public interface TtsModelCatalogGateway {
     Optional<ModelDescriptor> resolve(TtsModelSelector selector);
 
     record ModelDescriptor(
+            String sourceProvider,
+            String sourceRepository,
             String sourceRevision,
+            String engineVersion,
+            String modelVersion,
             String modelUrl,
             String configUrl,
             String modelSha256,

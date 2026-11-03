@@ -55,6 +55,15 @@ public class TtsVoiceModelEntity extends AbstractJpaEntity {
     @Column(name = "config_sha256", nullable = false, updatable = false, length = 64)
     private String configSha256;
 
+    @Column(name = "source_provider", updatable = false, length = 64)
+    private String sourceProvider;
+
+    @Column(name = "source_repository", updatable = false, length = 256)
+    private String sourceRepository;
+
+    @Column(name = "source_revision", updatable = false, length = 128)
+    private String sourceRevision;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 32)
     private TtsVoiceModelStatus status;
@@ -89,6 +98,44 @@ public class TtsVoiceModelEntity extends AbstractJpaEntity {
             String licenseReference,
             boolean commercialUseReviewed,
             Instant approvedAt) {
+        this(
+                code,
+                voice,
+                engine,
+                engineVersion,
+                modelVersion,
+                modelAssetId,
+                configAssetId,
+                modelSha256,
+                configSha256,
+                null,
+                null,
+                null,
+                status,
+                licenseName,
+                licenseReference,
+                commercialUseReviewed,
+                approvedAt);
+    }
+
+    public TtsVoiceModelEntity(
+            String code,
+            TtsVoiceEntity voice,
+            TtsEngine engine,
+            String engineVersion,
+            String modelVersion,
+            UUID modelAssetId,
+            UUID configAssetId,
+            String modelSha256,
+            String configSha256,
+            String sourceProvider,
+            String sourceRepository,
+            String sourceRevision,
+            TtsVoiceModelStatus status,
+            String licenseName,
+            String licenseReference,
+            boolean commercialUseReviewed,
+            Instant approvedAt) {
         this.code = TtsVoiceEntity.required(code, "code", 128);
         this.voice = Objects.requireNonNull(voice, "voice");
         this.engine = Objects.requireNonNull(engine, "engine");
@@ -98,6 +145,9 @@ public class TtsVoiceModelEntity extends AbstractJpaEntity {
         this.configAssetId = Objects.requireNonNull(configAssetId, "configAssetId");
         this.modelSha256 = sha256(modelSha256, "modelSha256");
         this.configSha256 = sha256(configSha256, "configSha256");
+        this.sourceProvider = TtsVoiceEntity.optional(sourceProvider, "sourceProvider", 64);
+        this.sourceRepository = TtsVoiceEntity.optional(sourceRepository, "sourceRepository", 256);
+        this.sourceRevision = TtsVoiceEntity.optional(sourceRevision, "sourceRevision", 128);
         updateReviewMetadata(status, licenseName, licenseReference, commercialUseReviewed, approvedAt);
     }
 
@@ -155,6 +205,18 @@ public class TtsVoiceModelEntity extends AbstractJpaEntity {
 
     public String getConfigSha256() {
         return configSha256;
+    }
+
+    public String getSourceProvider() {
+        return sourceProvider;
+    }
+
+    public String getSourceRepository() {
+        return sourceRepository;
+    }
+
+    public String getSourceRevision() {
+        return sourceRevision;
     }
 
     public TtsVoiceModelStatus getStatus() {
