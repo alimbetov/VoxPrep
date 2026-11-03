@@ -5,5 +5,5 @@ public interface TtsModelArtifactProvider {
 
     String providerId();
 
-    byte[] fetch(String url);
+    byte[] fetch(TtsModelArtifactSource.ArtifactRequest request);
 }
