@@ -40,3 +40,5 @@ databaseChangeLog:
       file: db/changelog/b3-p4-content-localization-authoring.sql
   - include:
       file: db/changelog/b4-p1-media-asset-kinds.sql
+  - include:
+      file: db/changelog/b5-p1-tts-model-provenance.sql
