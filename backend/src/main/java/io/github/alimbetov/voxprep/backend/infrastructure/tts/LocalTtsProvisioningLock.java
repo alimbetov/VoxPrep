@@ -24,9 +24,6 @@ public class LocalTtsProvisioningLock implements TtsProvisioningLock {
             return action.get();
         } finally {
             lock.unlock();
-            if (!lock.hasQueuedThreads()) {
-                locks.remove(modelCode, lock);
-            }
         }
     }
 }
