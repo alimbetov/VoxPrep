@@ -13,4 +13,6 @@ public interface ContentAssetBindingRepository extends JpaRepository<ContentAsse
             ContentAssetRole role);
 
     List<ContentAssetBindingEntity> findAllByContentRevision_IdOrderByRoleAsc(UUID contentRevisionId);
+
+    List<ContentAssetBindingEntity> findAllByFileAsset_Id(UUID fileAssetId);
 }
