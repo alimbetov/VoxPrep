@@ -18,6 +18,7 @@ import io.github.alimbetov.voxprep.backend.tts.domain.ContentAudioPolicyEntry;
 import io.github.alimbetov.voxprep.backend.tts.domain.TtsJobStatus;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsJobEntity;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsJobRepository;
+import jakarta.persistence.EntityManager;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
@@ -34,18 +35,21 @@ public class JpaPublicationMediaValidator implements PublicationMediaValidator {
     private final TtsJobRepository ttsJobRepository;
     private final ContentAudioPolicy audioPolicy;
     private final ContentTtsPlanner planner;
+    private final EntityManager entityManager;
 
     public JpaPublicationMediaValidator(
             ContentRevisionRepository contentRevisionRepository,
             ContentAssetBindingRepository bindingRepository,
             TtsJobRepository ttsJobRepository,
             ContentAudioPolicy audioPolicy,
-            ContentTtsPlanner planner) {
+            ContentTtsPlanner planner,
+            EntityManager entityManager) {
         this.contentRevisionRepository = Objects.requireNonNull(contentRevisionRepository, "contentRevisionRepository");
         this.bindingRepository = Objects.requireNonNull(bindingRepository, "bindingRepository");
         this.ttsJobRepository = Objects.requireNonNull(ttsJobRepository, "ttsJobRepository");
         this.audioPolicy = Objects.requireNonNull(audioPolicy, "audioPolicy");
         this.planner = Objects.requireNonNull(planner, "planner");
+        this.entityManager = Objects.requireNonNull(entityManager, "entityManager");
     }
 
     @Override
@@ -116,6 +120,9 @@ public class JpaPublicationMediaValidator implements PublicationMediaValidator {
             return;
         }
         TtsJobEntity job = ttsJobRepository.findByFingerprint(fingerprint).orElse(null);
+        if (job != null) {
+            entityManager.refresh(job);
+        }
         if (job == null
                 || job.getStatus() != TtsJobStatus.READY
                 || !Objects.equals(job.getContentRevisionId(), revision.getId())
