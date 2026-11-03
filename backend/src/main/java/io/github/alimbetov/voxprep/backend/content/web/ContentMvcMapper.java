@@ -131,7 +131,10 @@ class ContentMvcMapper {
     }
 
     private static ShadowingSegmentEmbeddable segment(String line) {
-        var parts = split(line, 3, "segment must use startMs|endMs|text");
+        var parts = line.split("\\|", 3);
+        if (parts.length != 3 || parts[2].isBlank()) {
+            throw new IllegalArgumentException("segment must use startMs|endMs|text");
+        }
         return new ShadowingSegmentEmbeddable(parts[2], integerOrNull(parts[0]), integerOrNull(parts[1]));
     }
 
