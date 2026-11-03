@@ -1,9 +1,10 @@
 name: B1 Backend Foundation Qualification
 
 on:
+  workflow_dispatch:
   push:
     branches:
-      - feat/b1-infrastructure-bootstrap
+      - main
     paths:
       - "backend/**"
       - "infra/compose/compose.test.yml"
