@@ -4,7 +4,7 @@
 <main>
     <div class="d-flex justify-content-between align-items-start mb-4">
         <div>
-            <span class="badge text-bg-secondary mb-2">MVC-R4.1</span>
+            <span class="badge text-bg-secondary mb-2">MVC-R4.2</span>
             <h1 class="h3 mb-1" th:text="${localization == null ? 'New localization' : 'Edit localization'}">Localization</h1>
             <p class="text-secondary" th:text="${contentRevision.contentCode}">Content code</p>
             <p th:if="${localization != null}" class="text-secondary"
@@ -64,5 +64,59 @@
                   th:if="${localization != null and localization.lifecycle.name() != 'DRAFT'}">Approved/review revisions are read-only.</span>
         </div>
     </form>
+
+    <div th:if="${localization != null}" class="card studio-card mb-4">
+        <div class="card-body p-4">
+            <h2 class="h5 mb-3">Localization lifecycle</h2>
+            <p class="text-secondary" th:text="'Current state: ' + ${localization.lifecycle}">Current state</p>
+
+            <form th:if="${localization.lifecycle.name() == 'DRAFT'}" method="post"
+                  th:action="@{/admin/content/localizations/{id}/review(id=${localization.id})}"
+                  th:object="${lifecycleForm}">
+                <input type="hidden" th:field="*{expectedVersion}">
+                <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
+                    <div th:each="error : ${#fields.globalErrors()}" th:text="${error}">Invalid review</div>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6"><label class="form-label">Reason</label>
+                        <input class="form-control" th:field="*{reason}">
+                        <div class="text-danger small" th:errors="*{reason}"></div>
+                    </div>
+                    <div class="col-md-6"><label class="form-label">Comment</label>
+                        <textarea class="form-control" rows="2" th:field="*{comment}"></textarea>
+                        <div class="text-danger small" th:errors="*{comment}"></div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Submit for review</button>
+            </form>
+
+            <form th:if="${localization.lifecycle.name() == 'READY_FOR_REVIEW'}" method="post"
+                  th:action="@{/admin/content/localizations/{id}/approve(id=${localization.id})}"
+                  th:object="${lifecycleForm}">
+                <input type="hidden" th:field="*{expectedVersion}">
+                <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
+                    <div th:each="error : ${#fields.globalErrors()}" th:text="${error}">Invalid approval</div>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6"><label class="form-label">Reason</label>
+                        <input class="form-control" th:field="*{reason}">
+                        <div class="text-danger small" th:errors="*{reason}"></div>
+                    </div>
+                    <div class="col-md-6"><label class="form-label">Comment</label>
+                        <textarea class="form-control" rows="2" th:field="*{comment}"></textarea>
+                        <div class="text-danger small" th:errors="*{comment}"></div>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-success">Approve localization</button>
+            </form>
+
+            <form th:if="${localization.lifecycle.name() == 'APPROVED'}" method="post"
+                  th:action="@{/admin/content/localizations/{id}/next(id=${localization.id})}"
+                  th:object="${lifecycleForm}">
+                <input type="hidden" th:field="*{expectedVersion}">
+                <button type="submit" class="btn btn-outline-primary">Create next localization draft</button>
+            </form>
+        </div>
+    </div>
 </main>
 </html>
