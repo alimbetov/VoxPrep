@@ -5,6 +5,7 @@ import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentNot
 import io.github.alimbetov.voxprep.backend.learner.application.LearnerPublishedMediaService;
 import io.github.alimbetov.voxprep.backend.learner.web.LearnerHttpCache;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
@@ -29,10 +30,13 @@ public class LearnerMediaController {
     }
 
     @GetMapping("/{contentType}/{contentCode}/audio")
-    public List<LearnerPublishedMediaService.AudioAssetSnapshot> audio(
+    public ResponseEntity<List<LearnerPublishedMediaService.AudioAssetSnapshot>> audio(
             @PathVariable String contentType,
-            @PathVariable String contentCode) {
-        return service.listAudio(contentType, contentCode);
+            @PathVariable String contentCode,
+            @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
+        List<LearnerPublishedMediaService.AudioAssetSnapshot> audio = service.listAudio(contentType, contentCode);
+        String etag = audioListEtag(contentType, contentCode, audio);
+        return LearnerHttpCache.revalidate(audio, etag, ifNoneMatch);
     }
 
     @GetMapping("/{contentType}/{contentCode}/audio/{assetId}/content")
@@ -80,5 +84,23 @@ public class LearnerMediaController {
 
     static boolean matches(String ifNoneMatch, String currentEtag) {
         return LearnerHttpCache.matches(ifNoneMatch, currentEtag);
+    }
+
+    static String audioListEtag(
+            String contentType,
+            String contentCode,
+            List<LearnerPublishedMediaService.AudioAssetSnapshot> audio) {
+        List<Object> components = new ArrayList<>();
+        components.add(contentType);
+        components.add(contentCode);
+        for (LearnerPublishedMediaService.AudioAssetSnapshot item : audio) {
+            components.add(item.assetId());
+            components.add(item.audioRole());
+            components.add(item.language());
+            components.add(item.mediaType());
+            components.add(item.sizeBytes());
+            components.add(item.sha256());
+        }
+        return LearnerHttpCache.weakEtag("audio-list", components.toArray());
     }
 }
