@@ -56,6 +56,10 @@ class ContentLocalizationAuthoringIntegrationTest {
         assertThat(created.locale()).isEqualTo("ru-KZ");
         assertThat(created.localizationRevisionNumber()).isEqualTo(1);
         assertThat(created.lifecycle()).isEqualTo(ContentLocalizationLifecycleStatus.DRAFT);
+        assertThat(created.checksumSha256()).isEqualTo(ContentLocalizationChecksum.compute(
+                new ContentLocalizationAuthoringService.Fields(
+                        "Локальный заголовок", null, null, "перевод", null, null)).value());
+        assertThat(created.checksumSha256()).isNotEqualTo("b".repeat(64));
 
         var updated = service.updateDraft(
                 created.id(),
@@ -63,6 +67,10 @@ class ContentLocalizationAuthoringIntegrationTest {
                 new Sha256Digest("c".repeat(64)),
                 new ContentLocalizationAuthoringService.Fields(
                         "Обновленный заголовок", null, null, "перевод", "подсказка", null));
+        assertThat(updated.checksumSha256()).isEqualTo(ContentLocalizationChecksum.compute(
+                new ContentLocalizationAuthoringService.Fields(
+                        "Обновленный заголовок", null, null, "перевод", "подсказка", null)).value());
+        assertThat(updated.checksumSha256()).isNotEqualTo("c".repeat(64));
         var reviewed = service.submitForReview(
                 updated.id(), updated.version(), "admin", "LOCALIZATION_REVIEW", "checked");
         var approved = service.approve(
