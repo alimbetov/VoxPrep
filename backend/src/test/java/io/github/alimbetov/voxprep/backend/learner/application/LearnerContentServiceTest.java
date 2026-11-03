@@ -122,10 +122,10 @@ class LearnerContentServiceTest {
                 "Topic title",
                 "Topic subtitle",
                 "Topic description",
-                new CatalogueCode("category"),
-                new CatalogueCode("b1"),
+                new CatalogueCode("CATEGORY"),
+                new CatalogueCode("B1"),
                 5,
-                List.of(new CatalogueCode("speaking")),
+                List.of(new CatalogueCode("SPEAKING")),
                 AvailabilityStatus.ACTIVE,
                 List.of(new TopicSectionEmbeddable("Heading", "Body")));
     }
