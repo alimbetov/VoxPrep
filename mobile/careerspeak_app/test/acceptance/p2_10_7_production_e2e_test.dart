@@ -208,6 +208,8 @@ void main() {
       await tester.pump();
       await _captureScreenshot(tester, screenshotKey, '01-home-after-sync.png');
       debugPrint('RENDERER_CHECKPOINT home-captured');
+      final homeLayoutError = tester.takeException();
+      if (homeLayoutError != null) throw homeLayoutError;
 
       container.read(routerProvider).go('/learn');
       await tester.pump();
@@ -221,6 +223,8 @@ void main() {
         '02-learn-after-sync.png',
       );
       debugPrint('RENDERER_CHECKPOINT learn-captured');
+      final learnLayoutError = tester.takeException();
+      if (learnLayoutError != null) throw learnLayoutError;
 
       await tester.tap(find.text('Dependency Injection'));
       await _pumpUntil(tester, find.text('Overview'));
@@ -235,6 +239,8 @@ void main() {
         '03-detail-after-sync.png',
       );
       debugPrint('RENDERER_CHECKPOINT detail-captured');
+      final detailLayoutError = tester.takeException();
+      if (detailLayoutError != null) throw detailLayoutError;
 
       // Dispose ProviderScope and its Drift subscriptions before closing the
       // database in tearDown. This also proves the E2E owns no dangling work.
