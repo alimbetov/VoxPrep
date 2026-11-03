@@ -1,5 +1,6 @@
 package io.github.alimbetov.voxprep.backend.tts.application;
 
+import io.github.alimbetov.voxprep.backend.asset.application.ObjectStoragePort;
 import io.github.alimbetov.voxprep.backend.infrastructure.storage.RustFsProperties;
 import java.security.MessageDigest;
 import java.util.HexFormat;
@@ -10,9 +11,6 @@ import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
-import software.amazon.awssdk.core.sync.RequestBody;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Service
 public class TtsOutputFinalizationService {
@@ -21,17 +19,17 @@ public class TtsOutputFinalizationService {
     public static final String CONTENT_TYPE = "audio/mpeg";
 
     private final JdbcTemplate jdbcTemplate;
-    private final S3Client s3Client;
+    private final ObjectStoragePort objectStorage;
     private final RustFsProperties storageProperties;
     private final TransactionTemplate transactionTemplate;
 
     public TtsOutputFinalizationService(
             JdbcTemplate jdbcTemplate,
-            S3Client s3Client,
+            ObjectStoragePort objectStorage,
             RustFsProperties storageProperties,
             TransactionTemplate transactionTemplate) {
         this.jdbcTemplate = jdbcTemplate;
-        this.s3Client = s3Client;
+        this.objectStorage = objectStorage;
         this.storageProperties = storageProperties;
         this.transactionTemplate = transactionTemplate;
     }
@@ -48,17 +46,15 @@ public class TtsOutputFinalizationService {
         }
 
         String objectKey = objectKey(upload);
-        s3Client.putObject(
-                PutObjectRequest.builder()
-                        .bucket(storageProperties.getBucket())
-                        .key(objectKey)
-                        .contentType(CONTENT_TYPE)
-                        .metadata(Map.of(
-                                "sha256", upload.sha256(),
-                                "fingerprint", upload.fingerprint(),
-                                "audio-profile", upload.audioProfile()))
-                        .build(),
-                RequestBody.fromBytes(upload.bytes()));
+        objectStorage.write(
+                storageProperties.getBucket(),
+                objectKey,
+                CONTENT_TYPE,
+                Map.of(
+                        "sha256", upload.sha256(),
+                        "fingerprint", upload.fingerprint(),
+                        "audio-profile", upload.audioProfile()),
+                upload.bytes());
 
         FinalizationResult result = transactionTemplate.execute(status -> finalizeDatabase(upload, objectKey));
         return Objects.requireNonNull(result, "finalization result");
