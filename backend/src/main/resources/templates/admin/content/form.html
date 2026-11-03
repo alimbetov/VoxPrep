@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/fragments/shell :: layout('Edit content', 'content', ~{::main})}">
+<main>
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <span class="badge text-bg-secondary mb-2">MVC-R3.1</span>
+            <h1 class="h3 mb-1">Edit content draft</h1>
+            <p class="text-secondary mb-0">
+                <code th:text="${revision.contentCode}">content-code</code>
+                <span class="mx-1">·</span>
+                <span th:text="${revision.contentType}">VOCABULARY</span>
+                <span class="mx-1">·</span>
+                revision <span th:text="${revision.revisionNumber}">1</span>
+                <span class="mx-1">·</span>
+                <span th:text="${revision.lifecycle}">DRAFT</span>
+            </p>
+        </div>
+        <a class="btn btn-outline-secondary" th:href="@{/admin/content}">Back to content</a>
+    </div>
+
+    <div th:if="${flashSuccess}" class="alert alert-success" th:text="${flashSuccess}"></div>
+
+    <form method="post" th:action="@{/admin/content/revisions/{id}(id=${revision.id})}" th:object="${form}">
+        <input type="hidden" th:field="*{expectedVersion}">
+        <input type="hidden" th:field="*{bodyType}">
+
+        <div th:if="${#fields.hasGlobalErrors()}" class="alert alert-danger">
+            <div th:each="error : ${#fields.globalErrors()}" th:text="${error}">Invalid content body</div>
+        </div>
+
+        <div class="card studio-card mb-4">
+            <div class="card-body p-4">
+                <h2 class="h5 mb-3">Metadata</h2>
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label" for="title">Title</label>
+                        <input class="form-control" id="title" th:field="*{title}">
+                        <div class="text-danger small" th:errors="*{title}"></div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="subtitle">Subtitle</label>
+                        <input class="form-control" id="subtitle" th:field="*{subtitle}">
+                        <div class="text-danger small" th:errors="*{subtitle}"></div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="description">Description</label>
+                        <textarea class="form-control" id="description" rows="4" th:field="*{description}"></textarea>
+                        <div class="text-danger small" th:errors="*{description}"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="categoryCode">Category code</label>
+                        <input class="form-control" id="categoryCode" th:field="*{categoryCode}">
+                        <div class="text-danger small" th:errors="*{categoryCode}"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label" for="levelCode">Level code</label>
+                        <input class="form-control" id="levelCode" th:field="*{levelCode}">
+                        <div class="text-danger small" th:errors="*{levelCode}"></div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label" for="minutes">Minutes</label>
+                        <input class="form-control" id="minutes" type="number" min="1" th:field="*{minutes}">
+                        <div class="text-danger small" th:errors="*{minutes}"></div>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label" for="availability">Availability</label>
+                        <select class="form-select" id="availability" th:field="*{availability}">
+                            <option th:each="status : ${availabilityValues}" th:value="${status}" th:text="${status}"></option>
+                        </select>
+                        <div class="text-danger small" th:errors="*{availability}"></div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label" for="skillCodes">Skill codes</label>
+                        <textarea class="form-control font-monospace" id="skillCodes" rows="3" th:field="*{skillCodes}"></textarea>
+                        <div class="form-text">One catalogue code per line.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card studio-card mb-4">
+            <div class="card-body p-4">
+                <h2 class="h5 mb-3" th:text="'Body · ' + ${revision.contentType}">Body</h2>
+
+                <div th:if="${form.bodyType == 'vocabulary'}" class="row g-3">
+                    <div class="col-md-6"><label class="form-label">Term</label><input class="form-control" th:field="*{term}"></div>
+                    <div class="col-md-6"><label class="form-label">Part of speech</label><input class="form-control" th:field="*{partOfSpeech}"></div>
+                    <div class="col-12"><label class="form-label">Definition</label><textarea class="form-control" rows="3" th:field="*{definition}"></textarea></div>
+                    <div class="col-12"><label class="form-label">Examples</label><textarea class="form-control" rows="4" th:field="*{examples}"></textarea><div class="form-text">One example per line.</div></div>
+                </div>
+
+                <div th:if="${form.bodyType == 'interview'}" class="row g-3">
+                    <div class="col-12"><label class="form-label">Prompt</label><textarea class="form-control" rows="3" th:field="*{prompt}"></textarea></div>
+                    <div class="col-12"><label class="form-label">Model answer</label><textarea class="form-control" rows="5" th:field="*{modelAnswer}"></textarea></div>
+                    <div class="col-12"><label class="form-label">Key points</label><textarea class="form-control" rows="4" th:field="*{keyPoints}"></textarea><div class="form-text">One key point per line.</div></div>
+                </div>
+
+                <div th:if="${form.bodyType == 'topic'}">
+                    <label class="form-label">Sections</label>
+                    <textarea class="form-control font-monospace" rows="10" th:field="*{sections}"></textarea>
+                    <div class="form-text">One section per line: <code>heading|text</code>.</div>
+                </div>
+
+                <div th:if="${form.bodyType == 'phrase'}" class="row g-3">
+                    <div class="col-12"><label class="form-label">Phrase</label><input class="form-control" th:field="*{phrase}"></div>
+                    <div class="col-12"><label class="form-label">Usage</label><textarea class="form-control" rows="3" th:field="*{usage}"></textarea></div>
+                    <div class="col-12"><label class="form-label">Examples</label><textarea class="form-control" rows="4" th:field="*{examples}"></textarea><div class="form-text">One example per line.</div></div>
+                </div>
+
+                <div th:if="${form.bodyType == 'shadowing'}" class="row g-3">
+                    <div class="col-12"><label class="form-label">Transcript</label><textarea class="form-control" rows="6" th:field="*{transcript}"></textarea></div>
+                    <div class="col-12"><label class="form-label">Segments</label><textarea class="form-control font-monospace" rows="8" th:field="*{segments}"></textarea><div class="form-text">One segment per line: <code>startMs|endMs|text</code>. Start/end may be empty.</div></div>
+                </div>
+
+                <div th:if="${form.bodyType == 'question'}" class="row g-3">
+                    <div class="col-12"><label class="form-label">Question</label><textarea class="form-control" rows="3" th:field="*{questionText}"></textarea></div>
+                    <div class="col-12"><label class="form-label">Explanation</label><textarea class="form-control" rows="4" th:field="*{explanation}"></textarea></div>
+                    <div class="col-12"><label class="form-label">Options</label><textarea class="form-control font-monospace" rows="8" th:field="*{options}"></textarea><div class="form-text">One option per line: <code>key|true|text</code>.</div></div>
+                </div>
+
+                <div th:if="${form.bodyType == 'practice_test'}" class="row g-3">
+                    <div class="col-12"><label class="form-label">Instructions</label><textarea class="form-control" rows="5" th:field="*{instructions}"></textarea></div>
+                    <div class="col-md-4"><label class="form-label">Passing score %</label><input class="form-control" type="number" min="0" max="100" th:field="*{passingScorePercent}"></div>
+                    <div class="col-12"><label class="form-label">Question revision IDs</label><textarea class="form-control font-monospace" rows="8" th:field="*{questionRevisionIds}"></textarea><div class="form-text">One UUID per line.</div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button class="btn btn-primary" type="submit" th:disabled="${revision.lifecycle.name() != 'DRAFT'}">Save draft</button>
+            <a class="btn btn-outline-secondary" th:href="@{/admin/content}">Cancel</a>
+            <span th:if="${revision.lifecycle.name() != 'DRAFT'}" class="text-secondary align-self-center">Only DRAFT revisions can be edited.</span>
+        </div>
+    </form>
+</main>
+</html>
