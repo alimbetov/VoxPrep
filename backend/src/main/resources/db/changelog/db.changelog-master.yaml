@@ -32,3 +32,5 @@ databaseChangeLog:
       file: db/changelog/b2-p1-installation-auth.sql
   - include:
       file: db/changelog/b3-p1-content-approval.sql
+  - include:
+      file: db/changelog/b3-p2-content-review-audit.sql
