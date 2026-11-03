@@ -9,3 +9,7 @@ spring:
 voxprep:
   storage:
     endpoint: ${VOXPREP_STORAGE_ENDPOINT:http://127.0.0.1:9000}
+  security:
+    admin:
+      username: ${VOXPREP_ADMIN_USERNAME:admin}
+      password: ${VOXPREP_ADMIN_PASSWORD:777}
