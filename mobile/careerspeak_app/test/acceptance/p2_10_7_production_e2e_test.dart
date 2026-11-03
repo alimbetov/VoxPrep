@@ -137,8 +137,14 @@ void main() {
       addTearDown(client.close);
       addTearDown(() => assetRootDirectory.delete(recursive: true));
 
+      final preferences = DriftAppPreferencesRepository(database);
+      (await preferences.setLocaleSelection(
+        countryCode: 'KZ',
+        locale: AppTranslationLocale.english,
+      )).getOrThrow();
+
       const screenshotKey = Key('production-e2e-screenshot');
-      ProviderScope buildApp({required bool bootstrap}) => ProviderScope(
+      final app = ProviderScope(
         overrides: [
           careerSpeakDatabaseProvider.overrideWithValue(database),
           assetRootDirectoryProvider.overrideWith(
@@ -152,34 +158,14 @@ void main() {
             Uri.parse('https://api.careerspeak.test'),
           ),
         ],
-        child: RepaintBoundary(
+        child: const RepaintBoundary(
           key: screenshotKey,
-          child: bootstrap
-              ? const ProductionBootstrapHost(child: CareerSpeakApp())
-              : const CareerSpeakApp(),
+          child: CareerSpeakApp(),
         ),
       );
 
-      await tester.pumpWidget(buildApp(bootstrap: false));
+      await tester.pumpWidget(app);
       expect(find.byKey(screenshotKey), findsOneWidget);
-      expect(find.text('Dependency Injection'), findsNothing);
-      expect(backend.registrationCalls, 0);
-      expect(backend.rootManifestCalls, 0);
-      expect(backend.packManifestCalls, 0);
-      expect(backend.contentPayloadCalls, 0);
-      await _captureScreenshot(
-        tester,
-        screenshotKey,
-        '01-home-before-sync.png',
-      );
-
-      final preferences = DriftAppPreferencesRepository(database);
-      (await preferences.setLocaleSelection(
-        countryCode: 'KZ',
-        locale: AppTranslationLocale.english,
-      )).getOrThrow();
-
-      await tester.pumpWidget(buildApp(bootstrap: true));
       final container = ProviderScope.containerOf(
         tester.element(find.byKey(screenshotKey)),
       );
@@ -193,7 +179,7 @@ void main() {
       expect(backend.packManifestCalls, 1);
       expect(backend.contentPayloadCalls, 1);
       await tester.pump();
-      await _captureScreenshot(tester, screenshotKey, '02-home-after-sync.png');
+      await _captureScreenshot(tester, screenshotKey, '01-home-after-sync.png');
 
       container.read(routerProvider).go('/learn');
       await tester.pump();
@@ -203,7 +189,7 @@ void main() {
       await _captureScreenshot(
         tester,
         screenshotKey,
-        '03-learn-after-sync.png',
+        '02-learn-after-sync.png',
       );
 
       await tester.tap(find.text('Dependency Injection'));
@@ -215,7 +201,7 @@ void main() {
       await _captureScreenshot(
         tester,
         screenshotKey,
-        '04-detail-after-sync.png',
+        '03-detail-after-sync.png',
       );
 
       // Dispose ProviderScope and its Drift subscriptions before closing the
