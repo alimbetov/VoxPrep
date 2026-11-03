@@ -1,12 +1,13 @@
 package io.github.alimbetov.voxprep.backend.catalogue.persistence;
 
+import io.github.alimbetov.voxprep.backend.catalogue.domain.CatalogueConstraints;
 import java.util.Objects;
 
 final class CatalogueEntityRules {
 
-    static final int TITLE_MAX_LENGTH = 256;
-    static final int DESCRIPTION_MAX_LENGTH = 4096;
-    static final int EXTERNAL_ID_MAX_LENGTH = 256;
+    static final int TITLE_MAX_LENGTH = CatalogueConstraints.TITLE_MAX_LENGTH;
+    static final int DESCRIPTION_MAX_LENGTH = CatalogueConstraints.DESCRIPTION_MAX_LENGTH;
+    static final int EXTERNAL_ID_MAX_LENGTH = CatalogueConstraints.EXTERNAL_ID_MAX_LENGTH;
 
     private CatalogueEntityRules() {
     }
