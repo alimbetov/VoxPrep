@@ -42,15 +42,22 @@ public class CatalogueMvcController {
             @RequestParam(required = false) UUID goalId,
             @RequestParam(required = false) UUID trackId,
             Model model) {
+        var selection = canonicalSelection(verticalId, goalId, trackId);
         model.addAttribute("activeSection", "catalogue");
         model.addAttribute("verticals", query.listVerticals());
-        model.addAttribute("selectedVerticalId", verticalId);
-        model.addAttribute("selectedGoalId", goalId);
-        model.addAttribute("selectedTrackId", trackId);
+        model.addAttribute("selectedVerticalId", selection.verticalId());
+        model.addAttribute("selectedGoalId", selection.goalId());
+        model.addAttribute("selectedTrackId", selection.trackId());
 
-        List<CatalogueSnapshot> goals = verticalId == null ? List.of() : query.listGoals(verticalId);
-        List<CatalogueSnapshot> tracks = goalId == null ? List.of() : query.listTracks(goalId);
-        List<CatalogueSnapshot> collections = trackId == null ? List.of() : query.listCollections(trackId);
+        List<CatalogueSnapshot> goals = selection.verticalId() == null
+                ? List.of()
+                : query.listGoals(selection.verticalId());
+        List<CatalogueSnapshot> tracks = selection.goalId() == null
+                ? List.of()
+                : query.listTracks(selection.goalId());
+        List<CatalogueSnapshot> collections = selection.trackId() == null
+                ? List.of()
+                : query.listCollections(selection.trackId());
         model.addAttribute("goals", goals);
         model.addAttribute("tracks", tracks);
         model.addAttribute("collections", collections);
@@ -75,7 +82,7 @@ public class CatalogueMvcController {
                 mapper.code(form.getCode()), mapper.code(form.getSectionCode()), form.getTitle(), form.getDescription(),
                 form.getIconAssetId(), form.getSortOrder(), mapper.availability(form.getAvailability()));
         redirect.addFlashAttribute("flashSuccess", "Vertical created.");
-        return "redirect:/admin/catalogue?verticalId=" + created.getId();
+        return catalogueRedirect(created.getId(), null, null);
     }
 
     @GetMapping("/verticals/{id}/edit")
@@ -97,7 +104,7 @@ public class CatalogueMvcController {
         authoring.updateVertical(id, form.getExpectedVersion(), mapper.code(form.getSectionCode()), form.getTitle(),
                 form.getDescription(), form.getIconAssetId(), form.getSortOrder(), mapper.availability(form.getAvailability()));
         redirect.addFlashAttribute("flashSuccess", "Vertical updated.");
-        return "redirect:/admin/catalogue?verticalId=" + id;
+        return catalogueRedirect(id, null, null);
     }
 
     @GetMapping("/goals/new")
@@ -121,7 +128,7 @@ public class CatalogueMvcController {
         var created = authoring.createGoal(mapper.code(form.getCode()), form.getVerticalId(), form.getTitle(),
                 form.getDescription(), form.getSortOrder(), mapper.availability(form.getAvailability()));
         redirect.addFlashAttribute("flashSuccess", "Goal created.");
-        return "redirect:/admin/catalogue?verticalId=" + form.getVerticalId() + "&goalId=" + created.getId();
+        return catalogueRedirect(form.getVerticalId(), created.getId(), null);
     }
 
     @GetMapping("/goals/{id}/edit")
@@ -138,14 +145,15 @@ public class CatalogueMvcController {
             BindingResult binding,
             Model model,
             RedirectAttributes redirect) {
-        var parent = form.getVerticalId() == null ? null : query.getVertical(form.getVerticalId());
+        var snapshot = query.getGoal(id);
+        var parent = query.getVertical(snapshot.parentId());
         if (binding.hasErrors()) {
             return form(model, "GOAL", "Edit goal", "/admin/catalogue/goals/" + id, form, true, parent);
         }
         authoring.updateGoal(id, form.getExpectedVersion(), form.getVerticalId(), form.getTitle(), form.getDescription(),
                 form.getSortOrder(), mapper.availability(form.getAvailability()));
         redirect.addFlashAttribute("flashSuccess", "Goal updated.");
-        return "redirect:/admin/catalogue?verticalId=" + form.getVerticalId() + "&goalId=" + id;
+        return catalogueRedirect(snapshot.parentId(), id, null);
     }
 
     @GetMapping("/tracks/new")
@@ -170,8 +178,7 @@ public class CatalogueMvcController {
                 form.getDescription(), mapper.code(form.getLevelCode()), mapper.optionalCode(form.getCareerTrackCode()),
                 form.getSortOrder(), mapper.availability(form.getAvailability()));
         redirect.addFlashAttribute("flashSuccess", "Track created.");
-        return "redirect:/admin/catalogue?verticalId=" + parent.parentId() + "&goalId=" + form.getGoalId()
-                + "&trackId=" + created.getId();
+        return catalogueRedirect(parent.parentId(), form.getGoalId(), created.getId());
     }
 
     @GetMapping("/tracks/{id}/edit")
@@ -188,7 +195,8 @@ public class CatalogueMvcController {
             BindingResult binding,
             Model model,
             RedirectAttributes redirect) {
-        var parent = form.getGoalId() == null ? null : query.getGoal(form.getGoalId());
+        var snapshot = query.getTrack(id);
+        var parent = query.getGoal(snapshot.parentId());
         if (binding.hasErrors()) {
             return form(model, "TRACK", "Edit track", "/admin/catalogue/tracks/" + id, form, true, parent);
         }
@@ -196,7 +204,7 @@ public class CatalogueMvcController {
                 mapper.code(form.getLevelCode()), mapper.optionalCode(form.getCareerTrackCode()), form.getSortOrder(),
                 mapper.availability(form.getAvailability()));
         redirect.addFlashAttribute("flashSuccess", "Track updated.");
-        return "redirect:/admin/catalogue?verticalId=" + parent.parentId() + "&goalId=" + form.getGoalId() + "&trackId=" + id;
+        return catalogueRedirect(parent.parentId(), snapshot.parentId(), id);
     }
 
     @GetMapping("/collections/new")
@@ -221,7 +229,7 @@ public class CatalogueMvcController {
                 form.getDescription(), mapper.accessLevel(form.getAccessLevel()), form.getSortOrder(),
                 mapper.availability(form.getAvailability()));
         redirect.addFlashAttribute("flashSuccess", "Collection created.");
-        return "redirect:/admin/catalogue?goalId=" + parent.parentId() + "&trackId=" + form.getTrackId();
+        return redirectToTrack(form.getTrackId());
     }
 
     @GetMapping("/collections/{id}/edit")
@@ -238,14 +246,55 @@ public class CatalogueMvcController {
             BindingResult binding,
             Model model,
             RedirectAttributes redirect) {
-        var parent = form.getTrackId() == null ? null : query.getTrack(form.getTrackId());
+        var snapshot = query.getCollection(id);
+        var parent = query.getTrack(snapshot.parentId());
         if (binding.hasErrors()) {
             return form(model, "COLLECTION", "Edit collection", "/admin/catalogue/collections/" + id, form, true, parent);
         }
         authoring.updateCollection(id, form.getExpectedVersion(), form.getTrackId(), form.getTitle(), form.getDescription(),
                 mapper.accessLevel(form.getAccessLevel()), form.getSortOrder(), mapper.availability(form.getAvailability()));
         redirect.addFlashAttribute("flashSuccess", "Collection updated.");
-        return "redirect:/admin/catalogue?goalId=" + parent.parentId() + "&trackId=" + form.getTrackId();
+        return redirectToTrack(snapshot.parentId());
+    }
+
+    private CatalogueSelection canonicalSelection(UUID verticalId, UUID goalId, UUID trackId) {
+        if (trackId != null) {
+            var track = query.getTrack(trackId);
+            var goal = query.getGoal(track.parentId());
+            return new CatalogueSelection(goal.parentId(), goal.id(), track.id());
+        }
+        if (goalId != null) {
+            var goal = query.getGoal(goalId);
+            return new CatalogueSelection(goal.parentId(), goal.id(), null);
+        }
+        if (verticalId != null) {
+            var vertical = query.getVertical(verticalId);
+            return new CatalogueSelection(vertical.id(), null, null);
+        }
+        return new CatalogueSelection(null, null, null);
+    }
+
+    private String redirectToTrack(UUID trackId) {
+        var track = query.getTrack(trackId);
+        var goal = query.getGoal(track.parentId());
+        return catalogueRedirect(goal.parentId(), goal.id(), track.id());
+    }
+
+    private static String catalogueRedirect(UUID verticalId, UUID goalId, UUID trackId) {
+        var redirect = new StringBuilder("redirect:/admin/catalogue");
+        String separator = "?";
+        if (verticalId != null) {
+            redirect.append(separator).append("verticalId=").append(verticalId);
+            separator = "&";
+        }
+        if (goalId != null) {
+            redirect.append(separator).append("goalId=").append(goalId);
+            separator = "&";
+        }
+        if (trackId != null) {
+            redirect.append(separator).append("trackId=").append(trackId);
+        }
+        return redirect.toString();
     }
 
     private static String form(
@@ -265,4 +314,6 @@ public class CatalogueMvcController {
         model.addAttribute("parent", parent);
         return "admin/catalogue/form";
     }
+
+    private record CatalogueSelection(UUID verticalId, UUID goalId, UUID trackId) {}
 }
