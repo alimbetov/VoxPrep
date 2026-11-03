@@ -2,6 +2,7 @@ package io.github.alimbetov.voxprep.backend.content.web;
 
 import io.github.alimbetov.voxprep.backend.catalogue.application.CatalogueAuthoringConflictException;
 import io.github.alimbetov.voxprep.backend.catalogue.application.CatalogueAuthoringNotFoundException;
+import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringConflictException;
 import jakarta.persistence.OptimisticLockException;
 import java.util.NoSuchElementException;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -21,7 +22,8 @@ public class AdminContentStudioExceptionHandler {
     @ExceptionHandler({
             OptimisticLockingFailureException.class,
             OptimisticLockException.class,
-            CatalogueAuthoringConflictException.class
+            CatalogueAuthoringConflictException.class,
+            ContentAuthoringConflictException.class
     })
     ModelAndView conflict(RuntimeException exception) {
         return error(HttpStatus.CONFLICT, "Update conflict", "This item was changed by another operation. Reload and try again.");
