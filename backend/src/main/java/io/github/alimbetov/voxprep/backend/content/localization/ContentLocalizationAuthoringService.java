@@ -4,6 +4,7 @@ import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringC
 import io.github.alimbetov.voxprep.backend.content.application.ContentRevisionNotFoundException;
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
 import io.github.alimbetov.voxprep.backend.sharedkernel.Sha256Digest;
+import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Locale;
@@ -162,7 +163,13 @@ public class ContentLocalizationAuthoringService {
         jdbcTemplate.update(
                 "insert into app.content_localization_review_audit "
                         + "(id, localization_revision_id, action, actor, reason, comment, occurred_at) values (?, ?, ?, ?, ?, ?, ?)",
-                UUID.randomUUID(), localizationRevisionId, action, actor.trim(), nullable(reason), nullable(comment), occurredAt);
+                UUID.randomUUID(),
+                localizationRevisionId,
+                action,
+                actor.trim(),
+                nullable(reason),
+                nullable(comment),
+                Timestamp.from(occurredAt));
     }
 
     private static String nullable(String value) {
