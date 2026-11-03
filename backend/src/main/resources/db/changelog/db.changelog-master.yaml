@@ -30,3 +30,5 @@ databaseChangeLog:
       file: db/changelog/b1-p12-tts-output-replay.sql
   - include:
       file: db/changelog/b2-p1-installation-auth.sql
+  - include:
+      file: db/changelog/b3-p1-content-approval.sql
