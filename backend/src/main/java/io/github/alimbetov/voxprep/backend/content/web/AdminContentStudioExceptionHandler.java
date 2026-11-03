@@ -3,6 +3,7 @@ package io.github.alimbetov.voxprep.backend.content.web;
 import io.github.alimbetov.voxprep.backend.catalogue.application.CatalogueAuthoringConflictException;
 import io.github.alimbetov.voxprep.backend.catalogue.application.CatalogueAuthoringNotFoundException;
 import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringConflictException;
+import io.github.alimbetov.voxprep.backend.content.application.ContentRevisionNotFoundException;
 import jakarta.persistence.OptimisticLockException;
 import java.util.NoSuchElementException;
 import org.springframework.dao.OptimisticLockingFailureException;
@@ -14,7 +15,11 @@ import org.springframework.web.servlet.ModelAndView;
 @ControllerAdvice(annotations = AdminContentStudioMvc.class)
 public class AdminContentStudioExceptionHandler {
 
-    @ExceptionHandler({NoSuchElementException.class, CatalogueAuthoringNotFoundException.class})
+    @ExceptionHandler({
+            NoSuchElementException.class,
+            CatalogueAuthoringNotFoundException.class,
+            ContentRevisionNotFoundException.class
+    })
     ModelAndView notFound(RuntimeException exception) {
         return error(HttpStatus.NOT_FOUND, "Not found", "The requested Content Studio resource does not exist.");
     }
