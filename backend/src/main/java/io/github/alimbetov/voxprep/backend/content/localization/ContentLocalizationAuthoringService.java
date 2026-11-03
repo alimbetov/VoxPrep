@@ -49,7 +49,7 @@ public class ContentLocalizationAuthoringService {
                 contentRevisionId,
                 canonicalLocale,
                 nextRevision,
-                checksum,
+                ContentLocalizationChecksum.compute(fields),
                 fields.title(),
                 fields.subtitle(),
                 fields.description(),
@@ -63,7 +63,7 @@ public class ContentLocalizationAuthoringService {
         var entity = require(id);
         requireVersion(entity, expectedVersion);
         entity.replaceDraft(
-                checksum,
+                ContentLocalizationChecksum.compute(fields),
                 fields.title(),
                 fields.subtitle(),
                 fields.description(),
@@ -113,7 +113,9 @@ public class ContentLocalizationAuthoringService {
                 source.getContentRevisionId(),
                 source.getLocale(),
                 source.getLocalizationRevisionNumber() + 1,
-                new Sha256Digest(source.getChecksumSha256()),
+                ContentLocalizationChecksum.compute(new Fields(
+                        source.getTitle(), source.getSubtitle(), source.getDescription(),
+                        source.getTranslation(), source.getHint(), source.getExplanation())),
                 source.getTitle(),
                 source.getSubtitle(),
                 source.getDescription(),
