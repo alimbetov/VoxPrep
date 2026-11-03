@@ -9,6 +9,10 @@ import org.springframework.data.repository.query.Param;
 
 public interface ContentRevisionRepository extends JpaRepository<ContentRevisionEntity, UUID> {
 
+    @Query(value = "select id from app.content_revision where id = :id for update", nativeQuery = true)
+    Optional<UUID> lockRevisionIdForUpdate(@Param("id") UUID id);
+
+
     @Query(value = """
             select id
               from app.content_revision
