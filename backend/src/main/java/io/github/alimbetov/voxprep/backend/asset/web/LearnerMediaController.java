@@ -29,6 +29,26 @@ public class LearnerMediaController {
         this.service = service;
     }
 
+    @GetMapping("/{contentType}/{contentCode}/media")
+    public ResponseEntity<List<LearnerPublishedMediaService.MediaAssetSnapshot>> media(
+            @PathVariable String contentType,
+            @PathVariable String contentCode,
+            @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
+        List<LearnerPublishedMediaService.MediaAssetSnapshot> media = service.listMedia(contentType, contentCode);
+        String etag = mediaListEtag(contentType, contentCode, media);
+        return LearnerHttpCache.revalidate(media, etag, ifNoneMatch);
+    }
+
+    @GetMapping("/{contentType}/{contentCode}/media/{assetId}/content")
+    public ResponseEntity<byte[]> mediaContent(
+            @PathVariable String contentType,
+            @PathVariable String contentCode,
+            @PathVariable UUID assetId,
+            @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
+        LearnerMediaService.MediaDescriptor descriptor = service.requireMedia(contentType, contentCode, assetId);
+        return contentResponse(descriptor, ifNoneMatch);
+    }
+
     @GetMapping("/{contentType}/{contentCode}/audio")
     public ResponseEntity<List<LearnerPublishedMediaService.AudioAssetSnapshot>> audio(
             @PathVariable String contentType,
@@ -40,12 +60,18 @@ public class LearnerMediaController {
     }
 
     @GetMapping("/{contentType}/{contentCode}/audio/{assetId}/content")
-    public ResponseEntity<byte[]> content(
+    public ResponseEntity<byte[]> audioContent(
             @PathVariable String contentType,
             @PathVariable String contentCode,
             @PathVariable UUID assetId,
             @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
         LearnerMediaService.MediaDescriptor descriptor = service.requireAudio(contentType, contentCode, assetId);
+        return contentResponse(descriptor, ifNoneMatch);
+    }
+
+    private ResponseEntity<byte[]> contentResponse(
+            LearnerMediaService.MediaDescriptor descriptor,
+            String ifNoneMatch) {
         if (matches(ifNoneMatch, descriptor.etag())) {
             return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
                     .header(HttpHeaders.ETAG, descriptor.etag())
@@ -84,6 +110,24 @@ public class LearnerMediaController {
 
     static boolean matches(String ifNoneMatch, String currentEtag) {
         return LearnerHttpCache.matches(ifNoneMatch, currentEtag);
+    }
+
+    static String mediaListEtag(
+            String contentType,
+            String contentCode,
+            List<LearnerPublishedMediaService.MediaAssetSnapshot> media) {
+        List<Object> components = new ArrayList<>();
+        components.add(contentType);
+        components.add(contentCode);
+        for (LearnerPublishedMediaService.MediaAssetSnapshot item : media) {
+            components.add(item.assetId());
+            components.add(item.role());
+            components.add(item.kind());
+            components.add(item.mediaType());
+            components.add(item.sizeBytes());
+            components.add(item.sha256());
+        }
+        return LearnerHttpCache.weakEtag("media-list", components.toArray());
     }
 
     static String audioListEtag(
