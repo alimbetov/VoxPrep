@@ -164,11 +164,19 @@ void main() {
       );
       addTearDown(container.dispose);
       debugPrint('RENDERER_CHECKPOINT bootstrap-start');
+      // This legacy schema-v1 fixture intentionally has no universal v2
+      // catalogues. Qualify the real ApplicationBootstrapService HTTP+Drift
+      // path, not the v2-only ProductionBootstrapHost normalization hook.
+      // A separate schema-v2 test must qualify the complete catalogue graph.
       final bootstrapResult = await tester.runAsync(
-        () => container.read(applicationBootstrapProvider.future),
+        () => _bootstrap(
+          database: database,
+          credentialStore: credentialStore,
+          client: client,
+          runId: 'e2e-renderer-startup',
+        ),
       );
       expect(bootstrapResult, isNotNull);
-      bootstrapResult!.getOrThrow();
       debugPrint('RENDERER_CHECKPOINT bootstrap-done');
 
       const screenshotKey = Key('production-e2e-screenshot');
@@ -265,6 +273,7 @@ Future<ApplicationBootstrapOutcome> _bootstrap({
     identityService: identityService,
     registrationGateway: HttpInstallationRegistrationGateway(
       apiClient: apiClient,
+      credentialStore: credentialStore,
     ),
   );
   final bootstrap = ApplicationBootstrapService(
@@ -402,8 +411,14 @@ final class _LearnerApiFixture {
     if (request.method == 'POST' &&
         request.url.path == '/api/v1/installations') {
       registrationCalls += 1;
-      if (request.headers.containsKey('authorization')) {
-        throw StateError('Installation registration must be anonymous.');
+      // New installs register anonymously; subsequent token rotations must
+      // prove possession of the preceding installation credential.
+      final authorization = request.headers['authorization'];
+      if (registrationCalls == 1 && authorization != null) {
+        throw StateError('Initial installation registration must be anonymous.');
+      }
+      if (registrationCalls > 1 && authorization != 'Bearer $_token') {
+        throw StateError('Installation rotation must authenticate previous token.');
       }
       final body = jsonDecode(request.body) as Map<String, dynamic>;
       if (body['installationId'] != _installationId) {
