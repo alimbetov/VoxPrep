@@ -8,4 +8,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface TtsJobRepository extends JpaRepository<TtsJobEntity, UUID> {
 
     List<TtsJobEntity> findAllByStatusOrderByCreatedAtAsc(TtsJobStatus status);
+
+    List<TtsJobEntity> findAllByContentRevisionIdAndStatusOrderByAudioRoleAsc(
+            UUID contentRevisionId,
+            TtsJobStatus status);
 }
