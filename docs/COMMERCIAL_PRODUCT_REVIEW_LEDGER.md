@@ -42,3 +42,19 @@ A ledger item is CLOSED only with code change, unit/integration test, negative/e
 ## XML decision
 
 `XML-R1` is **specified now, implementation deferred**. Do not implement an XML parser, XSD, upload endpoint or import pipeline in the current release-critical implementation slice. Review its future scope without blocking the immediate release path.
+
+## Technical architecture consistency review — 2026-11-03
+
+Detailed evidence and CI notes: [COMMERCIAL_TECHNICAL_CONSISTENCY_REVIEW.md](COMMERCIAL_TECHNICAL_CONSISTENCY_REVIEW.md).
+
+| ID | Priority | Classification | Finding | Required next test |
+|---|---|---|---|---|
+| SEC-001 | P0 | CONFIRMED ROUTE DEFECT | Installation auth filter has `catalogues/` / `assessment/` but actual routes use `catalogue` / `assessments/`, with fallback `permitAll` | Exact route matrix, unauthorized/blocked/revoked requests |
+| SEC-002 | P0 | ACCESS PATH NOT PROVEN | CURRENT publication authorization is not premium entitlement; inspected learner content/assessment/localization/media services have no purchase check | Direct access to paid resource without entitlement and with revoked entitlement |
+| PRIV-001 | P0 | CONFIRMED REQUIREMENTS CONFLICT | InstallationEntity persists installation UUID + hashed token; product prohibits persistent install identifiers in analytics and claims no personal data | Decide technical auth identifier retention vs strict no-stable-ID design |
+| MOB-002 | P1 | CONFIRMED POLICY INCONSISTENCY | `VOXPREP_RELEASE` and `kReleaseMode` independently choose billing and environment behavior | Cross-product debug simulation/staging/production composition tests |
+| MEDIA-002 | P1 | CONFIRMED MEMORY RISK | Learner media read buffers whole file and clones bytes; large concurrent loads unqualified | Bounded streaming/load qualification |
+| CONTENT-002 | P1 | CONTRACT REVIEW REQUIRED | LearnerCatalogueEntry has publication identity but no collection FREE/PREMIUM access metadata | Trace canonical catalogue access policy and mobile consumption |
+| CI-001 | P0 | CONFIRMED CI FAILURE | Renderer Acceptance on f3ea3398 failed with exit 124 from 3-minute Flutter renderer test timeout; root cause unknown | Diagnose, fix and rerun exact SHA |
+
+**Gate:** security route/entitlement/privacy findings take precedence over new MVC features; do not mark the branch release-ready. XML-R1 remains DEFERRED. Original GAP-001..018 remain tracked above.
