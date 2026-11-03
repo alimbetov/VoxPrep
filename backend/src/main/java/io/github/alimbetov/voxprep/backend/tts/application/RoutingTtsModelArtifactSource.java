@@ -27,25 +27,18 @@ public class RoutingTtsModelArtifactSource implements TtsModelArtifactSource {
     }
 
     @Override
-    public byte[] fetch(String provider, String url) {
-        TtsModelArtifactProvider adapter = providers.get(normalize(provider));
+    public byte[] fetch(ArtifactRequest request) {
+        Objects.requireNonNull(request, "request");
+        TtsModelArtifactProvider adapter = providers.get(normalize(request.provider()));
         if (adapter == null) {
-            throw new UnsupportedTtsArtifactProviderException(provider);
+            throw new UnsupportedTtsArtifactProviderException(request.provider());
         }
-        return Objects.requireNonNull(adapter.fetch(required(url, "url")), "provider returned null bytes").clone();
+        return Objects.requireNonNull(adapter.fetch(request), "provider returned null bytes").clone();
     }
 
     private static String normalize(String value) {
-        return required(value, "provider").toLowerCase(Locale.ROOT);
-    }
-
-    private static String required(String value, String field) {
-        Objects.requireNonNull(value, field);
-        String normalized = value.strip();
-        if (normalized.isEmpty() || !normalized.equals(value)) {
-            throw new IllegalArgumentException("Invalid " + field);
-        }
-        return normalized;
+        Objects.requireNonNull(value, "provider");
+        return value.toLowerCase(Locale.ROOT);
     }
 
     public static class UnsupportedTtsArtifactProviderException extends RuntimeException {
