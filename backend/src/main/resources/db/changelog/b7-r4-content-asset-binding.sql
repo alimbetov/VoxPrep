@@ -36,10 +36,6 @@ LANGUAGE plpgsql
 AS $$
 DECLARE
     binding_role varchar(32);
-    revision_type varchar(32);
-    asset_kind varchar(32);
-    asset_status varchar(32);
-    asset_media_type varchar(128);
 BEGIN
     IF NEW.status <> 'READY'
        OR NEW.output_asset_id IS NULL
@@ -60,35 +56,6 @@ BEGIN
 
     IF binding_role IS NULL THEN
         RAISE EXCEPTION 'Unsupported finalized TTS audio role: %', NEW.audio_role
-            USING ERRCODE = '23514';
-    END IF;
-
-    SELECT content_type
-      INTO revision_type
-      FROM app.content_revision
-     WHERE id = NEW.content_revision_id;
-
-    IF NOT (
-        (revision_type = 'vocabulary' AND binding_role = 'PRONUNCIATION')
-        OR (revision_type = 'phrase' AND binding_role = 'PRONUNCIATION')
-        OR (revision_type = 'interview' AND binding_role IN ('QUESTION', 'SAMPLE_ANSWER'))
-        OR (revision_type = 'topic' AND binding_role = 'NARRATION')
-        OR (revision_type = 'shadowing' AND binding_role = 'SHADOWING')
-    ) THEN
-        RAISE EXCEPTION 'TTS audio role % is not allowed for content type %', NEW.audio_role, revision_type
-            USING ERRCODE = '23514';
-    END IF;
-
-    SELECT kind, status, media_type
-      INTO asset_kind, asset_status, asset_media_type
-      FROM app.file_asset
-     WHERE id = NEW.output_asset_id;
-
-    IF asset_kind IS DISTINCT FROM 'TTS_AUDIO'
-       OR asset_status IS DISTINCT FROM 'READY'
-       OR asset_media_type IS NULL
-       OR asset_media_type NOT LIKE 'audio/%' THEN
-        RAISE EXCEPTION 'Finalized TTS binding requires READY TTS_AUDIO audio/* asset'
             USING ERRCODE = '23514';
     END IF;
 
@@ -118,4 +85,95 @@ RESET ROLE;
 --rollback SET ROLE voxprep_owner;
 --rollback DROP TRIGGER trg_tts_job_bind_ready_output ON app.tts_job;
 --rollback DROP FUNCTION app.bind_ready_tts_output_to_content();
+--rollback RESET ROLE;
+
+--changeset voxprep:b7-r4-0003-guard-content-asset-binding splitStatements:false
+SET ROLE voxprep_owner;
+CREATE FUNCTION app.content_asset_binding_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    revision_type varchar(32);
+    revision_published_at timestamptz;
+    asset_kind varchar(32);
+    asset_status varchar(32);
+    asset_media_type varchar(128);
+BEGIN
+    SELECT content_type, published_at
+      INTO revision_type, revision_published_at
+      FROM app.content_revision
+     WHERE id = NEW.content_revision_id;
+
+    IF revision_type IS NULL THEN
+        RAISE EXCEPTION 'Content revision not found for binding: %', NEW.content_revision_id
+            USING ERRCODE = '23503';
+    END IF;
+
+    IF revision_published_at IS NOT NULL THEN
+        RAISE EXCEPTION 'Published content revision asset bindings are immutable'
+            USING ERRCODE = '23514';
+    END IF;
+
+    SELECT kind, status, media_type
+      INTO asset_kind, asset_status, asset_media_type
+      FROM app.file_asset
+     WHERE id = NEW.file_asset_id;
+
+    IF asset_status IS DISTINCT FROM 'READY' THEN
+        RAISE EXCEPTION 'Only READY file assets may be bound to content'
+            USING ERRCODE = '23514';
+    END IF;
+
+    IF NEW.role = 'COVER_IMAGE' THEN
+        IF asset_kind IS DISTINCT FROM 'COVER_IMAGE'
+           OR asset_media_type IS NULL OR asset_media_type NOT LIKE 'image/%'
+           OR NEW.source_fingerprint IS NOT NULL THEN
+            RAISE EXCEPTION 'COVER_IMAGE binding requires READY COVER_IMAGE image/* asset without source fingerprint'
+                USING ERRCODE = '23514';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    IF NEW.role = 'CONTENT_IMAGE' THEN
+        IF asset_kind IS DISTINCT FROM 'CONTENT_IMAGE'
+           OR asset_media_type IS NULL OR asset_media_type NOT LIKE 'image/%'
+           OR NEW.source_fingerprint IS NOT NULL THEN
+            RAISE EXCEPTION 'CONTENT_IMAGE binding requires READY CONTENT_IMAGE image/* asset without source fingerprint'
+                USING ERRCODE = '23514';
+        END IF;
+        RETURN NEW;
+    END IF;
+
+    IF asset_kind IS DISTINCT FROM 'TTS_AUDIO'
+       OR asset_media_type IS NULL OR asset_media_type NOT LIKE 'audio/%'
+       OR NEW.source_fingerprint IS NULL THEN
+        RAISE EXCEPTION 'Audio binding requires READY TTS_AUDIO audio/* asset with source fingerprint'
+            USING ERRCODE = '23514';
+    END IF;
+
+    IF NOT (
+        (revision_type = 'vocabulary' AND NEW.role = 'PRONUNCIATION')
+        OR (revision_type = 'phrase' AND NEW.role = 'PRONUNCIATION')
+        OR (revision_type = 'interview' AND NEW.role IN ('QUESTION', 'SAMPLE_ANSWER'))
+        OR (revision_type = 'topic' AND NEW.role = 'NARRATION')
+        OR (revision_type = 'shadowing' AND NEW.role = 'SHADOWING')
+    ) THEN
+        RAISE EXCEPTION 'Content asset role % is not allowed for content type %', NEW.role, revision_type
+            USING ERRCODE = '23514';
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER trg_content_asset_binding_guard
+BEFORE INSERT OR UPDATE OF content_revision_id, role, file_asset_id, source_fingerprint
+ON app.content_asset_binding
+FOR EACH ROW
+EXECUTE FUNCTION app.content_asset_binding_guard();
+RESET ROLE;
+--rollback SET ROLE voxprep_owner;
+--rollback DROP TRIGGER trg_content_asset_binding_guard ON app.content_asset_binding;
+--rollback DROP FUNCTION app.content_asset_binding_guard();
 --rollback RESET ROLE;
