@@ -19,6 +19,8 @@ public interface ContentLocalizationRevisionRepository extends JpaRepository<Con
                     ContentLocalizationLifecycleStatus lifecycle,
                     Instant approvedAt);
 
+    List<ContentLocalizationRevisionEntity> findAllByContentRevisionIdOrderByLocaleAscLocalizationRevisionNumberDesc(UUID contentRevisionId);
+
     List<ContentLocalizationRevisionEntity> findAllByContentRevisionIdAndLocaleOrderByLocalizationRevisionNumberAsc(
             UUID contentRevisionId,
             String locale);
