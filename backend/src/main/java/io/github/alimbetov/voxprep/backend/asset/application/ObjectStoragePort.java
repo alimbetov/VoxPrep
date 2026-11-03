@@ -2,13 +2,11 @@ package io.github.alimbetov.voxprep.backend.asset.application;
 
 import java.util.Map;
 
-/**
- * Application-facing object storage boundary shared by media-producing domains.
- *
- * <p>The port deliberately exposes bucket/object identity because {@code FileAsset}
- * persists that identity and remains the source of truth for stored artifacts.
- */
+/** Application-facing object storage boundary shared by media-producing domains. */
 public interface ObjectStoragePort {
+
+    /** Default internal bucket for backend-managed assets. */
+    String defaultBucket();
 
     byte[] read(String bucket, String objectKey);
 

@@ -15,9 +15,16 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 public class RustFsObjectStorageAdapter implements ObjectStoragePort {
 
     private final S3Client s3Client;
+    private final RustFsProperties properties;
 
-    public RustFsObjectStorageAdapter(S3Client s3Client) {
+    public RustFsObjectStorageAdapter(S3Client s3Client, RustFsProperties properties) {
         this.s3Client = Objects.requireNonNull(s3Client, "s3Client");
+        this.properties = Objects.requireNonNull(properties, "properties");
+    }
+
+    @Override
+    public String defaultBucket() {
+        return required(properties.getBucket(), "bucket");
     }
 
     @Override
