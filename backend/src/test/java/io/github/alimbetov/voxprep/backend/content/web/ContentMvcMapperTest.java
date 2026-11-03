@@ -40,6 +40,23 @@ class ContentMvcMapperTest {
         })).body()).isInstanceOf(ContentDraftUpdate.PracticeTestBody.class);
     }
 
+    @Test
+    void shadowingSegmentsAllowMissingTimingBoundaries() {
+        var command = mapper.toCommand(base("shadowing", form -> {
+            form.setTranscript("transcript");
+            form.setSegments("||untimed\n10||open-ended\n|20|leading-open");
+        }));
+
+        var body = (ContentDraftUpdate.ShadowingBody) command.body();
+        assertThat(body.segments()).hasSize(3);
+        assertThat(body.segments().get(0).getStartMs()).isNull();
+        assertThat(body.segments().get(0).getEndMs()).isNull();
+        assertThat(body.segments().get(1).getStartMs()).isEqualTo(10);
+        assertThat(body.segments().get(1).getEndMs()).isNull();
+        assertThat(body.segments().get(2).getStartMs()).isNull();
+        assertThat(body.segments().get(2).getEndMs()).isEqualTo(20);
+    }
+
     private static ContentMvcForms.DraftForm base(
             String bodyType,
             java.util.function.Consumer<ContentMvcForms.DraftForm> body) {
