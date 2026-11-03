@@ -35,13 +35,12 @@ class FileAssetIngestServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(assetRepository.saveAndFlush(any(FileAssetEntity.class)))
-                .thenAnswer(invocation -> invocation.getArgument(0));
         service = new FileAssetIngestService(assetRepository, objectStorage);
     }
 
     @Test
     void persistsRegisteredWritesVerifiesAndMarksReady() {
+        stubRepositoryRoundTrip();
         byte[] payload = "verified-media".getBytes(StandardCharsets.UTF_8);
         when(objectStorage.read("media", "content/verified.bin")).thenReturn(payload.clone());
 
@@ -74,6 +73,7 @@ class FileAssetIngestServiceTest {
 
     @Test
     void storageFailureLeavesDurableFailedState() {
+        stubRepositoryRoundTrip();
         byte[] payload = "storage-failure".getBytes(StandardCharsets.UTF_8);
         doThrow(new IllegalStateException("storage offline"))
                 .when(objectStorage)
@@ -96,6 +96,7 @@ class FileAssetIngestServiceTest {
 
     @Test
     void readBackMismatchQuarantinesAsset() {
+        stubRepositoryRoundTrip();
         byte[] payload = "expected".getBytes(StandardCharsets.UTF_8);
         when(objectStorage.read("media", "content/corrupt.bin"))
                 .thenReturn("corrupted".getBytes(StandardCharsets.UTF_8));
@@ -131,6 +132,11 @@ class FileAssetIngestServiceTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("READY")
                 .hasMessageContaining("FAILED");
+    }
+
+    private void stubRepositoryRoundTrip() {
+        when(assetRepository.saveAndFlush(any(FileAssetEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
     private static String sha256(byte[] bytes) {
