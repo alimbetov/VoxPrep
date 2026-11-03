@@ -162,7 +162,7 @@ printf '%s\n' 'A07-A09 PASS'
 printf '%s\n' 'A10: verify durable DB finalization and exact output identity'
 ROW="$("${COMPOSE[@]}" exec -T postgres psql -At --username voxprep_bootstrap --dbname voxprep_test -F '|' -c "
   select j.status, a.status, a.kind, a.media_type, a.sha256, a.size_bytes, a.object_key,
-         j.finalized_worker_id, j.finalized_lease_token
+         j.finalized_by_worker, j.finalized_lease_token
     from app.tts_job j
     join app.file_asset a on a.id = j.output_asset_id
    where j.id='${JOB_ID}' and j.file_id='${FILE_ID}';")"
