@@ -188,6 +188,7 @@ printf '%s\n' 'A11: verify RustFS MP3 bytes, audio QC and secret non-leakage'
     rc alias set b8 http://rustfs:9000 \"\$root_access\" \"\$root_secret\" --region us-east-1 --bucket-lookup path >/dev/null
     rc stat \"b8/voxprep-assets/${OUTPUT_KEY}\" >/dev/null
     rc cp \"b8/voxprep-assets/${OUTPUT_KEY}\" /fixtures/final.mp3 >/dev/null
+    chmod 0644 /fixtures/final.mp3
   "
 [[ "$(sha256sum "$FINAL_MP3" | awk '{print $1}')" == "$OUTPUT_SHA" ]]
 docker run --rm --entrypoint ffprobe -v "$FINAL_MP3:/input/final.mp3:ro" voxprep-tts-worker:b8 \
