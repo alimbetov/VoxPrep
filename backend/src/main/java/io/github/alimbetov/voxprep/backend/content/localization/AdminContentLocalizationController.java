@@ -2,7 +2,6 @@ package io.github.alimbetov.voxprep.backend.content.localization;
 
 import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringConflictException;
 import io.github.alimbetov.voxprep.backend.content.application.ContentRevisionNotFoundException;
-import io.github.alimbetov.voxprep.backend.sharedkernel.Sha256Digest;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -43,14 +42,14 @@ public class AdminContentLocalizationController {
     @PostMapping
     public ContentLocalizationAuthoringService.Snapshot create(@Valid @RequestBody CreateRequest request) {
         return service.create(
-                request.contentRevisionId(), request.locale(), new Sha256Digest(request.checksumSha256()), request.fields());
+                request.contentRevisionId(), request.locale(), null, request.fields());
     }
 
     @PutMapping("/{id}/draft")
     public ContentLocalizationAuthoringService.Snapshot updateDraft(
             @PathVariable UUID id,
             @Valid @RequestBody UpdateRequest request) {
-        return service.updateDraft(id, request.expectedVersion(), new Sha256Digest(request.checksumSha256()), request.fields());
+        return service.updateDraft(id, request.expectedVersion(), null, request.fields());
     }
 
     @PostMapping("/{id}/review")
@@ -81,7 +80,7 @@ public class AdminContentLocalizationController {
     public record CreateRequest(
             @NotNull UUID contentRevisionId,
             @NotBlank String locale,
-            @NotBlank String checksumSha256,
+            String checksumSha256,
             String title,
             String subtitle,
             String description,
@@ -96,7 +95,7 @@ public class AdminContentLocalizationController {
 
     public record UpdateRequest(
             @Min(0) long expectedVersion,
-            @NotBlank String checksumSha256,
+            String checksumSha256,
             String title,
             String subtitle,
             String description,
