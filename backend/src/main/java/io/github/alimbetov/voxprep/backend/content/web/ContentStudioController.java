@@ -16,11 +16,6 @@ public class ContentStudioController {
         return "admin/dashboard";
     }
 
-    @GetMapping("/catalogue")
-    public String catalogue(Model model) {
-        return section(model, "catalogue", "Catalogue", "Catalogue authoring will be wired in MVC-R2.");
-    }
-
     @GetMapping("/content")
     public String content(Model model) {
         return section(model, "content", "Content", "Content revision editing will be wired in MVC-R3.");
