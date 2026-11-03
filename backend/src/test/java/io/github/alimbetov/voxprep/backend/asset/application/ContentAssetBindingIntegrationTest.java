@@ -86,8 +86,11 @@ class ContentAssetBindingIntegrationTest {
         bindingService.bind(revision.getId(), ContentAssetRole.COVER_IMAGE, first.getId(), null);
 
         revision.markReadyForAudio();
+        contentRevisionRepository.saveAndFlush(revision);
         revision.markReadyForReview();
+        contentRevisionRepository.saveAndFlush(revision);
         revision.approve(Instant.parse("2026-11-03T10:00:00Z"));
+        contentRevisionRepository.saveAndFlush(revision);
         revision.publish(Instant.parse("2026-11-03T10:05:00Z"));
         contentRevisionRepository.saveAndFlush(revision);
 
