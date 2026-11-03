@@ -126,6 +126,20 @@ class JpaPublicationWireSnapshotWriterTest {
         verify(docs, never()).save(any());
     }
 
+    @Test
+    void orphanPublishedQuestionCannotAppearInFrozenRoot() {
+        graph(true);
+        var question = new PublicationExactContentRef(
+                new ContentRevisionIdentity(new BusinessCode("ORPHAN_QUESTION"),
+                        ContentType.QUESTION, new RevisionNumber(1)),
+                new Sha256Digest("c".repeat(64)));
+
+        assertThatThrownBy(() -> writer.freeze(release, List.of(ref, question), NOW))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("no published practice-test owner");
+        verify(docs, never()).save(any());
+    }
+
     private void graph(boolean withMember) {
         var vertical = mock(VerticalEntity.class);
         var goal = mock(LearningGoalEntity.class);
