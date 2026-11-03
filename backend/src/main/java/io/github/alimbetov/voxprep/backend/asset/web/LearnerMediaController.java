@@ -1,8 +1,11 @@
 package io.github.alimbetov.voxprep.backend.asset.web;
 
 import io.github.alimbetov.voxprep.backend.asset.application.LearnerMediaService;
+import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentNotFoundException;
+import io.github.alimbetov.voxprep.backend.learner.application.LearnerPublishedMediaService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -16,22 +19,31 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/media/assets")
+@RequestMapping("/api/v1/content")
 public class LearnerMediaController {
 
     private static final String CACHE_CONTROL = "private, max-age=31536000, immutable";
 
-    private final LearnerMediaService service;
+    private final LearnerPublishedMediaService service;
 
-    public LearnerMediaController(LearnerMediaService service) {
+    public LearnerMediaController(LearnerPublishedMediaService service) {
         this.service = service;
     }
 
-    @GetMapping("/{assetId}/content")
+    @GetMapping("/{contentType}/{contentCode}/audio")
+    public List<LearnerPublishedMediaService.AudioAssetSnapshot> audio(
+            @PathVariable String contentType,
+            @PathVariable String contentCode) {
+        return service.listAudio(contentType, contentCode);
+    }
+
+    @GetMapping("/{contentType}/{contentCode}/audio/{assetId}/content")
     public ResponseEntity<byte[]> content(
+            @PathVariable String contentType,
+            @PathVariable String contentCode,
             @PathVariable UUID assetId,
             @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
-        LearnerMediaService.MediaDescriptor descriptor = service.describe(assetId);
+        LearnerMediaService.MediaDescriptor descriptor = service.requireAudio(contentType, contentCode, assetId);
         if (matches(ifNoneMatch, descriptor.etag())) {
             return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
                     .header(HttpHeaders.ETAG, descriptor.etag())
@@ -51,10 +63,21 @@ public class LearnerMediaController {
 
     @ExceptionHandler({
             LearnerMediaService.MediaUnavailableException.class,
-            LearnerMediaService.MediaIntegrityException.class
+            LearnerMediaService.MediaIntegrityException.class,
+            LearnerContentNotFoundException.class
     })
     public ResponseEntity<Void> unavailable(RuntimeException exception, HttpServletRequest request) {
         return ResponseEntity.notFound().build();
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Void> invalid(RuntimeException exception, HttpServletRequest request) {
+        return ResponseEntity.badRequest().build();
+    }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Void> inconsistent(RuntimeException exception, HttpServletRequest request) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).build();
     }
 
     static boolean matches(String ifNoneMatch, String currentEtag) {
