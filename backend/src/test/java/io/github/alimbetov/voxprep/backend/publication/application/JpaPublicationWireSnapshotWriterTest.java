@@ -10,6 +10,7 @@ import io.github.alimbetov.voxprep.backend.catalogue.domain.CatalogueCode;
 import io.github.alimbetov.voxprep.backend.catalogue.domain.CollectionAccessLevel;
 import io.github.alimbetov.voxprep.backend.catalogue.persistence.*;
 import io.github.alimbetov.voxprep.backend.content.domain.*;
+import io.github.alimbetov.voxprep.backend.content.application.AssessmentDeliveryConfigurationService;
 import io.github.alimbetov.voxprep.backend.content.localization.ContentLocalizationRevisionRepository;
 import io.github.alimbetov.voxprep.backend.content.persistence.*;
 import io.github.alimbetov.voxprep.backend.learner.application.FlutterPublicationCanonicalHash;
@@ -40,13 +41,14 @@ class JpaPublicationWireSnapshotWriterTest {
     private final LearningCollectionRepository collections = mock(LearningCollectionRepository.class);
     private final CollectionContentMemberRepository members = mock(CollectionContentMemberRepository.class);
     private final ContentRevisionRepository revisions = mock(ContentRevisionRepository.class);
+    private final AssessmentDeliveryConfigurationService assessment = mock(AssessmentDeliveryConfigurationService.class);
     private final ContentAssetBindingRepository bindings = mock(ContentAssetBindingRepository.class);
     private final ContentLocalizationRevisionRepository localizations = mock(ContentLocalizationRevisionRepository.class);
     private final PublicationWireDocumentRepository docs = mock(PublicationWireDocumentRepository.class);
     private final ObjectMapper json = new ObjectMapper();
     private final JpaPublicationWireSnapshotWriter writer = new JpaPublicationWireSnapshotWriter(
             verticals, goals, tracks, collections, members, revisions,
-            bindings, localizations, docs, json);
+            assessment, bindings, localizations, docs, json);
     private final PublicationReleaseEntity release = mock(PublicationReleaseEntity.class);
     private final PublicationExactContentRef ref = new PublicationExactContentRef(
             new ContentRevisionIdentity(new BusinessCode("PHRASE_ONE"), ContentType.PHRASE,
