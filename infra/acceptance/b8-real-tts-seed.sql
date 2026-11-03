@@ -53,7 +53,7 @@ INSERT INTO app.tts_job (
     'b8000000-0000-0000-0000-000000000006', 0, now(), now(),
     'b8000000-0000-0000-0000-000000000002', :'tts_text', :'text_sha', 'PENDING', NULL,
     'b8000000-0000-0000-0000-000000000007', 'b8000000-0000-0000-0000-000000000005',
-    'PRIMARY', :'tts_text', 'en-US', :'fingerprint'
+    'pronunciation', :'tts_text', 'en-US', :'fingerprint'
 );
 
 RESET ROLE;
