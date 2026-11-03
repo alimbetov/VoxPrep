@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -38,8 +39,8 @@ public class ContentLocalizationAuthoringService {
             String locale,
             Sha256Digest checksum,
             Fields fields) {
-        requireContent(contentRevisionId);
         String canonicalLocale = canonicalLocale(locale);
+        lockContentRevision(contentRevisionId);
         int nextRevision = repository
                 .findTopByContentRevisionIdAndLocaleOrderByLocalizationRevisionNumberDesc(contentRevisionId, canonicalLocale)
                 .map(value -> value.getLocalizationRevisionNumber() + 1)
@@ -96,6 +97,7 @@ public class ContentLocalizationAuthoringService {
     @Transactional
     public Snapshot createNext(UUID id, long expectedVersion) {
         var source = require(id);
+        lockContentRevision(source.getContentRevisionId());
         requireVersion(source, expectedVersion);
         if (source.getLifecycle() != ContentLocalizationLifecycleStatus.APPROVED) {
             throw new ContentAuthoringConflictException("Only APPROVED localization revision may create the next revision");
@@ -132,6 +134,15 @@ public class ContentLocalizationAuthoringService {
         return snapshot(require(id));
     }
 
+    /** Serializes revision-number allocation across every application instance. */
+    private void lockContentRevision(UUID contentRevisionId) {
+        if (jdbcTemplate.queryForList(
+                "select id from app.content_revision where id = ? for update",
+                UUID.class, contentRevisionId).isEmpty()) {
+            throw new ContentRevisionNotFoundException(contentRevisionId);
+        }
+    }
+
     private void requireContent(UUID contentRevisionId) {
         if (!contentRepository.existsById(contentRevisionId)) {
             throw new ContentRevisionNotFoundException(contentRevisionId);
@@ -155,6 +166,8 @@ public class ContentLocalizationAuthoringService {
             return repository.saveAndFlush(entity);
         } catch (OptimisticLockingFailureException exception) {
             throw new ContentAuthoringConflictException("Localization revision was modified by another editor", exception);
+        } catch (DataIntegrityViolationException exception) {
+            throw new ContentAuthoringConflictException("Localization revision conflicts with an existing revision", exception);
         }
     }
 
