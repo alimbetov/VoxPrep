@@ -143,8 +143,11 @@ void main() {
         locale: AppTranslationLocale.english,
       )).getOrThrow();
 
-      const screenshotKey = Key('production-e2e-screenshot');
-      final app = ProviderScope(
+      // Run the real production bootstrap outside Flutter's fake-async widget
+      // zone, then attach the SAME Riverpod container to the renderer. Starting
+      // FutureProvider inside pumpWidget and awaiting it through runAsync can
+      // strand timers/microtasks across zones and hang CI for 3 minutes.
+      final container = ProviderContainer(
         overrides: [
           careerSpeakDatabaseProvider.overrideWithValue(database),
           assetRootDirectoryProvider.overrideWith(
@@ -158,19 +161,8 @@ void main() {
             Uri.parse('https://api.careerspeak.test'),
           ),
         ],
-        child: const RepaintBoundary(
-          key: screenshotKey,
-          child: CareerSpeakApp(),
-        ),
       );
-
-      debugPrint('RENDERER_CHECKPOINT widget-pump-start');
-      await tester.pumpWidget(app);
-      debugPrint('RENDERER_CHECKPOINT widget-pump-done');
-      expect(find.byKey(screenshotKey), findsOneWidget);
-      final container = ProviderScope.containerOf(
-        tester.element(find.byKey(screenshotKey)),
-      );
+      addTearDown(container.dispose);
       debugPrint('RENDERER_CHECKPOINT bootstrap-start');
       final bootstrapResult = await tester.runAsync(
         () => container.read(applicationBootstrapProvider.future),
@@ -178,6 +170,19 @@ void main() {
       expect(bootstrapResult, isNotNull);
       bootstrapResult!.getOrThrow();
       debugPrint('RENDERER_CHECKPOINT bootstrap-done');
+
+      const screenshotKey = Key('production-e2e-screenshot');
+      final app = UncontrolledProviderScope(
+        container: container,
+        child: const RepaintBoundary(
+          key: screenshotKey,
+          child: CareerSpeakApp(),
+        ),
+      );
+      debugPrint('RENDERER_CHECKPOINT widget-pump-start');
+      await tester.pumpWidget(app);
+      debugPrint('RENDERER_CHECKPOINT widget-pump-done');
+      expect(find.byKey(screenshotKey), findsOneWidget);
       expect(backend.registrationCalls, 1);
       expect(backend.rootManifestCalls, 1);
       expect(backend.packManifestCalls, 1);
