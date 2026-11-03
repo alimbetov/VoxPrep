@@ -53,6 +53,15 @@ public final class FlutterPublicationCanonicalHash {
         return sha256(mapper, body);
     }
 
+    /**
+     * Catalogues do not use the root/pack canonicalizer in Flutter: their
+     * checksum is provider-defined. Freeze the exact kind/revision/items
+     * projection in an explicit key order to detect tampering on every read.
+     */
+    public static String catalogue(ObjectMapper mapper, Map<String, Object> wire) {
+        return sha256(mapper, project(wire, List.of("kind", "revision", "items")));
+    }
+
     private static List<LinkedHashMap<String, Object>> projectList(
             Map<String, Object> source, String field, List<String> keys) {
         if (!(source.get(field) instanceof List<?> raw)) {

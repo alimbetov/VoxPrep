@@ -87,6 +87,9 @@ public class LearnerWirePublicationService {
                 || !checksum.equals(document.getChecksumSha256())) {
             throw unavailable("catalogue document does not match frozen root");
         }
+        if (!FlutterPublicationCanonicalHash.catalogue(json, body).equals(checksum)) {
+            throw unavailable("catalogue body checksum mismatch");
+        }
         return new WireResponse(body, checksum);
     }
 
