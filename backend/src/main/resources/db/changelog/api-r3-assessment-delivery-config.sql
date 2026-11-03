@@ -28,16 +28,25 @@ RESET ROLE;
 SET ROLE voxprep_owner;
 CREATE FUNCTION app.assessment_delivery_config_published_guard()
 RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+    target_revision uuid;
 BEGIN
+    IF TG_OP = 'DELETE' THEN
+        target_revision := OLD.test_revision_id;
+    ELSE
+        target_revision := NEW.test_revision_id;
+    END IF;
     IF EXISTS (
         SELECT 1 FROM app.content_revision
-         WHERE id = COALESCE(NEW.test_revision_id, OLD.test_revision_id)
-           AND published_at IS NOT NULL
+         WHERE id = target_revision AND published_at IS NOT NULL
     ) THEN
         RAISE EXCEPTION 'published assessment delivery config is immutable'
             USING ERRCODE = '23514';
     END IF;
-    RETURN COALESCE(NEW, OLD);
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
 END;
 $$;
 CREATE TRIGGER trg_assessment_delivery_config_immutable
