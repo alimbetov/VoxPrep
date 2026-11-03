@@ -8,6 +8,7 @@ import io.github.alimbetov.voxprep.backend.tts.persistence.TtsJobRepository;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceModelRepository;
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,16 +19,19 @@ public class TtsJobPreparationService {
     private final TtsVoiceModelRepository voiceModelRepository;
     private final TtsJobRepository ttsJobRepository;
     private final ContentTtsPlanner planner;
+    private final JdbcTemplate jdbcTemplate;
 
     public TtsJobPreparationService(
             ContentRevisionRepository contentRevisionRepository,
             TtsVoiceModelRepository voiceModelRepository,
             TtsJobRepository ttsJobRepository,
-            ContentTtsPlanner planner) {
+            ContentTtsPlanner planner,
+            JdbcTemplate jdbcTemplate) {
         this.contentRevisionRepository = contentRevisionRepository;
         this.voiceModelRepository = voiceModelRepository;
         this.ttsJobRepository = ttsJobRepository;
         this.planner = planner;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Transactional
@@ -64,6 +68,8 @@ public class TtsJobPreparationService {
                 voiceModel,
                 TtsOutputFinalizationService.AUDIO_PROFILE);
 
+        lockFingerprint(fingerprint);
+
         var existing = ttsJobRepository.findByFingerprint(fingerprint);
         if (existing.isPresent()) {
             TtsJobEntity job = existing.orElseThrow();
@@ -82,6 +88,13 @@ public class TtsJobPreparationService {
                 fingerprint);
         TtsJobEntity saved = ttsJobRepository.saveAndFlush(job);
         return new PreparationResult(saved.getId(), fileId, fingerprint, false);
+    }
+
+    private void lockFingerprint(String fingerprint) {
+        jdbcTemplate.queryForObject(
+                "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))",
+                Long.class,
+                fingerprint);
     }
 
     private static String required(String value, String field) {
