@@ -6,5 +6,5 @@ import 'app/careerspeak_app.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  runApp(const ProviderScope(child: CareerSpeakApp()));
+  runApp(const ProviderScope(child: CareerSpeakApp(bootstrapEnabled: true)));
 }
