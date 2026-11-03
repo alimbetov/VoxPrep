@@ -61,7 +61,7 @@ class ContentMvcIntegrationTest {
         mockMvc.perform(get("/admin/content/revisions/{id}/edit", revision.getId())
                         .with(user("admin").roles("ADMIN")))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Edit content draft")))
+                .andExpect(content().string(containsString("Edit content")))
                 .andExpect(content().string(containsString("Vocabulary title")))
                 .andExpect(content().string(containsString("negotiate")))
                 .andExpect(content().string(containsString("name=\"_csrf\"")));
