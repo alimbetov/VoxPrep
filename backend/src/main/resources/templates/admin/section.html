@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{admin/fragments/shell :: head(${sectionTitle})}"></head>
+<body>
+<nav th:replace="~{admin/fragments/shell :: nav(${activeSection})}"></nav>
+<div class="container-fluid studio-shell px-4 py-4">
+    <div class="row g-4">
+        <div class="col-12 col-lg-2">
+            <aside th:replace="~{admin/fragments/shell :: sidebar(${activeSection})}"></aside>
+        </div>
+        <main class="col-12 col-lg-10">
+            <div class="card studio-card">
+                <div class="card-body p-4">
+                    <span class="badge text-bg-secondary mb-3">MVC-R1 foundation</span>
+                    <h1 class="h3" th:text="${sectionTitle}">Section</h1>
+                    <p class="text-secondary mb-0" th:text="${sectionDescription}">Section description</p>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+<th:block th:replace="~{admin/fragments/shell :: scripts}"></th:block>
+</body>
+</html>

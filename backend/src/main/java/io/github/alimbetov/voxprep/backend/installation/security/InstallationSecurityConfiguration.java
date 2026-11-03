@@ -3,6 +3,7 @@ package io.github.alimbetov.voxprep.backend.installation.security;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -28,15 +29,37 @@ public class InstallationSecurityConfiguration {
     }
 
     @Bean
+    @Order(1)
+    SecurityFilterChain adminApiSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/admin/api/**")
+                .csrf(AbstractHttpConfigurer::disable)
+                .httpBasic(Customizer.withDefaults())
+                .authorizeHttpRequests(authorize -> authorize.anyRequest().hasRole("ADMIN"));
+        return http.build();
+    }
+
+    @Bean
+    @Order(2)
+    SecurityFilterChain adminMvcSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .securityMatcher("/admin/**", "/login", "/logout")
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers("/login").permitAll()
+                        .anyRequest().hasRole("ADMIN"))
+                .formLogin(Customizer.withDefaults())
+                .logout(Customizer.withDefaults());
+        return http.build();
+    }
+
+    @Bean
+    @Order(3)
     SecurityFilterChain installationSecurityFilterChain(
             HttpSecurity http,
             InstallationAuthenticationFilter installationAuthenticationFilter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .httpBasic(Customizer.withDefaults())
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/admin/**").hasRole("ADMIN")
-                        .anyRequest().permitAll())
+                .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
                 .addFilterBefore(installationAuthenticationFilter, AnonymousAuthenticationFilter.class);
         return http.build();
     }
