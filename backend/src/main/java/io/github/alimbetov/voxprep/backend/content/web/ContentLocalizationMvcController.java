@@ -15,6 +15,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
 import java.util.UUID;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -91,6 +92,9 @@ public class ContentLocalizationMvcController {
             Model model,
             RedirectAttributes redirect) {
         var snapshot = localizations.get(id);
+        if (!snapshot.locale().equals(form.getLocale())) {
+            binding.reject("localization.locale.immutable", "Localization locale cannot be changed");
+        }
         if (binding.hasErrors() || !hasTranslation(form, binding)) {
             return form(model, snapshot.contentRevisionId(), snapshot, form);
         }
@@ -106,6 +110,79 @@ public class ContentLocalizationMvcController {
         }
     }
 
+    @PostMapping("/localizations/{id}/review")
+    public String review(
+            @PathVariable UUID id,
+            @Valid @ModelAttribute("lifecycleForm") LocalizationLifecycleMvcForm lifecycleForm,
+            BindingResult binding,
+            Authentication authentication,
+            Model model,
+            RedirectAttributes redirect) {
+        var snapshot = localizations.get(id);
+        if (binding.hasErrors()) {
+            return lifecycleInvalid(model, snapshot, lifecycleForm);
+        }
+        try {
+            localizations.submitForReview(id, lifecycleForm.getExpectedVersion(),
+                    authentication.getName(), lifecycleForm.getReason(), lifecycleForm.getComment());
+        } catch (IllegalStateException exception) {
+            throw new ContentAuthoringConflictException("Localization lifecycle conflict", exception);
+        }
+        redirect.addFlashAttribute("flashSuccess", "Localization submitted for review.");
+        return editRedirect(id);
+    }
+
+    @PostMapping("/localizations/{id}/approve")
+    public String approve(
+            @PathVariable UUID id,
+            @Valid @ModelAttribute("lifecycleForm") LocalizationLifecycleMvcForm lifecycleForm,
+            BindingResult binding,
+            Authentication authentication,
+            Model model,
+            RedirectAttributes redirect) {
+        var snapshot = localizations.get(id);
+        if (binding.hasErrors()) {
+            return lifecycleInvalid(model, snapshot, lifecycleForm);
+        }
+        try {
+            localizations.approve(id, lifecycleForm.getExpectedVersion(),
+                    authentication.getName(), lifecycleForm.getReason(), lifecycleForm.getComment());
+        } catch (IllegalStateException exception) {
+            throw new ContentAuthoringConflictException("Localization lifecycle conflict", exception);
+        }
+        redirect.addFlashAttribute("flashSuccess", "Localization approved.");
+        return editRedirect(id);
+    }
+
+    @PostMapping("/localizations/{id}/next")
+    public String next(
+            @PathVariable UUID id,
+            @Valid @ModelAttribute("lifecycleForm") LocalizationLifecycleMvcForm lifecycleForm,
+            BindingResult binding,
+            Model model,
+            RedirectAttributes redirect) {
+        var snapshot = localizations.get(id);
+        if (binding.hasErrors()) {
+            return lifecycleInvalid(model, snapshot, lifecycleForm);
+        }
+        try {
+            var created = localizations.createNext(id, lifecycleForm.getExpectedVersion());
+            redirect.addFlashAttribute("flashSuccess", "Next localization draft created.");
+            return editRedirect(created.id());
+        } catch (IllegalStateException exception) {
+            throw new ContentAuthoringConflictException("Localization lifecycle conflict", exception);
+        }
+    }
+
+    private String lifecycleInvalid(
+            Model model,
+            ContentLocalizationAuthoringService.Snapshot snapshot,
+            LocalizationLifecycleMvcForm lifecycleForm) {
+        form(model, snapshot.contentRevisionId(), snapshot, fromSnapshot(snapshot));
+        model.addAttribute("lifecycleForm", lifecycleForm);
+        return "admin/content/localization-form";
+    }
+
     private String form(
             Model model,
             UUID contentId,
@@ -115,6 +192,9 @@ public class ContentLocalizationMvcController {
         model.addAttribute("contentRevision", contentQuery.get(contentId));
         model.addAttribute("localization", snapshot);
         model.addAttribute("form", form);
+        var actionForm = new LocalizationLifecycleMvcForm();
+        actionForm.setExpectedVersion(snapshot == null ? 0L : snapshot.version());
+        model.addAttribute("lifecycleForm", actionForm);
         return "admin/content/localization-form";
     }
 
