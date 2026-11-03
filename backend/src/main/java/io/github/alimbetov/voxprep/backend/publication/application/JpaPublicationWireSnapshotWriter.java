@@ -11,6 +11,7 @@ import io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningGoalRep
 import io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningTrackRepository;
 import io.github.alimbetov.voxprep.backend.catalogue.persistence.VerticalRepository;
 import io.github.alimbetov.voxprep.backend.content.domain.ContentType;
+import io.github.alimbetov.voxprep.backend.content.application.AssessmentDeliveryConfigurationService;
 import io.github.alimbetov.voxprep.backend.content.persistence.PracticeTestContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.content.persistence.QuestionContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.content.localization.ContentLocalizationLifecycleStatus;
@@ -65,6 +66,7 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
     private final LearningCollectionRepository collections;
     private final CollectionContentMemberRepository members;
     private final ContentRevisionRepository revisions;
+    private final AssessmentDeliveryConfigurationService assessmentConfig;
     private final ContentAssetBindingRepository bindings;
     private final ContentLocalizationRevisionRepository localizations;
     private final PublicationWireDocumentRepository documents;
@@ -77,6 +79,7 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
             LearningCollectionRepository collections,
             CollectionContentMemberRepository members,
             ContentRevisionRepository revisions,
+            AssessmentDeliveryConfigurationService assessmentConfig,
             ContentAssetBindingRepository bindings,
             ContentLocalizationRevisionRepository localizations,
             PublicationWireDocumentRepository documents,
@@ -87,6 +90,7 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
         this.collections = Objects.requireNonNull(collections);
         this.members = Objects.requireNonNull(members);
         this.revisions = Objects.requireNonNull(revisions);
+        this.assessmentConfig = Objects.requireNonNull(assessmentConfig);
         this.bindings = Objects.requireNonNull(bindings);
         this.localizations = Objects.requireNonNull(localizations);
         this.documents = Objects.requireNonNull(documents);
@@ -110,7 +114,7 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
             }
         }
 
-        validateAssessmentOwnership(refs, published);
+        List<Snapshot> assessmentSnapshots = validateAssessmentOwnership(refs, published);
 
         var sectionItems = new ArrayList<Map<String, Object>>();
         var verticalItems = new ArrayList<Map<String, Object>>();
@@ -301,6 +305,7 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
 
         var catalogueRefs = new ArrayList<Map<String, Object>>();
         var staged = new ArrayList<Snapshot>(sourcePacks);
+        staged.addAll(assessmentSnapshots);
         for (String kind : CATALOGUE_KINDS) {
             var body = object("kind", kind, "revision", release.getContentVersion(),
                     "items", catalogues.get(kind));
@@ -332,7 +337,11 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
 
         for (var doc : staged) {
             var payload = new LinkedHashMap<>(doc.body());
-            payload.put("checksum", doc.checksum());
+            // Assessment payload.checksum denotes the exact content revision;
+            // the immutable document checksum is stored separately in the DB.
+            if (doc.kind() != PublicationWireDocumentKind.ASSESSMENT) {
+                payload.put("checksum", doc.checksum());
+            }
             documents.save(new PublicationWireDocumentEntity(
                     release, doc.kind(), doc.code(), doc.variant(), release.getContentVersion(),
                     doc.checksum(), encode(payload)));
@@ -344,10 +353,11 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
      * Prevents publishing unowned questions, dangling assessment references,
      * or question choices incompatible with the Flutter singleChoice contract.
      */
-    private void validateAssessmentOwnership(
+    private List<Snapshot> validateAssessmentOwnership(
             List<PublicationExactContentRef> refs,
             Map<String, PublicationExactContentRef> published) {
         Set<String> questionOwners = new HashSet<>();
+        var snapshots = new ArrayList<Snapshot>();
         for (var ref : refs) {
             if (ref.identity().contentType() != ContentType.PRACTICE_TEST) {
                 continue;
@@ -359,7 +369,11 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
                     || !rawTest.getChecksum().equals(ref.checksum())) {
                 throw new IllegalStateException("published practice test is inconsistent");
             }
-            for (UUID id : test.getQuestionRevisionIds()) {
+            var questionIds = test.getQuestionRevisionIds();
+            var delivery = assessmentConfig.requireReady(test.getId(), questionIds.size());
+            var questionRefs = new ArrayList<Map<String, Object>>();
+            for (int position = 0; position < questionIds.size(); position++) {
+                UUID id = questionIds.get(position);
                 var rawQuestion = revisions.findById(id)
                         .orElseThrow(() -> new IllegalStateException("published question reference is dangling"));
                 if (!(rawQuestion instanceof QuestionContentRevisionEntity question)) {
@@ -377,7 +391,22 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
                     throw new IllegalStateException("question does not satisfy Flutter singleChoice contract");
                 }
                 questionOwners.add(key(exact));
+                questionRefs.add(object("order", position,
+                        "question", object(
+                                "questionCode", exact.identity().contentCode().value(),
+                                "revision", exact.identity().revisionNumber().value(),
+                                "checksum", exact.checksum().value()),
+                        "points", delivery.points().get(position)));
             }
+            var body = object("practiceTestCode", ref.identity().contentCode().value(),
+                    "revision", ref.identity().revisionNumber().value(),
+                    "checksum", ref.checksum().value(),
+                    "title", test.getTitle(), "subtitle", test.getSubtitle(),
+                    "mode", delivery.mode(),
+                    "passingScoreBasisPoints", test.getPassingScorePercent() * 100,
+                    "questionRefs", questionRefs);
+            snapshots.add(new Snapshot(PublicationWireDocumentKind.ASSESSMENT,
+                    ref.identity().contentCode().value(), "-", body, sha256(body)));
         }
         for (var ref : refs) {
             if (ref.identity().contentType() == ContentType.QUESTION
@@ -385,6 +414,7 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
                 throw new IllegalStateException("published question has no published practice-test owner");
             }
         }
+        return List.copyOf(snapshots);
     }
 
     private static LinkedHashMap<String, Object> packBody(
