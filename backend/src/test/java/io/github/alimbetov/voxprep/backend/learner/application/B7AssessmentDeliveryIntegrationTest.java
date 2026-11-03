@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.alimbetov.voxprep.backend.catalogue.domain.CatalogueCode;
+import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetKind;
+import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetStatus;
+import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetEntity;
+import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetRepository;
 import io.github.alimbetov.voxprep.backend.catalogue.domain.CollectionAccessLevel;
 import io.github.alimbetov.voxprep.backend.catalogue.persistence.*;
 import io.github.alimbetov.voxprep.backend.content.application.AssessmentDeliveryConfigurationService;
@@ -35,6 +39,7 @@ import org.springframework.transaction.annotation.Transactional;
 class B7AssessmentDeliveryIntegrationTest {
 
     @Autowired private ContentRevisionRepository revisions;
+    @Autowired private FileAssetRepository assets;
     @Autowired private VerticalRepository verticals;
     @Autowired private LearningGoalRepository goals;
     @Autowired private LearningTrackRepository tracks;
@@ -76,9 +81,13 @@ class B7AssessmentDeliveryIntegrationTest {
         approved(question);
         approved(test);
 
+        var icon = assets.saveAndFlush(new FileAssetEntity(
+                FileAssetKind.COVER_IMAGE, FileAssetStatus.READY,
+                "voxprep-assets", "icons/r3-assessment.webp", "image/webp",
+                42, "e".repeat(64)));
         var vertical = verticals.saveAndFlush(new VerticalEntity(
                 new CatalogueCode("R3_CAREER"), new CatalogueCode("R3_TECH"),
-                "Software", "Technical interviews", "r3-icon",
+                "Software", "Technical interviews", icon.getId().toString(),
                 0, AvailabilityStatus.ACTIVE));
         var goal = goals.saveAndFlush(new LearningGoalEntity(
                 new CatalogueCode("R3_GOAL"), vertical, "Interview",

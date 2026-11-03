@@ -1,6 +1,9 @@
 package io.github.alimbetov.voxprep.backend.publication.application;
 
 import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetStatus;
+import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetKind;
+import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetRepository;
+import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetEntity;
 import io.github.alimbetov.voxprep.backend.asset.persistence.ContentAssetBindingRepository;
 import io.github.alimbetov.voxprep.backend.catalogue.domain.CollectionAccessLevel;
 import io.github.alimbetov.voxprep.backend.catalogue.persistence.CollectionContentMemberEntity;
@@ -67,6 +70,7 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
     private final CollectionContentMemberRepository members;
     private final ContentRevisionRepository revisions;
     private final AssessmentDeliveryConfigurationService assessmentConfig;
+    private final FileAssetRepository fileAssets;
     private final ContentAssetBindingRepository bindings;
     private final ContentLocalizationRevisionRepository localizations;
     private final PublicationWireDocumentRepository documents;
@@ -80,6 +84,7 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
             CollectionContentMemberRepository members,
             ContentRevisionRepository revisions,
             AssessmentDeliveryConfigurationService assessmentConfig,
+            FileAssetRepository fileAssets,
             ContentAssetBindingRepository bindings,
             ContentLocalizationRevisionRepository localizations,
             PublicationWireDocumentRepository documents,
@@ -91,6 +96,7 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
         this.members = Objects.requireNonNull(members);
         this.revisions = Objects.requireNonNull(revisions);
         this.assessmentConfig = Objects.requireNonNull(assessmentConfig);
+        this.fileAssets = Objects.requireNonNull(fileAssets);
         this.bindings = Objects.requireNonNull(bindings);
         this.localizations = Objects.requireNonNull(localizations);
         this.documents = Objects.requireNonNull(documents);
@@ -132,6 +138,10 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
                 continue;
             }
             var verticalCode = vertical.getCode().value();
+            // Flutter schema-v2 requires all catalogue icon asset IDs to resolve
+            // to an exact image asset listed in the frozen pack manifest.
+            var icon = requireReadyIcon(vertical.getIconAssetId(), verticalCode);
+            var iconDescriptor = assetDescriptor(icon);
             var sectionCode = vertical.getSectionCode().value();
             if (sectionCodes.add(sectionCode)) {
                 // Section metadata does not yet exist in the authoring schema.
@@ -173,6 +183,7 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
                         var memberItems = new ArrayList<Map<String, Object>>();
                         var packContents = new ArrayList<Map<String, Object>>();
                         var assetDescriptors = new LinkedHashMap<String, Map<String, Object>>();
+                        assetDescriptors.put(icon.getId().toString(), iconDescriptor);
                         var contentAssets = new ArrayList<Map<String, Object>>();
                         var translatedByLocale = new LinkedHashMap<String, List<Map<String, Object>>>();
                         List<CollectionContentMemberEntity> sortedMembers =
@@ -415,6 +426,38 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
             }
         }
         return List.copyOf(snapshots);
+    }
+
+    private FileAssetEntity requireReadyIcon(String assetId, String verticalCode) {
+        final UUID id;
+        try {
+            id = UUID.fromString(assetId);
+            if (!id.toString().equals(assetId)) {
+                throw new IllegalArgumentException("noncanonical UUID");
+            }
+        } catch (RuntimeException exception) {
+            throw new IllegalStateException(
+                    "vertical icon must be a canonical persisted UUID: " + verticalCode, exception);
+        }
+        var asset = fileAssets.findById(id)
+                .orElseThrow(() -> new IllegalStateException(
+                        "vertical icon asset does not exist: " + verticalCode));
+        if (asset.getStatus() != FileAssetStatus.READY
+                || (asset.getKind() != FileAssetKind.COVER_IMAGE
+                    && asset.getKind() != FileAssetKind.CONTENT_IMAGE)
+                || !asset.getMediaType().startsWith("image/")
+                || asset.getSizeBytes() <= 0
+                || !asset.getSha256().matches("[0-9a-f]{64}")) {
+            throw new IllegalStateException("vertical icon must be a READY image: " + verticalCode);
+        }
+        return asset;
+    }
+
+    private static Map<String, Object> assetDescriptor(FileAssetEntity asset) {
+        return object(
+                "assetId", asset.getId().toString(), "checksumSha256", asset.getSha256(),
+                "deliveryKey", asset.getObjectKey(), "sizeBytes", asset.getSizeBytes(),
+                "mediaType", asset.getMediaType(), "requiredOffline", false);
     }
 
     private static LinkedHashMap<String, Object> packBody(

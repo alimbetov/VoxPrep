@@ -150,7 +150,7 @@ class B7ProductDeliveryIntegrationTest {
         // collection membership. A bare content revision is not a learner pack.
         var vertical = verticalRepository.saveAndFlush(new VerticalEntity(
                 new CatalogueCode("R6_CAREER"), new CatalogueCode("R6_TECH"),
-                "Career", "Interview preparation", "r6-icon", 0, AvailabilityStatus.ACTIVE));
+                "Career", "Interview preparation", cover.getId().toString(), 0, AvailabilityStatus.ACTIVE));
         var goal = goalRepository.saveAndFlush(new LearningGoalEntity(
                 new CatalogueCode("R6_INTERVIEW"), vertical,
                 "Interviews", "Interview goal", 0, AvailabilityStatus.ACTIVE));

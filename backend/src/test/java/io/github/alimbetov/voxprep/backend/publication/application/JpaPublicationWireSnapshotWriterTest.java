@@ -6,6 +6,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import io.github.alimbetov.voxprep.backend.asset.persistence.ContentAssetBindingRepository;
+import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetRepository;
+import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetEntity;
+import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetKind;
+import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetStatus;
+import java.util.Optional;
 import io.github.alimbetov.voxprep.backend.catalogue.domain.CatalogueCode;
 import io.github.alimbetov.voxprep.backend.catalogue.domain.CollectionAccessLevel;
 import io.github.alimbetov.voxprep.backend.catalogue.persistence.*;
@@ -33,6 +38,7 @@ class JpaPublicationWireSnapshotWriterTest {
     private static final UUID TRACK = UUID.fromString("44444444-4444-4444-8444-444444444444");
     private static final UUID COLLECTION = UUID.fromString("55555555-5555-4555-8555-555555555555");
     private static final UUID REVISION = UUID.fromString("66666666-6666-4666-8666-666666666666");
+    private static final UUID ICON = UUID.fromString("77777777-7777-4777-8777-777777777777");
     private static final Instant NOW = Instant.parse("2026-11-03T11:30:00Z");
 
     private final VerticalRepository verticals = mock(VerticalRepository.class);
@@ -42,13 +48,14 @@ class JpaPublicationWireSnapshotWriterTest {
     private final CollectionContentMemberRepository members = mock(CollectionContentMemberRepository.class);
     private final ContentRevisionRepository revisions = mock(ContentRevisionRepository.class);
     private final AssessmentDeliveryConfigurationService assessment = mock(AssessmentDeliveryConfigurationService.class);
+    private final FileAssetRepository fileAssets = mock(FileAssetRepository.class);
     private final ContentAssetBindingRepository bindings = mock(ContentAssetBindingRepository.class);
     private final ContentLocalizationRevisionRepository localizations = mock(ContentLocalizationRevisionRepository.class);
     private final PublicationWireDocumentRepository docs = mock(PublicationWireDocumentRepository.class);
     private final ObjectMapper json = new ObjectMapper();
     private final JpaPublicationWireSnapshotWriter writer = new JpaPublicationWireSnapshotWriter(
             verticals, goals, tracks, collections, members, revisions,
-            assessment, bindings, localizations, docs, json);
+            assessment, fileAssets, bindings, localizations, docs, json);
     private final PublicationReleaseEntity release = mock(PublicationReleaseEntity.class);
     private final PublicationExactContentRef ref = new PublicationExactContentRef(
             new ContentRevisionIdentity(new BusinessCode("PHRASE_ONE"), ContentType.PHRASE,
@@ -92,6 +99,7 @@ class JpaPublicationWireSnapshotWriterTest {
         assertThat(pack.getChecksumSha256())
                 .isEqualTo(FlutterPublicationCanonicalHash.pack(json, packBody));
         assertThat((List<?>) packBody.get("contents")).hasSize(1);
+        assertThat((List<?>) packBody.get("assets")).hasSize(1);
 
         var collectionDoc = stored.stream()
                 .filter(doc -> doc.getKind() == PublicationWireDocumentKind.CATALOGUE)
@@ -129,6 +137,16 @@ class JpaPublicationWireSnapshotWriterTest {
     }
 
     @Test
+    void rejectsIconOutsideReadyAssetsBeforePublication() {
+        graph(true);
+        when(fileAssets.findById(ICON)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> writer.freeze(release, List.of(ref), NOW))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("vertical icon asset does not exist");
+        verify(docs, never()).save(any());
+    }
+
+    @Test
     void orphanPublishedQuestionCannotAppearInFrozenRoot() {
         graph(true);
         var question = new PublicationExactContentRef(
@@ -155,7 +173,16 @@ class JpaPublicationWireSnapshotWriterTest {
         when(vertical.getSectionCode()).thenReturn(new CatalogueCode("TECH"));
         when(vertical.getTitle()).thenReturn("Career");
         when(vertical.getDescription()).thenReturn("Career description");
-        when(vertical.getIconAssetId()).thenReturn("career-icon");
+        when(vertical.getIconAssetId()).thenReturn(ICON.toString());
+        var icon = mock(FileAssetEntity.class);
+        when(icon.getId()).thenReturn(ICON);
+        when(icon.getStatus()).thenReturn(FileAssetStatus.READY);
+        when(icon.getKind()).thenReturn(FileAssetKind.COVER_IMAGE);
+        when(icon.getMediaType()).thenReturn("image/png");
+        when(icon.getSizeBytes()).thenReturn(3L);
+        when(icon.getSha256()).thenReturn("e".repeat(64));
+        when(icon.getObjectKey()).thenReturn("icons/career.png");
+        when(fileAssets.findById(ICON)).thenReturn(Optional.of(icon));
         when(vertical.getSortOrder()).thenReturn(0);
 
         when(goals.findAllByVertical_IdOrderBySortOrderAscCodeAsc(VERTICAL)).thenReturn(List.of(goal));
