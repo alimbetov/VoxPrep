@@ -95,6 +95,9 @@ public abstract class ContentRevisionEntity extends AbstractJpaEntity {
     @Column(name = "availability", nullable = false, length = 16)
     private AvailabilityStatus availability;
 
+    @Column(name = "approved_at")
+    private Instant approvedAt;
+
     @Column(name = "published_at")
     private Instant publishedAt;
 
@@ -165,8 +168,14 @@ public abstract class ContentRevisionEntity extends AbstractJpaEntity {
         this.lifecycle = ContentLifecycleStatus.READY_FOR_REVIEW;
     }
 
-    public final void publish(Instant publishedAt) {
+    public final void approve(Instant approvedAt) {
         requireLifecycle(ContentLifecycleStatus.READY_FOR_REVIEW);
+        this.approvedAt = Objects.requireNonNull(approvedAt, "approvedAt");
+        this.lifecycle = ContentLifecycleStatus.APPROVED;
+    }
+
+    public final void publish(Instant publishedAt) {
+        requireLifecycle(ContentLifecycleStatus.APPROVED);
         this.publishedAt = Objects.requireNonNull(publishedAt, "publishedAt");
         this.lifecycle = ContentLifecycleStatus.PUBLISHED;
     }
@@ -243,6 +252,10 @@ public abstract class ContentRevisionEntity extends AbstractJpaEntity {
 
     public AvailabilityStatus getAvailability() {
         return availability;
+    }
+
+    public Instant getApprovedAt() {
+        return approvedAt;
     }
 
     public Instant getPublishedAt() {
