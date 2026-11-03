@@ -126,6 +126,30 @@ class ContentStudioFoundationIntegrationTest {
     }
 
     @Test
+    void localizationWriteEndpointsRejectAnonymousAndNonAdminCallers() throws Exception {
+        UUID id = UUID.randomUUID();
+
+        mockMvc.perform(post("/admin/api/v1/content/localizations")
+                        .contentType("application/json")
+                        .content("{\"contentRevisionId\":\"" + id + "\",\"locale\":\"fr\",\"title\":\"Forged\"}"))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(get("/admin/api/v1/content/localizations/{id}", id))
+                .andExpect(status().isUnauthorized());
+
+        mockMvc.perform(post("/admin/content/localizations/{id}/approve", id)
+                        .with(user("learner").roles("USER"))
+                        .with(csrf())
+                        .param("expectedVersion", "0"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/admin/content/localizations/{id}/review", id)
+                        .with(user("admin").roles("ADMIN"))
+                        .param("expectedVersion", "0"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void localWebjarAssetsResolveWithoutAdminAuthentication() throws Exception {
         mockMvc.perform(get("/webjars/bootstrap/5.3.8/css/bootstrap.min.css"))
                 .andExpect(status().isOk());
