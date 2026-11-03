@@ -22,7 +22,7 @@ No hardcoded/test-only release manifests, fake transaction verification, mutable
 | API-05 | `GET /api/v1/content/{type}/{code}/revisions/{rev}` | Exact CURRENT endpoint exists for five learning types | Verify all 15 fields, each typed body, immutable checksum, reference membership, PREM authorization before ETag |
 | API-06 | `GET /api/v1/content/{type}/{code}/revisions/{rev}/localizations/{locale}/revisions/{lr}` | CURRENT exact approved revision exists | Freeze exact locale ref with publication; no retroactive approval or fallback substitution; 12-locale tests |
 | API-07 | `GET /api/v1/media/assets/{assetId}/content` | Direct asset route exists with CURRENT membership+PREM checks | Frozen media descriptor, RustFS bytes/hash, size, range/streaming, wrong asset ID, 304 authorization and load tests |
-| API-08 | `GET /api/v1/assessment/practice-tests/{code}/revisions/{rev}` | Missing; legacy unversioned controller only | Exact DTO: mode, passingScoreBasisPoints, ordered question refs and points; checksum, publication and PREM |
+| API-08 | `GET /api/v1/assessment/practice-tests/{code}/revisions/{rev}` | **IMPLEMENTED (backend CI), real Flutter E2E pending** | Exact DTO: mode, passingScoreBasisPoints, ordered question refs and points; checksum, publication and PREM |
 | API-09 | `GET /api/v1/assessment/questions/{code}/revisions/{rev}` | Exact CURRENT singleChoice endpoint implemented, backend CI passed on ebc7623 | Exact singleChoice DTO incl. options/index/skillCode/explanation, checksum, release membership, PREM |
 | API-10 | `GET /api/v1/configuration/locales?countryCode=XX` | Public twelve-language API implemented; backend CI passed on 670b15d; Flutter UI localization not qualified | Public strict `countryCode,defaultLocale,locales[{code,label}]` from 12-language registry, KZ preference, deterministic fallback and invalid ISO handling |
 | API-11 | `POST /api/v1/purchases/verify` | Missing; default `UnverifiedLifetimeEntitlementAdapter` denies FULL | Real Google Play / App Store server verification, transaction replay + token protection, persistence, refund/revoke, restore cross-device without app account |
@@ -61,10 +61,12 @@ Each entry must receive an evidence link to a test job and exact commit SHA befo
 
 ### R3 — Exact practice-test and question APIs (P0)
 - [ ] Trace current seven content types / question body / practice test member tables / publication refs.
-- [ ] Persist missing required fields explicitly where needed: mode `learn|exam|quick`, passingScoreBasisPoints, question points, skillCode. No invented defaults that misrepresent content.
+- [x] Explicit persisted `assessment_delivery_config` with mode and per-question points (no inferred defaults), plus migration and immutable ASSESSMENT release snapshot; 4d3ce249 backend CI accepted.
+- [ ] Add MVC authoring controls and qualify editorial validation for exam/learn/quick; test 12-locale body coverage.
 - [ ] Freeze ordered question ref/checksum in publication.
 - [x] Exact question `singleChoice` API-09 implemented with parent-test entitlement and negative tests (ebc7623).
-- [ ] Implement API-08 exact practice-test DTO; mode and per-question points are missing and must be persisted explicitly, not inferred.
+- [x] Exact practice-test DTO + frozen release document with required mode, score basis points, ordered question refs and weights; backend CI passed on 4d3ce249.
+- [ ] Real Flutter decoder → Drift → test session qualification pending.
 - [ ] Verify Flutter `AssessmentPayloadDecoder` strict keys with real HTTP fixtures for learn/exam/quick and empty/invalid question sets.
 
 ### R4 — Public locale configuration and 12-language support (P1)
@@ -117,3 +119,13 @@ Implementation refs: `4c3839e` (atomic wire writer), `bffa4be` (B7 real catalogu
 **Known incompleteness:** UI-authored section metadata and presentation mode are not in the backend catalogue model: current writer uses section codes as explicit title fallbacks and a deterministic GRID presentation. It does NOT yet implement editor-configurable section titles/icons and presentation policy. Locale pack variants are generated only where approved localizations exist, and fallback rules/tombstones require completion. Store receipt verification and practice-test mode/points remain P0 blockers. Flutter renderer qualification remains unresolved.
 
 **Release decision:** NO MERGE and NO FULL-API ACCEPTANCE until all P0 gates pass.
+
+## 2026-11-04 progress checkpoint
+
+**API-R3:** `5a8bc0c` adds persisted authoring mode+points, `590f7fb` freezes exact ASSESSMENT DTO, `c5b780d` adds the strict practice-test GET, `c2de2c4` adds HTTP/unit tests, `4d3ce249` adds real Spring/Postgres integrated publish→read acceptance. Backend Foundation and Infrastructure, Worker and RustFS Restart were GREEN at the earlier `4d3ce249` SHA. R3 is implemented for CURRENT but **NOT** accepted as complete cross-app production E2E.
+
+**Asset v2 correctness:** `d34c746` enforces READY UUID vertical icons and freezes them into pack asset lists; `780bee2` enables icon download only when its frozen catalogue and pack metadata prove membership, with distinct entitlement rules for actual learner content. Backend CI at `e89b10a` GREEN; live icon byte/hash qualification pending.
+
+**Renderer diagnostics:** The former 3-minute hang was replaced by explicit, rapid errors using same-container Riverpod bootstrap and real onboarding completion. A responsive ContentCard fix is implemented; its Renderer exact-SHA result is still pending. CI now prints canonical dart-format diffs, and those known differences have been corrected in the present source changes.
+
+**Remaining P0 (do not merge):** v2 real Backend+Postgres+RustFS+Flutter/Drift acceptance, all six decoded graph catalogues with valid icon assets, FREE/FULL deny and restore replay, Google Play/App Store server verification and store sandbox receipt tests, media streaming limits, and exact-SHA full CI including Renderer Acceptance. XML import remains deferred.

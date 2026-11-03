@@ -79,7 +79,10 @@ class ContentCard extends ConsumerWidget {
                     onPressed: () async {
                       final result = await ref
                           .read(learnerStateRepositoryProvider)
-                          .setFavorite(identity, favorite: !markerState.favorite);
+                          .setFavorite(
+                            identity,
+                            favorite: !markerState.favorite,
+                          );
                       try {
                         result.getOrThrow();
                       } catch (error) {

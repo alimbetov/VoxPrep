@@ -431,10 +431,14 @@ final class _LearnerApiFixture {
       // prove possession of the preceding installation credential.
       final authorization = request.headers['authorization'];
       if (registrationCalls == 1 && authorization != null) {
-        throw StateError('Initial installation registration must be anonymous.');
+        throw StateError(
+          'Initial installation registration must be anonymous.',
+        );
       }
       if (registrationCalls > 1 && authorization != 'Bearer $_token') {
-        throw StateError('Installation rotation must authenticate previous token.');
+        throw StateError(
+          'Installation rotation must authenticate previous token.',
+        );
       }
       final body = jsonDecode(request.body) as Map<String, dynamic>;
       if (body['installationId'] != _installationId) {
