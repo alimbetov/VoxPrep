@@ -29,15 +29,17 @@ INSERT INTO app.tts_voice (
 
 INSERT INTO app.tts_voice_model (
     id, version, created_at, updated_at, code, voice_id, engine, engine_version, model_version,
-    model_asset_id, config_asset_id, model_sha256, config_sha256, status,
+    model_asset_id, config_asset_id, model_sha256, config_sha256,
+    source_provider, source_repository, source_revision, status,
     license_name, license_reference, commercial_use_reviewed, approved_at
 ) VALUES (
     'b8000000-0000-0000-0000-000000000002', 0, now(), now(), 'en_US-lessac-medium-b8',
     'b8000000-0000-0000-0000-000000000001', 'PIPER', '1.4.2',
     'rhasspy-piper-voices-a517d785',
     'b8000000-0000-0000-0000-000000000003', 'b8000000-0000-0000-0000-000000000004',
-    :'model_sha', :'config_sha', 'ACTIVE', 'acceptance-fixture',
-    'rhasspy/piper-voices@a517d785c98755ae1bb6c1bffd48a83e10c2f36f', false, now()
+    :'model_sha', :'config_sha',
+    'huggingface', 'rhasspy/piper-voices', 'a517d785c98755ae1bb6c1bffd48a83e10c2f36f', 'ACTIVE',
+    'MIT', 'https://github.com/rhasspy/piper/blob/master/LICENSE.md', true, now()
 );
 
 UPDATE app.tts_voice
