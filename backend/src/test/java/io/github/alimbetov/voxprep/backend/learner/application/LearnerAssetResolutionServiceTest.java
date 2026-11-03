@@ -1,6 +1,7 @@
 package io.github.alimbetov.voxprep.backend.learner.application;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
 import io.github.alimbetov.voxprep.backend.asset.application.LearnerMediaService;
@@ -19,6 +20,7 @@ import io.github.alimbetov.voxprep.backend.sharedkernel.RevisionNumber;
 import io.github.alimbetov.voxprep.backend.sharedkernel.Sha256Digest;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 
@@ -28,8 +30,9 @@ class LearnerAssetResolutionServiceTest {
     private final ContentAssetBindingRepository repository = mock(ContentAssetBindingRepository.class);
     private final LearnerContentAccessPolicy access = mock(LearnerContentAccessPolicy.class);
     private final LearnerMediaService media = mock(LearnerMediaService.class);
+    private final LearnerWirePublicationService wire = mock(LearnerWirePublicationService.class);
     private final LearnerAssetResolutionService service =
-            new LearnerAssetResolutionService(publication, repository, access, media);
+            new LearnerAssetResolutionService(publication, repository, access, media, wire);
 
     @Test
     void deniesAssetsNotReferencedByCurrentManifest() {
@@ -75,6 +78,57 @@ class LearnerAssetResolutionServiceTest {
         assertThatThrownBy(() -> service.requirePublished(assetId))
                 .isInstanceOf(LearnerMediaService.MediaUnavailableException.class);
         verifyNoInteractions(access, media);
+    }
+
+    @Test
+    void deliversFrozenVerticalIconListedInPublishedPack() {
+        givenPublication();
+        when(repository.findAllByFileAsset_Id(assetId)).thenReturn(List.of());
+        var descriptor = new LearnerMediaService.MediaDescriptor(assetId, "bucket",
+                "icons/vertical.webp", "image/webp", 12L, "d".repeat(64), "\"" + "d".repeat(64) + "\"");
+        when(media.describe(assetId)).thenReturn(descriptor);
+        when(wire.catalogue("verticals", 1)).thenReturn(
+                new LearnerWirePublicationService.WireResponse(
+                        Map.of("items", List.of(Map.of("active", true,
+                                "iconAssetId", assetId.toString()))), "a".repeat(64)));
+        when(wire.root()).thenReturn(new LearnerWirePublicationService.WireResponse(
+                Map.of("contentVersion", 1, "packs", List.of(
+                        Map.of("code", "COLLECTION", "variant", "canonical", "revision", 1))),
+                "a".repeat(64)));
+        when(wire.pack("COLLECTION", "canonical", 1)).thenReturn(
+                new LearnerWirePublicationService.WireResponse(
+                        Map.of("assets", List.of(Map.of(
+                                "assetId", assetId.toString(),
+                                "checksumSha256", "d".repeat(64),
+                                "deliveryKey", "icons/vertical.webp",
+                                "mediaType", "image/webp", "sizeBytes", 12L))),
+                        "a".repeat(64)));
+
+        assertThat(service.requirePublished(assetId)).isEqualTo(descriptor);
+        verifyNoInteractions(access);
+    }
+
+    @Test
+    void iconNotPresentInFrozenPackIsDeniedBeforeDownloading() {
+        givenPublication();
+        when(repository.findAllByFileAsset_Id(assetId)).thenReturn(List.of());
+        var descriptor = new LearnerMediaService.MediaDescriptor(assetId, "bucket",
+                "icons/vertical.webp", "image/webp", 12L, "d".repeat(64), "\"" + "d".repeat(64) + "\"");
+        when(media.describe(assetId)).thenReturn(descriptor);
+        when(wire.catalogue("verticals", 1)).thenReturn(
+                new LearnerWirePublicationService.WireResponse(
+                        Map.of("items", List.of(Map.of("active", true,
+                                "iconAssetId", assetId.toString()))), "a".repeat(64)));
+        when(wire.root()).thenReturn(new LearnerWirePublicationService.WireResponse(
+                Map.of("contentVersion", 1, "packs", List.of(
+                        Map.of("code", "COLLECTION", "variant", "canonical", "revision", 1))),
+                "a".repeat(64)));
+        when(wire.pack("COLLECTION", "canonical", 1)).thenReturn(
+                new LearnerWirePublicationService.WireResponse(
+                        Map.of("assets", List.of()), "a".repeat(64)));
+
+        assertThatThrownBy(() -> service.requirePublished(assetId))
+                .isInstanceOf(LearnerMediaService.MediaUnavailableException.class);
     }
 
     private void givenPublication() {
