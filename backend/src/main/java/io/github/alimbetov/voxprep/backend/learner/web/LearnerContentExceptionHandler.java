@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice(assignableTypes = {
     LearnerContentController.class,
+    LearnerExactContentController.class,
     LearnerAssessmentController.class,
     LearnerMediaController.class
 })
