@@ -3,8 +3,8 @@ package io.github.alimbetov.voxprep.backend.asset.web;
 import io.github.alimbetov.voxprep.backend.asset.application.LearnerMediaService;
 import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentNotFoundException;
 import io.github.alimbetov.voxprep.backend.learner.application.LearnerPublishedMediaService;
+import io.github.alimbetov.voxprep.backend.learner.web.LearnerHttpCache;
 import jakarta.servlet.http.HttpServletRequest;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
@@ -21,8 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/v1/content")
 public class LearnerMediaController {
-
-    private static final String CACHE_CONTROL = "private, max-age=31536000, immutable";
 
     private final LearnerPublishedMediaService service;
 
@@ -47,7 +45,7 @@ public class LearnerMediaController {
         if (matches(ifNoneMatch, descriptor.etag())) {
             return ResponseEntity.status(HttpStatus.NOT_MODIFIED)
                     .header(HttpHeaders.ETAG, descriptor.etag())
-                    .header(HttpHeaders.CACHE_CONTROL, CACHE_CONTROL)
+                    .header(HttpHeaders.CACHE_CONTROL, LearnerHttpCache.CACHE_CONTROL)
                     .build();
         }
 
@@ -56,7 +54,7 @@ public class LearnerMediaController {
                 .contentType(MediaType.parseMediaType(content.mediaType()))
                 .contentLength(descriptor.sizeBytes())
                 .header(HttpHeaders.ETAG, descriptor.etag())
-                .header(HttpHeaders.CACHE_CONTROL, CACHE_CONTROL)
+                .header(HttpHeaders.CACHE_CONTROL, LearnerHttpCache.CACHE_CONTROL)
                 .header("X-Content-Type-Options", "nosniff")
                 .body(content.bytes());
     }
@@ -81,20 +79,6 @@ public class LearnerMediaController {
     }
 
     static boolean matches(String ifNoneMatch, String currentEtag) {
-        if (ifNoneMatch == null || ifNoneMatch.isBlank()) {
-            return false;
-        }
-        return Arrays.stream(ifNoneMatch.split(","))
-                .map(String::trim)
-                .anyMatch(candidate -> "*".equals(candidate)
-                        || weakValue(candidate).equals(weakValue(currentEtag)));
-    }
-
-    private static String weakValue(String etag) {
-        String value = etag == null ? "" : etag.trim();
-        if (value.startsWith("W/")) {
-            value = value.substring(2).trim();
-        }
-        return value;
+        return LearnerHttpCache.matches(ifNoneMatch, currentEtag);
     }
 }
