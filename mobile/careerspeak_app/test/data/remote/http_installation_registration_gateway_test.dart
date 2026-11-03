@@ -99,28 +99,29 @@ void main() {
       'INSTALLATION_REGISTRATION_RESPONSE_INVALID',
     );
   });
+
   test(
     'uses installation authentication when rotating an existing token',
     () async {
-    final store = _TestCredentialStore();
-    await store.writeInstallationToken(InstallationToken('previous-token'));
-    final apiClient = _FakeApiClient(
-      Success<ApiResponse>(
-        ApiResponse(
-          statusCode: 200,
-          headers: const <String, String>{},
-          jsonBody: const <String, Object?>{'installationToken': 'new-token'},
+      final store = _TestCredentialStore();
+      await store.writeInstallationToken(InstallationToken('previous-token'));
+      final apiClient = _FakeApiClient(
+        Success<ApiResponse>(
+          ApiResponse(
+            statusCode: 200,
+            headers: const <String, String>{},
+            jsonBody: const <String, Object?>{'installationToken': 'new-token'},
+          ),
         ),
-      ),
-    );
-    final gateway = HttpInstallationRegistrationGateway(
-      apiClient: apiClient,
-      credentialStore: store,
-    );
+      );
+      final gateway = HttpInstallationRegistrationGateway(
+        apiClient: apiClient,
+        credentialStore: store,
+      );
 
-    final result = await gateway.register(InstallationId('installation-123'));
+      final result = await gateway.register(InstallationId('installation-123'));
 
-    expect(result.getOrThrow().value, 'new-token');
+      expect(result.getOrThrow().value, 'new-token');
       expect(
         apiClient.requests.single.authentication,
         ApiAuthentication.installation,
@@ -131,22 +132,22 @@ void main() {
   test(
     'uses anonymous authentication on first registration with empty store',
     () async {
-    final store = _TestCredentialStore();
-    final apiClient = _FakeApiClient(
-      Success<ApiResponse>(
-        ApiResponse(
-          statusCode: 200,
-          headers: const <String, String>{},
-          jsonBody: const <String, Object?>{'installationToken': 'new-token'},
+      final store = _TestCredentialStore();
+      final apiClient = _FakeApiClient(
+        Success<ApiResponse>(
+          ApiResponse(
+            statusCode: 200,
+            headers: const <String, String>{},
+            jsonBody: const <String, Object?>{'installationToken': 'new-token'},
+          ),
         ),
-      ),
-    );
-    final gateway = HttpInstallationRegistrationGateway(
-      apiClient: apiClient,
-      credentialStore: store,
-    );
+      );
+      final gateway = HttpInstallationRegistrationGateway(
+        apiClient: apiClient,
+        credentialStore: store,
+      );
 
-    await gateway.register(InstallationId('installation-123'));
+      await gateway.register(InstallationId('installation-123'));
 
       expect(apiClient.requests.single.authentication, ApiAuthentication.none);
     },
