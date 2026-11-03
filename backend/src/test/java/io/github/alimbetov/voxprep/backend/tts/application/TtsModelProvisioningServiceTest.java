@@ -34,7 +34,11 @@ class TtsModelProvisioningServiceTest {
         TtsModelCatalogGateway gateway = mock(TtsModelCatalogGateway.class);
         TtsModelSelector selector = new TtsModelSelector("de_DE", "thorsten", "high");
         TtsModelCatalogGateway.ModelDescriptor descriptor = new TtsModelCatalogGateway.ModelDescriptor(
+                "huggingface",
+                "rhasspy/piper-voices",
                 "rev-1",
+                "piper-1",
+                "thorsten-high",
                 "https://example.invalid/model.onnx",
                 "https://example.invalid/model.onnx.json",
                 "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
