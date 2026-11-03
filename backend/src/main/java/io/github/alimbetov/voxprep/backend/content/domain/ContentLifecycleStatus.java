@@ -4,6 +4,7 @@ public enum ContentLifecycleStatus {
     DRAFT,
     READY_FOR_AUDIO,
     READY_FOR_REVIEW,
+    APPROVED,
     PUBLISHED,
     ARCHIVED
 }
