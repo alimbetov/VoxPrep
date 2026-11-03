@@ -81,7 +81,7 @@
 
         <div class="card studio-card mb-4">
             <div class="card-body p-4">
-                <h2 class="h5 mb-3" th:text="'Body · ' + ${revision.contentType}">Body</h2>
+                <h2 class="h5 mb-3" th:text="${'Body · ' + revision.contentType}">Body</h2>
 
                 <div th:if="${form.bodyType == 'vocabulary'}" class="row g-3">
                     <div class="col-md-6"><label class="form-label">Term</label><input class="form-control" th:field="*{term}"></div>
