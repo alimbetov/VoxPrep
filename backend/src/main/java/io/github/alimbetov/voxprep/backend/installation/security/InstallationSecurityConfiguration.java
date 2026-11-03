@@ -67,7 +67,9 @@ public class InstallationSecurityConfiguration {
             InstallationAuthenticationFilter installationAuthenticationFilter) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
-                .authorizeHttpRequests(authorize -> authorize.anyRequest().permitAll())
+                .authorizeHttpRequests(authorize -> authorize
+                        .requestMatchers(LearnerApiRoutePolicy::isProtected).authenticated()
+                        .anyRequest().permitAll())
                 .addFilterBefore(installationAuthenticationFilter, AnonymousAuthenticationFilter.class);
         return http.build();
     }
