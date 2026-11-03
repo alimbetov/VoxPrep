@@ -66,8 +66,21 @@ public class FileAssetEntity extends AbstractJpaEntity {
         this.sha256 = sha256(sha256);
     }
 
-    public void updateStatus(FileAssetStatus status) {
-        this.status = Objects.requireNonNull(status, "status");
+    public void markReady() {
+        requireStatus(FileAssetStatus.REGISTERED, FileAssetStatus.READY);
+        status = FileAssetStatus.READY;
+    }
+
+    public void markFailed() {
+        requireStatus(FileAssetStatus.REGISTERED, FileAssetStatus.FAILED);
+        status = FileAssetStatus.FAILED;
+    }
+
+    public void markQuarantined() {
+        if (status != FileAssetStatus.REGISTERED && status != FileAssetStatus.READY) {
+            throw new IllegalStateException("FileAsset cannot transition from " + status + " to QUARANTINED");
+        }
+        status = FileAssetStatus.QUARANTINED;
     }
 
     public FileAssetKind getKind() {
@@ -96,6 +109,12 @@ public class FileAssetEntity extends AbstractJpaEntity {
 
     public String getSha256() {
         return sha256;
+    }
+
+    private void requireStatus(FileAssetStatus expected, FileAssetStatus target) {
+        if (status != expected) {
+            throw new IllegalStateException("FileAsset cannot transition from " + status + " to " + target);
+        }
     }
 
     private static String required(String value, String field, int maxLength) {

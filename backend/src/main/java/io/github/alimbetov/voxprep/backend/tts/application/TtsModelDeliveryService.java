@@ -1,5 +1,6 @@
 package io.github.alimbetov.voxprep.backend.tts.application;
 
+import io.github.alimbetov.voxprep.backend.asset.application.ObjectStoragePort;
 import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetKind;
 import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetStatus;
 import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetEntity;
@@ -9,10 +10,6 @@ import java.util.NoSuchElementException;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import software.amazon.awssdk.core.ResponseBytes;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
-import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 
 @Service
 public class TtsModelDeliveryService {
@@ -23,15 +20,15 @@ public class TtsModelDeliveryService {
 
     private final TtsVoiceModelRepository modelRepository;
     private final FileAssetRepository assetRepository;
-    private final S3Client s3Client;
+    private final ObjectStoragePort objectStorage;
 
     public TtsModelDeliveryService(
             TtsVoiceModelRepository modelRepository,
             FileAssetRepository assetRepository,
-            S3Client s3Client) {
+            ObjectStoragePort objectStorage) {
         this.modelRepository = modelRepository;
         this.assetRepository = assetRepository;
-        this.s3Client = s3Client;
+        this.objectStorage = objectStorage;
     }
 
     @Transactional(readOnly = true)
@@ -46,9 +43,8 @@ public class TtsModelDeliveryService {
         FileAssetKind kind = type == ArtifactType.MODEL ? FileAssetKind.TTS_MODEL : FileAssetKind.TTS_CONFIG;
         String expectedHash = type == ArtifactType.MODEL ? model.getModelSha256() : model.getConfigSha256();
         var asset = requireAsset(assetId, kind, expectedHash);
-        ResponseBytes<GetObjectResponse> object = s3Client.getObjectAsBytes(GetObjectRequest.builder()
-                .bucket(asset.getBucket()).key(asset.getObjectKey()).build());
-        return new Artifact(object.asByteArray(), asset.getMediaType(), asset.getSha256());
+        byte[] bytes = objectStorage.read(asset.getBucket(), asset.getObjectKey());
+        return new Artifact(bytes, asset.getMediaType(), asset.getSha256());
     }
 
     private FileAssetEntity requireAsset(UUID id, FileAssetKind kind, String expectedHash) {

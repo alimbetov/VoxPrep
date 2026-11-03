@@ -38,3 +38,5 @@ databaseChangeLog:
       file: db/changelog/b3-p3-assessment-authoring.sql
   - include:
       file: db/changelog/b3-p4-content-localization-authoring.sql
+  - include:
+      file: db/changelog/b4-p1-media-asset-kinds.sql
