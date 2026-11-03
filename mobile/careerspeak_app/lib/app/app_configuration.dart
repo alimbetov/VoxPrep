@@ -60,8 +60,7 @@ final class ApiHostPolicy {
       }
       if (stagingHosts.isEmpty || !stagingHosts.contains(host)) {
         throw AppConfigurationException(
-          'Staging API host is not present in CAREERSPEAK_STAGING_API_HOSTS: '
-          '$host',
+          'Staging API host is not present in VOXPREP_STAGING_HOSTS: $host',
         );
       }
       return;
@@ -74,8 +73,7 @@ final class ApiHostPolicy {
     }
     if (productionHosts.isEmpty || !productionHosts.contains(host)) {
       throw AppConfigurationException(
-        'Production API host is not present in '
-        'CAREERSPEAK_PRODUCTION_API_HOSTS: $host',
+        'Production API host is not present in VOXPREP_PROD_HOSTS: $host',
       );
     }
   }
@@ -115,7 +113,7 @@ final class AppConfiguration {
     final networkEnabled = normalizedApiBaseUrl.isNotEmpty;
     final apiBaseUri = networkEnabled
         ? _parseApiBaseUri(normalizedApiBaseUrl)
-        : Uri.parse('https://api.careerspeak.invalid');
+        : Uri.parse('https://api.voxprep.invalid');
 
     if (networkEnabled) {
       hostPolicy.validate(environment, apiBaseUri);
@@ -124,12 +122,12 @@ final class AppConfiguration {
     final developmentMocksDefault =
         environment == AppEnvironment.development && !releaseMode;
     final mockBillingRequested = _parseBoolean(
-      'CAREERSPEAK_MOCK_BILLING',
+      'VOXPREP_MOCK_BILLING',
       mockBilling,
       defaultValue: developmentMocksDefault,
     );
     final mockPurchaseVerificationRequested = _parseBoolean(
-      'CAREERSPEAK_MOCK_PURCHASE_VERIFICATION',
+      'VOXPREP_MOCK_PURCHASE',
       mockPurchaseVerification,
       defaultValue: developmentMocksDefault,
     );
@@ -169,7 +167,7 @@ final class AppConfiguration {
   Uri requireApiBaseUri() {
     if (!networkEnabled) {
       throw const AppConfigurationException(
-        'CAREERSPEAK_API_BASE_URL is required before Backend networking can be composed.',
+        'VOXPREP_API_URL is required before Backend networking can be composed.',
       );
     }
     return apiBaseUri;
@@ -186,9 +184,7 @@ final class AppConfiguration {
       'development' => AppEnvironment.development,
       'staging' => AppEnvironment.staging,
       'production' => AppEnvironment.production,
-      _ => throw AppConfigurationException(
-        'Unknown CAREERSPEAK_APP_ENV value: $raw',
-      ),
+      _ => throw AppConfigurationException('Unknown VOXPREP_ENV value: $raw'),
     };
   }
 
@@ -216,7 +212,7 @@ final class AppConfiguration {
         uri.hasQuery ||
         uri.hasFragment) {
       throw AppConfigurationException(
-        'CAREERSPEAK_API_BASE_URL must be an absolute HTTP(S) URI without '
+        'VOXPREP_API_URL must be an absolute HTTP(S) URI without '
         'credentials, query, or fragment.',
       );
     }
@@ -224,18 +220,14 @@ final class AppConfiguration {
   }
 }
 
-const _appEnvironmentValue = String.fromEnvironment('CAREERSPEAK_APP_ENV');
-const _apiBaseUrlValue = String.fromEnvironment('CAREERSPEAK_API_BASE_URL');
-const _mockBillingValue = String.fromEnvironment('CAREERSPEAK_MOCK_BILLING');
+const _appEnvironmentValue = String.fromEnvironment('VOXPREP_ENV');
+const _apiBaseUrlValue = String.fromEnvironment('VOXPREP_API_URL');
+const _mockBillingValue = String.fromEnvironment('VOXPREP_MOCK_BILLING');
 const _mockPurchaseVerificationValue = String.fromEnvironment(
-  'CAREERSPEAK_MOCK_PURCHASE_VERIFICATION',
+  'VOXPREP_MOCK_PURCHASE',
 );
-const _stagingApiHostsValue = String.fromEnvironment(
-  'CAREERSPEAK_STAGING_API_HOSTS',
-);
-const _productionApiHostsValue = String.fromEnvironment(
-  'CAREERSPEAK_PRODUCTION_API_HOSTS',
-);
+const _stagingApiHostsValue = String.fromEnvironment('VOXPREP_STAGING_HOSTS');
+const _productionApiHostsValue = String.fromEnvironment('VOXPREP_PROD_HOSTS');
 
 final appConfigurationProvider = Provider<AppConfiguration>((ref) {
   return AppConfiguration.fromBuildValues(
