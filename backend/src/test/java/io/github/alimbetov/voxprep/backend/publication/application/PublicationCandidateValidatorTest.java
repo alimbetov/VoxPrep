@@ -2,6 +2,7 @@ package io.github.alimbetov.voxprep.backend.publication.application;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -37,6 +38,44 @@ class PublicationCandidateValidatorTest {
         assertEquals(left.canonicalRefs(), right.canonicalRefs());
         assertEquals(left.rootSha256(), right.rootSha256());
         assertEquals(64, left.rootSha256().length());
+    }
+
+    @Test
+    void warningDoesNotBlockRootOrValidity() {
+        PublicationExactContentRef phrase = ref("phrase", ContentType.PHRASE, 1, A);
+        PublicationExactContentResolver resolver = identity -> Optional.ofNullable(Map.of(
+                phrase.identity(), resolved(phrase, ContentLifecycleStatus.APPROVED)).get(identity));
+        PublicationMediaValidator mediaValidator = ref -> List.of(new PublicationValidationIssue(
+                PublicationValidationSeverity.WARNING,
+                PublicationValidationCode.MISSING_RECOMMENDED_AUDIO,
+                ref.identityKey(),
+                "role=pronunciation"));
+
+        PublicationValidationResult result = new PublicationCandidateValidator(resolver, mediaValidator)
+                .validate(List.of(phrase));
+
+        assertTrue(result.valid());
+        assertTrue(result.hasWarnings());
+        assertNotNull(result.rootSha256());
+        assertEquals(PublicationValidationSeverity.WARNING, result.issues().get(0).severity());
+    }
+
+    @Test
+    void mediaErrorBlocksRootAndValidity() {
+        PublicationExactContentRef shadowing = ref("shadowing", ContentType.SHADOWING, 1, A);
+        PublicationExactContentResolver resolver = identity -> Optional.ofNullable(Map.of(
+                shadowing.identity(), resolved(shadowing, ContentLifecycleStatus.APPROVED)).get(identity));
+        PublicationMediaValidator mediaValidator = ref -> List.of(new PublicationValidationIssue(
+                PublicationValidationSeverity.ERROR,
+                PublicationValidationCode.MISSING_REQUIRED_AUDIO,
+                ref.identityKey(),
+                "role=shadowing"));
+
+        PublicationValidationResult result = new PublicationCandidateValidator(resolver, mediaValidator)
+                .validate(List.of(shadowing));
+
+        assertFalse(result.valid());
+        assertNull(result.rootSha256());
     }
 
     @Test
