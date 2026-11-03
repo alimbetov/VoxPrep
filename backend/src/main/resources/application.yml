@@ -75,3 +75,7 @@ voxprep:
     api-key: ${VOXPREP_WORKER_API_KEY:${worker_api_key}}
     url-ttl: ${VOXPREP_WORKER_MODEL_URL_TTL:5m}
     lease-duration: ${VOXPREP_WORKER_LEASE_DURATION:2m}
+  security:
+    admin:
+      username: ${VOXPREP_ADMIN_USERNAME:admin}
+      password: ${VOXPREP_ADMIN_PASSWORD:888}
