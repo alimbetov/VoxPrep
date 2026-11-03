@@ -36,7 +36,8 @@ final class HttpInstallationRegistrationGateway
     // No insecure fallback to anonymous registration after a 401.
     final bool hasExistingToken;
     try {
-      hasExistingToken = await _credentialStore?.readInstallationToken() != null;
+      hasExistingToken =
+          await _credentialStore?.readInstallationToken() != null;
     } on Object {
       return const FailureResult<InstallationToken>(
         ApplicationFailure(
