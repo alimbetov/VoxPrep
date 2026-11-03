@@ -1,6 +1,7 @@
 package io.github.alimbetov.voxprep.backend.infrastructure.storage;
 
 import io.github.alimbetov.voxprep.backend.asset.application.ObjectStoragePort;
+import java.io.InputStream;
 import java.util.Map;
 import java.util.Objects;
 import org.springframework.stereotype.Component;
@@ -34,6 +35,14 @@ public class RustFsObjectStorageAdapter implements ObjectStoragePort {
                 .key(required(objectKey, "objectKey"))
                 .build());
         return object.asByteArray();
+    }
+
+    @Override
+    public InputStream openRead(String bucket, String objectKey) {
+        return s3Client.getObject(GetObjectRequest.builder()
+                .bucket(required(bucket, "bucket"))
+                .key(required(objectKey, "objectKey"))
+                .build());
     }
 
     @Override
