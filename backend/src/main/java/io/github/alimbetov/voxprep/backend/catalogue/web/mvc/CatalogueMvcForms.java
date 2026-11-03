@@ -1,9 +1,12 @@
 package io.github.alimbetov.voxprep.backend.catalogue.web.mvc;
 
+import io.github.alimbetov.voxprep.backend.catalogue.domain.CatalogueCode;
+import io.github.alimbetov.voxprep.backend.catalogue.domain.CatalogueConstraints;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Size;
 import java.util.UUID;
 
 public final class CatalogueMvcForms {
@@ -13,12 +16,12 @@ public final class CatalogueMvcForms {
     private static final String AVAILABILITY_PATTERN = "ACTIVE|INACTIVE";
 
     public static final class VerticalForm {
-        private Long expectedVersion = 0L;
-        @NotBlank private String code;
-        @NotBlank private String sectionCode;
-        @NotBlank private String title;
-        @NotBlank private String description;
-        @NotBlank private String iconAssetId;
+        @NotNull @Min(0) private Long expectedVersion = 0L;
+        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP) private String code;
+        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP) private String sectionCode;
+        @NotBlank @Size(max = CatalogueConstraints.TITLE_MAX_LENGTH) private String title;
+        @NotBlank @Size(max = CatalogueConstraints.DESCRIPTION_MAX_LENGTH) private String description;
+        @NotBlank @Size(max = CatalogueConstraints.EXTERNAL_ID_MAX_LENGTH) private String iconAssetId;
         @NotNull @Min(0) private Integer sortOrder = 0;
         @NotBlank @Pattern(regexp = AVAILABILITY_PATTERN) private String availability = "ACTIVE";
 
@@ -41,11 +44,11 @@ public final class CatalogueMvcForms {
     }
 
     public static final class GoalForm {
-        private Long expectedVersion = 0L;
-        @NotBlank private String code;
+        @NotNull @Min(0) private Long expectedVersion = 0L;
+        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP) private String code;
         @NotNull private UUID verticalId;
-        @NotBlank private String title;
-        @NotBlank private String description;
+        @NotBlank @Size(max = CatalogueConstraints.TITLE_MAX_LENGTH) private String title;
+        @NotBlank @Size(max = CatalogueConstraints.DESCRIPTION_MAX_LENGTH) private String description;
         @NotNull @Min(0) private Integer sortOrder = 0;
         @NotBlank @Pattern(regexp = AVAILABILITY_PATTERN) private String availability = "ACTIVE";
 
@@ -66,13 +69,13 @@ public final class CatalogueMvcForms {
     }
 
     public static final class TrackForm {
-        private Long expectedVersion = 0L;
-        @NotBlank private String code;
+        @NotNull @Min(0) private Long expectedVersion = 0L;
+        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP) private String code;
         @NotNull private UUID goalId;
-        @NotBlank private String title;
-        @NotBlank private String description;
-        @NotBlank private String levelCode;
-        private String careerTrackCode;
+        @NotBlank @Size(max = CatalogueConstraints.TITLE_MAX_LENGTH) private String title;
+        @NotBlank @Size(max = CatalogueConstraints.DESCRIPTION_MAX_LENGTH) private String description;
+        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP) private String levelCode;
+        @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = "^$|" + CatalogueCode.REGEXP) private String careerTrackCode;
         @NotNull @Min(0) private Integer sortOrder = 0;
         @NotBlank @Pattern(regexp = AVAILABILITY_PATTERN) private String availability = "ACTIVE";
 
@@ -97,11 +100,11 @@ public final class CatalogueMvcForms {
     }
 
     public static final class CollectionForm {
-        private Long expectedVersion = 0L;
-        @NotBlank private String code;
+        @NotNull @Min(0) private Long expectedVersion = 0L;
+        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP) private String code;
         @NotNull private UUID trackId;
-        @NotBlank private String title;
-        @NotBlank private String description;
+        @NotBlank @Size(max = CatalogueConstraints.TITLE_MAX_LENGTH) private String title;
+        @NotBlank @Size(max = CatalogueConstraints.DESCRIPTION_MAX_LENGTH) private String description;
         @NotBlank @Pattern(regexp = "FREE|FULL") private String accessLevel = "FREE";
         @NotNull @Min(0) private Integer sortOrder = 0;
         @NotBlank @Pattern(regexp = AVAILABILITY_PATTERN) private String availability = "ACTIVE";
