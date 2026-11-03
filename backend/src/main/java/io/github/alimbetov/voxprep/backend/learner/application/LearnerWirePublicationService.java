@@ -7,10 +7,6 @@ import io.github.alimbetov.voxprep.backend.publication.persistence.PublicationRe
 import io.github.alimbetov.voxprep.backend.publication.persistence.PublicationWireDocumentEntity;
 import io.github.alimbetov.voxprep.backend.publication.persistence.PublicationWireDocumentKind;
 import io.github.alimbetov.voxprep.backend.publication.persistence.PublicationWireDocumentRepository;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -28,13 +24,6 @@ import tools.jackson.databind.ObjectMapper;
 @Service
 public class LearnerWirePublicationService {
 
-    private static final List<String> ROOT_KEYS = List.of(
-            "schemaVersion", "contentVersion", "minimumAppContractVersion",
-            "publishedAt", "packs", "practiceTests", "catalogues",
-            "localeFallbacks", "tombstones");
-    private static final List<String> PACK_KEYS = List.of(
-            "schemaVersion", "code", "variant", "revision",
-            "contents", "localizations", "assets", "contentAssets");
     private static final List<String> REQUIRED_CATALOGUES = List.of(
             "vertical-sections", "verticals", "vertical-presentation",
             "learning-goals", "learning-tracks", "learning-collections");
@@ -76,7 +65,7 @@ public class LearnerWirePublicationService {
         if (!checksum.equals(document.getChecksumSha256())) {
             throw unavailable("pack checksum differs from frozen root");
         }
-        verifyDigest(document, body, PACK_KEYS);
+        verifyDigest(document, body, false);
         return new WireResponse(body, checksum);
     }
 
@@ -118,7 +107,7 @@ public class LearnerWirePublicationService {
                 "root", "-", release.getContentVersion());
         var body = decode(document);
         requireNumber(body, "contentVersion", release.getContentVersion());
-        verifyDigest(document, body, ROOT_KEYS);
+        verifyDigest(document, body, true);
         int schemaVersion = number(body, "schemaVersion");
         if (schemaVersion < 1 || schemaVersion > 2) {
             throw unavailable("unsupported root manifest version");
@@ -188,22 +177,18 @@ public class LearnerWirePublicationService {
     }
 
     private void verifyDigest(
-            PublicationWireDocumentEntity document, Map<String, Object> body, List<String> exactCanonicalOrder) {
-        Map<String, Object> hashBody = new LinkedHashMap<>(body);
-        hashBody.remove("checksum");
-        if (!List.copyOf(hashBody.keySet()).equals(exactCanonicalOrder)) {
-            throw unavailable("wire document differs from Flutter canonical field order");
-        }
+            PublicationWireDocumentEntity document, Map<String, Object> body, boolean root) {
         try {
-            byte[] canonical = json.writeValueAsString(hashBody).getBytes(StandardCharsets.UTF_8);
-            byte[] hash = MessageDigest.getInstance("SHA-256").digest(canonical);
-            if (!HexFormat.of().formatHex(hash).equals(document.getChecksumSha256())) {
+            String actual = root
+                    ? FlutterPublicationCanonicalHash.root(json, body)
+                    : FlutterPublicationCanonicalHash.pack(json, body);
+            if (!actual.equals(document.getChecksumSha256())) {
                 throw unavailable("wire document Flutter checksum mismatch");
             }
         } catch (LearnerWireSnapshotUnavailableException exception) {
             throw exception;
-        } catch (Exception exception) {
-            throw unavailable("cannot verify immutable wire checksum");
+        } catch (RuntimeException exception) {
+            throw unavailable("wire document cannot be canonically verified");
         }
     }
 
