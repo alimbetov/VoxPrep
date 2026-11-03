@@ -50,3 +50,5 @@ databaseChangeLog:
       file: db/changelog/b6-p2-publication-candidate-manifest.sql
   - include:
       file: db/changelog/b7-r3-tts-semantic-idempotency.sql
+  - include:
+      file: db/changelog/b7-r4-content-asset-binding.sql
