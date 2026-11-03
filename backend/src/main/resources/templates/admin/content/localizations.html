@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/fragments/shell :: layout('Content localizations', 'content', ~{::main})}">
+<main>
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <span class="badge text-bg-secondary mb-2">MVC-R4.1</span>
+            <h1 class="h3 mb-1">Content localizations</h1>
+            <p class="text-secondary" th:text="${contentRevision.contentCode}">Content code</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" th:href="@{/admin/content/revisions/{id}/edit(id=${contentRevision.id})}">Back to content</a>
+            <a class="btn btn-primary" th:href="@{/admin/content/revisions/{id}/localizations/new(id=${contentRevision.id})}">New localization</a>
+        </div>
+    </div>
+    <div th:if="${#lists.isEmpty(localizations)}" class="alert alert-info">No localization revisions yet.</div>
+    <div th:unless="${#lists.isEmpty(localizations)}" class="card studio-card">
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>Locale</th><th>Revision</th><th>State</th><th>Title</th><th></th></tr></thead>
+                <tbody>
+                <tr th:each="item : ${localizations}">
+                    <td th:text="${item.locale}">en-US</td>
+                    <td th:text="${item.localizationRevisionNumber}">1</td>
+                    <td th:text="${item.lifecycle}">DRAFT</td>
+                    <td th:text="${item.title}">Title</td>
+                    <td><a class="btn btn-sm btn-outline-primary" th:href="@{/admin/content/localizations/{id}/edit(id=${item.id})}">Open</a></td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+</html>
