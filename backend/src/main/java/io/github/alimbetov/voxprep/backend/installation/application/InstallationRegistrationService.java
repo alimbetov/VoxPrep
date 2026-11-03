@@ -10,6 +10,7 @@ import java.time.Clock;
 import java.util.Base64;
 import java.util.HexFormat;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +23,7 @@ public class InstallationRegistrationService {
     private final SecureRandom secureRandom;
     private final Clock clock;
 
+    @Autowired
     public InstallationRegistrationService(InstallationRepository repository) {
         this(repository, new SecureRandom(), Clock.systemUTC());
     }
@@ -37,16 +39,16 @@ public class InstallationRegistrationService {
 
     @Transactional
     public RegistrationResult register(UUID installationId) {
-        var token = generateToken();
-        var tokenSha256 = sha256(token);
+        String token = generateToken();
+        String tokenSha256 = sha256(token);
         var issuedAt = clock.instant();
 
-        var installation = repository.findByInstallationId(installationId)
-                .map(existing -> {
-                    existing.rotateToken(tokenSha256, issuedAt);
-                    return existing;
-                })
-                .orElseGet(() -> new InstallationEntity(installationId, tokenSha256, issuedAt));
+        InstallationEntity installation = repository.findByInstallationId(installationId).orElse(null);
+        if (installation == null) {
+            installation = new InstallationEntity(installationId, tokenSha256, issuedAt);
+        } else {
+            installation.rotateToken(tokenSha256, issuedAt);
+        }
 
         repository.save(installation);
         return new RegistrationResult(installationId, token, issuedAt);
