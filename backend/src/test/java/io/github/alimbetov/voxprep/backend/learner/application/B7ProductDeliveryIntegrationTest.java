@@ -136,7 +136,7 @@ class B7ProductDeliveryIntegrationTest {
                 List.of(ref),
                 Instant.parse("2026-11-03T14:05:00Z"));
         assertThat(validation.valid()).isTrue();
-        assertThat(validation.warnings()).isEmpty();
+        assertThat(validation.hasWarnings()).isFalse();
 
         var published = publisher.publish(candidate.getId(), Instant.parse("2026-11-03T14:10:00Z"));
         assertThat(published.replayed()).isFalse();
