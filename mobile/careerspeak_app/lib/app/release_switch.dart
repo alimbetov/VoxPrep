@@ -17,7 +17,7 @@ final class AppRunModePolicy {
 }
 
 const _releaseFlagEnabled = bool.fromEnvironment(
-  'CAREERSPEAK_RELEASE_ENABLED',
+  'VOXPREP_RELEASE',
   defaultValue: false,
 );
 
