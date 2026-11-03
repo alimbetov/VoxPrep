@@ -5,8 +5,9 @@ import java.util.regex.Pattern;
 
 public record CatalogueCode(String value) {
 
-    public static final int MAX_LENGTH = 128;
-    private static final Pattern PATTERN = Pattern.compile("^[A-Z0-9][A-Z0-9._-]*$");
+    public static final int MAX_LENGTH = CatalogueConstraints.CODE_MAX_LENGTH;
+    public static final String REGEXP = CatalogueConstraints.CODE_PATTERN;
+    private static final Pattern PATTERN = Pattern.compile(REGEXP);
 
     public CatalogueCode {
         Objects.requireNonNull(value, "value");
@@ -15,7 +16,7 @@ public record CatalogueCode(String value) {
         }
         if (!PATTERN.matcher(value).matches()) {
             throw new IllegalArgumentException(
-                    "Catalogue code must match ^[A-Z0-9][A-Z0-9._-]*$ without normalization");
+                    "Catalogue code must match " + REGEXP + " without normalization");
         }
     }
 
