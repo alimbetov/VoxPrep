@@ -97,6 +97,19 @@ class ContentTtsPlannerTest {
     }
 
     @Test
+    void rejectsTopicWhenAnySectionNormalizesToBlank() {
+        var revision = snapshot(
+                ContentType.TOPIC,
+                new ContentRevisionSnapshot.TopicBody(List.of(
+                        new ContentRevisionSnapshot.TopicSection("Heading one", "First section."),
+                        new ContentRevisionSnapshot.TopicSection("Heading two", " \t\r\n "))));
+
+        assertThatThrownBy(() -> planner.plan(revision, "en-US"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("must not be blank");
+    }
+
+    @Test
     void plansShadowingFromTranscriptOnly() {
         var revision = snapshot(
                 ContentType.SHADOWING,
@@ -137,6 +150,15 @@ class ContentTtsPlannerTest {
         var invalid = snapshot(
                 ContentType.PHRASE,
                 new ContentRevisionSnapshot.VocabularyBody("term", "definition", "noun", List.of("example")));
+
+        assertThatThrownBy(() -> planner.plan(invalid, "en-US"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("does not match content type");
+    }
+
+    @Test
+    void rejectsNullBodyFailClosed() {
+        var invalid = snapshot(ContentType.PHRASE, null);
 
         assertThatThrownBy(() -> planner.plan(invalid, "en-US"))
                 .isInstanceOf(IllegalArgumentException.class)
