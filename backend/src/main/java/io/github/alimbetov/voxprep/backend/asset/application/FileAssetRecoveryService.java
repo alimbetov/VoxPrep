@@ -2,6 +2,8 @@ package io.github.alimbetov.voxprep.backend.asset.application;
 
 import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetStatus;
 import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetRepository;
+import java.io.IOException;
+import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
@@ -21,6 +23,9 @@ import org.springframework.transaction.support.TransactionTemplate;
  */
 @Service
 public class FileAssetRecoveryService {
+
+    /** Explicit per-object cap; oversized assets require a separate, deliberate recovery path. */
+    private static final long MAX_VERIFICATION_BYTES = 64L * 1024 * 1024;
 
     private final FileAssetRepository repository;
     private final ObjectStoragePort storage;
@@ -56,17 +61,31 @@ public class FileAssetRecoveryService {
             return RecoveryResult.TOO_RECENT;
         }
 
-        byte[] stored;
-        try {
-            stored = storage.read(initial.getBucket(), initial.getObjectKey());
-        } catch (RuntimeException exception) {
-            // A missing object or transient RustFS outage must not be mistaken for
-            // verified corruption. Preserve REGISTERED for safe later inspection/retry.
-            return RecoveryResult.STORAGE_UNAVAILABLE;
+        if (initial.getSizeBytes() > MAX_VERIFICATION_BYTES) {
+            return RecoveryResult.TOO_LARGE;
         }
-
-        boolean verified = stored.length == initial.getSizeBytes()
-                && sha256(stored).equals(initial.getSha256());
+        boolean verified;
+        try (InputStream stream = storage.openRead(initial.getBucket(), initial.getObjectKey())) {
+            var digest = MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[8192];
+            long length = 0;
+            int count;
+            while ((count = stream.read(buffer)) != -1) {
+                length += count;
+                if (length > MAX_VERIFICATION_BYTES) {
+                    // Do not quarantine a file when verification exceeds the configured budget.
+                    return RecoveryResult.TOO_LARGE;
+                }
+                digest.update(buffer, 0, count);
+            }
+            verified = length == initial.getSizeBytes()
+                    && HexFormat.of().formatHex(digest.digest()).equals(initial.getSha256());
+        } catch (IOException | RuntimeException exception) {
+            // A missing object, partial stream or transient RustFS outage stays retryable.
+            return RecoveryResult.STORAGE_UNAVAILABLE;
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 unavailable", exception);
+        }
 
         return Objects.requireNonNull(transactions.execute(status -> {
             var current = repository.findByIdForUpdate(assetId).orElse(null);
@@ -95,18 +114,11 @@ public class FileAssetRecoveryService {
         }));
     }
 
-    private static String sha256(byte[] bytes) {
-        try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
-        } catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("SHA-256 is unavailable", exception);
-        }
-    }
-
     public enum RecoveryResult {
         NOT_FOUND,
         ALREADY_SETTLED,
         TOO_RECENT,
+        TOO_LARGE,
         STORAGE_UNAVAILABLE,
         RECOVERED_READY,
         QUARANTINED
