@@ -95,9 +95,10 @@ class LearnerWirePublicationServiceTest {
         var body = new LinkedHashMap<String, Object>();
         body.put("kind", "learning-collections");
         body.put("revision", 3);
-        body.put("checksum", "c".repeat(64));
         body.put("items", List.of());
-        stub(PublicationWireDocumentKind.CATALOGUE, "learning-collections", "-", 3, body, "c".repeat(64));
+        String digest = FlutterPublicationCanonicalHash.catalogue(json, body);
+        body.put("checksum", digest);
+        stub(PublicationWireDocumentKind.CATALOGUE, "learning-collections", "-", 3, body, digest);
         var result = service.catalogue("learning-collections", 3);
         assertThat(result.body()).containsEntry("kind", "learning-collections");
         assertThatThrownBy(() -> service.catalogue("learning-collections", 99))
@@ -153,8 +154,10 @@ class LearnerWirePublicationServiceTest {
         return root;
     }
 
-    private static Map<String, Object> catalogueRef(String kind) {
-        return Map.of("kind", kind, "revision", 3, "checksum", "c".repeat(64));
+    private Map<String, Object> catalogueRef(String kind) {
+        var body = Map.<String, Object>of("kind", kind, "revision", 3, "items", List.of());
+        String checksum = FlutterPublicationCanonicalHash.catalogue(json, body);
+        return Map.of("kind", kind, "revision", 3, "checksum", checksum);
     }
 
     private static LinkedHashMap<String, Object> packBody() {
