@@ -2,6 +2,7 @@ package io.github.alimbetov.voxprep.backend.asset.application;
 
 import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetKind;
 import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetStatus;
+import io.github.alimbetov.voxprep.backend.asset.domain.MediaAssetPolicy;
 import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetEntity;
 import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetRepository;
 import java.security.MessageDigest;
@@ -39,6 +40,7 @@ public class FileAssetIngestService {
         if (bytes.length == 0) {
             throw new IllegalArgumentException("FileAsset payload must not be empty");
         }
+        MediaAssetPolicy.validate(command.kind(), command.mediaType(), bytes.length);
 
         String sha256 = sha256(bytes);
         FileAssetEntity asset = assetRepository.saveAndFlush(new FileAssetEntity(
