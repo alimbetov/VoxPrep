@@ -12,6 +12,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import io.github.alimbetov.voxprep.backend.catalogue.domain.CatalogueCode;
+import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringService;
+import io.github.alimbetov.voxprep.backend.content.application.ContentDraftUpdate;
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
 import io.github.alimbetov.voxprep.backend.content.persistence.VocabularyContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.sharedkernel.AvailabilityStatus;
@@ -36,6 +38,7 @@ class ContentMvcIntegrationTest {
 
     @Autowired private WebApplicationContext context;
     @Autowired private ContentRevisionRepository repository;
+    @Autowired private ContentAuthoringService authoring;
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -110,17 +113,24 @@ class ContentMvcIntegrationTest {
         var revision = repository.saveAndFlush(vocabulary());
         var staleVersion = revision.getVersion();
 
-        var current = repository.findById(revision.getId()).orElseThrow();
-        current.replaceDraftMetadata(
-                new Sha256Digest("b".repeat(64)),
-                "Concurrent title",
-                "Vocabulary subtitle",
-                "Vocabulary description",
-                new CatalogueCode("VOCABULARY"),
-                new CatalogueCode("B2"),
-                4,
-                List.of(new CatalogueCode("SPEAKING")));
-        repository.saveAndFlush(current);
+        authoring.updateDraft(
+                revision.getId(),
+                staleVersion,
+                new ContentDraftUpdate(
+                        new Sha256Digest("b".repeat(64)),
+                        "Concurrent title",
+                        "Vocabulary subtitle",
+                        "Vocabulary description",
+                        new CatalogueCode("VOCABULARY"),
+                        new CatalogueCode("B2"),
+                        4,
+                        List.of(new CatalogueCode("SPEAKING")),
+                        AvailabilityStatus.ACTIVE,
+                        new ContentDraftUpdate.VocabularyBody(
+                                "negotiate",
+                                "concurrent definition",
+                                "verb",
+                                List.of("Concurrent example"))));
 
         mockMvc.perform(post("/admin/content/revisions/{id}", revision.getId())
                         .with(user("admin").roles("ADMIN"))
