@@ -99,7 +99,9 @@ void main() {
       'INSTALLATION_REGISTRATION_RESPONSE_INVALID',
     );
   });
-  test('uses installation authentication when rotating an existing token', () async {
+  test(
+    'uses installation authentication when rotating an existing token',
+    () async {
     final store = _TestCredentialStore();
     await store.writeInstallationToken(InstallationToken('previous-token'));
     final apiClient = _FakeApiClient(
@@ -119,10 +121,16 @@ void main() {
     final result = await gateway.register(InstallationId('installation-123'));
 
     expect(result.getOrThrow().value, 'new-token');
-    expect(apiClient.requests.single.authentication, ApiAuthentication.installation);
-  });
+      expect(
+        apiClient.requests.single.authentication,
+        ApiAuthentication.installation,
+      );
+    },
+  );
 
-  test('uses anonymous authentication on first registration with empty store', () async {
+  test(
+    'uses anonymous authentication on first registration with empty store',
+    () async {
     final store = _TestCredentialStore();
     final apiClient = _FakeApiClient(
       Success<ApiResponse>(
@@ -140,9 +148,9 @@ void main() {
 
     await gateway.register(InstallationId('installation-123'));
 
-    expect(apiClient.requests.single.authentication, ApiAuthentication.none);
-  });
-
+      expect(apiClient.requests.single.authentication, ApiAuthentication.none);
+    },
+  );
 }
 
 final class _FakeApiClient implements ApiClient {
@@ -169,7 +177,9 @@ final class _TestCredentialStore implements InstallationCredentialStore {
   Future<InstallationToken?> readInstallationToken() async => _token;
 
   @override
-  Future<void> writeInstallationId(InstallationId id) async { _id = id; }
+  Future<void> writeInstallationId(InstallationId id) async {
+    _id = id;
+  }
 
   @override
   Future<void> writeInstallationToken(InstallationToken token) async {
@@ -177,8 +187,13 @@ final class _TestCredentialStore implements InstallationCredentialStore {
   }
 
   @override
-  Future<void> clearInstallationToken() async { _token = null; }
+  Future<void> clearInstallationToken() async {
+    _token = null;
+  }
 
   @override
-  Future<void> clear() async { _id = null; _token = null; }
+  Future<void> clear() async {
+    _id = null;
+    _token = null;
+  }
 }
