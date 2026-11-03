@@ -1,0 +1,11 @@
+spring:
+  config:
+    import: "configtree:${VOXPREP_SECRET_DIR:../infra/secrets/dev/backend/}"
+  datasource:
+    url: ${VOXPREP_DB_URL:jdbc:postgresql://127.0.0.1:5432/voxprep_dev}
+  liquibase:
+    url: ${VOXPREP_DB_URL:jdbc:postgresql://127.0.0.1:5432/voxprep_dev}
+
+voxprep:
+  storage:
+    endpoint: ${VOXPREP_STORAGE_ENDPOINT:http://127.0.0.1:9000}

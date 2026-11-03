@@ -1,0 +1,30 @@
+databaseChangeLog:
+  - changeSet:
+      id: 0000-backend-foundation
+      author: voxprep
+      comment: Establish the migration pipeline without creating product-domain tables.
+      changes:
+        - sql:
+            sql: SELECT 1
+  - include:
+      file: db/changelog/b1-p2-catalogue-hierarchy.sql
+  - include:
+      file: db/changelog/b1-p3-content-revision.sql
+  - include:
+      file: db/changelog/b1-p4-collection-content-members.sql
+  - include:
+      file: db/changelog/b1-p5-tts-voice-catalogue.sql
+  - include:
+      file: db/changelog/b1-p6-file-asset-tts-job.sql
+  - include:
+      file: db/changelog/b1-p7-tts-job-lease.sql
+  - include:
+      file: db/changelog/b1-p8-tts-model-assets.sql
+  - include:
+      file: db/changelog/b1-p9-tts-job-worker-lifecycle.sql
+  - include:
+      file: db/changelog/b1-p10-worker-contract.sql
+  - include:
+      file: db/changelog/b1-p11-tts-output-finalization.sql
+  - include:
+      file: db/changelog/b1-p12-tts-output-replay.sql

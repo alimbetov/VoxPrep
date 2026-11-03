@@ -1,0 +1,132 @@
+name: B1 Infrastructure Qualification
+
+on:
+  push:
+    branches:
+      - feat/b1-infrastructure-bootstrap
+    paths:
+      - "infra/**"
+      - "docs/specification/CAREERSPEAK_INFRASTRUCTURE_REQUIREMENTS.md"
+      - ".github/workflows/b1-infrastructure.yml"
+  pull_request:
+    paths:
+      - "infra/**"
+      - "docs/specification/CAREERSPEAK_INFRASTRUCTURE_REQUIREMENTS.md"
+      - ".github/workflows/b1-infrastructure.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  infrastructure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Generate isolated TEST secrets
+        run: ./infra/scripts/init-secrets.sh test
+
+      - name: Validate Compose model
+        run: |
+          docker compose \
+            --env-file infra/env/test.env.example \
+            -f infra/compose/compose.test.yml \
+            config --quiet
+
+      - name: Start PostgreSQL and RustFS
+        run: |
+          docker compose \
+            --env-file infra/env/test.env.example \
+            -f infra/compose/compose.test.yml \
+            up -d --wait postgres rustfs
+
+      - name: Bootstrap RustFS twice
+        run: |
+          docker compose \
+            --env-file infra/env/test.env.example \
+            -f infra/compose/compose.test.yml \
+            run --rm rustfs-bootstrap
+          docker compose \
+            --env-file infra/env/test.env.example \
+            -f infra/compose/compose.test.yml \
+            run --rm rustfs-bootstrap
+
+      - name: Verify PostgreSQL least-privilege topology
+        run: |
+          docker compose \
+            --env-file infra/env/test.env.example \
+            -f infra/compose/compose.test.yml \
+            exec -T postgres psql \
+              -v ON_ERROR_STOP=1 \
+              -U voxprep_bootstrap \
+              -d voxprep_test <<'SQL'
+          DO $$
+          DECLARE
+            backend_super boolean;
+            schema_owner text;
+          BEGIN
+            SELECT rolsuper OR rolcreatedb OR rolcreaterole OR rolreplication OR rolbypassrls
+              INTO backend_super
+              FROM pg_roles
+             WHERE rolname = 'voxprep_backend';
+
+            IF backend_super IS DISTINCT FROM false THEN
+              RAISE EXCEPTION 'voxprep_backend has elevated cluster privileges';
+            END IF;
+
+            SELECT nspowner::regrole::text
+              INTO schema_owner
+              FROM pg_namespace
+             WHERE nspname = 'app';
+
+            IF schema_owner IS DISTINCT FROM 'voxprep_owner' THEN
+              RAISE EXCEPTION 'app schema owner is %, expected voxprep_owner', schema_owner;
+            END IF;
+
+            IF NOT pg_has_role('voxprep_migrator', 'voxprep_owner', 'MEMBER') THEN
+              RAISE EXCEPTION 'voxprep_migrator is not a member of voxprep_owner';
+            END IF;
+          END
+          $$;
+          SQL
+
+      - name: Verify RustFS Backend credential is S3-scoped
+        run: |
+          docker compose \
+            --env-file infra/env/test.env.example \
+            -f infra/compose/compose.test.yml \
+            run --rm --entrypoint /bin/sh rustfs-bootstrap -ec '
+              backend_access_key="$(tr -d "\r\n" < /run/secrets/rustfs_backend_access_key)"
+              backend_secret_key="$(tr -d "\r\n" < /run/secrets/rustfs_backend_secret_key)"
+              rc alias set backend http://rustfs:9000 "$backend_access_key" "$backend_secret_key" --region us-east-1 --bucket-lookup path >/dev/null
+              rc object list backend/voxprep-assets >/dev/null
+              if rc admin info cluster backend >/dev/null 2>&1; then
+                echo "Backend IAM credential unexpectedly has RustFS admin access" >&2
+                exit 1
+              fi
+            '
+
+      - name: Show service state on failure
+        if: failure()
+        run: |
+          docker compose \
+            --env-file infra/env/test.env.example \
+            -f infra/compose/compose.test.yml \
+            ps -a || true
+          docker compose \
+            --env-file infra/env/test.env.example \
+            -f infra/compose/compose.test.yml \
+            logs postgres rustfs || true
+
+      - name: Cleanup
+        if: always()
+        run: |
+          docker compose \
+            --env-file infra/env/test.env.example \
+            -f infra/compose/compose.test.yml \
+            down -v --remove-orphans || true

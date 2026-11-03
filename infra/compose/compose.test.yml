@@ -1,0 +1,110 @@
+name: ${COMPOSE_PROJECT_NAME:-voxprep-test}
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:-postgres:18.6-bookworm}
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-voxprep_test}
+      POSTGRES_USER: ${POSTGRES_USER:-voxprep_bootstrap}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_bootstrap_password
+      POSTGRES_INITDB_ARGS: --auth-host=scram-sha-256
+    secrets:
+      - postgres_bootstrap_password
+      - postgres_migrator_password
+      - postgres_backend_password
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ../postgres/init/00-bootstrap.sh:/docker-entrypoint-initdb.d/00-bootstrap.sh:ro
+    ports:
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-55432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - backend_private
+
+  rustfs:
+    image: ${RUSTFS_IMAGE:-rustfs/rustfs:1.0.4}
+    environment:
+      RUSTFS_VOLUMES: /data
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+      RUSTFS_CONSOLE_ENABLE: "false"
+      RUSTFS_REGION: ${RUSTFS_REGION:-us-east-1}
+      RUSTFS_ACCESS_KEY_FILE: /run/secrets/rustfs_root_access_key
+      RUSTFS_SECRET_KEY_FILE: /run/secrets/rustfs_root_secret_key
+      RUSTFS_OBS_LOGGER_LEVEL: error
+      RUSTFS_OBS_LOG_DIRECTORY: /var/log/rustfs
+    secrets:
+      - rustfs_root_access_key
+      - rustfs_root_secret_key
+    volumes:
+      - rustfs_data:/data
+      - rustfs_logs:/var/log/rustfs
+    ports:
+      - "127.0.0.1:${RUSTFS_API_HOST_PORT:-19000}:9000"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/health/ready >/dev/null || exit 1"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - backend_private
+
+  rustfs-bootstrap:
+    image: ${RUSTFS_RC_IMAGE:-rustfs/rc:v0.1.30}
+    restart: "no"
+    depends_on:
+      rustfs:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "/bootstrap/bootstrap.sh"]
+    environment:
+      RUSTFS_ENDPOINT: http://rustfs:9000
+      RUSTFS_REGION: ${RUSTFS_REGION:-us-east-1}
+      RUSTFS_BUCKET: ${RUSTFS_BUCKET:-voxprep-assets}
+      RUSTFS_POLICY_NAME: ${RUSTFS_POLICY_NAME:-voxprep-backend-rw}
+    secrets:
+      - rustfs_root_access_key
+      - rustfs_root_secret_key
+      - rustfs_backend_access_key
+      - rustfs_backend_secret_key
+    volumes:
+      - ../rustfs/bootstrap/bootstrap.sh:/bootstrap/bootstrap.sh:ro
+      - ../rustfs/policies/backend-rw.json:/bootstrap/backend-rw.json:ro
+    networks:
+      - backend_private
+
+networks:
+  backend_private:
+    name: ${BACKEND_NETWORK_NAME:-voxprep-test-backend-private}
+
+volumes:
+  postgres_data:
+    name: ${POSTGRES_VOLUME_NAME:-voxprep_test_pgdata}
+  rustfs_data:
+    name: ${RUSTFS_DATA_VOLUME_NAME:-voxprep_test_rustfs_data}
+  rustfs_logs:
+    name: ${RUSTFS_LOG_VOLUME_NAME:-voxprep_test_rustfs_logs}
+
+secrets:
+  postgres_bootstrap_password:
+    file: ../secrets/test/postgres_bootstrap_password
+  postgres_migrator_password:
+    file: ../secrets/test/postgres_migrator_password
+  postgres_backend_password:
+    file: ../secrets/test/postgres_backend_password
+  rustfs_root_access_key:
+    file: ../secrets/test/rustfs_root_access_key
+  rustfs_root_secret_key:
+    file: ../secrets/test/rustfs_root_secret_key
+  rustfs_backend_access_key:
+    file: ../secrets/test/rustfs_backend_access_key
+  rustfs_backend_secret_key:
+    file: ../secrets/test/rustfs_backend_secret_key

@@ -130,6 +130,8 @@ tts
 
 The TTS Worker remains a separate worker process because it is a distinct computational workload; this does not justify decomposing the backend into microservices.
 
+The secured Content Studio and XML bulk authoring defined by [`CAREERSPEAK_CONTENT_STUDIO_REQUIREMENTS.md`](CAREERSPEAK_CONTENT_STUDIO_REQUIREMENTS.md) are allowed **inside B1** as internal authoring/productivity tooling for the already normative `ADMIN` actor. They do not create a sixth feature stream or an independent MVP release gate. V1 authoring must remain deliberately small: server-rendered admin UI, secure XML validation/preview/diff/apply, draft editing and publication preparation only as required to populate the accepted Backend domain.
+
 ### A1 — Cross-system acceptance
 
 Qualify the real production path:
