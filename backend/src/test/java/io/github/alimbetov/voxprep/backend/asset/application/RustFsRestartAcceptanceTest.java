@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.util.HexFormat;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -20,6 +21,7 @@ import org.springframework.test.context.ActiveProfiles;
  * Run each method in a separate Maven invocation, with RustFS stopped between
  * the seed and outage methods and restarted before the final method.
  */
+@EnabledIfSystemProperty(named = "h2.restart.acceptance", matches = "true")
 @ActiveProfiles("test")
 @SpringBootTest
 class RustFsRestartAcceptanceTest {
