@@ -58,8 +58,8 @@ public class TtsModelMaterializationService {
         var voice = voiceRepository.findByCode(selector.voiceCode())
                 .orElseThrow(() -> new NoSuchElementException("TTS voice not found: " + selector.voiceCode()));
 
-        byte[] modelBytes = artifactSource.fetch(descriptor.sourceProvider(), descriptor.modelUrl());
-        byte[] configBytes = artifactSource.fetch(descriptor.sourceProvider(), descriptor.configUrl());
+        byte[] modelBytes = artifactSource.fetch(request(descriptor, descriptor.modelUrl()));
+        byte[] configBytes = artifactSource.fetch(request(descriptor, descriptor.configUrl()));
         verifySha(modelBytes, descriptor.modelSha256(), "model");
         verifySha(configBytes, descriptor.configSha256(), "config");
 
@@ -96,6 +96,16 @@ public class TtsModelMaterializationService {
                 descriptor.licenseReference(),
                 false,
                 null));
+    }
+
+    private static TtsModelArtifactSource.ArtifactRequest request(
+            TtsModelCatalogGateway.ModelDescriptor descriptor,
+            String url) {
+        return new TtsModelArtifactSource.ArtifactRequest(
+                descriptor.sourceProvider(),
+                descriptor.sourceRepository(),
+                descriptor.sourceRevision(),
+                url);
     }
 
     private FileAssetEntity requireOrIngest(
