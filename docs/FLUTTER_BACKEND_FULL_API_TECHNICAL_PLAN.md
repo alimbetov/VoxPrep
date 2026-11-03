@@ -16,15 +16,15 @@ No hardcoded/test-only release manifests, fake transaction verification, mutable
 | ID | Flutter API | Current repository status at baseline | Required implementation and acceptance |
 |---|---|---|---|
 | API-01 | `POST /api/v1/installations` | Registration + proof-of-possession rotation implemented | Cold start / repeated start / concurrent 401 / stale / blocked / revoked / lost credential, both Java and Flutter tests |
-| API-02 | `GET /api/v1/content/manifest` | Reader exists, root wire snapshot generation not wired to publisher | Frozen canonical root written atomically before CURRENT switch; Flutter digest and 200/304/missing/rollback |
-| API-03 | `GET /api/v1/content/packs/{code}/manifest?variant=&revision=` | Reader exists, no publisher-generated pack | Frozen pack, exact content/localizations/assets/access and order, canonical digest; no mutable source lookup |
-| API-04 | `GET /api/v1/catalogues/{kind}/revisions/{rev}` (6 kinds) | Reader exists, no frozen catalogue producer | Materialize six deterministic catalogue projections; exact Flutter decoder schemas + digest proof and freeze |
+| API-02 | `GET /api/v1/content/manifest` | **Writer + reader implemented**, exact-SHA E2E qualification pending | Frozen canonical root written atomically before CURRENT switch; Flutter digest and 200/304/missing/rollback |
+| API-03 | `GET /api/v1/content/packs/{code}/manifest?variant=&revision=` | **Canonical/locale pack writer implemented**, exact-SHA E2E qualification pending | Frozen pack, exact content/localizations/assets/access and order, canonical digest; no mutable source lookup |
+| API-04 | `GET /api/v1/catalogues/{kind}/revisions/{rev}` (6 kinds) | **Six catalogue projections implemented**, completeness and Flutter graph E2E pending | Materialize six deterministic catalogue projections; exact Flutter decoder schemas + digest proof and freeze |
 | API-05 | `GET /api/v1/content/{type}/{code}/revisions/{rev}` | Exact CURRENT endpoint exists for five learning types | Verify all 15 fields, each typed body, immutable checksum, reference membership, PREM authorization before ETag |
 | API-06 | `GET /api/v1/content/{type}/{code}/revisions/{rev}/localizations/{locale}/revisions/{lr}` | CURRENT exact approved revision exists | Freeze exact locale ref with publication; no retroactive approval or fallback substitution; 12-locale tests |
 | API-07 | `GET /api/v1/media/assets/{assetId}/content` | Direct asset route exists with CURRENT membership+PREM checks | Frozen media descriptor, RustFS bytes/hash, size, range/streaming, wrong asset ID, 304 authorization and load tests |
 | API-08 | `GET /api/v1/assessment/practice-tests/{code}/revisions/{rev}` | Missing; legacy unversioned controller only | Exact DTO: mode, passingScoreBasisPoints, ordered question refs and points; checksum, publication and PREM |
-| API-09 | `GET /api/v1/assessment/questions/{code}/revisions/{rev}` | Missing | Exact singleChoice DTO incl. options/index/skillCode/explanation, checksum, release membership, PREM |
-| API-10 | `GET /api/v1/configuration/locales?countryCode=XX` | Missing | Public strict `countryCode,defaultLocale,locales[{code,label}]` from 12-language registry, KZ preference, deterministic fallback and invalid ISO handling |
+| API-09 | `GET /api/v1/assessment/questions/{code}/revisions/{rev}` | Exact CURRENT singleChoice endpoint implemented, backend CI passed on ebc7623 | Exact singleChoice DTO incl. options/index/skillCode/explanation, checksum, release membership, PREM |
+| API-10 | `GET /api/v1/configuration/locales?countryCode=XX` | Public twelve-language API implemented; backend CI passed on 670b15d; Flutter UI localization not qualified | Public strict `countryCode,defaultLocale,locales[{code,label}]` from 12-language registry, KZ preference, deterministic fallback and invalid ISO handling |
 | API-11 | `POST /api/v1/purchases/verify` | Missing; default `UnverifiedLifetimeEntitlementAdapter` denies FULL | Real Google Play / App Store server verification, transaction replay + token protection, persistence, refund/revoke, restore cross-device without app account |
 | API-12 | Existing learner CURRENT convenience endpoints | Existing, partly authorized | Preserve explicit legacy compatibility without letting them bypass the exact immutable publication or PREM |
 
@@ -42,17 +42,20 @@ Each entry must receive an evidence link to a test job and exact commit SHA befo
 ### R1 — Complete publication writer/freeze and signed access snapshot (P0)
 - [x] `publication_wire_document` storage table, immutability trigger and read endpoints exist.
 - [ ] Analyze `PublicationPublisher` transaction, `JpaPublicationContentFreezer`, catalogue/locale/media data lifecycles and release current pointer.
-- [ ] Build `PublicationWireSnapshotBuilder` that takes a frozen candidate, not live mutable catalogue after publish; deterministically collects: pack identity and ordered members, all six catalogue kinds, localized refs, media descriptors, assessment refs, tombstones and locale fallbacks.
-- [ ] Freeze the FREE/FULL access and membership/order in the same publication identity. Decide explicit format/ownership for the access snapshot; **most restrictive membership wins**, immutable and atomic.
+- [x] Initial `JpaPublicationWireSnapshotWriter` constructs v2 root, canonical/available locale packs, ordered memberships, six catalogue kinds and READY media descriptors in the publisher transaction (4c3839e + follow-ups). **Not accepted until full Flutter contract/e2e proves it**.
+- [ ] Replace section-code label fallback and default presentation policy with editor-managed persisted publication metadata; qualify locale fallback and tombstones; verify complete frozen semantics for every assessment type.
+- [x] Writer snapshots FREE/FULL and collection membership/order; `LearnerFrozenAccessResolver` now authorizes using immutable CURRENT catalogue (0c3cd14, 38f8ac7). Tests cover FULL alias, malformed/missing snapshots; post-publish edit acceptance added in 53ac62e.
+- [ ] Exact-SHA completion and validation of concurrent changes across catalogue/publish operations.
 - [ ] Validate semantic and digest completeness of all root/pack/catalogue documents; compare with Dart canonicalizer on fixture vectors, with actual valid catalogue schema.
-- [ ] Persist the complete publication wire documents *within the same transaction as* release creation and CURRENT advancement; fail/rollback publication if any snapshot missing or checksum mismatch. No separate asynchronous backfill of CURRENT.
+- [x] Wire writer invoked after `PublicationReleaseEntity.saveAndFlush` and before `publication_current.switchTo` inside `PublicationPublisher.publish` (4c3839e). A missing active member/pack or corrupted revision fails the transaction.
+- [ ] Add concurrent publisher, reload, content deletion and schema-tampering adversarial integration tests; prove complete Dart canonical compatibility.
 - [ ] No changes to `CURRENT` during corrupted RustFS, missing TTS/translation or concurrent edit. Test 2 competing publishers; repeated publish idempotency; saved old immutable manifests.
 - [ ] Existing releases without snapshots must be handled by an explicitly reviewed migration/rollback policy; continue fail-closed 503 until formally qualified.
 
 ### R2 — Complete exact material / localization / media contract (P0)
 - [ ] Back-to-back real JSON tests for five content bodies, nullable optional fields, safe MIME, checksum/revision, ETag and 304, old vs CURRENT, 12 languages and fallback.
 - [ ] Ensure taxonomy category/level labels are actual published immutable labels, not code placeholders, once label data is frozen.
-- [ ] Ensure `hasAudio` and each `contentAssets` role match real READY media and Flutter role vocabulary.
+- [ ] Ensure `hasAudio` and each `contentAssets` role match real READY media and Flutter role vocabulary. Writer currently emits `requiredOffline=false` and uses the asset's frozen object key; qualify offline and media asset descriptors.
 - [ ] Ensure requested asset IDs are UUIDs (or formally update both API and Flutter contract), never raw RustFS URLs; verify byte/hash consistency and cache isolation.
 - [ ] Move download from `ResponseEntity<byte[]>` / repeated byte copies to bounded response streaming; cover concurrency/abort/range as applicable.
 
@@ -60,11 +63,12 @@ Each entry must receive an evidence link to a test job and exact commit SHA befo
 - [ ] Trace current seven content types / question body / practice test member tables / publication refs.
 - [ ] Persist missing required fields explicitly where needed: mode `learn|exam|quick`, passingScoreBasisPoints, question points, skillCode. No invented defaults that misrepresent content.
 - [ ] Freeze ordered question ref/checksum in publication.
-- [ ] Implement exact controllers/DTO for both API-08 and API-09 and negative tests, including premium direct-question access and replay.
+- [x] Exact question `singleChoice` API-09 implemented with parent-test entitlement and negative tests (ebc7623).
+- [ ] Implement API-08 exact practice-test DTO; mode and per-question points are missing and must be persisted explicitly, not inferred.
 - [ ] Verify Flutter `AssessmentPayloadDecoder` strict keys with real HTTP fixtures for learn/exam/quick and empty/invalid question sets.
 
 ### R4 — Public locale configuration and 12-language support (P1)
-- [ ] Implement API-10 as anonymous read-only API with ISO alpha-2 validation, stable cache and exact JSON keys.
+- [x] API-10 public endpoint, ISO alpha-2 validation, cache and exact JSON keys implemented (670b15d).
 - [ ] Single registry: en, ru, kk, es, fr, de, pt-BR, zh-Hans, ar, hi, tr, ja; country preference `KZ -> kk`, other markets localized default with `en` fallback.
 - [ ] Decide if Flutter accepts `kk` vs `kk-KZ` and `ru` vs `ru-KZ`; do not silently change locale codes and invalidate stored preferences.
 - [ ] Tests for 12 locales, Arabic RTL on Flutter, unknown ISO country, malformed code, empty list, duplicates and exact schema.
@@ -103,3 +107,13 @@ MVC-R7 new material + seven typed authoring forms; MVC-R9 publication UI; MVC-R5
 | Renderer screenshots | End-to-end test completes without timeout | **PENDING** |
 
 When any test is red, identify the exact error and repair the actual failing slice. Never declare "API full support" based on mocks or green B1 alone.
+
+## 2026-11-03 implementation update: API-R2 publication and SEC-FIX-4
+
+Implementation refs: `4c3839e` (atomic wire writer), `bffa4be` (B7 real catalogue fixture), `0c3cd14` (immutable FREE/FULL), `38f8ac7` (frozen policy and canonical catalogue tests), `cfc2713` (question ownership), `53ac62e` (post-publication authoring mutation acceptance).
+
+**Confirmed:** B1 Backend Foundation, Infrastructure, B8 Worker and H2 RustFS Restart successfully completed for `38f8ac7f0c0283edab6882583a0e4812dddd58d5`. This is NOT a release gate for later commits; exact-SHA CI must repeat.
+
+**Known incompleteness:** UI-authored section metadata and presentation mode are not in the backend catalogue model: current writer uses section codes as explicit title fallbacks and a deterministic GRID presentation. It does NOT yet implement editor-configurable section titles/icons and presentation policy. Locale pack variants are generated only where approved localizations exist, and fallback rules/tombstones require completion. Store receipt verification and practice-test mode/points remain P0 blockers. Flutter renderer qualification remains unresolved.
+
+**Release decision:** NO MERGE and NO FULL-API ACCEPTANCE until all P0 gates pass.
