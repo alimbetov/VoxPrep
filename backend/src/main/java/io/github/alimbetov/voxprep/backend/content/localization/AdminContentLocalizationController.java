@@ -7,6 +7,8 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.Pattern;
 import java.time.Instant;
 import java.util.Map;
 import java.util.UUID;
@@ -79,11 +81,11 @@ public class AdminContentLocalizationController {
 
     public record CreateRequest(
             @NotNull UUID contentRevisionId,
-            @NotBlank String locale,
+            @NotBlank @Size(max = 64) @Pattern(regexp = "[A-Za-z]{2,8}(-[A-Za-z0-9]{1,8})*") String locale,
             String checksumSha256,
-            String title,
-            String subtitle,
-            String description,
+            @Size(max = 256) String title,
+            @Size(max = 512) String subtitle,
+            @Size(max = 4096) String description,
             String translation,
             String hint,
             String explanation) {
@@ -96,9 +98,9 @@ public class AdminContentLocalizationController {
     public record UpdateRequest(
             @Min(0) long expectedVersion,
             String checksumSha256,
-            String title,
-            String subtitle,
-            String description,
+            @Size(max = 256) String title,
+            @Size(max = 512) String subtitle,
+            @Size(max = 4096) String description,
             String translation,
             String hint,
             String explanation) {
@@ -108,7 +110,10 @@ public class AdminContentLocalizationController {
         }
     }
 
-    public record ReviewRequest(@Min(0) long expectedVersion, String reason, String comment) {
+    public record ReviewRequest(
+            @Min(0) long expectedVersion,
+            @Size(max = 512) String reason,
+            @Size(max = 2048) String comment) {
     }
 
     public record VersionRequest(@Min(0) long expectedVersion) {
