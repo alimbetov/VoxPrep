@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.function.Supplier;
 import org.junit.jupiter.api.Test;
 
 class TtsProvisioningBootstrapCoordinatorTest {
@@ -18,7 +19,7 @@ class TtsProvisioningBootstrapCoordinatorTest {
         TtsModelProvisioningService provisioningService = mock(TtsModelProvisioningService.class);
         TtsModelMaterializationService materializationService = mock(TtsModelMaterializationService.class);
         TtsProvisioningBootstrapCoordinator coordinator = new TtsProvisioningBootstrapCoordinator(
-                properties, provisioningService, materializationService);
+                properties, provisioningService, materializationService, directLock());
 
         var report = coordinator.provisionConfiguredSeeds();
 
@@ -45,7 +46,7 @@ class TtsProvisioningBootstrapCoordinatorTest {
                 missing, TtsModelProvisioningService.State.MISSING, null, null));
 
         TtsProvisioningBootstrapCoordinator coordinator = new TtsProvisioningBootstrapCoordinator(
-                properties, provisioningService, materializationService);
+                properties, provisioningService, materializationService, directLock());
         var report = coordinator.provisionConfiguredSeeds();
 
         assertThat(report.materialized()).isEqualTo(1);
@@ -64,11 +65,20 @@ class TtsProvisioningBootstrapCoordinatorTest {
                 missing, TtsModelProvisioningService.State.MISSING, null, null));
 
         TtsProvisioningBootstrapCoordinator coordinator = new TtsProvisioningBootstrapCoordinator(
-                properties, provisioningService, materializationService);
+                properties, provisioningService, materializationService, directLock());
 
         assertThatThrownBy(coordinator::provisionConfiguredSeeds)
                 .isInstanceOf(TtsProvisioningBootstrapCoordinator.TtsProvisioningException.class)
                 .hasMessageContaining("es_ES.davefx.medium");
+    }
+
+    private static TtsProvisioningLock directLock() {
+        return new TtsProvisioningLock() {
+            @Override
+            public <T> T withLock(String modelCode, Supplier<T> action) {
+                return action.get();
+            }
+        };
     }
 
     private static TtsProvisioningProperties properties(
