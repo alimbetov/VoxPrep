@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -57,12 +59,18 @@ final applicationBootstrapProvider =
           }
         }
 
-        final manager = await ref.watch(
-          assetCacheRetentionManagerProvider.future,
-        );
-        // Cache maintenance is deliberately best-effort. Failure must never
-        // prevent startup or invalidate the last committed publication.
-        await manager.cleanupExpiredAudio();
+        // Cache maintenance is deliberately best-effort and must never block
+        // startup or invalidate the last committed publication.
+        unawaited(() async {
+          try {
+            final manager = await ref.read(
+              assetCacheRetentionManagerProvider.future,
+            );
+            await manager.cleanupExpiredAudio();
+          } catch (_) {
+            // Startup remains successful when maintenance cannot run.
+          }
+        }());
       }
 
       return result;
