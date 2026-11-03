@@ -74,6 +74,7 @@ class B7ProductDeliveryIntegrationTest {
     @Autowired private LearningCollectionRepository collectionRepository;
     @Autowired private CollectionContentMemberRepository memberRepository;
     @Autowired private LearnerWirePublicationService wirePublicationService;
+    @Autowired private LearnerFrozenAccessResolver frozenAccessResolver;
     @Autowired private ContentAssetBindingService bindingService;
     @Autowired private TtsVoiceRepository voiceRepository;
     @Autowired private TtsVoiceModelRepository modelRepository;
@@ -191,6 +192,14 @@ class B7ProductDeliveryIntegrationTest {
         var collectionSnapshot = wirePublicationService.catalogue(
                 "learning-collections", (int) published.contentVersion());
         assertThat((List<?>) collectionSnapshot.body().get("items")).hasSize(1);
+
+        // Post-publication authoring changes must NOT rewrite the FREE/FULL
+        // decision captured in the immutable learning-collections document.
+        assertThat(frozenAccessResolver.requiresFull(ref, published.contentVersion())).isFalse();
+        collection.updateDetails(track, "First block", "Updated authoring metadata",
+                CollectionAccessLevel.FULL, 0, AvailabilityStatus.ACTIVE);
+        collectionRepository.saveAndFlush(collection);
+        assertThat(frozenAccessResolver.requiresFull(ref, published.contentVersion())).isFalse();
 
         var content = learnerContentService.get("phrase", "R6_PHRASE");
         assertThat(content.contentVersion()).isEqualTo(published.contentVersion());
