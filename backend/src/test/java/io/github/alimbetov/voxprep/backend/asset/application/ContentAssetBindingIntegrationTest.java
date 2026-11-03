@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import io.github.alimbetov.voxprep.backend.asset.domain.ContentAssetRole;
 import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetKind;
 import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetStatus;
+import io.github.alimbetov.voxprep.backend.asset.persistence.ContentAssetBindingRepository;
 import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetEntity;
 import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetRepository;
 import io.github.alimbetov.voxprep.backend.catalogue.domain.CatalogueCode;
@@ -15,6 +16,7 @@ import io.github.alimbetov.voxprep.backend.sharedkernel.AvailabilityStatus;
 import io.github.alimbetov.voxprep.backend.sharedkernel.BusinessCode;
 import io.github.alimbetov.voxprep.backend.sharedkernel.RevisionNumber;
 import io.github.alimbetov.voxprep.backend.sharedkernel.Sha256Digest;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 class ContentAssetBindingIntegrationTest {
 
     @Autowired private ContentAssetBindingService bindingService;
+    @Autowired private ContentAssetBindingRepository bindingRepository;
     @Autowired private ContentRevisionRepository contentRevisionRepository;
     @Autowired private FileAssetRepository fileAssetRepository;
 
@@ -46,6 +49,20 @@ class ContentAssetBindingIntegrationTest {
     }
 
     @Test
+    void replacementKeepsOneActiveBindingPerRevisionAndRole() {
+        var revision = revision("REPLACE");
+        var first = asset(FileAssetKind.COVER_IMAGE, FileAssetStatus.READY, "image/png", "cover-first");
+        var second = asset(FileAssetKind.COVER_IMAGE, FileAssetStatus.READY, "image/webp", "cover-second");
+
+        bindingService.bind(revision.getId(), ContentAssetRole.COVER_IMAGE, first.getId(), null);
+        bindingService.bind(revision.getId(), ContentAssetRole.COVER_IMAGE, second.getId(), null);
+
+        var bindings = bindingRepository.findAllByContentRevision_IdOrderByRoleAsc(revision.getId());
+        assertThat(bindings).hasSize(1);
+        assertThat(bindings.getFirst().getFileAsset().getId()).isEqualTo(second.getId());
+    }
+
+    @Test
     void audioBindingBecomesStaleWhenExpectedFingerprintChanges() {
         var revision = revision("AUDIO");
         var asset = asset(FileAssetKind.TTS_AUDIO, FileAssetStatus.READY, "audio/mpeg", "audio");
@@ -59,6 +76,25 @@ class ContentAssetBindingIntegrationTest {
         assertThat(bindingService.state(
                 revision.getId(), ContentAssetRole.PRONUNCIATION, String.valueOf('b').repeat(64)))
                 .isEqualTo(ContentAssetBindingService.BindingState.STALE);
+    }
+
+    @Test
+    void rejectsMutationAfterPublication() {
+        var revision = revision("PUBLISHED");
+        var first = asset(FileAssetKind.COVER_IMAGE, FileAssetStatus.READY, "image/png", "published-first");
+        var second = asset(FileAssetKind.COVER_IMAGE, FileAssetStatus.READY, "image/webp", "published-second");
+        bindingService.bind(revision.getId(), ContentAssetRole.COVER_IMAGE, first.getId(), null);
+
+        revision.markReadyForAudio();
+        revision.markReadyForReview();
+        revision.approve(Instant.parse("2026-11-03T10:00:00Z"));
+        revision.publish(Instant.parse("2026-11-03T10:05:00Z"));
+        contentRevisionRepository.saveAndFlush(revision);
+
+        assertThatThrownBy(() -> bindingService.bind(
+                revision.getId(), ContentAssetRole.COVER_IMAGE, second.getId(), null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("immutable");
     }
 
     @Test
