@@ -256,6 +256,27 @@ Future<void> _expectCurrentRevision(
   final page = (await DriftContentRepository(
     database,
   ).watchContent(const ContentQuery()).first).getOrThrow();
+  if (page.items.isEmpty) {
+    final root = await database.customSelect(
+      'SELECT schema_version, current_content_version FROM content_manifest_states',
+    ).get();
+    final packs = await database.customSelect(
+      'SELECT pack_code, variant_key, revision, source_content_version, state FROM content_pack_revisions',
+    ).get();
+    final refs = await database.customSelect(
+      'SELECT pack_code, variant_key, content_code, content_type, content_revision FROM pack_content_refs',
+    ).get();
+    final locals = await database.customSelect(
+      'SELECT content_code, content_type, revision, snapshot_state FROM local_content_records',
+    ).get();
+    fail(
+      'Expected committed CURRENT revision $revision; '
+      'root=${root.map((row) => row.data).toList()}, '
+      'packs=${packs.map((row) => row.data).toList()}, '
+      'refs=${refs.map((row) => row.data).toList()}, '
+      'locals=${locals.map((row) => row.data).toList()}',
+    );
+  }
   expect(page.items, hasLength(1));
   expect(page.items.single.code, _contentCode);
   expect(page.items.single.revision, revision);
