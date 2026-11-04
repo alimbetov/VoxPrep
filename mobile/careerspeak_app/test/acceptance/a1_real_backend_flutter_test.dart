@@ -278,7 +278,9 @@ void main() {
             database,
           ).watchContent(const ContentQuery()).first).getOrThrow();
           expect(
-            oldPage.items.singleWhere((item) => item.code == _freeCode).revision,
+            oldPage.items
+                .singleWhere((item) => item.code == _freeCode)
+                .revision,
             1,
           );
           expect(
