@@ -2,6 +2,7 @@ package io.github.alimbetov.voxprep.backend.billing;
 
 import io.github.alimbetov.voxprep.backend.billing.StorePurchaseVerifier.StoreDecision;
 import java.time.Instant;
+import java.sql.Timestamp;
 import java.util.Objects;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -54,7 +55,7 @@ public class PurchaseLedger {
             RETURNING id
             """, UUID.class, UUID.randomUUID(), decision.provider(), decision.productId(),
                 decision.transactionSha256(), decision.state().name(), decision.environment().name(),
-                decision.verifiedAt());
+                decision.verifiedAt() == null ? null : Timestamp.from(decision.verifiedAt()));
         if (decision.state() == StorePurchaseVerifier.State.GRANTED) {
             jdbc.update("""
                 INSERT INTO app.store_purchase_claim (purchase_id,installation_id,claimed_at)
@@ -101,7 +102,8 @@ public class PurchaseLedger {
                OR app.store_purchase.latest_store_event_at < excluded.latest_store_event_at
             """, UUID.randomUUID(), provider, productId, transactionHash,
                 state.name(), environment.name(),
-                state == StorePurchaseVerifier.State.GRANTED ? eventAt : null, eventAt);
+                state == StorePurchaseVerifier.State.GRANTED ? Timestamp.from(eventAt) : null,
+                Timestamp.from(eventAt));
     }
 
     /** Called only after an independently authenticated Store notification or reconciliation. */
