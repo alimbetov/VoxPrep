@@ -33,6 +33,27 @@ final class R5AdminHttpPublicationWorkflow {
     }
 
     UUID createPhrase(String code, String title, String phrase) throws Exception {
+        return createContent(code, title, "phrase",
+                "&phrase=" + enc(phrase) + "&usage=Interview+preparation&examples="
+                        + enc(phrase + " Example."));
+    }
+
+    UUID createQuestion(String code) throws Exception {
+        return createContent(code, "Dependency injection", "question",
+                "&questionText=" + enc("What is dependency injection?")
+                        + "&explanation=" + enc("Decoupling construction from use.")
+                        + "&options=" + enc("A|true|Pass dependencies through a constructor\\n"
+                                + "B|false|Use global mutable state"));
+    }
+
+    UUID createPracticeTest(String code, UUID questionId) throws Exception {
+        return createContent(code, "Backend basics", "practice_test",
+                "&instructions=" + enc("Choose one option")
+                        + "&passingScorePercent=80&questionRevisionIds=" + questionId);
+    }
+
+    private UUID createContent(String code, String title, String bodyType,
+            String typedBodyFields) throws Exception {
         CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
         try (HttpClient http = HttpClient.newBuilder().cookieHandler(cookies)
                 .connectTimeout(Duration.ofSeconds(5))
@@ -46,13 +67,12 @@ final class R5AdminHttpPublicationWorkflow {
             assertThat(page.statusCode()).isEqualTo(200);
             assertThat(page.body()).contains("Create first content revision");
             String payload = "contentCode=" + enc(code)
-                    + "&expectedVersion=0&bodyType=phrase"
+                    + "&expectedVersion=0&bodyType=" + enc(bodyType)
                     + "&title=" + enc(title)
                     + "&subtitle=CareerSpeak&description=Live+HTTP+created+content"
                     + "&categoryCode=GENERAL&levelCode=B1&minutes=2"
                     + "&skillCodes=SPEAKING&availability=ACTIVE"
-                    + "&phrase=" + enc(phrase)
-                    + "&usage=Interview+preparation&examples=" + enc(phrase + " Example.");
+                    + typedBodyFields;
             var created = post(http, "/admin/content/revisions", csrf(page.body()), payload);
             assertThat(created.statusCode()).as("create first revision POST").isEqualTo(302);
             String location = created.headers().firstValue("location").orElseThrow();
