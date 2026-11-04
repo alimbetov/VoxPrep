@@ -103,7 +103,10 @@ void main() {
 
     expect(find.text('Future Collection'), findsOneWidget);
     expect(find.text('Your learning sequence'), findsOneWidget);
-    expect(find.byKey(const ValueKey('collection-content-CONTENT_ALPHA')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('collection-content-CONTENT_ALPHA')),
+      findsOneWidget,
+    );
     expect(find.text('1'), findsOneWidget);
   });
 
