@@ -568,6 +568,7 @@ class _ContentCollectionMemberCard extends ConsumerWidget {
     final subtitle = exact?.subtitle ?? 'Learning content';
 
     return Card(
+      key: ValueKey<String>('collection-content-${content.contentCode}'),
       child: InkWell(
         borderRadius: BorderRadius.circular(20),
         onTap: () => context.push(contentDetailLocation(identity)),
