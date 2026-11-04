@@ -175,12 +175,26 @@ class ContentDetailPanel extends ConsumerWidget {
             ),
           )
         else
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Text('No structured lesson body is available for this revision.'),
+          Card(
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Learning content',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  item.type == ContentType.interview
+                      ? 'Interview audio has independent question and sample-answer roles. Role clips use one active session and do not share a persisted resume position.'
+                      : 'Audio playback uses the verified local asset pipeline. Completion of audio marks the item as listened; learning completion remains a separate learner action.',
+                ),
+              ],
             ),
           ),
+        ),
       ],
     );
   }
