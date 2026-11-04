@@ -8,6 +8,7 @@ import io.github.alimbetov.voxprep.backend.sharedkernel.AvailabilityStatus;
 import io.github.alimbetov.voxprep.backend.sharedkernel.BusinessCode;
 import jakarta.validation.Valid;
 import java.util.UUID;
+import java.util.List;
 import java.util.function.Supplier;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @AdminContentStudioMvc
@@ -47,6 +49,19 @@ public class ContentMvcController {
         model.addAttribute("revisions", query.list(page, PAGE_SIZE));
         return "admin/content/index";
     }
+
+    /** Authenticated admin lookup; never accepts a client-supplied approval state. */
+    @GetMapping("/questions/approved")
+    @ResponseBody
+    public QuestionChoicesResponse approvedQuestions(
+            @RequestParam(defaultValue = "") String q,
+            @RequestParam(defaultValue = "0") int page) {
+        var results = query.approvedQuestions(q, page);
+        return new QuestionChoicesResponse(results.getContent(), results.hasNext());
+    }
+
+    public record QuestionChoicesResponse(
+            List<ContentAdminQueryService.QuestionChoice> items, boolean hasNext) {}
 
     @GetMapping("/revisions/new")
     public String newRevision(Model model) {
