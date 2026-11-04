@@ -82,8 +82,14 @@ public class MediaLibraryService {
         // The lock serializes "find READY → upload" for this exact content fingerprint.
         // Database failure rolls back its records; H2 handles storage orphan reconciliation.
         return Objects.requireNonNull(tx.execute(status -> {
-            jdbc.queryForObject("select pg_advisory_xact_lock(hashtextextended(?::text,0))",
-                    Long.class, role.assetKind().name() + ":" + mediaType + ":" + digest);
+            jdbc.execute((org.springframework.jdbc.core.ConnectionCallback<Void>) connection -> {
+                try (var statement = connection.prepareStatement(
+                        "select pg_advisory_xact_lock(hashtextextended(?::text,0))")) {
+                    statement.setString(1, role.assetKind().name() + ":" + mediaType + ":" + digest);
+                    statement.execute();
+                }
+                return null;
+            });
             var existing = files.findFirstByKindAndMediaTypeAndSha256AndSizeBytesAndStatus(
                     role.assetKind(), mediaType, digest, bytes.length, FileAssetStatus.READY);
             if (existing.isPresent()) return existing.orElseThrow();
