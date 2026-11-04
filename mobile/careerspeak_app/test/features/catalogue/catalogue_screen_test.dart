@@ -1,3 +1,4 @@
+import 'package:careerspeak_app/app/access_providers.dart';
 import 'package:careerspeak_app/app/asset_resolver_providers.dart';
 import 'package:careerspeak_app/app/catalogue_payload_providers.dart';
 import 'package:careerspeak_app/app/repository_providers.dart';
@@ -274,6 +275,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          learnerAccessLevelProvider.overrideWithValue(AccessLevel.full),
           // These widget tests exercise catalogue rendering, not network asset
           // delivery. The separate A1 suite tests real RustFS downloads.
           catalogueIconAssetProvider.overrideWith((ref, assetId) async => null),
@@ -300,6 +302,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          learnerAccessLevelProvider.overrideWithValue(AccessLevel.full),
           // These widget tests exercise catalogue rendering, not network asset
           // delivery. The separate A1 suite tests real RustFS downloads.
           catalogueIconAssetProvider.overrideWith((ref, assetId) async => null),
