@@ -94,7 +94,12 @@ void main() {
         debugPrint('[A1-AUDIO] widget unmounted');
         await tester.pump();
         debugPrint('[A1-AUDIO] controller closing');
-        await controller.dispose();
+        // Disposal awaits an audio event-subscription cancellation and a
+        // persisted-progress future. Drive both outside widget FakeAsync,
+        // which otherwise leaves these asynchronous completions suspended.
+        await tester.runAsync(() async {
+          await controller.dispose();
+        });
         debugPrint('[A1-AUDIO] controller closed');
       }
     },
