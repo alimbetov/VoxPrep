@@ -110,11 +110,14 @@ void main() {
           trigger: SyncTrigger.manual,
           translationLocale: 'en',
         );
-        expect(
-          synchronized,
-          isA<Success<ContentSyncOutcome>>(),
-          reason: 'Actual FREE/FULL Spring Boot sync failed: $synchronized',
-        );
+        if (synchronized
+            case FailureResult<ContentSyncOutcome>(:final failure)) {
+          fail(
+            'A1 live FREE/FULL sync: code=${failure.code}, '
+            'message=${failure.message}, details=${failure.details}',
+          );
+        }
+        expect(synchronized, isA<Success<ContentSyncOutcome>>());
 
         final current = (await DriftUniversalCatalogueRepository(
           database,
