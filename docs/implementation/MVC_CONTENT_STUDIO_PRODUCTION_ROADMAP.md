@@ -1,6 +1,6 @@
 # MVC Content Studio production roadmap (R5 follow-up)
 
-Status: implementation in progress; NOT release accepted.
+Status: MVC-R5 first structured editing and collection picker slice implemented; exact-head CI pending; NOT release accepted.
 Branch: feat/r5-commercial-chain-qualification. R5 store gates remain independent and mandatory.
 
 ## Existing guarantees
@@ -17,6 +17,13 @@ Branch: feat/r5-commercial-chain-qualification. R5 store gates remain independen
 2. Add access badges in catalogue list, using String CatalogueSnapshot.accessLevel().
 3. Initial-revision MVC form shows only fields for selected content type; on type change nonmatching inputs are disabled so stale cross-type fields are not posted. JavaScript-free fallback must remain safe through backend body-type validation.
 4. No schema/API/entitlement policy changes.
+
+## MVC-R5 first implementation slice
+
+- Row-based add/remove/reorder progressive editor wired to examples, interview key points, topic sections, shadowing segments and question options. Existing newline/pipe wire format is retained; malformed legacy field input stays editable as raw textarea.
+- Collection membership UI now uses bounded, title-searchable APPROVED/PUBLISHED revision picker instead of typed UUID. Server still revalidates eligibility, identity, and revision ordering.
+- This does not yet include the Practice Test question picker, catalogue drag-and-drop, or a complete production-grade repeating form builder.
+- New HTTP/DB tests validate initial form rendering, role boundary and approved query; still require exact-SHA CI.
 
 ## Work remaining (NOT implemented)
 
