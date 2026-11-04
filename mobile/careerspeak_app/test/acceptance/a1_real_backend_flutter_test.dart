@@ -63,9 +63,8 @@ void main() {
         );
         final identity = InstallationIdentityService(
           store,
-          installationIdFactory: () => InstallationId(
-            '8aeac9d8-e5e5-4f88-93ca-9d90e7f1bba9',
-          ),
+          installationIdFactory: () =>
+              InstallationId('8aeac9d8-e5e5-4f88-93ca-9d90e7f1bba9'),
         );
         final credentials = (await InstallationBootstrapService(
           identityService: identity,
@@ -77,7 +76,8 @@ void main() {
         expect(credentials.installationToken.value, isNotEmpty);
 
         final manifestGateway = HttpContentManifestGateway(apiClient: api);
-        final rootResult = (await manifestGateway.fetchRootManifest()).getOrThrow();
+        final rootResult = (await manifestGateway.fetchRootManifest())
+            .getOrThrow();
         expect(rootResult, isA<RootManifestChanged>());
         final root = (rootResult as RootManifestChanged).manifest;
         expect(root.schemaVersion, 2);
@@ -126,7 +126,10 @@ void main() {
           database,
         ).watchContent(const ContentQuery()).first).getOrThrow();
         expect(contentPage.items.any((item) => item.code == _freeCode), isTrue);
-        expect(contentPage.items.any((item) => item.code == _fullCode), isFalse);
+        expect(
+          contentPage.items.any((item) => item.code == _fullCode),
+          isFalse,
+        );
 
         final premium = await api.send(
           ApiRequest(
