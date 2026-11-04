@@ -124,7 +124,7 @@ void main() {
         type: ContentType.interview,
         title: 'Dependency Injection',
         subtitle: 'Java Backend',
-        description: 'Explain constructor injection and testability.',
+        description: 'Explain constructor injection and its tradeoffs.',
         category: 'Java Backend',
         level: 'Senior',
         minutes: 6,
