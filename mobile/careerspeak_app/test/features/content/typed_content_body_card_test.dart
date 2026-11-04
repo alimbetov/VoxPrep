@@ -8,9 +8,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: SingleChildScrollView(
-            child: TypedContentBodyCard(body: body),
-          ),
+          body: SingleChildScrollView(child: TypedContentBodyCard(body: body)),
         ),
       ),
     );
@@ -45,7 +43,10 @@ void main() {
       ),
     );
     expect(find.text('Explain dependency injection.'), findsOneWidget);
-    expect(find.text('Dependencies are supplied to the object.'), findsOneWidget);
+    expect(
+      find.text('Dependencies are supplied to the object.'),
+      findsOneWidget,
+    );
     expect(find.text('1. Loose coupling'), findsOneWidget);
   });
 
@@ -84,12 +85,7 @@ void main() {
       ShadowingBody(
         transcript: 'Welcome to the interview.',
         segments: [
-          ShadowingSegment(
-            order: 0,
-            text: 'Welcome',
-            startMs: 0,
-            endMs: 1200,
-          ),
+          ShadowingSegment(order: 0, text: 'Welcome', startMs: 0, endMs: 1200),
         ],
       ),
     );
