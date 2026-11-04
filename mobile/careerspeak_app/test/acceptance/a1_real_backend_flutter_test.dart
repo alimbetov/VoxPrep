@@ -261,7 +261,7 @@ void main() {
               database,
               assessmentLoader,
               HttpCataloguePayloadGateway(apiClient: api),
-              manifestGateway,
+              manifestGateway: manifestGateway,
             ),
           );
           final failure = await interrupted.synchronize(
