@@ -244,6 +244,51 @@ void main() {
           final nextRoot = (nextFetch as RootManifestChanged).manifest;
           expect(nextRoot.contentVersion, root.contentVersion + 1);
           expect(nextRoot.checksum, isNot(root.checksum));
+          // Inject one real payload fetch failure after N+1 becomes available.
+          // The atomic CURRENT switch must not happen until all bytes are ready.
+          final interrupted = ContentSyncCoordinator(
+            journal: DriftSyncJournal(database),
+            manifestGateway: manifestGateway,
+            planner: const ContentSyncPlanner(),
+            executor: DriftSyncPlanExecutor(
+              database,
+              manifestGateway,
+              _FailOnceContentPayloadGateway(
+                HttpContentPayloadGateway(apiClient: api),
+              ),
+            ),
+            snapshotStager: DriftPublicationSnapshotStager(
+              database,
+              assessmentLoader,
+              HttpCataloguePayloadGateway(apiClient: api),
+              manifestGateway,
+            ),
+          );
+          final failure = await interrupted.synchronize(
+            runId: 'r5-n2-injected-fetch-failure',
+            trigger: SyncTrigger.manual,
+            translationLocale: 'en',
+          );
+          expect(failure, isA<FailureResult<ContentSyncOutcome>>());
+          final stillN = (await DriftUniversalCatalogueRepository(
+            database,
+          ).readCurrent()).getOrThrow();
+          expect(stillN!.contentVersion, root.contentVersion);
+          final oldPage = (await DriftContentRepository(
+            database,
+          ).watchContent(const ContentQuery()).first).getOrThrow();
+          expect(
+            oldPage.items.singleWhere((item) => item.code == _freeCode).revision,
+            1,
+          );
+          expect(
+            (await database.select(database.favorites).get()).any(
+              (row) => row.contentCode == _freeCode,
+            ),
+            isTrue,
+          );
+
+          // Retry with the production gateway and a fresh run ID.
           final nextSync = await coordinator.synchronize(
             runId: 'r5-real-publication-n-plus-one',
             trigger: SyncTrigger.manual,
