@@ -56,7 +56,11 @@ final class DriftTypedContentReader {
         row.read<String>('body_kind') != item.type.name ||
         row.read<String>('title') != item.title ||
         row.read<String>('subtitle') != item.subtitle ||
-        row.read<String>('description') != item.description) {
+        row.read<String>('description') != item.description ||
+        row.read<String>('category') != item.category ||
+        row.read<String>('level') != item.level ||
+        row.read<int>('minutes') != item.minutes ||
+        (row.read<int>('has_audio') != 0) != item.hasAudio) {
       throw StateError('Typed content identity/checksum mismatch');
     }
 
