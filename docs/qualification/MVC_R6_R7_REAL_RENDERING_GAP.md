@@ -5,9 +5,9 @@ Status: **OPEN**. R7 first learner rendering slice implemented for five existing
 ## Source evidence
 
 - Backend `ContentRevisionSnapshot.Body` supports seven typed variants: Vocabulary, Interview, Topic, Phrase, Shadowing, Question, PracticeTest.
-- Flutter `mobile/careerspeak_app/lib/domain/content_item.dart` has only five `ContentType` members: vocabulary, interview, topic, shadowing, phrase.
+- Flutter `mobile/careerspeak_app/lib/domain/content_item.dart` has five ordinary lesson `ContentType` members: vocabulary, interview, topic, shadowing, phrase. **Question/PracticeTest are represented separately** in `domain/assessment.dart`, `data/remote/assessment_payload_decoder.dart` and `features/tests/test_session_screen.dart`; absence from `ContentType` alone is not evidence the app lacks test UI.
 - Flutter `features/content/content_detail_panel.dart` currently renders common metadata, learner markers, generic audio or Interview role audio and description. It does **not** render all typed body fields.
-- Therefore Flutter's learner-visible lesson cannot yet be claimed equivalent to Backend MVC Content Studio. Especially Question/PracticeTest cannot be previewed faithfully without new Flutter domain/decoder/persistence/UI work.
+- Therefore ordinary learner-visible lessons previously did not render typed body fields. The existing assessment pathway must be qualified against Backend editorial questions/tests and linked to the same published exact-revision contract; it should not be duplicated as an ordinary lesson.
 
 ## Implemented R7 first slice (pending qualification)
 
@@ -40,8 +40,8 @@ Each typed view must use exactly the published payload, not a hand-crafted MVC p
 | Interview | Prompt, model answer, ordered key points, distinct Question/Sample Answer role clips | Decode/persist/widget/audio/offline |
 | Topic | Ordered sections with heading/text, optional narration | Decode/persist/widget/offline |
 | Shadowing | Transcript, ordered segments with optional start/end; published audio; **no microphone scoring** | Decode/persist/widget/audio/offline |
-| Question | Question text, ordered choices, correctness handling appropriate to learner mode, explanation | Decode/persist/widget/answer feedback/offline |
-| Practice Test | Instructions, percentage threshold, exact referenced Question revisions, deterministic scoring, review | Decode/references/persist/widget/scoring/offline |
+| Question (assessment domain) | Actual assessment prompt, ordered choices, feedback/explanation; use existing assessment decoder and session UI | Backend editor → assessment payload → Drift → test UI/offline |
+| Practice Test (assessment domain) | Existing session navigator and scoring, exact referenced Question revisions and configured passing threshold | Backend editor → frozen assessment refs → Drift → test UI/scoring/offline |
 
 ## Non-negotiable business/security rules
 
@@ -54,8 +54,8 @@ Each typed view must use exactly the published payload, not a hand-crafted MVC p
 
 ## Work remaining
 
-1. Update Dart domain, payload parsers and Drift mappings to cover all seven types without losing typed bodies.
-2. Add production type-specific learner widgets and tests (including Question & Practice Test).
+1. Qualify the existing five ordinary lesson types on real published payloads through Drift, widgets and offline reopen (first local reader/widget slice is implemented).
+2. Qualify the separate existing Question/PracticeTest assessment decoders, repositories, learner sessions, scoring and revision references against Backend MVC outputs. Integrate navigation without duplicating assessment models.
 3. Add exact published fixture E2E per type and offline reopen tests.
 4. Add MVC read-only preview backed by the same typed fixtures, explicitly label any approximation until parity proven.
 5. Record screenshots from actual Flutter renderer on devices/emulators and compare with approved content.
