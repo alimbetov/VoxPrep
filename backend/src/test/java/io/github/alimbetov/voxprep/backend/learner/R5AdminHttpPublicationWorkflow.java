@@ -84,6 +84,25 @@ final class R5AdminHttpPublicationWorkflow {
         }
     }
 
+    void bindDraftImage(UUID revisionId, UUID assetId) throws Exception {
+        CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
+        try (HttpClient http = HttpClient.newBuilder().cookieHandler(cookies)
+                .connectTimeout(Duration.ofSeconds(5))
+                .followRedirects(HttpClient.Redirect.NEVER).build()) {
+            var login = get(http, "/login");
+            assertThat(post(http, "/login", csrf(login.body()),
+                    "username=" + enc(username) + "&password=" + enc(password)).statusCode())
+                    .isEqualTo(302);
+            var picker = get(http, "/admin/media?revisionId=" + revisionId + "&role=COVER_IMAGE");
+            assertThat(picker.statusCode()).isEqualTo(200);
+            var bound = post(http, "/admin/media/bind", csrf(picker.body()),
+                    "revisionId=" + revisionId + "&role=COVER_IMAGE&assetId=" + assetId);
+            assertThat(bound.statusCode()).isEqualTo(302);
+            assertThat(get(http, "/admin/content/revisions/" + revisionId + "/edit").body())
+                    .contains("DRAFT");
+        }
+    }
+
     void bindAndPublish(UUID revisionId, UUID assetId, UUID candidateId,
             List<PublicationExactContentRef> refs) throws Exception {
         CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
@@ -95,31 +114,10 @@ final class R5AdminHttpPublicationWorkflow {
             HttpResponse<String> auth = post(http, "/login", csrf(login.body()),
                     "username=" + enc(username) + "&password=" + enc(password));
             assertThat(auth.statusCode()).isEqualTo(302);
-            HttpResponse<String> picker = get(http,
-                    "/admin/media?revisionId=" + revisionId + "&role=COVER_IMAGE");
-            assertThat(picker.statusCode()).isEqualTo(200);
-            String token = csrf(picker.body());
-            HttpResponse<String> bind = post(http, "/admin/media/bind", token,
-                    "revisionId=" + revisionId + "&role=COVER_IMAGE&assetId=" + assetId);
-            assertThat(bind.statusCode()).isEqualTo(302);
-            assertThat(bind.headers().firstValue("location").orElse(""))
-                    .contains("/admin/content/revisions/" + revisionId + "/edit");
-
-            // Prove actual Content Studio lifecycle DRAFT → READY_FOR_AUDIO
-            // → READY_FOR_REVIEW → APPROVED before publication.
-            String editPath = "/admin/content/revisions/" + revisionId + "/edit";
-            for (String step : List.of("ready-for-audio", "review", "approve")) {
-                var edit = get(http, editPath);
-                assertThat(edit.statusCode()).isEqualTo(200);
-                var version = VERSION.matcher(edit.body());
-                assertThat(version.find()).as("expectedVersion exists in lifecycle form").isTrue();
-                String payload = "expectedVersion=" + enc(version.group(1))
-                        + "&reason=R5_ACCEPTANCE&comment=Live+HTTP+workflow";
-                var change = post(http,
-                        "/admin/content/revisions/" + revisionId + "/" + step, token, payload);
-                assertThat(change.statusCode()).as(step).isEqualTo(302);
-            }
-            assertThat(get(http, editPath).body()).contains("APPROVED");
+            String token = csrf(get(http, "/admin/publication").body());
+            var approved = get(http, "/admin/content/revisions/" + revisionId + "/edit");
+            assertThat(approved.statusCode()).isEqualTo(200);
+            assertThat(approved.body()).contains("APPROVED");
 
             StringBuilder lines = new StringBuilder();
             for (var ref : refs) {
