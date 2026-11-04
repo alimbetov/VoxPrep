@@ -1,6 +1,6 @@
 # MVC-R6 → MVC-R7: exact Flutter rendering gap and acceptance
 
-Status: **OPEN**, based on actual source inspection in `main` after R5 PR #48 merge. No generated mock screenshots are acceptance.
+Status: **OPEN**. R7 first learner rendering slice implemented for five existing Flutter types; Question/PracticeTest remain separate contracts. Device/end-to-end acceptance and exact-SHA CI are pending. No generated mock screenshots are acceptance.
 
 ## Source evidence
 
@@ -8,6 +8,15 @@ Status: **OPEN**, based on actual source inspection in `main` after R5 PR #48 me
 - Flutter `mobile/careerspeak_app/lib/domain/content_item.dart` has only five `ContentType` members: vocabulary, interview, topic, shadowing, phrase.
 - Flutter `features/content/content_detail_panel.dart` currently renders common metadata, learner markers, generic audio or Interview role audio and description. It does **not** render all typed body fields.
 - Therefore Flutter's learner-visible lesson cannot yet be claimed equivalent to Backend MVC Content Studio. Especially Question/PracticeTest cannot be previewed faithfully without new Flutter domain/decoder/persistence/UI work.
+
+## Implemented R7 first slice (pending qualification)
+
+- Flutter `DriftTypedContentReader` reads exact typed payload already written by `DriftSyncPlanExecutor` into `typed_content_reads`; joins exact revision with `content_catalog_reads` and compares immutable checksums, body kind and visible canonical metadata.
+- The existing production `ContentPayloadDecoder` validates the reconstituted typed payload. Invalid/corrupt payloads fail closed, with no invented body data.
+- `typedContentByIdentityProvider` requires entitlement-aware `contentByIdentityProvider` to succeed before retrieving typed body. No new public endpoint or broader FULL entitlement access introduced.
+- Actual `ContentDetailPanel` renders Vocabulary, Phrase, Interview, Topic and Shadowing using `TypedContentBodyCard`. Includes exact transcript and segment timing; does **not** add microphone, recording or speech-scoring functionality.
+- Widget tests cover all five body types; Drift tests cover exact read, absent legacy body and checksum mismatch.
+- DB schema unchanged (uses existing `typed_content_reads` table). All changes require exact-SHA Flutter CI and offline device acceptance.
 
 ## Required R7 production path
 
