@@ -8,7 +8,7 @@ import io.github.alimbetov.voxprep.backend.installation.security.InstallationPri
 import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 class PurchaseVerificationControllerTest {
@@ -19,6 +19,7 @@ class PurchaseVerificationControllerTest {
                 new LifetimePurchaseService.VerificationResult(true,"FULL",
                         Instant.parse("2026-11-04T00:00:00Z")));
         var mvc=MockMvcBuilders.standaloneSetup(new PurchaseVerificationController(service))
+                .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .build();
         // @AuthenticationPrincipal requires security context normally set by the installation filter.
         // Without a production filter, this standalone test verifies the mandatory deny path.

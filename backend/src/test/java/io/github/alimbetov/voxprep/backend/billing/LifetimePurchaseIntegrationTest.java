@@ -17,7 +17,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 /** Real Postgres+Liquibase B8 qualification. No store network or personal data. */
-@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.NONE)
+@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Transactional
 class LifetimePurchaseIntegrationTest {
