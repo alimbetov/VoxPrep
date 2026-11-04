@@ -110,7 +110,11 @@ void main() {
           await tester.pump(const Duration(milliseconds: 1));
         }
         expect(disposalError, isNull);
-        expect(disposed, isTrue, reason: 'audio controller teardown must finish');
+        expect(
+          disposed,
+          isTrue,
+          reason: 'audio controller teardown must finish',
+        );
         await disposal;
         debugPrint('[A1-AUDIO] controller closed');
       }
@@ -169,9 +173,14 @@ final class _Session implements AudioPlaybackSession {
   @override
   Duration? get initialDuration => const Duration(seconds: 10);
 
+  final StreamController<AudioPlaybackEvent> _events =
+      StreamController<AudioPlaybackEvent>.broadcast(
+        sync: true,
+        onCancel: () => debugPrint('[A1-AUDIO] fake events cancelled'),
+      );
+
   @override
-  Stream<AudioPlaybackEvent> get events =>
-      const Stream<AudioPlaybackEvent>.empty();
+  Stream<AudioPlaybackEvent> get events => _events.stream;
 
   @override
   Future<Result<void>> play() async => const Success<void>(null);
@@ -192,6 +201,7 @@ final class _Session implements AudioPlaybackSession {
   @override
   Future<void> dispose() async {
     debugPrint('[A1-AUDIO] fake session dispose');
+    await _events.close();
   }
 }
 
