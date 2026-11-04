@@ -9,6 +9,7 @@ import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart'
     hide ContentAssetRef, PackContentRef;
 import 'package:careerspeak_app/data/local/drift_sync_journal.dart';
+import 'package:careerspeak_app/data/local/drift_typed_content_reader.dart';
 import 'package:careerspeak_app/data/local/drift_sync_plan_executor.dart';
 import 'package:careerspeak_app/domain/content_identity.dart';
 import 'package:careerspeak_app/domain/content_item.dart';
@@ -117,6 +118,26 @@ void main() {
       typedPayload.bodyJson,
       contains('"prompt":"What is dependency injection?"'),
     );
+    final renderedBody = await DriftTypedContentReader(database).getForVisible(
+      const ContentItem(
+        code: 'JAVA_Q_001',
+        type: ContentType.interview,
+        title: 'Dependency Injection',
+        subtitle: 'Java Backend',
+        description: 'Explain constructor injection and testability.',
+        category: 'Java Backend',
+        level: 'Senior',
+        minutes: 6,
+        hasAudio: true,
+      ),
+    );
+    expect(renderedBody, isA<InterviewBody>());
+    expect(
+      (renderedBody! as InterviewBody).prompt,
+      'What is dependency injection?',
+    );
+
+
 
     final asset = await database.select(database.assetCatalog).getSingle();
     expect(asset.assetKind, 'AUDIO');
