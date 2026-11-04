@@ -292,7 +292,10 @@ final class AudioPlaybackController {
     final shouldPersist = _state.phase != AudioPlaybackPhase.completed;
 
     ++_generation;
-    await _eventSubscription?.cancel();
+    // _generation already invalidates any late event. Cancellation is
+    // asynchronous for some playback engines and must not block Stop/Dispose.
+    final subscription = _eventSubscription;
+    if (subscription != null) unawaited(subscription.cancel());
     _eventSubscription = null;
     _session = null;
 
@@ -456,7 +459,10 @@ final class AudioPlaybackController {
         persistPosition && _state.phase != AudioPlaybackPhase.completed;
 
     ++_generation;
-    await _eventSubscription?.cancel();
+    // _generation already invalidates any late event. Cancellation is
+    // asynchronous for some playback engines and must not block Stop/Dispose.
+    final subscription = _eventSubscription;
+    if (subscription != null) unawaited(subscription.cancel());
     _eventSubscription = null;
     _session = null;
 
