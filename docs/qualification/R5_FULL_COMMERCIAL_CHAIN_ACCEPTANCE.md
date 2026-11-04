@@ -214,6 +214,20 @@ The A1 live acceptance fixture now commits its catalog and content **before** pu
 
 Scope boundary: the initial content and catalogue hierarchy remain controlled JPA fixtures and the image object is ingested via backend application service; the joined test does not prove Content Studio content creation or Media Library HTTP file upload for that **same** release. The separate R5 live media test proves the upload, deduplication and two draft bindings. Do not mark the entire real-editor-created publication path accepted until the remaining authoring/asset ingestion steps are driven through production HTTP within one joined scenario.
 
+## R5.2 — HTTP authoring and N → N+1 implementation evidence
+
+**Implementation present, acceptance requires successful exact-SHA CI.**
+
+- Production `ContentAuthoringService.createInitialRevision` constructs first DRAFT with revision number 1 through existing domain entities for all seven supported content types. New CSRF-protected Content Studio `GET /admin/content/revisions/new` + `POST /admin/content/revisions` now lets operators author new material without directly inserting JPA rows.
+- Production `CollectionMembershipRevisionService.replace` and ADMIN MVC screen under `/admin/catalogue/collections/{id}/members` atomically replace one slot with a strictly newer APPROVED exact revision of the **same** content identity, with a database collection lock. Already-frozen historical publication documents remain immutable.
+- A1 creates FREE and FULL phrases, QUESTION and PRACTICE_TEST through real admin HTTP, and runs review/approve through MVC; JPA still creates the **catalogue hierarchy and collection membership fixture**, and calls the assessment configuration service. The test may not be described as complete HTTP-based catalogue authoring until these remaining fixtures are replaced.
+- A1 stages immutable N over real HTTP → Flutter/Drift, writes a stable-identity FAVORITE, then uses a bounded test-only filesystem signal between the Flutter subprocess and Java harness. Java creates revision 2 through MVC `/next`, edits it, binds the existing image, reviews/approves it, replaces the collection slot, and publishes N+1 through the real Publication Studio endpoints. Flutter then must synchronize N+1 in the **same Drift database**, observe revised title/revision, preserve FAVORITE, and successfully reopen local CURRENT and image offline.
+- No test-only HTTP controller or production runtime switch is added. Signal files are confined to the test runner.
+- The first N+1 run found a production defect: the frozen pack writer used the *new release* timestamp for unchanged exact content revisions; Flutter correctly rejected it as `CONTENT_REVISION_IMMUTABLE_CONFLICT`. Writer now uses `revision.getPublishedAt()`, leaving the root's new `publishedAt` independent. The unit writer fixture was updated to represent an already-published revision.
+- HTTP redirect assertions were fixed to accept absolute Spring MVC `Location`; Flutter formatting is enforced by CI. Every change must be re-qualified at the final commit SHA.
+
+**Still out of scope for this slice:** HTTP authoring of complete catalogue hierarchy + membership creation, real image upload within the exact same A1 publication (separately exercised by the Media Library HTTP test), real store transactions, restore/refund/device tests, interrupted N+1 rollback fault injection, and a full production learner UI interaction test. Acceptance statements must not merge these independent gates.
+
 ## Second-pass review outcome
 
 **Specification completeness is improved, implementation is not claimed.** Existing PR is documentation-only. The reviewed code confirms particular failure modes and unimplemented contracts that acceptance must address, but this review has not executed a complete runtime test of media, stores or devices. Prioritise DEC-01 and DEC-02 before writing an offline premium implementation, then R5.1/R5.2. Keep PR draft and preserve existing CI gates.
