@@ -27,53 +27,62 @@ void main() {
         engine: engine,
         learnerState: learnerState,
       );
-      addTearDown(controller.dispose);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            learnerStateRepositoryProvider.overrideWithValue(learnerState),
-            audioPlaybackControllerProvider.overrideWithValue(controller),
-          ],
-          child: const MaterialApp(
-            home: Scaffold(body: ContentDetailPanel(item: _topic)),
+      try {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              learnerStateRepositoryProvider.overrideWithValue(learnerState),
+              audioPlaybackControllerProvider.overrideWithValue(controller),
+            ],
+            child: const MaterialApp(
+              home: Scaffold(body: ContentDetailPanel(item: _topic)),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        // Do not pumpAndSettle against an asynchronous playback state:
+        // an in-flight audio resolve deliberately has an animated spinner.
+        for (var frame = 0;
+            frame < 5 &&
+                find.widgetWithText(FilledButton, 'Play').evaluate().isEmpty;
+            frame++) {
+          await tester.pump();
+        }
+        expect(find.widgetWithText(FilledButton, 'Play'), findsOneWidget);
 
-      final play = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Play'),
-      );
-      play.onPressed!();
-      play.onPressed!();
+        final play = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Play'),
+        );
+        play.onPressed!();
+        play.onPressed!();
 
-      for (
-        var attempt = 0;
-        attempt < 30 && resolver.pending.length < 2;
-        attempt++
-      ) {
-        // Widget tests run in FakeAsync: delayed(Duration.zero) cannot make
-        // progress until the test binding pumps the microtask queue.
+        for (var frame = 0;
+            frame < 30 && resolver.pending.length < 2;
+            frame++) {
+          await tester.pump();
+        }
+        expect(resolver.pending, hasLength(2));
+
+        resolver.complete(0, _asset('superseded'));
         await tester.pump();
-      }
-      expect(resolver.pending, hasLength(2));
-      resolver.complete(0, _asset('superseded'));
-      await tester.pump();
+        expect(find.textContaining('Audio playback failed:'), findsNothing);
 
-      expect(find.textContaining('Audio playback failed:'), findsNothing);
-
-      resolver.complete(1, _asset('winner'));
-      // A resolving spinner is an intentionally non-settling animation.
-      // Pump a bounded number of frames so a regression fails with its
-      // actual UI state rather than exhausting the CI timeout.
-      for (var frame = 0; frame < 5; frame++) {
+        resolver.complete(1, _asset('winner'));
+        for (var frame = 0; frame < 5; frame++) {
+          await tester.pump();
+        }
+        expect(find.textContaining('Audio playback failed:'), findsNothing);
+        expect(find.text('Pause'), findsOneWidget);
+        expect(engine.openedAssetIds, <String>['winner']);
+      } finally {
+        // Riverpod's StreamProvider is listening to controller.states.
+        // Unmount it *before* awaiting the broadcast controller's close().
+        // Otherwise test finalization can await a paused FakeAsync listener
+        // indefinitely even if the supersession behavior is correct.
+        await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump();
+        await controller.dispose();
       }
-
-      expect(find.textContaining('Audio playback failed:'), findsNothing);
-      expect(find.text('Pause'), findsOneWidget);
-      expect(engine.openedAssetIds, <String>['winner']);
     },
   );
 }
