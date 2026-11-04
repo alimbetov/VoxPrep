@@ -34,6 +34,20 @@ installation bearer tokens to GitHub issues, artifacts or CI logs.
 - Play: enroll license testers, distribute a signed internal testing build,
   grant service account access to Google Play Developer API, mount its key
   in the backend process; set `GOOGLE_APPLICATION_CREDENTIALS`.
+- Configure a Google Cloud Pub/Sub push subscription for Play RTDN to
+  `POST /api/v1/store/notifications/google`. Enable **authenticated push**
+  with a dedicated OIDC service account and explicit push audience; supply
+  `VOXPREP_GOOGLE_PUBSUB_AUDIENCE` and
+  `VOXPREP_GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL`. Production billing fails
+  startup without both values. The JWT signature, issuer, exact audience,
+  email and `email_verified` are enforced before decoding notifications.
+  The service account must be authorized only for this Pub/Sub push endpoint;
+  do not use shared unverified tokens or make the endpoint publicly trusted.
+- The RTDN envelope must match the configured package. Purchased/canceled
+  events are reverified through Google productsv2. Full one-time-product
+  voided notices are rechecked against the Developer API before entitlement
+  revocation. Backend responds 503 to transient Store errors so Pub/Sub retries;
+  no raw purchase tokens may appear in request logs or diagnostic artifacts.
 - Apple: provision Sandbox testers and TestFlight build; mount App Store
   Server API `p8` key and trusted Apple `cer` roots. Configure issuer ID,
   key ID, bundle ID and Apple API environment.
