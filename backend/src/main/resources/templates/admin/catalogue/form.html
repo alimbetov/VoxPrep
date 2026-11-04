@@ -78,6 +78,7 @@
 
                 <div class="d-flex gap-2 mt-4">
                     <button class="btn btn-dark" type="submit">Save</button>
+                    <a class="btn btn-outline-primary" th:if="${collectionMembersUrl != null}" th:href="${collectionMembersUrl}">Manage content revisions</a>
                     <a class="btn btn-outline-secondary" th:href="@{/admin/catalogue}">Cancel</a>
                 </div>
             </form>
