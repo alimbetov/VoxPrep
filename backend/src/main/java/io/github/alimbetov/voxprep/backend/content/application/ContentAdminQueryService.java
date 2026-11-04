@@ -1,6 +1,8 @@
 package io.github.alimbetov.voxprep.backend.content.application;
 
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
+import io.github.alimbetov.voxprep.backend.content.domain.ContentLifecycleStatus;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,6 +31,24 @@ public class ContentAdminQueryService {
         }
         return repository.findAll(PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "updatedAt")))
                 .map(ContentRevisionSnapshot::from);
+    }
+
+    /** Bounded, server-filtered approved revision selector; posting still revalidates state. */
+    @Transactional(readOnly = true)
+    public Page<ContentRevisionSnapshot> approvedCandidates(String titleQuery, int page) {
+        if (page < 0 || page > 10000) {
+            throw new IllegalArgumentException("Invalid candidate page");
+        }
+        String query = titleQuery == null ? "" : titleQuery.strip();
+        if (query.length() > 100) {
+            throw new IllegalArgumentException("Candidate search exceeds 100 characters");
+        }
+        var statuses = List.of(ContentLifecycleStatus.APPROVED, ContentLifecycleStatus.PUBLISHED);
+        var pageable = PageRequest.of(page, 30, Sort.by(Sort.Direction.DESC, "updatedAt"));
+        var selected = query.isEmpty()
+                ? repository.findByLifecycleIn(statuses, pageable)
+                : repository.findByLifecycleInAndTitleContainingIgnoreCase(statuses, query, pageable);
+        return selected.map(ContentRevisionSnapshot::from);
     }
 
     @Transactional(readOnly = true)
