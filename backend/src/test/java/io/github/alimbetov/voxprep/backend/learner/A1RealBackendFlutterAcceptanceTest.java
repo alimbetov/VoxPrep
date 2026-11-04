@@ -148,7 +148,7 @@ class A1RealBackendFlutterAcceptanceTest {
                 new CatalogueCode("A1_FULL"), track, "Advanced",
                 "Premium block", CollectionAccessLevel.FULL,
                 1, AvailabilityStatus.ACTIVE));
-        members.saveAndFlush(new CollectionContentMemberEntity(freeCollection, 0, free));
+        var primaryMember = members.saveAndFlush(new CollectionContentMemberEntity(freeCollection, 0, free));
         members.saveAndFlush(new CollectionContentMemberEntity(freeCollection, 1, test));
         members.saveAndFlush(new CollectionContentMemberEntity(fullCollection, 0, full));
 
@@ -159,7 +159,8 @@ class A1RealBackendFlutterAcceptanceTest {
                 new PublicationExactContentRef(full.getIdentity(), full.getChecksum()),
                 new PublicationExactContentRef(test.getIdentity(), test.getChecksum()),
                 new PublicationExactContentRef(question.getIdentity(), question.getChecksum()));
-        adminPublication.set(new PublicationHttpFixture(free.getId(), icon.getId(), candidate.getId(), refs));
+        adminPublication.set(new PublicationHttpFixture(free.getId(), icon.getId(), candidate.getId(),
+                freeCollection.getId(), primaryMember.getId(), refs));
         }); // Commit fixture before ADMIN HTTP binding and publish (separate transaction).
 
         var fixture = adminPublication.get();
@@ -174,6 +175,7 @@ class A1RealBackendFlutterAcceptanceTest {
                 "voxprep.a1.flutter.dir", "../mobile/careerspeak_app"));
         assertThat(new File(flutterDirectory, "pubspec.yaml")).isFile();
 
+        var r5Signals = java.nio.file.Files.createTempDirectory("voxprep-r5-n2-");
         var command = List.of(
                 "flutter", "test",
                 "--dart-define=A1_REAL_BACKEND=true",
@@ -182,8 +184,39 @@ class A1RealBackendFlutterAcceptanceTest {
                 "--dart-define=A1_FULL_CODE=" + FULL_CODE,
                 "--dart-define=A1_TEST_CODE=" + TEST_CODE,
                 "--dart-define=A1_QUESTION_CODE=" + QUESTION_CODE,
+                "--dart-define=A1_R5_CONTROL_DIR=" + r5Signals.toAbsolutePath(),
                 "--reporter=expanded",
                 "test/acceptance/a1_real_backend_flutter_test.dart");
+
+        // On the *same* Flutter process and SQLite file, publish N+1 only
+        // after the learner has fully committed and marked N ready.
+        Thread upgrade = Thread.ofVirtual().start(() -> {
+            try {
+                var started = System.nanoTime();
+                var ready = r5Signals.resolve("n1-ready");
+                while (!java.nio.file.Files.exists(ready)) {
+                    if (java.time.Duration.ofNanos(System.nanoTime() - started).toSeconds() > 150) {
+                        throw new IllegalStateException("Flutter did not signal N1-ready");
+                    }
+                    Thread.sleep(100);
+                }
+                new R5AdminHttpPublicationWorkflow(serverPort, adminUsername, adminPassword)
+                        .reviseAndPublish(fixture.revisionId(), fixture.assetId(),
+                                fixture.collectionId(), fixture.memberId(), fixture.refs(),
+                                id -> {
+                                    var revision = revisions.findById(id).orElseThrow();
+                                    return new PublicationExactContentRef(revision.getIdentity(), revision.getChecksum());
+                                });
+                java.nio.file.Files.writeString(r5Signals.resolve("n2-ready"), "published");
+            } catch (Exception exception) {
+                try {
+                    java.nio.file.Files.writeString(r5Signals.resolve("n2-error"),
+                            exception.getClass().getSimpleName() + ": " + exception.getMessage());
+                } catch (java.io.IOException ignored) {
+                    // Flutter's bounded wait still fails deterministically.
+                }
+            }
+        });
 
         Process process = new ProcessBuilder(command)
                 .directory(flutterDirectory)
@@ -213,13 +246,16 @@ class A1RealBackendFlutterAcceptanceTest {
         boolean completed = process.waitFor(8, TimeUnit.MINUTES);
         if (!completed) process.destroyForcibly();
         drain.join(10_000);
+        upgrade.join(10_000);
         assertThat(completed).as("Flutter A1 exceeded timeout; output:\n%s", output).isTrue();
         assertThat(process.exitValue()).as("Real Flutter HTTP/Drift A1 acceptance:\n%s", output).isZero();
         assertThat(output.toString()).contains("A1_REAL_BACKEND_ACCEPTED");
+        assertThat(java.nio.file.Files.exists(r5Signals.resolve("n2-ready")))
+                .as("R5 N+1 publication must complete").isTrue();
     }
 
     private record PublicationHttpFixture(UUID revisionId, UUID assetId, UUID candidateId,
-            List<PublicationExactContentRef> refs) {}
+            UUID collectionId, UUID memberId, List<PublicationExactContentRef> refs) {}
 
     private PhraseContentRevisionEntity phrase(String code, String title, String phrase) {
         return revisions.saveAndFlush(new PhraseContentRevisionEntity(
