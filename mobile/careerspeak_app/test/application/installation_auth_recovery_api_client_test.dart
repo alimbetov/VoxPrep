@@ -8,27 +8,33 @@ import 'package:careerspeak_app/domain/installation_credentials.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('rejected token fails closed without anonymous rotation or replay', () async {
-    final store = _MemoryCredentialStore(
-      installationId: InstallationId('installation-1'),
-      token: InstallationToken('invalid-token'),
-    );
-    final delegate = _Delegate((request) async => _unauthorized());
-    final client = InstallationAuthRecoveryApiClient(
-      delegate: delegate,
-      credentialStore: store,
-    );
+  test(
+    'rejected token fails closed without anonymous rotation or replay',
+    () async {
+      final store = _MemoryCredentialStore(
+        installationId: InstallationId('installation-1'),
+        token: InstallationToken('invalid-token'),
+      );
+      final delegate = _Delegate((request) async => _unauthorized());
+      final client = InstallationAuthRecoveryApiClient(
+        delegate: delegate,
+        credentialStore: store,
+      );
 
-    final result = await client.send(
-      ApiRequest(method: ApiMethod.get, path: '/api/v1/content'),
-    );
+      final result = await client.send(
+        ApiRequest(method: ApiMethod.get, path: '/api/v1/content'),
+      );
 
-    expect(result, isA<FailureResult<ApiResponse>>());
-    expect((result as FailureResult<ApiResponse>).failure.code, 'UNAUTHORIZED');
-    expect(delegate.calls, 1);
-    expect((await store.readInstallationToken())?.value, 'invalid-token');
-    expect((await store.readInstallationId())?.value, 'installation-1');
-  });
+      expect(result, isA<FailureResult<ApiResponse>>());
+      expect(
+        (result as FailureResult<ApiResponse>).failure.code,
+        'UNAUTHORIZED',
+      );
+      expect(delegate.calls, 1);
+      expect((await store.readInstallationToken())?.value, 'invalid-token');
+      expect((await store.readInstallationId())?.value, 'installation-1');
+    },
+  );
 
   test('anonymous 401 never attempts installation recovery', () async {
     final store = _MemoryCredentialStore(
@@ -122,63 +128,69 @@ void main() {
     expect((await store.readInstallationToken())?.value, 'token-revoked');
   });
 
-  test('parallel in-flight 401s replay once after independent rotation', () async {
-    final store = _MemoryCredentialStore(
-      installationId: InstallationId('installation-1'),
-      token: InstallationToken('token-old'),
-    );
-    final gate = Completer<void>();
-    final firstTwoStarted = Completer<void>();
-    var oldCalls = 0;
-    var freshCalls = 0;
-    final client = InstallationAuthRecoveryApiClient(
-      delegate: _Delegate((request) async {
-        final token = await store.readInstallationToken();
-        if (token?.value == 'token-old') {
-          oldCalls++;
-          if (oldCalls == 2) firstTwoStarted.complete();
-          await gate.future;
-          return _unauthorized();
-        }
-        freshCalls++;
-        return _ok();
-      }),
-      credentialStore: store,
-    );
+  test(
+    'parallel in-flight 401s replay once after independent rotation',
+    () async {
+      final store = _MemoryCredentialStore(
+        installationId: InstallationId('installation-1'),
+        token: InstallationToken('token-old'),
+      );
+      final gate = Completer<void>();
+      final firstTwoStarted = Completer<void>();
+      var oldCalls = 0;
+      var freshCalls = 0;
+      final client = InstallationAuthRecoveryApiClient(
+        delegate: _Delegate((request) async {
+          final token = await store.readInstallationToken();
+          if (token?.value == 'token-old') {
+            oldCalls++;
+            if (oldCalls == 2) firstTwoStarted.complete();
+            await gate.future;
+            return _unauthorized();
+          }
+          freshCalls++;
+          return _ok();
+        }),
+        credentialStore: store,
+      );
 
-    final first = client.send(
-      ApiRequest(method: ApiMethod.get, path: '/api/v1/a'),
-    );
-    final second = client.send(
-      ApiRequest(method: ApiMethod.get, path: '/api/v1/b'),
-    );
-    await firstTwoStarted.future;
-    await store.writeInstallationToken(InstallationToken('token-new'));
-    gate.complete();
-    final results = await Future.wait([first, second]);
-    expect(results, everyElement(isA<Success<ApiResponse>>()));
-    expect(oldCalls, 2);
-    expect(freshCalls, 2);
-  });
+      final first = client.send(
+        ApiRequest(method: ApiMethod.get, path: '/api/v1/a'),
+      );
+      final second = client.send(
+        ApiRequest(method: ApiMethod.get, path: '/api/v1/b'),
+      );
+      await firstTwoStarted.future;
+      await store.writeInstallationToken(InstallationToken('token-new'));
+      gate.complete();
+      final results = await Future.wait([first, second]);
+      expect(results, everyElement(isA<Success<ApiResponse>>()));
+      expect(oldCalls, 2);
+      expect(freshCalls, 2);
+    },
+  );
 
-  test('missing local credential never resurrects or re-registers UUID', () async {
-    final store = _MemoryCredentialStore(
-      installationId: InstallationId('installation-1'),
-      token: null,
-    );
-    final delegate = _Delegate((request) async => _unauthorized());
-    final client = InstallationAuthRecoveryApiClient(
-      delegate: delegate,
-      credentialStore: store,
-    );
-    final response = await client.send(
-      ApiRequest(method: ApiMethod.get, path: '/api/v1/content'),
-    );
-    expect(response, isA<FailureResult<ApiResponse>>());
-    expect(delegate.calls, 1);
-    expect(await store.readInstallationToken(), isNull);
-    expect((await store.readInstallationId())?.value, 'installation-1');
-  });
+  test(
+    'missing local credential never resurrects or re-registers UUID',
+    () async {
+      final store = _MemoryCredentialStore(
+        installationId: InstallationId('installation-1'),
+        token: null,
+      );
+      final delegate = _Delegate((request) async => _unauthorized());
+      final client = InstallationAuthRecoveryApiClient(
+        delegate: delegate,
+        credentialStore: store,
+      );
+      final response = await client.send(
+        ApiRequest(method: ApiMethod.get, path: '/api/v1/content'),
+      );
+      expect(response, isA<FailureResult<ApiResponse>>());
+      expect(delegate.calls, 1);
+      expect(await store.readInstallationToken(), isNull);
+      expect((await store.readInstallationId())?.value, 'installation-1');
+    },
+  );
 }
 
 Result<ApiResponse> _ok() => Success(
