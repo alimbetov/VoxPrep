@@ -196,6 +196,8 @@ void main() {
         );
         final downloaded = (await manager.ensureLocal(image)).getOrThrow();
         expect(await File(downloaded.localPath).exists(), isTrue);
+        expect(await File(downloaded.localPath).readAsBytes(), mediaProbe.bodyBytes);
+        expect(mediaProbe.bodyBytes.length, image.sizeBytes);
         expect(downloaded.reused, isFalse);
 
         // A rejected installation credential cannot rotate itself and cannot
@@ -246,6 +248,7 @@ void main() {
         expect(offlinePage.items.any((item) => item.code == _freeCode), isTrue);
         final reused = (await manager.ensureLocal(image)).getOrThrow();
         expect(reused.reused, isTrue);
+        expect(await File(reused.localPath).readAsBytes(), mediaProbe.bodyBytes);
 
         // The marker is emitted only after a genuine live-backend exchange.
         // ignore: avoid_print
