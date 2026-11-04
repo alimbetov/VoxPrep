@@ -4,13 +4,27 @@
 <main>
     <h1 class="h3">Collection <code th:text="${collectionCode}">CODE</code></h1>
     <p class="text-secondary">Replace a published collection slot with a newer APPROVED revision. Historical releases remain immutable.</p>
+    <form method="get" class="card card-body mb-3" th:action="@{/admin/catalogue/collections/{cid}/members(cid=${collectionId})}">
+        <label for="candidateQuery" class="form-label">Find approved content by title</label>
+        <div class="input-group">
+            <input id="candidateQuery" name="q" maxlength="100" type="search" class="form-control"
+                   th:value="${candidateQuery}" placeholder="Search approved content">
+            <button class="btn btn-outline-secondary" type="submit">Search</button>
+        </div>
+        <div class="form-text">Select from exact APPROVED / PUBLISHED revisions below; the server checks eligibility again on save.</div>
+    </form>
+    <div class="alert alert-info" th:if="${approvedCandidates.empty}">No approved content found for this search.</div>
     <div class="card studio-card mb-3"><div class="card-body">
         <h2 class="h5">Add approved content</h2>
         <form method="post" th:action="@{/admin/catalogue/collections/{cid}/members(cid=${collectionId})}">
-            <label class="form-label">Approved revision UUID</label>
+            <label class="form-label" for="appendRevision">Approved revision</label>
             <div class="input-group">
-                <input name="revisionId" class="form-control" required pattern="[0-9a-fA-F-]{36}">
-                <button class="btn btn-primary" type="submit">Append</button>
+                <select id="appendRevision" name="revisionId" class="form-select" required>
+                    <option value="">Select content…</option>
+                    <option th:each="candidate : ${approvedCandidates.content}" th:value="${candidate.id}"
+                            th:text="${candidate.contentCode + ' · ' + candidate.contentType + ' · rev ' + candidate.revisionNumber + ' — ' + candidate.title}">Approved revision</option>
+                </select>
+                <button class="btn btn-primary" type="submit" th:disabled="${approvedCandidates.empty}">Append</button>
             </div>
         </form>
     </div></div>
@@ -22,15 +36,28 @@
                 <span>revision <span th:text="${member.revision}">1</span></span>
             </div>
             <form method="post" th:action="@{/admin/catalogue/collections/{cid}/members/{mid}/replace(cid=${collectionId},mid=${member.id})}">
-                <label class="form-label">Approved replacement revision ID</label>
+                <label class="form-label">Approved replacement revision</label>
                 <div class="input-group">
-                    <input class="form-control" name="newRevisionId" required type="text"
-                           pattern="[0-9a-fA-F-]{36}" placeholder="UUID of newer approved revision">
+                    <select class="form-select" name="newRevisionId" required>
+                        <option value="">Select newer approved revision…</option>
+                        <option th:each="candidate : ${approvedCandidates.content}"
+                                th:if="${candidate.contentCode == member.code and candidate.revisionNumber > member.revision}"
+                                th:value="${candidate.id}"
+                                th:text="${candidate.contentCode + ' · rev ' + candidate.revisionNumber + ' — ' + candidate.title}">New revision</option>
+                    </select>
                     <button class="btn btn-outline-primary" type="submit">Replace for next publication</button>
                 </div>
             </form>
         </div>
     </div>
+
+    <nav class="d-flex align-items-center gap-2 mb-3" th:if="${approvedCandidates.totalPages > 1}" aria-label="Approved revision search pages">
+        <a class="btn btn-sm btn-outline-secondary" th:if="${!approvedCandidates.first}"
+           th:href="@{/admin/catalogue/collections/{cid}/members(cid=${collectionId},q=${candidateQuery},page=${approvedCandidates.number - 1})}">Previous results</a>
+        <span class="small text-secondary" th:text="${(approvedCandidates.number + 1) + ' / ' + approvedCandidates.totalPages}">1 / 1</span>
+        <a class="btn btn-sm btn-outline-secondary" th:if="${!approvedCandidates.last}"
+           th:href="@{/admin/catalogue/collections/{cid}/members(cid=${collectionId},q=${candidateQuery},page=${approvedCandidates.number + 1})}">Next results</a>
+    </nav>
     <p th:if="${#lists.isEmpty(members)}" class="text-secondary">No collection content members have been assigned.</p>
     <a class="btn btn-outline-secondary" th:href="@{/admin/catalogue}">Back to catalogue</a>
 </main>
