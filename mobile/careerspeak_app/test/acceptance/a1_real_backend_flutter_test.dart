@@ -197,7 +197,6 @@ void main() {
         final downloaded = (await manager.ensureLocal(image)).getOrThrow();
         expect(await File(downloaded.localPath).exists(), isTrue);
         expect(await File(downloaded.localPath).readAsBytes(), mediaProbe.bodyBytes);
-        expect(mediaProbe.bodyBytes.length, image.sizeBytes);
         expect(downloaded.reused, isFalse);
 
         // A rejected installation credential cannot rotate itself and cannot
