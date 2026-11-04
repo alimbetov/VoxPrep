@@ -4,6 +4,8 @@ import 'package:careerspeak_app/application/assessment/assessment_revision_loade
 import 'package:careerspeak_app/application/content_sync/content_sync_coordinator.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_planner.dart';
 import 'package:careerspeak_app/application/content_sync/sync_models.dart';
+import 'package:careerspeak_app/application/content_delivery/content_payload.dart';
+import 'package:careerspeak_app/application/ports/content_payload_gateway.dart';
 import 'package:careerspeak_app/application/ports/api_client.dart';
 import 'package:careerspeak_app/application/ports/content_manifest_gateway.dart';
 import 'package:careerspeak_app/application/ports/installation_credential_store.dart';
@@ -363,6 +365,28 @@ void main() {
     },
     skip: !_runRealBackend,
   );
+}
+
+final class _FailOnceContentPayloadGateway implements ContentPayloadGateway {
+  _FailOnceContentPayloadGateway(this._delegate);
+  final ContentPayloadGateway _delegate;
+  bool _failed = false;
+  @override
+  Future<Result<ContentPayload>> fetch(ContentPayloadRef target) {
+    if (!_failed) {
+      _failed = true;
+      return Future<Result<ContentPayload>>.value(
+        const FailureResult<ContentPayload>(
+          ApplicationFailure(
+            code: 'R5_INJECTED_N2_CONTENT_FETCH_FAILURE',
+            message: 'A required N+1 payload is unavailable.',
+            retryable: true,
+          ),
+        ),
+      );
+    }
+    return _delegate.fetch(target);
+  }
 }
 
 final class _MemoryCredentialStore implements InstallationCredentialStore {
