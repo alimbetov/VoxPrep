@@ -19,6 +19,8 @@ import 'package:careerspeak_app/application/services/installation_identity_servi
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/local/drift_app_preferences_repository.dart';
 import 'package:careerspeak_app/data/local/drift_content_repository.dart';
+import 'package:careerspeak_app/data/local/drift_typed_content_reader.dart';
+import 'package:careerspeak_app/application/content_delivery/typed_content_body.dart';
 import 'package:careerspeak_app/data/local/drift_sync_journal.dart';
 import 'package:careerspeak_app/data/local/drift_sync_plan_executor.dart';
 import 'package:careerspeak_app/data/remote/http_api_client.dart';
@@ -316,6 +318,13 @@ Future<void> _expectProductionReadModel(CareerSpeakDatabase database) async {
   expect(item.category, 'Java Backend');
   expect(item.level, 'Senior');
   expect(item.revision, 1);
+  // The same exact typed body must survive closing/reopening the SQLite file
+  // without a second HTTP content fetch or inventing a placeholder.
+  final typed = await DriftTypedContentReader(database).getForVisible(item);
+  expect(typed, isA<InterviewBody>());
+  final interview = typed! as InterviewBody;
+  expect(interview.prompt, 'What is dependency injection?');
+  expect(interview.keyPoints, <String>['loose coupling', 'testability']);
 }
 
 Future<void> _expectProductionUi(
