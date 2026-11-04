@@ -56,6 +56,12 @@ public class GooglePlayStoreVerifier {
                     || !product.equals(item.get("productId"))) {
                 return decision(product, token, StorePurchaseVerifier.State.REVOKED, null);
             }
+            // Lifetime unlock is NON_CONSUMABLE: a consumed purchase token
+            // must not be reused to grant perpetual access.
+            if (item.get("productOfferDetails") instanceof Map<?, ?> details
+                    && "CONSUMPTION_STATE_CONSUMED".equals(details.get("consumptionState"))) {
+                return decision(product, token, StorePurchaseVerifier.State.REVOKED, null);
+            }
             if (body.get("testPurchaseContext") != null && !acceptTestPurchases) {
                 return decision(product, token, StorePurchaseVerifier.State.REVOKED, null);
             }
