@@ -31,14 +31,31 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout 7m flutter test --concurrency=1 --reporter expanded \
-            test/acceptance/p1_7_adaptive_acceptance_test.dart \
-            test/acceptance/p2_11_recovery_acceptance_test.dart \
-            test/acceptance/v11_universal_catalogue_offline_restart_acceptance_test.dart \
-            test/features/catalogue/catalogue_adaptive_visual_boundary_test.dart \
-            test/features/catalogue/catalogue_screen_test.dart \
-            test/features/content/content_detail_supersession_ui_test.dart \
-            test/features/home/home_learning_context_test.dart \
-            test/features/settings/settings_adaptive_visual_boundary_test.dart \
-            test/features/shared/learner_surfaces_adaptive_visual_boundary_test.dart \
+          # An individual hung widget test must not hide later regressions.
+          # Every existing case still runs, and any failure keeps this gate red.
+          test_files=(
+            test/acceptance/p1_7_adaptive_acceptance_test.dart
+            test/acceptance/p2_11_recovery_acceptance_test.dart
+            test/acceptance/v11_universal_catalogue_offline_restart_acceptance_test.dart
+            test/features/catalogue/catalogue_adaptive_visual_boundary_test.dart
+            test/features/catalogue/catalogue_screen_test.dart
+            test/features/content/content_detail_supersession_ui_test.dart
+            test/features/home/home_learning_context_test.dart
+            test/features/settings/settings_adaptive_visual_boundary_test.dart
+            test/features/shared/learner_surfaces_adaptive_visual_boundary_test.dart
             test/features/tests/test_session_adaptive_visual_boundary_test.dart
+          )
+          failures=0
+          for test_file in "${test_files[@]}"; do
+            echo "::group::QUALIFY ${test_file}"
+            if timeout 70s flutter test --concurrency=1 --reporter expanded "${test_file}"; then
+              echo "PASS ${test_file}"
+            else
+              status=$?
+              echo "::error file=${test_file}::Regression failed or timed out (exit ${status})"
+              failures=$((failures + 1))
+            fi
+            echo "::endgroup::"
+          done
+          echo "Regression file failures: ${failures}/${#test_files[@]}"
+          if (( failures > 0 )); then exit 1; fi
