@@ -125,7 +125,7 @@
                 <div th:if="${form.bodyType == 'practice_test'}" class="row g-3">
                     <div class="col-12"><label class="form-label">Instructions</label><textarea class="form-control" rows="5" th:field="*{instructions}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea></div>
                     <div class="col-md-4"><label class="form-label">Passing score %</label><input class="form-control" type="number" min="0" max="100" th:field="*{passingScorePercent}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></div>
-                    <div class="col-12"><label class="form-label">Question revision IDs</label><textarea class="form-control font-monospace" rows="8" th:field="*{questionRevisionIds}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">One UUID per line.</div></div>
+                    <div class="col-12"><label class="form-label">Question revision IDs</label><textarea data-question-picker="true" class="form-control font-monospace" rows="8" th:field="*{questionRevisionIds}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">One UUID per line.</div></div>
                 </div>
             </div>
         </div>
