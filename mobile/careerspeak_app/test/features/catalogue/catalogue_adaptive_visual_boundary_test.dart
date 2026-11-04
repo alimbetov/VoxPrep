@@ -94,7 +94,7 @@ void main() {
         mode: VerticalCataloguePresentationMode.shelves,
       );
 
-      expect(find.text('Learning sequence'), findsOneWidget);
+      expect(find.text('Your learning sequence'), findsOneWidget);
       expectNoLayoutExceptions(
         tester,
         reason: 'Collection sequence overflowed at $boundary',
