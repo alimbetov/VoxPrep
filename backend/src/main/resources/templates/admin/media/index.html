@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/fragments/shell :: layout('Media Library', 'content', ~{::main})}">
+<main>
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div><h1 class="h3">Media Library</h1>
+            <p class="text-secondary">Choose a verified image for this draft revision. Reusing the same file does not create another copy.</p>
+        </div>
+        <a class="btn btn-outline-secondary" th:href="@{/admin/content/revisions/{id}/edit(id=${revisionId})}">Back to content</a>
+    </div>
+    <div class="alert alert-success" th:if="${flashSuccess}" th:text="${flashSuccess}"></div>
+    <form class="card card-body mb-4" th:action="@{/admin/media/upload}" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="revisionId" th:value="${revisionId}">
+        <input type="hidden" name="role" th:value="${role}">
+        <label class="form-label" for="file">Upload new PNG, JPEG or WebP (maximum 10 MiB; cover images 5 MiB)</label>
+        <input class="form-control mb-3" type="file" name="file" id="file" required accept="image/png,image/jpeg,image/webp">
+        <button class="btn btn-primary" type="submit">Upload / reuse identical image</button>
+    </form>
+    <h2 class="h5 mb-3">READY images — <span th:text="${role}">COVER_IMAGE</span></h2>
+    <div class="row g-3">
+        <div class="col-12 col-md-4 col-xl-3" th:each="asset : ${assets}">
+            <div class="card studio-card h-100">
+                <img class="card-img-top" loading="lazy" style="height:150px;object-fit:contain"
+                     th:src="@{/admin/media/{id}/preview(id=${asset.id})}" alt="Library image preview">
+                <div class="card-body">
+                    <p class="small text-break mb-1" th:text="${asset.id}">ID</p>
+                    <p class="small text-secondary" th:text="${asset.mediaType}">image/png</p>
+                    <form th:action="@{/admin/media/bind}" method="post">
+                        <input type="hidden" name="revisionId" th:value="${revisionId}">
+                        <input type="hidden" name="role" th:value="${role}">
+                        <input type="hidden" name="assetId" th:value="${asset.id}">
+                        <button type="submit" class="btn btn-sm btn-primary">Use this image</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    <p class="text-secondary mt-3" th:if="${#lists.isEmpty(assets)}">No images of this kind have been uploaded yet.</p>
+    <div class="d-flex gap-2 mt-4">
+        <a class="btn btn-outline-secondary" th:if="${page > 0}"
+           th:href="@{/admin/media(revisionId=${revisionId},role=${role},page=${page - 1})}">Previous</a>
+        <a class="btn btn-outline-secondary" th:if="${#lists.size(assets) == 24}"
+           th:href="@{/admin/media(revisionId=${revisionId},role=${role},page=${page + 1})}">Next</a>
+    </div>
+</main>
+</html>
