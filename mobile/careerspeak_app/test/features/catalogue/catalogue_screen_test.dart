@@ -103,8 +103,8 @@ void main() {
 
     expect(find.text('Future Collection'), findsOneWidget);
     expect(find.text('Your learning sequence'), findsOneWidget);
-    expect(find.text('CONTENT_ALPHA'), findsOneWidget);
-    expect(find.text('Step 1'), findsOneWidget);
+    expect(find.byKey(const ValueKey('collection-content-CONTENT_ALPHA')), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
   });
 
   testWidgets('unknown vertical route fails closed', (tester) async {
