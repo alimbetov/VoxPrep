@@ -63,6 +63,10 @@ void main() {
         250,
         scrollable: find.byType(Scrollable).first,
       );
+      // scrollUntilVisible can build a tile before its hit target enters the
+      // viewport. Ensure the actual action is tappable at large text scales.
+      await tester.ensureVisible(find.text(_optionA));
+      await tester.pumpAndSettle();
       await tester.tap(find.text(_optionA));
       await tester.pump();
 
@@ -71,6 +75,10 @@ void main() {
         250,
         scrollable: find.byType(Scrollable).first,
       );
+      // scrollUntilVisible can build a tile before its hit target enters the
+      // viewport. Ensure the actual action is tappable at large text scales.
+      await tester.ensureVisible(find.text('Submit'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Submit'));
       await tester.pumpAndSettle();
 
