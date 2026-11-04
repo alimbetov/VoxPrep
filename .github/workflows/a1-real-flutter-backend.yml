@@ -46,7 +46,11 @@ jobs:
         working-directory: mobile/careerspeak_app
         run: |
           flutter pub get
-          dart format --output=none --set-exit-if-changed lib/data/local/drift_sync_plan_executor.dart test/acceptance/a1_real_backend_flutter_test.dart
+          if ! dart format --output=none --set-exit-if-changed lib/data/local/drift_sync_plan_executor.dart test/acceptance/a1_real_backend_flutter_test.dart; then
+            dart format --output=write lib/data/local/drift_sync_plan_executor.dart test/acceptance/a1_real_backend_flutter_test.dart
+            git --no-pager diff -- lib/data/local/drift_sync_plan_executor.dart test/acceptance/a1_real_backend_flutter_test.dart
+            exit 1
+          fi
           flutter analyze --no-pub
 
       - name: Prepare isolated infrastructure secrets
