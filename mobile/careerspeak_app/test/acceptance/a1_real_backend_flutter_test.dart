@@ -173,6 +173,18 @@ void main() {
         final image = pack.assets.singleWhere(
           (asset) => asset.mediaType == 'image/png',
         );
+        final mediaProbe = await client.get(
+          baseUri.resolve('/api/v1/media/assets/${image.assetId}/content'),
+          headers: <String, String>{
+            'authorization': 'Bearer ${credentials.installationToken.value}',
+          },
+        );
+        if (mediaProbe.statusCode != 200) {
+          fail(
+            'A1 live media HTTP status=${mediaProbe.statusCode}, '
+            'body=${mediaProbe.body}',
+          );
+        }
         final manager = AssetDownloadManager(
           source: HttpAssetByteSource(
             client: client,
