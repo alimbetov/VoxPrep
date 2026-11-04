@@ -1,0 +1,81 @@
+name: A1 Real Flutter Backend Acceptance
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feat/a1-real-flutter-backend-acceptance
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'mobile/careerspeak_app/**'
+      - 'infra/**'
+      - '.github/workflows/a1-real-flutter-backend.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  a1-real-flutter-backend:
+    name: a1-real-flutter-backend
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact revision
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: backend/pom.xml
+
+      - name: Flutter SDK 3.47.9
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.9'
+          channel: stable
+          cache: true
+
+      - name: Flutter dependencies and static checks
+        working-directory: mobile/careerspeak_app
+        run: |
+          flutter pub get
+          dart format --output=none --set-exit-if-changed lib/data/local/drift_sync_plan_executor.dart test/acceptance/a1_real_backend_flutter_test.dart
+          flutter analyze --no-pub
+
+      - name: Prepare isolated infrastructure secrets
+        run: ./infra/scripts/init-secrets.sh test
+
+      - name: Start real PostgreSQL and RustFS
+        run: |
+          docker compose --env-file infra/env/test.env.example -f infra/compose/compose.test.yml up -d --wait postgres rustfs
+          docker compose --env-file infra/env/test.env.example -f infra/compose/compose.test.yml run --rm rustfs-bootstrap
+
+      - name: Live Spring Boot plus Flutter HTTP/Drift A1
+        env:
+          VOXPREP_SECRET_DIR: ${{ github.workspace }}/infra/secrets/test/backend/
+          VOXPREP_DB_URL: jdbc:postgresql://127.0.0.1:55432/voxprep_test
+          VOXPREP_STORAGE_ENDPOINT: http://127.0.0.1:19000
+          SPRING_PROFILES_ACTIVE: test
+        run: |
+          mvn -B -ntp -f backend/pom.xml \
+            -Dtest=A1RealBackendFlutterAcceptanceTest \
+            -Dvoxprep.a1.enabled=true \
+            -Dvoxprep.a1.flutter.dir=${{ github.workspace }}/mobile/careerspeak_app \
+            test
+
+      - name: Report infrastructure state on failure
+        if: failure()
+        run: |
+          docker compose --env-file infra/env/test.env.example -f infra/compose/compose.test.yml ps -a || true
+          docker compose --env-file infra/env/test.env.example -f infra/compose/compose.test.yml logs --tail=100 postgres rustfs || true
+
+      - name: Cleanup isolated infrastructure
+        if: always()
+        run: docker compose --env-file infra/env/test.env.example -f infra/compose/compose.test.yml down -v --remove-orphans || true
