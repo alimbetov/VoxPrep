@@ -15,6 +15,7 @@ final class MockBillingRepository implements BillingRepository {
       StreamController<StorePurchaseEvent>.broadcast(sync: true);
   final Set<String> _completableEventIds = <String>{};
   int _sequence = 0;
+  String? _ownedTransactionId;
 
   @override
   Future<Result<StoreProduct>> loadFullUnlockProduct() async {
@@ -43,6 +44,7 @@ final class MockBillingRepository implements BillingRepository {
     }
 
     final transactionId = 'mock-purchase-${++_sequence}';
+    _ownedTransactionId = transactionId;
     _events.add(
       StorePurchaseEvent(
         eventId: '$transactionId-pending',
@@ -61,7 +63,8 @@ final class MockBillingRepository implements BillingRepository {
         provider: provider,
         productId: fullUnlockProductId,
         status: StorePurchaseStatus.purchased,
-        serverVerificationData: 'mock-proof-$transactionId',
+        serverVerificationData:
+            'sim:v1:${provider.wireName}:GRANTED:$transactionId',
       ),
     );
     return const Success<void>(null);
@@ -69,7 +72,8 @@ final class MockBillingRepository implements BillingRepository {
 
   @override
   Future<Result<void>> restorePurchases() async {
-    final transactionId = 'mock-restore-${++_sequence}';
+    final transactionId = _ownedTransactionId;
+    if (transactionId == null) return const Success<void>(null);
     final eventId = '$transactionId-restored';
     _completableEventIds.add(eventId);
     _events.add(
