@@ -421,6 +421,105 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
     });
   }
 
+  /// Determine the immutable published access level from the staged v2
+  /// catalogue graph. A shared FREE/FULL member remains FULL (server policy).
+  /// A missing owner is never interpreted as FREE.
+  Future<bool> _isFrozenFullContent({
+    required String code,
+    required String type,
+    required int revision,
+    String? checksum,
+    required int contentVersion,
+    required bool enabled,
+  }) async {
+    if (!enabled) return false; // Schema-v1 fixture compatibility.
+    final checksumClause =
+        checksum == null ? '' : 'AND m.content_checksum = ?';
+    final rows = await _database.customSelect(
+      '''
+      SELECT a.access_level
+      FROM learning_collection_member_reads AS m
+      JOIN learning_collection_access_reads AS a
+        ON a.content_version = m.content_version
+       AND a.collection_code = m.collection_code
+      WHERE m.content_version = ?
+        AND m.member_type = 'CONTENT'
+        AND m.content_code = ?
+        AND m.content_type = ?
+        AND m.content_revision = ?
+        $checksumClause
+      ''',
+      variables: <Variable<Object>>[
+        Variable<int>(contentVersion),
+        Variable<String>(code),
+        Variable<String>(type),
+        Variable<int>(revision),
+        if (checksum != null) Variable<String>(checksum),
+      ],
+    ).get();
+    if (rows.isEmpty) {
+      throw const _SyncExecutorInvariant(
+        ApplicationFailure(
+          code: 'FROZEN_CONTENT_MEMBERSHIP_MISSING',
+          message: 'Published content has no exact catalogue owner.',
+        ),
+      );
+    }
+    final levels = rows.map((row) => row.read<String>('access_level')).toSet();
+    if (levels.any((level) => level != 'FREE' && level != 'FULL')) {
+      throw const _SyncExecutorInvariant(
+        ApplicationFailure(
+          code: 'FROZEN_CONTENT_ACCESS_INVALID',
+          message: 'Published content has an invalid frozen access level.',
+        ),
+      );
+    }
+    return levels.contains('FULL');
+  }
+
+  Future<int> _lockedContentCount(
+    int contentVersion,
+    PackContentManifest manifest,
+    bool hasUniversalCatalogues,
+  ) async {
+    if (manifest.schemaVersion < 2 || !hasUniversalCatalogues) return 0;
+    var count = 0;
+    for (final content in manifest.contents) {
+      if (await _isFrozenFullContent(
+        code: content.identity.code,
+        type: content.identity.type.name,
+        revision: content.revision,
+        checksum: content.checksum,
+        contentVersion: contentVersion,
+        enabled: true,
+      )) {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  Future<int> _lockedLocalizationCount(
+    int contentVersion,
+    PackContentManifest manifest,
+    bool hasUniversalCatalogues,
+  ) async {
+    if (manifest.schemaVersion < 2 || !hasUniversalCatalogues) return 0;
+    var count = 0;
+    for (final ref in manifest.localizations) {
+      if (await _isFrozenFullContent(
+        code: ref.identity.code,
+        type: ref.identity.type.name,
+        revision: ref.contentRevision,
+        contentVersion: contentVersion,
+        enabled: true,
+      )) {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
   Future<void> _ensureContentRecord(
     PackContentRef content,
     int schemaVersion,
