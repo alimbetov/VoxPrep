@@ -80,6 +80,8 @@ class A1RealBackendFlutterAcceptanceTest {
 
         // Real ADMIN HTTP creates the entire catalogue graph.
         browser.createCatalogue(icon.getId());
+        browser.bindDraftImage(authoredId, icon.getId());
+        browser.approveDraft(authoredId);
         browser.approveDraft(fullId);
         browser.approveDraft(questionId);
         browser.approveDraft(practiceTestId);
