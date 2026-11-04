@@ -63,9 +63,9 @@ void main() {
     );
 
     expect(
-        find.text('This learning collection is unavailable.'),
-        findsOneWidget,
-      );
+      find.text('This learning collection is unavailable.'),
+      findsOneWidget,
+    );
     expect(find.text('Collection A'), findsNothing);
   });
 
