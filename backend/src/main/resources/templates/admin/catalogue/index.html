@@ -69,7 +69,12 @@
                 <div class="list-group list-group-flush mt-2">
                     <div th:each="item : ${collections}" class="list-group-item px-0">
                         <span th:text="${item.title()}">Collection</span>
-                        <small class="d-block text-secondary"><span th:text="${item.code()}">CODE</span> · <span th:text="${item.accessLevel()}">FREE</span></small>
+                        <small class="d-block text-secondary">
+                            <span th:text="${item.code()}">CODE</span>
+                            <span class="badge ms-1"
+                                  th:classappend="${item.accessLevel().name() == 'FULL'} ? 'text-bg-warning' : 'text-bg-success'"
+                                  th:text="${item.accessLevel().name() == 'FULL'} ? '$ FULL' : 'FREE'">FREE</span>
+                        </small>
                         <a class="small" th:href="@{/admin/catalogue/collections/{id}/edit(id=${item.id()})}">Edit</a>
                     </div>
                 </div>
