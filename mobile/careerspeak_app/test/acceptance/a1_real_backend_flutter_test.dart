@@ -5,6 +5,7 @@ import 'package:careerspeak_app/application/content_sync/content_sync_coordinato
 import 'package:careerspeak_app/application/content_sync/content_sync_planner.dart';
 import 'package:careerspeak_app/application/content_sync/sync_models.dart';
 import 'package:careerspeak_app/application/ports/api_client.dart';
+import 'package:careerspeak_app/application/ports/content_manifest_gateway.dart';
 import 'package:careerspeak_app/application/ports/installation_credential_store.dart';
 import 'package:careerspeak_app/application/query/content_query.dart';
 import 'package:careerspeak_app/application/result/result.dart';
