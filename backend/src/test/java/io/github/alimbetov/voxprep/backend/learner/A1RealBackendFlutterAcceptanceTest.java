@@ -60,9 +60,9 @@ class A1RealBackendFlutterAcceptanceTest {
 
     @Test
     void flutterSynchronizesActualMixedFreeFullPublishedRelease() throws Exception {
-        // All four source content revisions are created through authenticated
-        // Content Studio MVC HTTP. JPA is used only to assemble unrelated
-        // catalogue/membership fixture rows and assert the resulting identities.
+        // All source content revisions and catalogue hierarchy are created over
+        // authenticated ADMIN HTTP, including immutable publication candidates.
+        // JPA here is read-only identity resolution, not a shortcut for writes.
         var browser = new R5AdminHttpPublicationWorkflow(serverPort, adminUsername, adminPassword);
         UUID authoredId = browser.createPhrase(FREE_CODE, "Interview introduction",
                 "Could you introduce yourself?");
