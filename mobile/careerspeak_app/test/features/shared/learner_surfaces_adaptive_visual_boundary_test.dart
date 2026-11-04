@@ -4,7 +4,6 @@ import 'package:careerspeak_app/app/learner_state_providers.dart';
 import 'package:careerspeak_app/app/repository_providers.dart';
 import 'package:careerspeak_app/app/review_schedule_providers.dart';
 import 'package:careerspeak_app/application/continue_learning/continue_learning_resolver.dart';
-import 'package:careerspeak_app/app/review_schedule_providers.dart';
 import 'package:careerspeak_app/application/ports/learner_state_repository.dart';
 import 'package:careerspeak_app/application/query/page.dart';
 import 'package:careerspeak_app/application/result/result.dart';
