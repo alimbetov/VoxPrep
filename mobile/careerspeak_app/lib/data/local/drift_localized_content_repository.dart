@@ -363,7 +363,7 @@ WHERE r.snapshot_state = 'CURRENT'
   AND r.revision = ?
   AND (
     NOT EXISTS (
-      SELECT 1 FROM content_manifest_states legacy_guard WHERE legacy_guard.id = 1
+      SELECT 1 FROM content_manifest_states legacy_guard WHERE legacy_guard.id = 1 AND legacy_guard.schema_version >= 2
     )
     OR EXISTS (
       SELECT 1
@@ -412,7 +412,7 @@ WHERE pack.state = 'CURRENT'
   AND p.locale = ?
   AND (
     NOT EXISTS (
-      SELECT 1 FROM content_manifest_states legacy_guard WHERE legacy_guard.id = 1
+      SELECT 1 FROM content_manifest_states legacy_guard WHERE legacy_guard.id = 1 AND legacy_guard.schema_version >= 2
     )
     OR EXISTS (
       SELECT 1
