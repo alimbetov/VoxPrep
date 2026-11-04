@@ -5,6 +5,7 @@ import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringC
 import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringService;
 import io.github.alimbetov.voxprep.backend.content.application.ContentRevisionSnapshot;
 import io.github.alimbetov.voxprep.backend.sharedkernel.AvailabilityStatus;
+import io.github.alimbetov.voxprep.backend.tts.application.TtsReviewQueryService;
 import io.github.alimbetov.voxprep.backend.sharedkernel.BusinessCode;
 import jakarta.validation.Valid;
 import java.util.UUID;
@@ -33,14 +34,17 @@ public class ContentMvcController {
     private final ContentAdminQueryService query;
     private final ContentAuthoringService authoring;
     private final ContentMvcMapper mapper;
+    private final TtsReviewQueryService ttsReview;
 
     public ContentMvcController(
             ContentAdminQueryService query,
             ContentAuthoringService authoring,
-            ContentMvcMapper mapper) {
+            ContentMvcMapper mapper,
+            TtsReviewQueryService ttsReview) {
         this.query = query;
         this.authoring = authoring;
         this.mapper = mapper;
+        this.ttsReview = ttsReview;
     }
 
     @GetMapping
@@ -224,6 +228,7 @@ public class ContentMvcController {
         model.addAttribute("revision", revision);
         model.addAttribute("form", form);
         model.addAttribute("lifecycleForm", lifecycleForm);
+        model.addAttribute("ttsJobs", ttsReview.latest(revision.id()));
         model.addAttribute("availabilityValues", AvailabilityStatus.values());
         return "admin/content/form";
     }
