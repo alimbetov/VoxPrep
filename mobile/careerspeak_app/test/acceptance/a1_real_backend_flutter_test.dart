@@ -77,8 +77,14 @@ void main() {
         expect(credentials.installationToken.value, isNotEmpty);
 
         final manifestGateway = HttpContentManifestGateway(apiClient: api);
-        final rootResult = (await manifestGateway.fetchRootManifest())
-            .getOrThrow();
+        final rootFetch = await manifestGateway.fetchRootManifest();
+        if (rootFetch case FailureResult<RootManifestFetch>(:final failure)) {
+          fail(
+            'A1 root manifest contract failure: code=${failure.code}, '
+            'message=${failure.message}, details=${failure.details}',
+          );
+        }
+        final rootResult = rootFetch.getOrThrow();
         expect(rootResult, isA<RootManifestChanged>());
         final root = (rootResult as RootManifestChanged).manifest;
         expect(root.schemaVersion, 2);
