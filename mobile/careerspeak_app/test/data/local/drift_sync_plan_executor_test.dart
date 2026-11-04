@@ -137,8 +137,6 @@ void main() {
       'What is dependency injection?',
     );
 
-
-
     final asset = await database.select(database.assetCatalog).getSingle();
     expect(asset.assetKind, 'AUDIO');
     expect(asset.mimeType, 'audio/mpeg');
