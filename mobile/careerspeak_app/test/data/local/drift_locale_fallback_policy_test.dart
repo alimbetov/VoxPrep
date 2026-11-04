@@ -128,6 +128,31 @@ Future<void> _seedCanonicalAndRussian(
           createdAt: now,
         ),
       );
+  // The root pointer is authoritative even for legacy schema v1. Seed
+  // canonical pack membership rather than bypassing publication visibility.
+  await database.into(database.contentPackRevisions).insert(
+    ContentPackRevisionsCompanion.insert(
+      packCode: 'JAVA_SENIOR',
+      variantKey: 'canonical',
+      revision: 1,
+      schemaVersion: 1,
+      checksum: _packChecksum,
+      state: 'CURRENT',
+      sourceContentVersion: contentVersion,
+      stagedAt: now,
+      currentAt: Value(now),
+    ),
+  );
+  await database.into(database.packContentRefs).insert(
+    PackContentRefsCompanion.insert(
+      packCode: 'JAVA_SENIOR',
+      variantKey: 'canonical',
+      packRevision: 1,
+      contentCode: _identity.code,
+      contentType: 'INTERVIEW',
+      contentRevision: 1,
+    ),
+  );
   await database
       .into(database.contentPackRevisions)
       .insert(
