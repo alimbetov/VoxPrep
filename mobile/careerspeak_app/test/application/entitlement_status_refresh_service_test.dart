@@ -78,21 +78,24 @@ void main() {
     expect(store.snapshot?.accessLevel, AccessLevel.full);
   });
 
-  test('malformed or contradictory server response never grants FULL', () async {
-    final store = _MemoryAccessStore(null);
-    final service = EntitlementStatusRefreshService(
-      apiClient: _FakeApiClient(
-        _response(<String, Object?>{
-          'verified': false,
-          'accessLevel': 'FULL',
-          'verifiedAt': null,
-        }),
-      ),
-      repository: store,
-    );
-    expect(await service.refresh(), isA<FailureResult<bool>>());
-    expect(store.snapshot, isNull);
-  });
+  test(
+    'malformed or contradictory server response never grants FULL',
+    () async {
+      final store = _MemoryAccessStore(null);
+      final service = EntitlementStatusRefreshService(
+        apiClient: _FakeApiClient(
+          _response(<String, Object?>{
+            'verified': false,
+            'accessLevel': 'FULL',
+            'verifiedAt': null,
+          }),
+        ),
+        repository: store,
+      );
+      expect(await service.refresh(), isA<FailureResult<bool>>());
+      expect(store.snapshot, isNull);
+    },
+  );
 }
 
 Result<ApiResponse> _response(Map<String, Object?> json) {

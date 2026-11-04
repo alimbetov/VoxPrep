@@ -42,7 +42,8 @@ final applicationBootstrapProvider =
         // A development-only local Store simulator is intentionally not a
         // server entitlement source. Release and real-backend development
         // always refresh before rendering cached FULL entitlement.
-        final isLocalMock = configuration.developmentMocksAllowed &&
+        final isLocalMock =
+            configuration.developmentMocksAllowed &&
             configuration.mockPurchaseVerificationRequested;
         if (configuration.networkEnabled && !isLocalMock) {
           try {

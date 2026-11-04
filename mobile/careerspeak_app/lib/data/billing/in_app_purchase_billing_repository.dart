@@ -201,14 +201,16 @@ final class InAppPurchaseBillingRepository implements BillingRepository {
         _ => null,
       };
       final stableIdentity = purchase.purchaseID ?? proof ?? purchase.productID;
-      final identity = '${provider.wireName}|${purchase.productID}|$stableIdentity';
+      final identity =
+          '${provider.wireName}|${purchase.productID}|$stableIdentity';
       final eventId = 'store-${sha256.convert(utf8.encode(identity))}';
       _purchaseDetailsByEventId[eventId] = purchase;
       yield StorePurchaseEvent(
         eventId: eventId,
         provider: provider,
         productId: purchase.productID,
-        status: proof == null &&
+        status:
+            proof == null &&
                 (purchase.status == PurchaseStatus.purchased ||
                     purchase.status == PurchaseStatus.restored)
             ? StorePurchaseStatus.failed
