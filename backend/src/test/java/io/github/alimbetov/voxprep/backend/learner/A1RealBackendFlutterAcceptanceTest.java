@@ -117,7 +117,8 @@ class A1RealBackendFlutterAcceptanceTest {
                 "Choose one option", 80, List.of(question.getId())));
         assessmentConfig.configure(test.getId(), "exam", List.of(3));
 
-        for (var revision : List.of(free, full, question, test)) {
+        // The FREE draft is reviewed via real Content Studio HTTP after image binding.
+        for (var revision : List.of(full, question, test)) {
             revision.markReadyForAudio();
             revisions.saveAndFlush(revision);
             revision.markReadyForReview();
