@@ -11,13 +11,19 @@ class TypedContentBodyCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final fields = switch (body) {
-      VocabularyBody(:final term, :final definition, :final partOfSpeech,
-          :final examples) => <Widget>[
-        _field(context, 'Term', term),
-        if (partOfSpeech != null) _field(context, 'Part of speech', partOfSpeech),
-        _field(context, 'Definition', definition),
-        _list(context, 'Examples', examples),
-      ],
+      VocabularyBody(
+        :final term,
+        :final definition,
+        :final partOfSpeech,
+        :final examples,
+      ) =>
+        <Widget>[
+          _field(context, 'Term', term),
+          if (partOfSpeech != null)
+            _field(context, 'Part of speech', partOfSpeech),
+          _field(context, 'Definition', definition),
+          _list(context, 'Examples', examples),
+        ],
       PhraseBody(:final phrase, :final usage, :final examples) => <Widget>[
         _field(context, 'Phrase', phrase),
         _field(context, 'Usage', usage),
@@ -55,8 +61,10 @@ class TypedContentBodyCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Learning content',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Learning content',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 16),
             ...fields,
           ],
@@ -79,8 +87,7 @@ class TypedContentBodyCard extends StatelessWidget {
     );
   }
 
-  static Widget _list(
-      BuildContext context, String title, List<String> values) {
+  static Widget _list(BuildContext context, String title, List<String> values) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
