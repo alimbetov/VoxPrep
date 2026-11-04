@@ -121,6 +121,53 @@ class LifetimePurchaseIntegrationTest {
     }
 
     @Test
+    void refundBeforeFirstRestoreCreatesTombstoneAndBlocksFreshInstallation() {
+        UUID original = installation();
+        UUID cleanInstall = installation();
+        String proof = fixture("GOOGLE_PLAY", "GRANTED", "refund-before-first-verify");
+        String transaction = PurchaseDigest.sha256(
+                "sim:v1:GOOGLE_PLAY:refund-before-first-verify");
+        Instant refundAt = Instant.parse("2026-11-04T12:30:00Z");
+
+        // Google voided-purchase notification may beat the client's first
+        // verify request. This MUST NOT resurrect an already-refunded token.
+        ledger.applyStoreEvent("GOOGLE_PLAY", PRODUCT, transaction,
+                Environment.SIMULATED, State.REVOKED, refundAt);
+        assertThat(service.verify(original, request("GOOGLE_PLAY", "purchase-late", proof))
+                .accessLevel()).isEqualTo("FREE");
+        assertThat(service.verify(cleanInstall, request("GOOGLE_PLAY", "restore-late", proof))
+                .accessLevel()).isEqualTo("FREE");
+        assertThat(ledger.hasEntitlement(original)).isFalse();
+        assertThat(ledger.hasEntitlement(cleanInstall)).isFalse();
+
+        // A repeated refund and an older (delayed) purchase notification
+        // cannot override the tombstone, regardless of delivery order.
+        ledger.applyStoreEvent("GOOGLE_PLAY", PRODUCT, transaction,
+                Environment.SIMULATED, State.REVOKED, refundAt);
+        ledger.applyStoreEvent("GOOGLE_PLAY", PRODUCT, transaction,
+                Environment.SIMULATED, State.GRANTED, refundAt.minusSeconds(20));
+        assertThat(service.currentEntitlement(cleanInstall).verified()).isFalse();
+    }
+
+    @Test
+    void duplicateTimestampCannotReverseStoreRefund() {
+        UUID id = installation();
+        String proof = fixture("APP_STORE", "GRANTED", "same-timestamp-race");
+        service.verify(id, request("APP_STORE", "initial", proof));
+        String transaction = PurchaseDigest.sha256(
+                "sim:v1:APP_STORE:same-timestamp-race");
+        Instant at = Instant.parse("2026-11-04T12:40:00Z");
+        ledger.applyStoreEvent("APP_STORE", PRODUCT, transaction,
+                Environment.SIMULATED, State.REVOKED, at);
+        ledger.applyStoreEvent("APP_STORE", PRODUCT, transaction,
+                Environment.SIMULATED, State.GRANTED, at);
+        assertThat(service.currentEntitlement(id).accessLevel()).isEqualTo("FREE");
+        ledger.applyStoreEvent("APP_STORE", PRODUCT, transaction,
+                Environment.SIMULATED, State.GRANTED, at.plusSeconds(1));
+        assertThat(service.currentEntitlement(id).accessLevel()).isEqualTo("FULL");
+    }
+
+    @Test
     void malformedSimulationsNeverGrantRealEntitlement() {
         UUID id=installation();
         assertThatThrownBy(() -> service.verify(id,request(
