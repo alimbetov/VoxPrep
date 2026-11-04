@@ -348,6 +348,7 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        learnerAccessLevelProvider.overrideWithValue(AccessLevel.full),
         // These widget tests exercise catalogue rendering, not network asset
         // delivery. The separate A1 suite tests real RustFS downloads.
         catalogueIconAssetProvider.overrideWith((ref, assetId) async => null),
