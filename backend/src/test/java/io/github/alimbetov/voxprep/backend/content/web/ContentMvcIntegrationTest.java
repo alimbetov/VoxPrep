@@ -72,12 +72,9 @@ class ContentMvcIntegrationTest {
         // Persist the draft and its typed child rows before changing lifecycle;
         // PostgreSQL makes typed payload immutable once the revision is approved.
         var approved = repository.saveAndFlush(vocabulary());
-        approved.markReadyForAudio();
-        repository.saveAndFlush(approved);
-        approved.markReadyForReview();
-        repository.saveAndFlush(approved);
-        approved.approve(Instant.now());
-        repository.saveAndFlush(approved);
+        authoring.markReadyForAudio(approved.getId());
+        authoring.submitForReview(approved.getId());
+        authoring.approve(approved.getId(), Instant.now());
         var draft = repository.saveAndFlush(vocabulary());
 
         var candidates = adminQuery.approvedCandidates("Vocabulary title", 0);
@@ -88,12 +85,9 @@ class ContentMvcIntegrationTest {
     @Test
     void practiceTestPickerListsOnlyApprovedQuestionsAndRequiresAdmin() throws Exception {
         var approved = repository.saveAndFlush(question());
-        approved.markReadyForAudio();
-        repository.saveAndFlush(approved);
-        approved.markReadyForReview();
-        repository.saveAndFlush(approved);
-        approved.approve(Instant.now());
-        repository.saveAndFlush(approved);
+        authoring.markReadyForAudio(approved.getId());
+        authoring.submitForReview(approved.getId());
+        authoring.approve(approved.getId(), Instant.now());
         var draft = repository.saveAndFlush(question());
 
         mockMvc.perform(get("/admin/content/questions/approved")
@@ -133,8 +127,7 @@ class ContentMvcIntegrationTest {
     void ttsJobPreparationRequiresAdminCsrfAndReadyForAudioRevision() throws Exception {
         var draft = repository.saveAndFlush(vocabulary());
         var ready = repository.saveAndFlush(vocabulary());
-        ready.markReadyForAudio();
-        repository.saveAndFlush(ready);
+        authoring.markReadyForAudio(ready.getId());
 
         mockMvc.perform(get("/admin/content/revisions/{id}/edit", ready.getId())
                         .with(user("admin").roles("ADMIN")))
