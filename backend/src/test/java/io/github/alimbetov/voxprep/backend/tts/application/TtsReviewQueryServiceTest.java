@@ -71,7 +71,7 @@ class TtsReviewQueryServiceTest {
         when(media.read(descriptor)).thenReturn(
                 new LearnerMediaService.MediaContent("audio/mpeg", new byte[] {1, 2, 3}));
 
-        assertThat(review.preview(revisionId, jobId).bytes()).containsExactly(1, 2, 3);
+        assertThat(review.preview(revisionId, jobId).bytes()).containsExactly(new byte[] {1, 2, 3});
         verify(media).read(descriptor);
     }
 }
