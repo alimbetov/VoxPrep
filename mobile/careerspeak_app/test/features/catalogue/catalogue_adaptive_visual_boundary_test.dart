@@ -75,6 +75,11 @@ void main() {
       );
 
       expect(find.text(_longVerticalTitle), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text(_longDescription).first,
+        100,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text(_longDescription), findsWidgets);
       expectNoLayoutExceptions(
         tester,
