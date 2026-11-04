@@ -32,6 +32,36 @@ MockContentRepository
 
 The mock adapter is intentionally replaceable. Feature widgets must not depend on HTTP/Drift types.
 
+## Generated DEV/TEST demo content
+
+The project has a reproducible mock-data generator shared with Backend tests.
+Run from the **repository root** (Python 3.12+):
+
+```powershell
+python tools/generate_demo_catalogue.py
+python tools/generate_demo_catalogue.py --check
+```
+
+To generate a larger repeatable dataset:
+
+```powershell
+python tools/generate_demo_catalogue.py --seed 42 --count 64
+```
+
+The default 32 items are generated into
+`lib/data/mock/generated_demo_content.dart`, which is consumed by
+`MockContentRepository`. The same seed also generates Backend's
+`src/test/resources/fixtures/demo_catalogue_seed.json`.
+The shared JSON marks the first example in each category FREE and later
+examples FULL for test scenarios; the Flutter `ContentItem` currently
+does **not** carry those access labels. This is a **demo fixture**, not a
+Store purchase or server entitlement.
+
+The generator does not initialize browser SQLite/Drift. The Flutter Web
+bootstrap issue must be addressed separately before expecting the full app
+to launch in Chrome. See
+[`R5_DEV_TEST_MOCK_DATA.md`](../../docs/qualification/R5_DEV_TEST_MOCK_DATA.md).
+
 ## Dependencies
 
 - Flutter stable with Dart >= 3.12
