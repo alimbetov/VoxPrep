@@ -1069,7 +1069,8 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
               revision: ref.contentRevision,
               checksum: local.checksum,
               contentVersion: plan.target.contentVersion,
-              enabled: plan.target.schemaVersion >= 2 &&
+              enabled:
+                  plan.target.schemaVersion >= 2 &&
                   plan.target.catalogues.isNotEmpty,
             );
             if (payload == null && !locked) {
@@ -1126,7 +1127,8 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
             type: ref.contentType.toLowerCase(),
             revision: ref.contentRevision,
             contentVersion: plan.target.contentVersion,
-            enabled: plan.target.schemaVersion >= 2 &&
+            enabled:
+                plan.target.schemaVersion >= 2 &&
                 plan.target.catalogues.isNotEmpty,
           );
           if (payload == null && !locked) {
