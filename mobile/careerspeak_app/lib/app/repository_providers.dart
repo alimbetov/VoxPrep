@@ -71,10 +71,17 @@ final contentByIdentityProvider =
 
 /// Never looks up a typed body before the entitlement-aware content query.
 final typedContentByIdentityProvider =
-    FutureProvider.family<TypedContentBody?, ContentIdentity>((ref, identity) async {
-      final visible = await ref.watch(contentByIdentityProvider(identity).future);
+    FutureProvider.family<TypedContentBody?, ContentIdentity>((
+      ref,
+      identity,
+    ) async {
+      final visible = await ref.watch(
+        contentByIdentityProvider(identity).future,
+      );
       if (visible == null) return null;
-      final reader = DriftTypedContentReader(ref.watch(careerSpeakDatabaseProvider));
+      final reader = DriftTypedContentReader(
+        ref.watch(careerSpeakDatabaseProvider),
+      );
       return reader.getForVisible(visible);
     });
 
