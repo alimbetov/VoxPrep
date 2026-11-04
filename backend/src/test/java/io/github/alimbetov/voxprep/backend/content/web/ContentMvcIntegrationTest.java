@@ -67,7 +67,9 @@ class ContentMvcIntegrationTest {
 
     @Test
     void approvedRevisionPickerSearchNeverIncludesDrafts() {
-        var approved = vocabulary();
+        // Persist the draft and its typed child rows before changing lifecycle;
+        // PostgreSQL makes typed payload immutable once the revision is approved.
+        var approved = repository.saveAndFlush(vocabulary());
         approved.markReadyForAudio();
         approved.markReadyForReview();
         approved.approve(Instant.now());
