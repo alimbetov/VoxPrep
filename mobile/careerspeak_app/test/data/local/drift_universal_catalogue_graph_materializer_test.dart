@@ -139,9 +139,9 @@ void main() {
         'learning_collection_access_reads',
         'vertical_presentation_reads',
       ]) {
-        final rows = await database.customSelect(
-          'SELECT * FROM $table WHERE content_version = 201',
-        ).get();
+        final rows = await database
+            .customSelect('SELECT * FROM $table WHERE content_version = 201')
+            .get();
         expect(rows, isNotEmpty, reason: '$table must survive N+1 retry');
       }
     });
@@ -184,9 +184,9 @@ void main() {
         'learning_collection_member_reads',
       ]) {
         expect(
-          await database.customSelect(
-            'SELECT * FROM $table WHERE content_version = 202',
-          ).get(),
+          await database
+              .customSelect('SELECT * FROM $table WHERE content_version = 202')
+              .get(),
           isNotEmpty,
           reason: '$table must survive a transaction abort',
         );
