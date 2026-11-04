@@ -1,6 +1,6 @@
 # MVC Content Studio production roadmap (R5 follow-up)
 
-Status: MVC-R5 first structured editing and collection picker slice implemented; exact-head CI pending; NOT release accepted.
+Status: MVC-R5 Practice Test question selector implemented; MVC-R6 real-job status/MP3-preview initial slice implemented; exact-head CI and real audio acceptance pending; NOT release accepted.
 Branch: feat/r5-commercial-chain-qualification. R5 store gates remain independent and mandatory.
 
 ## Existing guarantees
@@ -24,6 +24,20 @@ Branch: feat/r5-commercial-chain-qualification. R5 store gates remain independen
 - Collection membership UI now uses bounded, title-searchable APPROVED/PUBLISHED revision picker instead of typed UUID. Server still revalidates eligibility, identity, and revision ordering.
 - This does not yet include the Practice Test question picker, catalogue drag-and-drop, or a complete production-grade repeating form builder.
 - New HTTP/DB tests validate initial form rendering, role boundary and approved query; still require exact-SHA CI.
+
+## MVC-R5 Practice Test picker (implemented, pending qualification)
+
+- New admin-only `GET /admin/content/questions/approved?q=&page=` reads APPROVED/PUBLISHED Question exact revisions using a bounded, type-filtered repository query.
+- Practice Test create/edit forms offer searchable question selection, ordering and removal while preserving `questionRevisionIds` newline UUID contract to server.
+- Current selection survives failed requests; non-JavaScript fallback retains native textarea. Draft or non-Question revisions cannot be supplied as selectable options; existing domain validation remains source-authoritative.
+- HTTP tests assert non-admin rejection and that DRAFT questions are excluded.
+
+## MVC-R6 first read-only TTS slice (implemented, pending qualification)
+
+- Editor embeds existing revision-scoped TTS jobs (role, language, model, attempts, status, failure code) rather than mock records.
+- READY audio preview `GET /admin/content/revisions/{revisionId}/tts/jobs/{jobId}/preview` verifies exact revision ownership, TTS_AUDIO kind, READY job/asset state, audio/mpeg and media size/hash through LearnerMediaService. Never exposes RustFS keys or Worker access.
+- No regeneration button until the existing Backend job/fingerprint application service is identified and authorized for admin review; implementing a direct database write or Worker HTTP call would violate TTS contract.
+- Remaining: generation/regeneration commands with idempotency and role-selection, per-job model/voice controls, real Piper→RustFS→MVC playback acceptance, failures/retries and concurrency tests.
 
 ## Work remaining (NOT implemented)
 
