@@ -217,7 +217,8 @@ const generatedDemoContentItems = <ContentItem>[
     type: ContentType.interview,
     title: 'Explaining transaction boundaries - practice 2',
     subtitle: 'Java Backend - demo learning material',
-    description: 'Practice English: Explaining transaction boundaries - practice 2.',
+    description:
+        'Practice English: Explaining transaction boundaries - practice 2.',
     category: 'Java Backend',
     level: 'B2',
     minutes: 3,
@@ -239,7 +240,8 @@ const generatedDemoContentItems = <ContentItem>[
     type: ContentType.shadowing,
     title: 'Explaining microservice tradeoffs - practice 2',
     subtitle: 'Java Backend - demo learning material',
-    description: 'Practice English: Explaining microservice tradeoffs - practice 2.',
+    description:
+        'Practice English: Explaining microservice tradeoffs - practice 2.',
     category: 'Java Backend',
     level: 'B1',
     minutes: 7,
@@ -250,7 +252,8 @@ const generatedDemoContentItems = <ContentItem>[
     type: ContentType.interview,
     title: 'Describing deployment strategies - practice 2',
     subtitle: 'Cloud and DevOps - demo learning material',
-    description: 'Practice English: Describing deployment strategies - practice 2.',
+    description:
+        'Practice English: Describing deployment strategies - practice 2.',
     category: 'Cloud and DevOps',
     level: 'B2',
     minutes: 4,
@@ -305,7 +308,8 @@ const generatedDemoContentItems = <ContentItem>[
     type: ContentType.topic,
     title: 'Explaining a financial product - practice 2',
     subtitle: 'Banking English - demo learning material',
-    description: 'Practice English: Explaining a financial product - practice 2.',
+    description:
+        'Practice English: Explaining a financial product - practice 2.',
     category: 'Banking English',
     level: 'B1',
     minutes: 9,
@@ -316,7 +320,8 @@ const generatedDemoContentItems = <ContentItem>[
     type: ContentType.phrase,
     title: 'Could you describe your symptoms? - practice 2',
     subtitle: 'Medical English - demo learning material',
-    description: 'Practice English: Could you describe your symptoms? - practice 2.',
+    description:
+        'Practice English: Could you describe your symptoms? - practice 2.',
     category: 'Medical English',
     level: 'B2',
     minutes: 6,
@@ -349,7 +354,8 @@ const generatedDemoContentItems = <ContentItem>[
     type: ContentType.interview,
     title: 'Explaining transaction boundaries - practice 3',
     subtitle: 'Java Backend - demo learning material',
-    description: 'Practice English: Explaining transaction boundaries - practice 3.',
+    description:
+        'Practice English: Explaining transaction boundaries - practice 3.',
     category: 'Java Backend',
     level: 'B2',
     minutes: 7,
