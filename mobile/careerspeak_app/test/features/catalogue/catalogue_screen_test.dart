@@ -168,7 +168,10 @@ void main() {
       ),
     );
 
-    expect(find.text('This learning collection is unavailable.'), findsOneWidget);
+    expect(
+      find.text('This learning collection is unavailable.'),
+      findsOneWidget,
+    );
     expect(find.text('Future Collection'), findsNothing);
   });
 
@@ -185,7 +188,10 @@ void main() {
       ),
     );
 
-    expect(find.text('This learning collection is unavailable.'), findsOneWidget);
+    expect(
+      find.text('This learning collection is unavailable.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('inactive vertical is never learner-visible', (tester) async {
@@ -253,7 +259,10 @@ void main() {
       ),
     );
 
-    expect(find.text('This learning collection is unavailable.'), findsOneWidget);
+    expect(
+      find.text('This learning collection is unavailable.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('missing CURRENT catalogue renders an explicit empty state', (
@@ -263,11 +272,11 @@ void main() {
       ProviderScope(
         overrides: [
           // These widget tests exercise catalogue rendering, not network asset
-        // delivery. The separate A1 suite tests real RustFS downloads.
-        catalogueIconAssetProvider.overrideWith((ref, assetId) async => null),
-        contentCoverAssetProvider.overrideWith((ref, request) async => null),
-        contentByIdentityProvider.overrideWith((ref, identity) async => null),
-        universalCatalogueRepositoryProvider.overrideWithValue(
+          // delivery. The separate A1 suite tests real RustFS downloads.
+          catalogueIconAssetProvider.overrideWith((ref, assetId) async => null),
+          contentCoverAssetProvider.overrideWith((ref, request) async => null),
+          contentByIdentityProvider.overrideWith((ref, identity) async => null),
+          universalCatalogueRepositoryProvider.overrideWithValue(
             const _EmptyRepository(),
           ),
         ],
@@ -289,11 +298,11 @@ void main() {
       ProviderScope(
         overrides: [
           // These widget tests exercise catalogue rendering, not network asset
-        // delivery. The separate A1 suite tests real RustFS downloads.
-        catalogueIconAssetProvider.overrideWith((ref, assetId) async => null),
-        contentCoverAssetProvider.overrideWith((ref, request) async => null),
-        contentByIdentityProvider.overrideWith((ref, identity) async => null),
-        universalCatalogueRepositoryProvider.overrideWithValue(
+          // delivery. The separate A1 suite tests real RustFS downloads.
+          catalogueIconAssetProvider.overrideWith((ref, assetId) async => null),
+          contentCoverAssetProvider.overrideWith((ref, request) async => null),
+          contentByIdentityProvider.overrideWith((ref, identity) async => null),
+          universalCatalogueRepositoryProvider.overrideWithValue(
             const _FailureRepository(),
           ),
         ],
