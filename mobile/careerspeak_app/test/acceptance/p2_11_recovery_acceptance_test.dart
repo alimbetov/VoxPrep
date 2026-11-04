@@ -18,6 +18,7 @@ import 'package:careerspeak_app/data/remote/http_api_client.dart';
 import 'package:careerspeak_app/data/remote/http_content_manifest_gateway.dart';
 import 'package:careerspeak_app/data/remote/http_content_payload_gateway.dart';
 import 'package:careerspeak_app/data/remote/http_installation_registration_gateway.dart';
+import 'package:careerspeak_app/domain/application_preferences.dart';
 import 'package:careerspeak_app/domain/installation_credentials.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -200,6 +201,12 @@ Future<ApplicationBootstrapOutcome> _bootstrapSuccess({
   required http.Client client,
   required String runId,
 }) async {
+  // Startup content sync intentionally waits for country/locale onboarding.
+  // These recovery scenarios begin with a learner who has selected a locale.
+  (await DriftAppPreferencesRepository(database).setLocaleSelection(
+    countryCode: 'KZ',
+    locale: AppTranslationLocale.english,
+  )).getOrThrow();
   return (await _bootstrapResult(
     database: database,
     credentialStore: credentialStore,
