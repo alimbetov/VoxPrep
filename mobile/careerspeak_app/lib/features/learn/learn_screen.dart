@@ -152,14 +152,13 @@ class _CatalogList extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(24),
       children: [
-        Row(
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
           children: [
-            Expanded(
-              child: Text(
-                'Learn',
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-            ),
+            Text('Learn', style: Theme.of(context).textTheme.headlineMedium),
             TextButton.icon(
               onPressed: () => context.push('/learn/direction'),
               icon: const Icon(Icons.swap_horiz),

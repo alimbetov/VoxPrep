@@ -1,4 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
 
 import 'package:in_app_purchase/in_app_purchase.dart';
 
@@ -19,7 +22,6 @@ final class InAppPurchaseBillingRepository implements BillingRepository {
   final Map<String, PurchaseDetails> _purchaseDetailsByEventId =
       <String, PurchaseDetails>{};
   late final Stream<StorePurchaseEvent> _events;
-  int _eventSequence = 0;
 
   @override
   Future<Result<StoreProduct>> loadFullUnlockProduct() async {
@@ -186,18 +188,34 @@ final class InAppPurchaseBillingRepository implements BillingRepository {
   ) sync* {
     for (final purchase in purchases) {
       if (purchase.productID != fullUnlockProductId) continue;
-      final eventId = 'store-event-${++_eventSequence}';
+      final provider = _providerFromSource(purchase.verificationData.source);
+      // Google's serverVerificationData is the Play purchaseToken. For Apple,
+      // older in_app_purchase StoreKit bridges expose a base64 app receipt,
+      // which is NOT a signed Store Server JWS. Apple Server API expects the
+      // StoreKit transaction identifier; the backend obtains and verifies JWS.
+      final String? proof = switch (purchase.status) {
+        PurchaseStatus.purchased || PurchaseStatus.restored =>
+          provider == StoreProvider.appStore
+              ? purchase.purchaseID
+              : purchase.verificationData.serverVerificationData,
+        _ => null,
+      };
+      final stableIdentity = purchase.purchaseID ?? proof ?? purchase.productID;
+      final identity =
+          '${provider.wireName}|${purchase.productID}|$stableIdentity';
+      final eventId = 'store-${sha256.convert(utf8.encode(identity))}';
       _purchaseDetailsByEventId[eventId] = purchase;
       yield StorePurchaseEvent(
         eventId: eventId,
-        provider: _providerFromSource(purchase.verificationData.source),
+        provider: provider,
         productId: purchase.productID,
-        status: _status(purchase.status),
-        serverVerificationData: switch (purchase.status) {
-          PurchaseStatus.purchased || PurchaseStatus.restored =>
-            purchase.verificationData.serverVerificationData,
-          _ => null,
-        },
+        status:
+            proof == null &&
+                (purchase.status == PurchaseStatus.purchased ||
+                    purchase.status == PurchaseStatus.restored)
+            ? StorePurchaseStatus.failed
+            : _status(purchase.status),
+        serverVerificationData: proof,
       );
     }
   }

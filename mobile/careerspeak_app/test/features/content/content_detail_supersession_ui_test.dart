@@ -27,39 +27,97 @@ void main() {
         engine: engine,
         learnerState: learnerState,
       );
-      addTearDown(controller.dispose);
 
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            learnerStateRepositoryProvider.overrideWithValue(learnerState),
-            audioPlaybackControllerProvider.overrideWithValue(controller),
-          ],
-          child: const MaterialApp(
-            home: Scaffold(body: ContentDetailPanel(item: _topic)),
+      debugPrint('[A1-AUDIO] entering test');
+      try {
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              learnerStateRepositoryProvider.overrideWithValue(learnerState),
+              audioPlaybackControllerProvider.overrideWithValue(controller),
+            ],
+            child: const MaterialApp(
+              home: Scaffold(body: ContentDetailPanel(item: _topic)),
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
+        );
+        debugPrint('[A1-AUDIO] widget mounted');
+        // Do not pumpAndSettle against an asynchronous playback state:
+        // an in-flight audio resolve deliberately has an animated spinner.
+        for (
+          var frame = 0;
+          frame < 5 &&
+              find.widgetWithText(FilledButton, 'Play').evaluate().isEmpty;
+          frame++
+        ) {
+          await tester.pump();
+        }
+        debugPrint('[A1-AUDIO] initial play button located');
+        expect(find.widgetWithText(FilledButton, 'Play'), findsOneWidget);
 
-      final play = tester.widget<FilledButton>(
-        find.widgetWithText(FilledButton, 'Play'),
-      );
-      play.onPressed!();
-      play.onPressed!();
+        final play = tester.widget<FilledButton>(
+          find.widgetWithText(FilledButton, 'Play'),
+        );
+        play.onPressed!();
+        play.onPressed!();
 
-      await _waitUntil(() => resolver.pending.length == 2);
-      resolver.complete(0, _asset('superseded'));
-      await tester.pump();
+        for (
+          var frame = 0;
+          frame < 30 && resolver.pending.length < 2;
+          frame++
+        ) {
+          await tester.pump();
+        }
+        debugPrint('[A1-AUDIO] resolve calls: ${resolver.pending.length}');
+        expect(resolver.pending, hasLength(2));
 
-      expect(find.textContaining('Audio playback failed:'), findsNothing);
+        resolver.complete(0, _asset('superseded'));
+        await tester.pump();
+        expect(find.textContaining('Audio playback failed:'), findsNothing);
 
-      resolver.complete(1, _asset('winner'));
-      await tester.pumpAndSettle();
-
-      expect(find.textContaining('Audio playback failed:'), findsNothing);
-      expect(find.text('Pause'), findsOneWidget);
-      expect(engine.openedAssetIds, <String>['winner']);
+        debugPrint('[A1-AUDIO] losing completion handled');
+        resolver.complete(1, _asset('winner'));
+        for (var frame = 0; frame < 5; frame++) {
+          await tester.pump();
+        }
+        expect(find.textContaining('Audio playback failed:'), findsNothing);
+        expect(find.text('Pause'), findsOneWidget);
+        expect(engine.openedAssetIds, <String>['winner']);
+        debugPrint('[A1-AUDIO] winning completion asserted');
+      } finally {
+        debugPrint('[A1-AUDIO] entering cleanup');
+        // Riverpod's StreamProvider is listening to controller.states.
+        // Unmount it *before* awaiting the broadcast controller's close().
+        // Otherwise test finalization can await a paused FakeAsync listener
+        // indefinitely even if the supersession behavior is correct.
+        await tester.pumpWidget(const SizedBox.shrink());
+        debugPrint('[A1-AUDIO] widget unmounted');
+        await tester.pump();
+        debugPrint('[A1-AUDIO] controller closing');
+        // Controller work was created inside FakeAsync. Keep driving the
+        // widget binding while its cancellation/progress futures drain; a
+        // plain await (including runAsync) can starve those fake-zone tasks.
+        var disposed = false;
+        Object? disposalError;
+        final disposal = controller.dispose().then(
+          (_) => disposed = true,
+          onError: (Object error) {
+            disposalError = error;
+            disposed = true;
+          },
+        );
+        for (var frame = 0; frame < 40 && !disposed; frame++) {
+          await tester.pump(const Duration(milliseconds: 1));
+        }
+        expect(disposalError, isNull);
+        expect(
+          disposed,
+          isTrue,
+          reason: 'audio controller teardown must finish',
+        );
+        await disposal;
+        debugPrint('[A1-AUDIO] controller closed');
+      }
     },
   );
 }
@@ -82,13 +140,6 @@ ResolvedAsset _asset(String id) => ResolvedAsset(
   localPath: '/tmp/$id.mp3',
   mediaType: 'audio/mpeg',
 );
-
-Future<void> _waitUntil(bool Function() predicate) async {
-  for (var i = 0; i < 100 && !predicate(); i += 1) {
-    await Future<void>.delayed(Duration.zero);
-  }
-  expect(predicate(), isTrue);
-}
 
 final class _ControlledResolver {
   final List<Completer<Result<ResolvedAsset>>> pending =
@@ -122,9 +173,14 @@ final class _Session implements AudioPlaybackSession {
   @override
   Duration? get initialDuration => const Duration(seconds: 10);
 
+  final StreamController<AudioPlaybackEvent> _events =
+      StreamController<AudioPlaybackEvent>.broadcast(
+        sync: true,
+        onCancel: () => debugPrint('[A1-AUDIO] fake events cancelled'),
+      );
+
   @override
-  Stream<AudioPlaybackEvent> get events =>
-      const Stream<AudioPlaybackEvent>.empty();
+  Stream<AudioPlaybackEvent> get events => _events.stream;
 
   @override
   Future<Result<void>> play() async => const Success<void>(null);
@@ -137,10 +193,16 @@ final class _Session implements AudioPlaybackSession {
       const Success<void>(null);
 
   @override
-  Future<Result<void>> stop() async => const Success<void>(null);
+  Future<Result<void>> stop() async {
+    debugPrint('[A1-AUDIO] fake session stop');
+    return const Success<void>(null);
+  }
 
   @override
-  Future<void> dispose() async {}
+  Future<void> dispose() async {
+    debugPrint('[A1-AUDIO] fake session dispose');
+    await _events.close();
+  }
 }
 
 final class _LearnerState implements LearnerStateRepository {
@@ -178,5 +240,8 @@ final class _LearnerState implements LearnerStateRepository {
     ContentIdentity identity, {
     required int positionMs,
     int? lastRevisionSeen,
-  }) async => const Success<void>(null);
+  }) async {
+    debugPrint('[A1-AUDIO] fake progress save');
+    return const Success<void>(null);
+  }
 }

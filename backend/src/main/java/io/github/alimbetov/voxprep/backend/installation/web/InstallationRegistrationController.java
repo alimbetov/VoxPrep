@@ -5,11 +5,13 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 import java.util.UUID;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -23,13 +25,16 @@ public class InstallationRegistrationController {
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.OK)
-    public RegistrationResponse register(@Valid @RequestBody RegistrationRequest request) {
-        var result = registrationService.register(request.installationId());
-        return new RegistrationResponse(
-                result.installationId(),
-                result.installationToken(),
-                result.issuedAt());
+    public ResponseEntity<RegistrationResponse> register(
+            @Valid @RequestBody RegistrationRequest request,
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization) {
+        var result = registrationService.register(request.installationId(), authorization);
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(new RegistrationResponse(
+                        result.installationId(),
+                        result.installationToken(),
+                        result.issuedAt()));
     }
 
     public record RegistrationRequest(@NotNull UUID installationId) {

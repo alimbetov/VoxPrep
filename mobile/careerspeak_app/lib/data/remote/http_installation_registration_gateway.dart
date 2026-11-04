@@ -1,6 +1,7 @@
 // ignore_for_file: prefer_initializing_formals
 
 import '../../application/ports/api_client.dart';
+import '../../application/ports/installation_credential_store.dart';
 import '../../application/ports/installation_registration_gateway.dart';
 import '../../application/result/result.dart';
 import '../../domain/installation_credentials.dart';
@@ -11,15 +12,18 @@ final class HttpInstallationRegistrationGateway
     implements InstallationRegistrationGateway {
   const HttpInstallationRegistrationGateway({
     required ApiClient apiClient,
+    InstallationCredentialStore? credentialStore,
     InstallationRegistrationDecoder decoder =
         const InstallationRegistrationDecoder(),
     InstallationRegistrationMapper mapper =
         const InstallationRegistrationMapper(),
   }) : _apiClient = apiClient,
+       _credentialStore = credentialStore,
        _decoder = decoder,
        _mapper = mapper;
 
   final ApiClient _apiClient;
+  final InstallationCredentialStore? _credentialStore;
   final InstallationRegistrationDecoder _decoder;
   final InstallationRegistrationMapper _mapper;
 
@@ -27,13 +31,30 @@ final class HttpInstallationRegistrationGateway
   Future<Result<InstallationToken>> register(
     InstallationId installationId,
   ) async {
+    // New installations register anonymously. Existing installations MUST prove
+    // possession of their current credential before the server rotates it.
+    // No insecure fallback to anonymous registration after a 401.
+    final bool hasExistingToken;
+    try {
+      hasExistingToken =
+          await _credentialStore?.readInstallationToken() != null;
+    } on Object {
+      return const FailureResult<InstallationToken>(
+        ApplicationFailure(
+          code: 'CREDENTIAL_STORE_ERROR',
+          message: 'The installation credential could not be read.',
+        ),
+      );
+    }
     final requestDto = _mapper.request(installationId);
     final responseResult = await _apiClient.send(
       ApiRequest(
         method: ApiMethod.post,
         path: '/api/v1/installations',
         jsonBody: requestDto.toJson(),
-        authentication: ApiAuthentication.none,
+        authentication: hasExistingToken
+            ? ApiAuthentication.installation
+            : ApiAuthentication.none,
       ),
     );
 

@@ -8,14 +8,18 @@ import '../data/billing/in_app_purchase_billing_repository.dart';
 import '../data/billing/mock_billing_repository.dart';
 import '../data/billing/unavailable_billing_repository.dart';
 import 'app_configuration.dart';
+import 'release_switch.dart';
 
-/// Only non-release development builds may compose the accepting mock billing
-/// adapter. Any mock request outside that boundary fails closed instead of
-/// manufacturing a purchasable FULL entitlement path.
+/// Only development mode may compose the accepting mock billing adapter.
+/// CAREERSPEAK_RELEASE_ENABLED=true switches a debug/profile build to the same
+/// fail-closed billing boundary used by a compiler release build.
 final billingRepositoryProvider = Provider<BillingRepository>((ref) {
   final configuration = ref.watch(appConfigurationProvider);
-  if (configuration.mockBillingRequested &&
-      !configuration.developmentMocksAllowed) {
+  final runMode = ref.watch(appRunModeProvider);
+  final mocksAllowed =
+      configuration.developmentMocksAllowed && runMode.isDevelopment;
+
+  if (configuration.mockBillingRequested && !mocksAllowed) {
     return const UnavailableBillingRepository();
   }
   if (configuration.mockBillingRequested) {

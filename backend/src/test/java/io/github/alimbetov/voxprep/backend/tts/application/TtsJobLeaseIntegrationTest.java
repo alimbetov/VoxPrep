@@ -59,7 +59,13 @@ class TtsJobLeaseIntegrationTest {
             jdbcTemplate.update("delete from app.tts_job");
             jdbcTemplate.update("delete from app.tts_voice_model");
             jdbcTemplate.update("delete from app.tts_voice");
-            jdbcTemplate.update("delete from app.file_asset");
+            // Only remove this suite's assets. Other integration tests leave READY
+            // media bindings referencing their own FileAsset rows.
+            jdbcTemplate.update("""
+                    delete from app.file_asset
+                     where bucket = 'voxprep-assets'
+                       and object_key like 'tts/models/lease-%'
+                    """);
         });
     }
 

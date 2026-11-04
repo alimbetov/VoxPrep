@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/fragments/shell :: layout(${sectionTitle}, ${activeSection}, ~{::main})}">
+<main>
+    <div class="card studio-card">
+        <div class="card-body p-4">
+            <span class="badge text-bg-secondary mb-3">MVC-R1 foundation</span>
+            <h1 class="h3" th:text="${sectionTitle}">Section</h1>
+            <p class="text-secondary mb-0" th:text="${sectionDescription}">Section description</p>
+        </div>
+    </div>
+</main>
+</html>

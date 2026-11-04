@@ -51,60 +51,68 @@ class ContentCard extends ConsumerWidget {
         onTap: onTap ?? () => context.push(contentDetailLocation(identity)),
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Row(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(child: Icon(_iconFor(item.type))),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    CareerSpeakLearningText(
-                      item.title,
-                      style: Theme.of(context).textTheme.titleMedium,
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CircleAvatar(child: Icon(_iconFor(item.type))),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CareerSpeakLearningText(
+                          item.title,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 4),
+                        CareerSpeakLearningText(item.subtitle),
+                      ],
                     ),
-                    const SizedBox(height: 4),
-                    CareerSpeakLearningText(item.subtitle),
-                    const SizedBox(height: 10),
-                    ContentMarkerChips(state: markerState),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: markerState.favorite
-                    ? 'Remove favorite'
-                    : 'Add favorite',
-                onPressed: () async {
-                  final result = await ref
-                      .read(learnerStateRepositoryProvider)
-                      .setFavorite(identity, favorite: !markerState.favorite);
-                  try {
-                    result.getOrThrow();
-                  } catch (error) {
-                    if (!context.mounted) return;
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Unable to update favorite: $error'),
+                  ),
+                  IconButton(
+                    tooltip: markerState.favorite
+                        ? 'Remove favorite'
+                        : 'Add favorite',
+                    onPressed: () async {
+                      final result = await ref
+                          .read(learnerStateRepositoryProvider)
+                          .setFavorite(
+                            identity,
+                            favorite: !markerState.favorite,
+                          );
+                      try {
+                        result.getOrThrow();
+                      } catch (error) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Unable to update favorite: $error'),
+                          ),
+                        );
+                      }
+                    },
+                    icon: AnimatedSwitcher(
+                      duration: CareerSpeakMotion.duration(
+                        context,
+                        CareerSpeakMotion.fast,
                       ),
-                    );
-                  }
-                },
-                icon: AnimatedSwitcher(
-                  duration: CareerSpeakMotion.duration(
-                    context,
-                    CareerSpeakMotion.fast,
+                      switchInCurve: CareerSpeakMotion.standardCurve,
+                      switchOutCurve: CareerSpeakMotion.standardCurve,
+                      child: Icon(
+                        markerState.favorite
+                            ? Icons.favorite
+                            : Icons.favorite_border,
+                        key: ValueKey<bool>(markerState.favorite),
+                      ),
+                    ),
                   ),
-                  switchInCurve: CareerSpeakMotion.standardCurve,
-                  switchOutCurve: CareerSpeakMotion.standardCurve,
-                  child: Icon(
-                    markerState.favorite
-                        ? Icons.favorite
-                        : Icons.favorite_border,
-                    key: ValueKey<bool>(markerState.favorite),
-                  ),
-                ),
+                ],
               ),
+              const SizedBox(height: 10),
+              ContentMarkerChips(state: markerState),
             ],
           ),
         ),

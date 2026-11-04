@@ -1,4 +1,7 @@
+import 'package:careerspeak_app/app/access_providers.dart';
+import 'package:careerspeak_app/app/asset_resolver_providers.dart';
 import 'package:careerspeak_app/app/catalogue_payload_providers.dart';
+import 'package:careerspeak_app/app/repository_providers.dart';
 import 'package:careerspeak_app/application/content_delivery/learning_vertical.dart';
 import 'package:careerspeak_app/application/content_delivery/product_catalog.dart';
 import 'package:careerspeak_app/application/content_delivery/universal_catalogue_graph.dart';
@@ -83,7 +86,7 @@ void main() {
 
     expect(find.text('Future Track'), findsOneWidget);
     expect(find.text('Future Collection'), findsOneWidget);
-    expect(find.text('1 items'), findsOneWidget);
+    expect(find.text('1 learning items'), findsOneWidget);
   });
 
   testWidgets('collection preserves ordered learning sequence', (tester) async {
@@ -99,10 +102,20 @@ void main() {
       ),
     );
 
+    // At small test viewports, collection metadata is above the sequence
+    // and both cannot remain built in the same lazy ListView viewport.
     expect(find.text('Future Collection'), findsOneWidget);
-    expect(find.text('Learning sequence'), findsOneWidget);
-    expect(find.text('CONTENT_ALPHA'), findsOneWidget);
-    expect(find.text('Step 1'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Your learning sequence'),
+      140,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(find.text('Your learning sequence'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('collection-content-CONTENT_ALPHA')),
+      findsOneWidget,
+    );
+    expect(find.text('1'), findsOneWidget);
   });
 
   testWidgets('unknown vertical route fails closed', (tester) async {
@@ -113,7 +126,7 @@ void main() {
       const CatalogueVerticalScreen(verticalCode: 'UNKNOWN_VERTICAL'),
     );
 
-    expect(find.text('Learning vertical is unavailable.'), findsOneWidget);
+    expect(find.text('This learning path is unavailable.'), findsOneWidget);
   });
 
   testWidgets('goal cannot be opened through a different vertical', (
@@ -129,7 +142,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Learning goal is unavailable.'), findsOneWidget);
+    expect(find.text('This learning goal is unavailable.'), findsOneWidget);
     expect(find.text('Future Goal'), findsNothing);
   });
 
@@ -147,7 +160,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Learning track is unavailable.'), findsOneWidget);
+    expect(find.text('This learning track is unavailable.'), findsOneWidget);
     expect(find.text('Future Track'), findsNothing);
   });
 
@@ -166,7 +179,10 @@ void main() {
       ),
     );
 
-    expect(find.text('Learning collection is unavailable.'), findsOneWidget);
+    expect(
+      find.text('This learning collection is unavailable.'),
+      findsOneWidget,
+    );
     expect(find.text('Future Collection'), findsNothing);
   });
 
@@ -183,7 +199,10 @@ void main() {
       ),
     );
 
-    expect(find.text('Learning collection is unavailable.'), findsOneWidget);
+    expect(
+      find.text('This learning collection is unavailable.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('inactive vertical is never learner-visible', (tester) async {
@@ -212,7 +231,7 @@ void main() {
 
     expect(find.text('Future Goal'), findsNothing);
     expect(
-      find.text('No learning goals are published for this vertical.'),
+      find.text('No learning goals are available here yet.'),
       findsOneWidget,
     );
   });
@@ -232,7 +251,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Learning track is unavailable.'), findsOneWidget);
+    expect(find.text('This learning track is unavailable.'), findsOneWidget);
   });
 
   testWidgets('inactive collection cannot be deep-linked', (tester) async {
@@ -251,7 +270,10 @@ void main() {
       ),
     );
 
-    expect(find.text('Learning collection is unavailable.'), findsOneWidget);
+    expect(
+      find.text('This learning collection is unavailable.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('missing CURRENT catalogue renders an explicit empty state', (
@@ -260,6 +282,12 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          learnerAccessLevelProvider.overrideWithValue(AccessLevel.full),
+          // These widget tests exercise catalogue rendering, not network asset
+          // delivery. The separate A1 suite tests real RustFS downloads.
+          catalogueIconAssetProvider.overrideWith((ref, assetId) async => null),
+          contentCoverAssetProvider.overrideWith((ref, request) async => null),
+          contentByIdentityProvider.overrideWith((ref, identity) async => null),
           universalCatalogueRepositoryProvider.overrideWithValue(
             const _EmptyRepository(),
           ),
@@ -281,6 +309,12 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          learnerAccessLevelProvider.overrideWithValue(AccessLevel.full),
+          // These widget tests exercise catalogue rendering, not network asset
+          // delivery. The separate A1 suite tests real RustFS downloads.
+          catalogueIconAssetProvider.overrideWith((ref, assetId) async => null),
+          contentCoverAssetProvider.overrideWith((ref, request) async => null),
+          contentByIdentityProvider.overrideWith((ref, identity) async => null),
           universalCatalogueRepositoryProvider.overrideWithValue(
             const _FailureRepository(),
           ),
@@ -314,6 +348,12 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        learnerAccessLevelProvider.overrideWithValue(AccessLevel.full),
+        // These widget tests exercise catalogue rendering, not network asset
+        // delivery. The separate A1 suite tests real RustFS downloads.
+        catalogueIconAssetProvider.overrideWith((ref, assetId) async => null),
+        contentCoverAssetProvider.overrideWith((ref, request) async => null),
+        contentByIdentityProvider.overrideWith((ref, identity) async => null),
         universalCatalogueRepositoryProvider.overrideWithValue(
           _FakeRepository(snapshot),
         ),

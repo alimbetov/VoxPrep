@@ -46,7 +46,7 @@ class TtsOutputFinalizationIntegrationTest {
     @Autowired private EntityManager entityManager;
 
     @Test
-    void currentLeaseFinalizesRustFsAssetAndReadyJob() {
+    void currentLeaseFinalizesRustFsAssetReadyJobAndContentBinding() {
         var fixture = pendingWorkerJob("finalize");
         var claim = leaseService.claimNextForWorker("worker-output", Duration.ofMinutes(5)).orElseThrow();
         byte[] mp3 = "qualified-mp3-payload".getBytes(StandardCharsets.UTF_8);
@@ -66,6 +66,14 @@ class TtsOutputFinalizationIntegrationTest {
         assertThat(jdbcTemplate.queryForObject(
                 "select audio_profile from app.file_asset where id = ?", String.class, fixture.fileId()))
                 .isEqualTo(TtsOutputFinalizationService.AUDIO_PROFILE);
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*) from app.content_asset_binding
+                 where content_revision_id = ?
+                   and role = 'PRONUNCIATION'
+                   and file_asset_id = ?
+                   and source_fingerprint = ?
+                """, Integer.class, fixture.revisionId(), fixture.fileId(), fixture.fingerprint()))
+                .isEqualTo(1);
     }
 
     @Test
@@ -84,6 +92,9 @@ class TtsOutputFinalizationIntegrationTest {
         assertThat(result).isEqualTo(TtsOutputFinalizationService.FinalizationResult.LEASE_LOST);
         assertThat(jdbcTemplate.queryForObject(
                 "select count(*) from app.file_asset where id = ?", Integer.class, fixture.fileId())).isZero();
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from app.content_asset_binding where content_revision_id = ?",
+                Integer.class, fixture.revisionId())).isZero();
     }
 
     private Fixture pendingWorkerJob(String suffix) {
@@ -109,9 +120,10 @@ class TtsOutputFinalizationIntegrationTest {
         UUID fileId = UUID.randomUUID();
         String fingerprint = String.valueOf('c').repeat(64);
         var job = new TtsJobEntity(model, "Tell me about yourself.", String.valueOf('d').repeat(64));
-        job.prepareWorkerClaim(fileId, revisionId, "PRIMARY", "Tell me about yourself.", "en-US", fingerprint);
+        job.prepareWorkerClaim(
+                fileId, revisionId, "pronunciation", "Tell me about yourself.", "en-US", fingerprint);
         jobRepository.saveAndFlush(job);
-        return new Fixture(job, model, fileId, fingerprint);
+        return new Fixture(job, model, revisionId, fileId, fingerprint);
     }
 
     private static String sha256(byte[] bytes) {
@@ -122,5 +134,10 @@ class TtsOutputFinalizationIntegrationTest {
         }
     }
 
-    private record Fixture(TtsJobEntity job, TtsVoiceModelEntity model, UUID fileId, String fingerprint) { }
+    private record Fixture(
+            TtsJobEntity job,
+            TtsVoiceModelEntity model,
+            UUID revisionId,
+            UUID fileId,
+            String fingerprint) { }
 }

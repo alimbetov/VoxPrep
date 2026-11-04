@@ -37,20 +37,14 @@ class PublicationPublisherTest {
     private static final String ROOT = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
     private static final Instant PUBLISHED_AT = Instant.parse("2026-11-03T09:30:00Z");
 
-    @Mock
-    private PublicationCandidateRepository candidateRepository;
-    @Mock
-    private PublicationCandidateManifestRefRepository manifestRepository;
-    @Mock
-    private PublicationReleaseRepository releaseRepository;
-    @Mock
-    private PublicationCurrentRepository currentRepository;
-    @Mock
-    private PublicationCandidateValidator validator;
-    @Mock
-    private PublicationContentVersionAllocator versionAllocator;
-    @Mock
-    private PublicationCurrentEntity current;
+    @Mock private PublicationCandidateRepository candidateRepository;
+    @Mock private PublicationCandidateManifestRefRepository manifestRepository;
+    @Mock private PublicationReleaseRepository releaseRepository;
+    @Mock private PublicationCurrentRepository currentRepository;
+    @Mock private PublicationCandidateValidator validator;
+    @Mock private PublicationContentVersionAllocator versionAllocator;
+    @Mock private PublicationContentFreezer contentFreezer;
+    @Mock private PublicationCurrentEntity current;
 
     private PublicationPublisher publisher;
 
@@ -62,7 +56,8 @@ class PublicationPublisherTest {
                 releaseRepository,
                 currentRepository,
                 validator,
-                versionAllocator);
+                versionAllocator,
+                contentFreezer);
     }
 
     @Test
@@ -91,6 +86,7 @@ class PublicationPublisherTest {
         assertThat(result.publishedAt()).isEqualTo(PUBLISHED_AT);
         assertThat(result.replayed()).isFalse();
         assertThat(candidate.getStatus()).isEqualTo(PublicationCandidateStatus.PUBLISHED);
+        verify(contentFreezer).freeze(List.of(ref), PUBLISHED_AT);
         verify(current).switchTo(org.mockito.ArgumentMatchers.any(PublicationReleaseEntity.class),
                 org.mockito.ArgumentMatchers.eq(PUBLISHED_AT));
         verify(currentRepository).save(current);
@@ -112,6 +108,7 @@ class PublicationPublisherTest {
         assertThat(result.contentVersion()).isEqualTo(7L);
         assertThat(result.replayed()).isTrue();
         verify(versionAllocator, never()).nextVersion();
+        verify(contentFreezer, never()).freeze(org.mockito.ArgumentMatchers.anyList(), org.mockito.ArgumentMatchers.any());
         verify(currentRepository, never()).findByIdForUpdate(PublicationCurrentEntity.SINGLETON_ID);
         verify(releaseRepository, never()).saveAndFlush(org.mockito.ArgumentMatchers.any());
     }
@@ -135,6 +132,7 @@ class PublicationPublisherTest {
                 .hasMessage("frozen publication manifest root does not match candidate root");
 
         assertThat(candidate.getStatus()).isEqualTo(PublicationCandidateStatus.VALIDATED);
+        verify(contentFreezer, never()).freeze(org.mockito.ArgumentMatchers.anyList(), org.mockito.ArgumentMatchers.any());
         verify(versionAllocator, never()).nextVersion();
         verify(currentRepository, never()).findByIdForUpdate(PublicationCurrentEntity.SINGLETON_ID);
         verify(releaseRepository, never()).saveAndFlush(org.mockito.ArgumentMatchers.any());

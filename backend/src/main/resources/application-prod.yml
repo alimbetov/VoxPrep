@@ -1,0 +1,9 @@
+# Production only. No live credentials or test/fixture tokens committed.
+# Startup fails if Store API credentials/Root CAs are missing.
+voxprep:
+  billing:
+    mode: production
+    google:
+      accept-test-purchases: false
+    apple:
+      environment: PRODUCTION

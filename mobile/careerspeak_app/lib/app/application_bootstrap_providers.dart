@@ -7,6 +7,9 @@ import '../application/ports/universal_catalogue_repository.dart';
 import '../application/result/result.dart';
 import '../application/services/application_bootstrap_service.dart';
 import 'api_client_providers.dart';
+import 'access_providers.dart';
+import 'app_configuration.dart';
+import 'entitlement_refresh_providers.dart';
 import 'asset_cache_retention_providers.dart';
 import 'catalogue_payload_providers.dart';
 import 'content_sync_providers.dart';
@@ -35,6 +38,26 @@ final applicationBootstrapProvider =
           .bootstrap();
 
       if (result is Success<ApplicationBootstrapOutcome>) {
+        final configuration = ref.read(appConfigurationProvider);
+        // A development-only local Store simulator is intentionally not a
+        // server entitlement source. Release and real-backend development
+        // always refresh before rendering cached FULL entitlement.
+        final isLocalMock =
+            configuration.developmentMocksAllowed &&
+            configuration.mockPurchaseVerificationRequested;
+        if (configuration.networkEnabled && !isLocalMock) {
+          try {
+            final entitlementResult = await ref
+                .read(entitlementStatusRefreshServiceProvider)
+                .refresh();
+            if (entitlementResult is Success<bool>) {
+              ref.invalidate(learnerAccessSnapshotProvider);
+            }
+          } catch (_) {
+            // Offline bootstrap retains the last verified local snapshot;
+            // backend still denies FULL resource access without entitlement.
+          }
+        }
         final catalogueResult = await ref
             .read(universalCatalogueRepositoryProvider)
             .readCurrent();

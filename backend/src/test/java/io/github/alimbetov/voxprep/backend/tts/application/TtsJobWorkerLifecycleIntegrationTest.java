@@ -111,6 +111,40 @@ class TtsJobWorkerLifecycleIntegrationTest {
                 job.getId(), "worker-old", claim.leaseToken(), "STALE", "stale worker")).isFalse();
     }
 
+    @Test
+    void reclaimedLeaseFencesOldWorkerHeartbeatAndFailureCallbacks() {
+        var job = pendingJob("reclaim-fencing");
+        var old = leaseService.claimNext("worker-old", Duration.ofMinutes(5)).orElseThrow();
+        jdbcTemplate.update("""
+                update app.tts_job
+                   set lease_until = CURRENT_TIMESTAMP - INTERVAL '1 second'
+                 where id = ?
+                """, job.getId());
+
+        var replacement = leaseService.claimNext("worker-new", Duration.ofMinutes(5)).orElseThrow();
+        assertThat(replacement.jobId()).isEqualTo(job.getId());
+        assertThat(replacement.leaseToken()).isNotEqualTo(old.leaseToken());
+        assertThat(replacement.attemptCount()).isEqualTo(old.attemptCount() + 1);
+
+        assertThat(leaseService.heartbeat(
+                job.getId(), "worker-old", old.leaseToken(), Duration.ofMinutes(5))).isEmpty();
+        assertThat(leaseService.fail(
+                job.getId(), "worker-old", old.leaseToken(), "STALE", "delayed callback")).isFalse();
+
+        var active = leaseService.heartbeat(
+                job.getId(), "worker-new", replacement.leaseToken(), Duration.ofMinutes(5)).orElseThrow();
+        assertThat(active.status()).isEqualTo(TtsJobStatus.PROCESSING);
+        assertThat(active.leaseOwner()).isEqualTo("worker-new");
+
+        assertThat(leaseService.fail(
+                job.getId(), "worker-new", replacement.leaseToken(), "PIPER_FAILED", "worker failed")).isTrue();
+        assertThat(leaseService.fail(
+                job.getId(), "worker-new", replacement.leaseToken(), "PIPER_FAILED", "duplicate")).isFalse();
+        assertThat(jdbcTemplate.queryForObject(
+                "select status from app.tts_job where id = ?", String.class, job.getId()))
+                .isEqualTo("FAILED");
+    }
+
     private TtsJobEntity pendingJob(String suffix) {
         var voice = voiceRepository.saveAndFlush(new TtsVoiceEntity(
                 "voice-worker-" + suffix, "US English Lessac", "en-US", "US", "FEMALE", "NEUTRAL", true));

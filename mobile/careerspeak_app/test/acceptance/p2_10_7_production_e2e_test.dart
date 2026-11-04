@@ -2,11 +2,11 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:careerspeak_app/app/api_client_providers.dart';
-import 'package:careerspeak_app/app/application_bootstrap_providers.dart';
 import 'package:careerspeak_app/app/asset_download_providers.dart';
 import 'package:careerspeak_app/app/careerspeak_app.dart';
 import 'package:careerspeak_app/app/installation_identity_providers.dart';
 import 'package:careerspeak_app/app/learner_state_providers.dart';
+import 'package:careerspeak_app/app/onboarding_providers.dart';
 import 'package:careerspeak_app/app/router.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_coordinator.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_planner.dart';
@@ -143,8 +143,11 @@ void main() {
         locale: AppTranslationLocale.english,
       )).getOrThrow();
 
-      const screenshotKey = Key('production-e2e-screenshot');
-      final app = ProviderScope(
+      // Run the real production bootstrap outside Flutter's fake-async widget
+      // zone, then attach the SAME Riverpod container to the renderer. Starting
+      // FutureProvider inside pumpWidget and awaiting it through runAsync can
+      // strand timers/microtasks across zones and hang CI for 3 minutes.
+      final container = ProviderContainer(
         overrides: [
           careerSpeakDatabaseProvider.overrideWithValue(database),
           assetRootDirectoryProvider.overrideWith(
@@ -158,42 +161,74 @@ void main() {
             Uri.parse('https://api.careerspeak.test'),
           ),
         ],
+      );
+      addTearDown(container.dispose);
+      debugPrint('RENDERER_CHECKPOINT bootstrap-start');
+      // This legacy schema-v1 fixture intentionally has no universal v2
+      // catalogues. Qualify the real ApplicationBootstrapService HTTP+Drift
+      // path, not the v2-only ProductionBootstrapHost normalization hook.
+      // A separate schema-v2 test must qualify the complete catalogue graph.
+      final bootstrapResult = await tester.runAsync(
+        () => _bootstrap(
+          database: database,
+          credentialStore: credentialStore,
+          client: client,
+          runId: 'e2e-renderer-startup',
+        ),
+      );
+      expect(bootstrapResult, isNotNull);
+      debugPrint('RENDERER_CHECKPOINT bootstrap-done');
+
+      // The screenshot acceptance starts after a completed onboarding flow.
+      // Persist that state through the production controller, not through a
+      // mocked router override; otherwise /learn legitimately redirects.
+      final onboarding = await tester.runAsync(
+        () => container.read(onboardingControllerProvider).skip(),
+      );
+      expect(onboarding, isNotNull);
+      onboarding!.getOrThrow();
+      debugPrint('RENDERER_CHECKPOINT onboarding-completed');
+
+      const screenshotKey = Key('production-e2e-screenshot');
+      final app = UncontrolledProviderScope(
+        container: container,
         child: const RepaintBoundary(
           key: screenshotKey,
           child: CareerSpeakApp(),
         ),
       );
-
+      debugPrint('RENDERER_CHECKPOINT widget-pump-start');
       await tester.pumpWidget(app);
+      debugPrint('RENDERER_CHECKPOINT widget-pump-done');
       expect(find.byKey(screenshotKey), findsOneWidget);
-      final container = ProviderScope.containerOf(
-        tester.element(find.byKey(screenshotKey)),
-      );
-      final bootstrapResult = await tester.runAsync(
-        () => container.read(applicationBootstrapProvider.future),
-      );
-      expect(bootstrapResult, isNotNull);
-      bootstrapResult!.getOrThrow();
       expect(backend.registrationCalls, 1);
       expect(backend.rootManifestCalls, 1);
       expect(backend.packManifestCalls, 1);
       expect(backend.contentPayloadCalls, 1);
       await tester.pump();
       await _captureScreenshot(tester, screenshotKey, '01-home-after-sync.png');
+      debugPrint('RENDERER_CHECKPOINT home-captured');
+      final homeLayoutError = tester.takeException();
+      if (homeLayoutError != null) throw homeLayoutError;
 
       container.read(routerProvider).go('/learn');
       await tester.pump();
       await _pumpUntil(tester, find.byType(SearchBar));
       await _pumpUntil(tester, find.text('Dependency Injection'));
+      debugPrint('RENDERER_CHECKPOINT learn-ready');
       expect(find.text('Dependency Injection'), findsOneWidget);
       await _captureScreenshot(
         tester,
         screenshotKey,
         '02-learn-after-sync.png',
       );
+      debugPrint('RENDERER_CHECKPOINT learn-captured');
+      final learnLayoutError = tester.takeException();
+      if (learnLayoutError != null) throw learnLayoutError;
 
       await tester.tap(find.text('Dependency Injection'));
       await _pumpUntil(tester, find.text('Overview'));
+      debugPrint('RENDERER_CHECKPOINT detail-ready');
       expect(
         find.text('Explain constructor injection and its tradeoffs.'),
         findsOneWidget,
@@ -203,11 +238,18 @@ void main() {
         screenshotKey,
         '03-detail-after-sync.png',
       );
+      debugPrint('RENDERER_CHECKPOINT detail-captured');
+      final detailLayoutError = tester.takeException();
+      if (detailLayoutError != null) throw detailLayoutError;
 
       // Dispose ProviderScope and its Drift subscriptions before closing the
       // database in tearDown. This also proves the E2E owns no dangling work.
       await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump();
+      container.dispose();
+      debugPrint('RENDERER_CHECKPOINT cleanup-widget-disposed');
+      // Riverpod retries use fake-async timers; after disposing the owner,
+      // advance the clock once to assert that no retry timers survive.
+      await tester.pump(const Duration(milliseconds: 500));
     },
   );
 }
@@ -250,6 +292,7 @@ Future<ApplicationBootstrapOutcome> _bootstrap({
     identityService: identityService,
     registrationGateway: HttpInstallationRegistrationGateway(
       apiClient: apiClient,
+      credentialStore: credentialStore,
     ),
   );
   final bootstrap = ApplicationBootstrapService(
@@ -323,7 +366,9 @@ Future<void> _captureScreenshot(
     isFalse,
     reason: '$fileName must be fully painted before renderer snapshot.',
   );
+  debugPrint('RENDERER_CHECKPOINT screenshot-$fileName-start');
   final image = boundary.toImageSync(pixelRatio: 1);
+  debugPrint('RENDERER_CHECKPOINT screenshot-$fileName-done');
   try {
     expect(
       image.width,
@@ -385,8 +430,18 @@ final class _LearnerApiFixture {
     if (request.method == 'POST' &&
         request.url.path == '/api/v1/installations') {
       registrationCalls += 1;
-      if (request.headers.containsKey('authorization')) {
-        throw StateError('Installation registration must be anonymous.');
+      // New installs register anonymously; subsequent token rotations must
+      // prove possession of the preceding installation credential.
+      final authorization = request.headers['authorization'];
+      if (registrationCalls == 1 && authorization != null) {
+        throw StateError(
+          'Initial installation registration must be anonymous.',
+        );
+      }
+      if (registrationCalls > 1 && authorization != 'Bearer $_token') {
+        throw StateError(
+          'Installation rotation must authenticate previous token.',
+        );
       }
       final body = jsonDecode(request.body) as Map<String, dynamic>;
       if (body['installationId'] != _installationId) {

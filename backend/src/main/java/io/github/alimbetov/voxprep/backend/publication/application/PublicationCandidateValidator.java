@@ -11,15 +11,25 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class PublicationCandidateValidator {
 
     private final PublicationExactContentResolver resolver;
+    private final PublicationMediaValidator mediaValidator;
 
     public PublicationCandidateValidator(PublicationExactContentResolver resolver) {
+        this(resolver, PublicationMediaValidator.noOp());
+    }
+
+    @Autowired
+    public PublicationCandidateValidator(
+            PublicationExactContentResolver resolver,
+            PublicationMediaValidator mediaValidator) {
         this.resolver = Objects.requireNonNull(resolver, "resolver");
+        this.mediaValidator = Objects.requireNonNull(mediaValidator, "mediaValidator");
     }
 
     public PublicationValidationResult validate(List<PublicationExactContentRef> refs) {
@@ -64,6 +74,11 @@ public class PublicationCandidateValidator {
                             ref.identityKey(),
                             "lifecycle=" + resolved.lifecycle().name()));
                 }
+                if (resolved.checksum().equals(ref.checksum())
+                        && (resolved.lifecycle() == ContentLifecycleStatus.APPROVED
+                        || resolved.lifecycle() == ContentLifecycleStatus.PUBLISHED)) {
+                    issues.addAll(mediaValidator.validate(ref));
+                }
             }, () -> issues.add(new PublicationValidationIssue(
                     PublicationValidationCode.MISSING_REVISION,
                     ref.identityKey(),
@@ -71,10 +86,12 @@ public class PublicationCandidateValidator {
         }
 
         issues.sort(PublicationValidationIssue::compareTo);
+        boolean hasErrors = issues.stream()
+                .anyMatch(issue -> issue.severity() == PublicationValidationSeverity.ERROR);
         return new PublicationValidationResult(
                 canonicalRefs,
                 issues,
-                issues.isEmpty() ? digest(canonicalRefs) : null);
+                hasErrors ? null : digest(canonicalRefs));
     }
 
     private static String digest(List<String> canonicalRefs) {

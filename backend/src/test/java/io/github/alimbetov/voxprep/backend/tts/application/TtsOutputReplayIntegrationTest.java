@@ -55,6 +55,10 @@ class TtsOutputReplayIntegrationTest {
                 .isEqualTo(TtsOutputFinalizationService.FinalizationResult.ALREADY_FINALIZED);
         assertThat(jdbcTemplate.queryForObject(
                 "select count(*) from app.file_asset where id = ?", Integer.class, fixture.fileId())).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*) from app.content_asset_binding
+                 where content_revision_id = ? and role = 'PRONUNCIATION' and file_asset_id = ?
+                """, Integer.class, fixture.revisionId(), fixture.fileId())).isEqualTo(1);
     }
 
     @Test
@@ -102,9 +106,10 @@ class TtsOutputReplayIntegrationTest {
         UUID fileId = UUID.randomUUID();
         String fingerprint = String.valueOf('c').repeat(64);
         var job = new TtsJobEntity(model, "Replay-safe output.", String.valueOf('d').repeat(64));
-        job.prepareWorkerClaim(fileId, revisionId, "PRIMARY", "Replay-safe output.", "en-US", fingerprint);
+        job.prepareWorkerClaim(
+                fileId, revisionId, "pronunciation", "Replay-safe output.", "en-US", fingerprint);
         jobRepository.saveAndFlush(job);
-        return new Fixture(job, model, fileId, fingerprint);
+        return new Fixture(job, model, revisionId, fileId, fingerprint);
     }
 
     private static String sha256(byte[] bytes) {
@@ -115,5 +120,10 @@ class TtsOutputReplayIntegrationTest {
         }
     }
 
-    private record Fixture(TtsJobEntity job, TtsVoiceModelEntity model, UUID fileId, String fingerprint) { }
+    private record Fixture(
+            TtsJobEntity job,
+            TtsVoiceModelEntity model,
+            UUID revisionId,
+            UUID fileId,
+            String fingerprint) { }
 }

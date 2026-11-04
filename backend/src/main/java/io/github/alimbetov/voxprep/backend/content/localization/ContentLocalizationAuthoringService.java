@@ -7,8 +7,10 @@ import io.github.alimbetov.voxprep.backend.sharedkernel.Sha256Digest;
 import java.sql.Timestamp;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -37,8 +39,8 @@ public class ContentLocalizationAuthoringService {
             String locale,
             Sha256Digest checksum,
             Fields fields) {
-        requireContent(contentRevisionId);
         String canonicalLocale = canonicalLocale(locale);
+        lockContentRevision(contentRevisionId);
         int nextRevision = repository
                 .findTopByContentRevisionIdAndLocaleOrderByLocalizationRevisionNumberDesc(contentRevisionId, canonicalLocale)
                 .map(value -> value.getLocalizationRevisionNumber() + 1)
@@ -47,7 +49,7 @@ public class ContentLocalizationAuthoringService {
                 contentRevisionId,
                 canonicalLocale,
                 nextRevision,
-                checksum,
+                ContentLocalizationChecksum.compute(fields),
                 fields.title(),
                 fields.subtitle(),
                 fields.description(),
@@ -61,7 +63,7 @@ public class ContentLocalizationAuthoringService {
         var entity = require(id);
         requireVersion(entity, expectedVersion);
         entity.replaceDraft(
-                checksum,
+                ContentLocalizationChecksum.compute(fields),
                 fields.title(),
                 fields.subtitle(),
                 fields.description(),
@@ -95,6 +97,7 @@ public class ContentLocalizationAuthoringService {
     @Transactional
     public Snapshot createNext(UUID id, long expectedVersion) {
         var source = require(id);
+        lockContentRevision(source.getContentRevisionId());
         requireVersion(source, expectedVersion);
         if (source.getLifecycle() != ContentLocalizationLifecycleStatus.APPROVED) {
             throw new ContentAuthoringConflictException("Only APPROVED localization revision may create the next revision");
@@ -110,7 +113,9 @@ public class ContentLocalizationAuthoringService {
                 source.getContentRevisionId(),
                 source.getLocale(),
                 source.getLocalizationRevisionNumber() + 1,
-                new Sha256Digest(source.getChecksumSha256()),
+                ContentLocalizationChecksum.compute(new Fields(
+                        source.getTitle(), source.getSubtitle(), source.getDescription(),
+                        source.getTranslation(), source.getHint(), source.getExplanation())),
                 source.getTitle(),
                 source.getSubtitle(),
                 source.getDescription(),
@@ -120,8 +125,24 @@ public class ContentLocalizationAuthoringService {
     }
 
     @Transactional(readOnly = true)
+    public List<Snapshot> listByContent(UUID contentRevisionId) {
+        requireContent(contentRevisionId);
+        return repository.findAllByContentRevisionIdOrderByLocaleAscLocalizationRevisionNumberDesc(contentRevisionId)
+                .stream().map(ContentLocalizationAuthoringService::snapshot).toList();
+    }
+
+    @Transactional(readOnly = true)
     public Snapshot get(UUID id) {
         return snapshot(require(id));
+    }
+
+    /** Serializes revision-number allocation across every application instance. */
+    private void lockContentRevision(UUID contentRevisionId) {
+        if (jdbcTemplate.queryForList(
+                "select id from app.content_revision where id = ? for update",
+                UUID.class, contentRevisionId).isEmpty()) {
+            throw new ContentRevisionNotFoundException(contentRevisionId);
+        }
     }
 
     private void requireContent(UUID contentRevisionId) {
@@ -147,6 +168,8 @@ public class ContentLocalizationAuthoringService {
             return repository.saveAndFlush(entity);
         } catch (OptimisticLockingFailureException exception) {
             throw new ContentAuthoringConflictException("Localization revision was modified by another editor", exception);
+        } catch (DataIntegrityViolationException exception) {
+            throw new ContentAuthoringConflictException("Localization revision conflicts with an existing revision", exception);
         }
     }
 

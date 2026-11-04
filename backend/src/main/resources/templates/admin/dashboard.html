@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/fragments/shell :: layout('Dashboard', ${activeSection}, ~{::main})}">
+<main>
+    <div class="mb-4">
+        <h1 class="h3 mb-1">Dashboard</h1>
+        <p class="text-secondary mb-0">Authoring shell over existing VoxPrep application services and publication contracts.</p>
+    </div>
+    <div class="row g-3">
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card studio-card h-100"><div class="card-body"><h2 class="h5">Catalogue</h2><p class="text-secondary small">Catalogue hierarchy and learner structure.</p><a class="btn btn-sm btn-outline-dark" th:href="@{/admin/catalogue}">Open</a></div></div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card studio-card h-100"><div class="card-body"><h2 class="h5">Content</h2><p class="text-secondary small">Revision authoring and immutable publication inputs.</p><a class="btn btn-sm btn-outline-dark" th:href="@{/admin/content}">Open</a></div></div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card studio-card h-100"><div class="card-body"><h2 class="h5">Localization</h2><p class="text-secondary small">Localized revision authoring and review.</p><a class="btn btn-sm btn-outline-dark" th:href="@{/admin/localization}">Open</a></div></div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card studio-card h-100"><div class="card-body"><h2 class="h5">Publication</h2><p class="text-secondary small">Readiness, validation and CURRENT release controls.</p><a class="btn btn-sm btn-outline-dark" th:href="@{/admin/publication}">Open</a></div></div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card studio-card h-100"><div class="card-body"><h2 class="h5">Imports</h2><p class="text-secondary small">Controlled ingestion through application services.</p><a class="btn btn-sm btn-outline-dark" th:href="@{/admin/imports}">Open</a></div></div>
+        </div>
+    </div>
+</main>
+</html>

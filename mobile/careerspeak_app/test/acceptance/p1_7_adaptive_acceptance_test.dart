@@ -2,6 +2,10 @@ import 'package:careerspeak_app/app/careerspeak_app.dart';
 import 'package:careerspeak_app/app/learner_state_providers.dart';
 import 'package:careerspeak_app/app/mock_visual_preferences.dart';
 import 'package:careerspeak_app/app/repository_providers.dart';
+import 'package:careerspeak_app/application/ports/practice_test_attempt_repository.dart';
+import 'package:careerspeak_app/application/result/result.dart';
+import 'package:careerspeak_app/domain/practice_test_attempt.dart';
+import 'package:careerspeak_app/domain/practice_test_completion_key.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/mock/mock_content_repository.dart';
 import 'package:careerspeak_app/data/mock/mock_test_repository.dart';
@@ -10,6 +14,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
   const widths = <double>[360, 600, 840, 1200];
@@ -47,7 +52,11 @@ void main() {
     await _pumpApp(tester, width: 360, textScale: MockTextScalePreview.normal);
 
     await _navigate(tester, 'Learn');
-    await tester.tap(find.text('Dependency Injection').first);
+    // Learn now opens the universal catalogue, whereas the content detail
+    // route remains deep-linkable. Verify the actual route across resizing.
+    GoRouter.of(
+      tester.element(find.byType(NavigationBar)),
+    ).go('/content/interview/JAVA_DI_001');
     await tester.pumpAndSettle();
 
     expect(find.text('Dependency Injection'), findsWidgets);
@@ -90,9 +99,16 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
+    final database = CareerSpeakDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
+    final attempts = _AcceptancePracticeTestAttemptRepository();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          careerSpeakDatabaseProvider.overrideWithValue(database),
+          // MockTestRepository is not published into Drift. The test needs
+          // an isolated attempt adapter for that same mock test revision.
+          practiceTestAttemptRepositoryProvider.overrideWithValue(attempts),
           practiceTestRepositoryProvider.overrideWithValue(
             const MockTestRepository(),
           ),
@@ -142,6 +158,11 @@ Future<void> _pumpApp(
 
   final database = CareerSpeakDatabase(NativeDatabase.memory());
   addTearDown(database.close);
+  // Navigation/resize acceptance begins after onboarding. Production sends
+  // a fresh installation to /onboarding; do not bypass redirect semantics.
+  await database.customStatement(
+    'UPDATE onboarding_state SET completed = 1, generation = 1 WHERE id = 1',
+  );
 
   await tester.pumpWidget(
     ProviderScope(
@@ -180,11 +201,12 @@ Future<void> _navigate(WidgetTester tester, String label) async {
 Future<void> _tapScrollableText(WidgetTester tester, String text) async {
   final target = find.text(text);
 
-  for (var attempt = 0; attempt < 8 && target.evaluate().isEmpty; attempt++) {
-    final scrollables = find.byType(Scrollable);
-    expect(scrollables, findsWidgets);
-    await tester.drag(scrollables.first, const Offset(0, -300));
-    await tester.pumpAndSettle();
+  if (target.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      target,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
   }
 
   expect(target, findsOneWidget);
@@ -207,4 +229,64 @@ class _AcceptanceVisualPreferencesController
   @override
   MockVisualPreferences build() =>
       MockVisualPreferences(textScale: initialTextScale);
+}
+
+final class _AcceptancePracticeTestAttemptRepository
+    implements PracticeTestAttemptRepository {
+  PracticeTestAttempt? _active;
+  final Set<PracticeTestCompletionKey> _completed =
+      <PracticeTestCompletionKey>{};
+
+  @override
+  Future<Result<PracticeTestAttempt?>> getActiveAttempt() async =>
+      Success<PracticeTestAttempt?>(_active);
+
+  @override
+  Future<Result<PracticeTestAttempt>> startActiveAttempt(String code) async {
+    final now = DateTime.utc(2026, 11, 4);
+    _active = PracticeTestAttempt(
+      practiceTestCode: code,
+      practiceTestRevision: 1,
+      currentIndex: 0,
+      answers: const <int, int>{},
+      startedAt: now,
+      updatedAt: now,
+    );
+    return Success<PracticeTestAttempt>(_active!);
+  }
+
+  @override
+  Future<Result<PracticeTestAttempt>> saveActiveAttempt(
+    PracticeTestAttempt attempt,
+  ) async {
+    _active = attempt;
+    return Success<PracticeTestAttempt>(attempt);
+  }
+
+  @override
+  Future<Result<Set<PracticeTestCompletionKey>>>
+  getCompletedPracticeTests() async => Success<Set<PracticeTestCompletionKey>>(
+    Set<PracticeTestCompletionKey>.unmodifiable(_completed),
+  );
+
+  @override
+  Future<Result<void>> completeActiveAttempt() async {
+    final active = _active;
+    if (active != null) {
+      _completed.add(
+        PracticeTestCompletionKey(
+          practiceTestCode: active.practiceTestCode,
+          revision: active.practiceTestRevision,
+        ),
+      );
+      _active = null;
+    }
+    return const Success<void>(null);
+  }
+
+  @override
+  Future<Result<void>> clearActiveAttempt() async {
+    _active = null;
+    return const Success<void>(null);
+  }
 }

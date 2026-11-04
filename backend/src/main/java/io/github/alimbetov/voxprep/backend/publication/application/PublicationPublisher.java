@@ -14,6 +14,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,8 @@ public class PublicationPublisher {
     private final PublicationCurrentRepository currentRepository;
     private final PublicationCandidateValidator validator;
     private final PublicationContentVersionAllocator versionAllocator;
+    private final PublicationContentFreezer contentFreezer;
+    private final PublicationWireSnapshotWriter wireWriter;
 
     public PublicationPublisher(
             PublicationCandidateRepository candidateRepository,
@@ -34,12 +37,47 @@ public class PublicationPublisher {
             PublicationCurrentRepository currentRepository,
             PublicationCandidateValidator validator,
             PublicationContentVersionAllocator versionAllocator) {
+        this(
+                candidateRepository,
+                manifestRepository,
+                releaseRepository,
+                currentRepository,
+                validator,
+                versionAllocator,
+                PublicationContentFreezer.noOp(),
+                PublicationWireSnapshotWriter.noOp());
+    }
+
+    public PublicationPublisher(
+            PublicationCandidateRepository candidateRepository,
+            PublicationCandidateManifestRefRepository manifestRepository,
+            PublicationReleaseRepository releaseRepository,
+            PublicationCurrentRepository currentRepository,
+            PublicationCandidateValidator validator,
+            PublicationContentVersionAllocator versionAllocator,
+            PublicationContentFreezer contentFreezer) {
+        this(candidateRepository, manifestRepository, releaseRepository, currentRepository,
+                validator, versionAllocator, contentFreezer, PublicationWireSnapshotWriter.noOp());
+    }
+
+    @Autowired
+    public PublicationPublisher(
+            PublicationCandidateRepository candidateRepository,
+            PublicationCandidateManifestRefRepository manifestRepository,
+            PublicationReleaseRepository releaseRepository,
+            PublicationCurrentRepository currentRepository,
+            PublicationCandidateValidator validator,
+            PublicationContentVersionAllocator versionAllocator,
+            PublicationContentFreezer contentFreezer,
+            PublicationWireSnapshotWriter wireWriter) {
         this.candidateRepository = Objects.requireNonNull(candidateRepository, "candidateRepository");
         this.manifestRepository = Objects.requireNonNull(manifestRepository, "manifestRepository");
         this.releaseRepository = Objects.requireNonNull(releaseRepository, "releaseRepository");
         this.currentRepository = Objects.requireNonNull(currentRepository, "currentRepository");
         this.validator = Objects.requireNonNull(validator, "validator");
         this.versionAllocator = Objects.requireNonNull(versionAllocator, "versionAllocator");
+        this.contentFreezer = Objects.requireNonNull(contentFreezer, "contentFreezer");
+        this.wireWriter = Objects.requireNonNull(wireWriter, "wireWriter");
     }
 
     @Transactional
@@ -71,6 +109,8 @@ public class PublicationPublisher {
             throw new IllegalStateException("frozen publication manifest root does not match candidate root");
         }
 
+        contentFreezer.freeze(manifest, publishedAt);
+
         PublicationCurrentEntity current = currentRepository.findByIdForUpdate(PublicationCurrentEntity.SINGLETON_ID)
                 .orElseThrow(() -> new IllegalStateException("publication_current singleton row is missing"));
 
@@ -81,6 +121,10 @@ public class PublicationPublisher {
                 candidate.getRootSha256(),
                 publishedAt);
         releaseRepository.saveAndFlush(release);
+
+        // Invariant: CURRENT never points to a release lacking the immutable Flutter
+        // manifest, all six catalogues and a complete FREE/FULL access projection.
+        wireWriter.freeze(release, manifest, publishedAt);
 
         current.switchTo(release, publishedAt);
         currentRepository.save(current);

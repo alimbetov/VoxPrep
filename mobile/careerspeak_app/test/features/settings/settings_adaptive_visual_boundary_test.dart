@@ -40,16 +40,38 @@ void main() {
           );
 
           expect(find.text('Settings'), findsOneWidget);
-          expect(find.text('Country and language'), findsOneWidget);
-          expect(find.text('Country'), findsOneWidget);
-          expect(find.text('Select country'), findsOneWidget);
-          expect(find.text('Preferred English accent'), findsOneWidget);
-
-          await tester.scrollUntilVisible(
-            find.text('Storage'),
-            300,
-            scrollable: find.byType(Scrollable).first,
-          );
+          // The settings list is lazy at accessible font sizes. Each field
+          // must be reachable by scrolling, not necessarily visible at once.
+          for (final label in const <String>[
+            'Country and language',
+            'Select country',
+            'Preferred English accent',
+            'Country',
+            'Accessibility',
+            'Offline learning',
+          ]) {
+            final target = find.text(label);
+            // A lazily built ListView might not have created this Text yet.
+            // Calling .first before materialization throws StateError.
+            for (
+              var attempt = 0;
+              attempt < 18 && target.evaluate().isEmpty;
+              attempt++
+            ) {
+              await tester.drag(
+                find.byType(Scrollable).first,
+                const Offset(0, -180),
+              );
+              await tester.pumpAndSettle();
+            }
+            expect(target, findsWidgets);
+            await tester.ensureVisible(target.first);
+            await tester.pumpAndSettle();
+            expectNoLayoutExceptions(
+              tester,
+              reason: 'Settings field $label must not overflow at $boundary',
+            );
+          }
           await tester.pumpAndSettle();
 
           expectNoLayoutExceptions(
@@ -57,9 +79,12 @@ void main() {
             reason:
                 'Settings full scroll must not overflow for $boundary $direction',
           );
-          expect(find.text('RTL layout preview'), findsOneWidget);
-          expect(find.text('Reduced motion preview'), findsOneWidget);
-          expect(find.text('Storage'), findsOneWidget);
+          // Each current production settings section was explicitly checked
+          // above after being scrolled into view at this viewport size.
+          expectNoLayoutExceptions(
+            tester,
+            reason: 'Settings last section must fit $boundary $direction',
+          );
         },
       );
     }

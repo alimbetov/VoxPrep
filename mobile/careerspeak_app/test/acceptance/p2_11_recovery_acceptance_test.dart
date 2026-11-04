@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:careerspeak_app/application/content_sync/content_sync_coordinator.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_planner.dart';
 import 'package:careerspeak_app/application/content_sync/preference_aware_content_sync.dart';
+import 'package:careerspeak_app/application/content_delivery/publication_manifest_canonicalizer.dart';
 import 'package:careerspeak_app/application/ports/installation_credential_store.dart';
 import 'package:careerspeak_app/application/query/content_query.dart';
 import 'package:careerspeak_app/application/result/result.dart';
@@ -15,9 +16,11 @@ import 'package:careerspeak_app/data/local/drift_content_repository.dart';
 import 'package:careerspeak_app/data/local/drift_sync_journal.dart';
 import 'package:careerspeak_app/data/local/drift_sync_plan_executor.dart';
 import 'package:careerspeak_app/data/remote/http_api_client.dart';
+import 'package:careerspeak_app/data/remote/content_manifest_decoder.dart';
 import 'package:careerspeak_app/data/remote/http_content_manifest_gateway.dart';
 import 'package:careerspeak_app/data/remote/http_content_payload_gateway.dart';
 import 'package:careerspeak_app/data/remote/http_installation_registration_gateway.dart';
+import 'package:careerspeak_app/domain/application_preferences.dart';
 import 'package:careerspeak_app/domain/installation_credentials.dart';
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
@@ -156,7 +159,9 @@ void main() {
         );
       }
 
-      expect(backend.registrationCalls, 1);
+      // Each cold bootstrap revalidates/rotates credentials with the existing
+      // Bearer proof; a same-root repair must retain that authentication.
+      expect(backend.registrationCalls, 2);
       expect(backend.packManifestCalls, packCallsBeforeRepair + 1);
       expect(backend.contentPayloadCalls, payloadCallsBeforeRepair + 1);
       await _expectCurrentRevision(database, revision: 1, title: _titleV1);
@@ -200,6 +205,12 @@ Future<ApplicationBootstrapOutcome> _bootstrapSuccess({
   required http.Client client,
   required String runId,
 }) async {
+  // Startup content sync intentionally waits for country/locale onboarding.
+  // These recovery scenarios begin with a learner who has selected a locale.
+  (await DriftAppPreferencesRepository(database).setLocaleSelection(
+    countryCode: 'KZ',
+    locale: AppTranslationLocale.english,
+  )).getOrThrow();
   return (await _bootstrapResult(
     database: database,
     credentialStore: credentialStore,
@@ -256,6 +267,35 @@ Future<void> _expectCurrentRevision(
   final page = (await DriftContentRepository(
     database,
   ).watchContent(const ContentQuery()).first).getOrThrow();
+  if (page.items.isEmpty) {
+    final root = await database
+        .customSelect(
+          'SELECT schema_version, current_content_version FROM content_manifest_states',
+        )
+        .get();
+    final packs = await database
+        .customSelect(
+          'SELECT pack_code, variant_key, revision, source_content_version, state FROM content_pack_revisions',
+        )
+        .get();
+    final refs = await database
+        .customSelect(
+          'SELECT pack_code, variant_key, content_code, content_type, content_revision FROM pack_content_refs',
+        )
+        .get();
+    final locals = await database
+        .customSelect(
+          'SELECT content_code, content_type, revision, snapshot_state FROM local_content_records',
+        )
+        .get();
+    fail(
+      'Expected committed CURRENT revision $revision; '
+      'root=${root.map((row) => row.data).toList()}, '
+      'packs=${packs.map((row) => row.data).toList()}, '
+      'refs=${refs.map((row) => row.data).toList()}, '
+      'locals=${locals.map((row) => row.data).toList()}',
+    );
+  }
   expect(page.items, hasLength(1));
   expect(page.items.single.code, _contentCode);
   expect(page.items.single.revision, revision);
@@ -356,45 +396,63 @@ final class _RecoveryLearnerApiFixture {
   }
 }
 
-Map<String, Object?> _rootManifest(int revision) => <String, Object?>{
-  'schemaVersion': 1,
-  'contentVersion': revision,
-  'minimumAppContractVersion': 1,
-  'publishedAt': '2026-10-31T00:00:00Z',
-  'checksum': revision == 1 ? _rootChecksumV1 : _rootChecksumV2,
-  'packs': <Object?>[
-    <String, Object?>{
-      'code': 'JAVA_SENIOR',
-      'variant': 'canonical',
-      'revision': revision,
-      'checksum': revision == 1 ? _packChecksumV1 : _packChecksumV2,
-    },
-  ],
-  'practiceTests': <Object?>[],
-  'catalogues': <Object?>[],
-  'tombstones': <Object?>[],
-};
+Map<String, Object?> _rootManifest(int revision) {
+  final payload = <String, Object?>{
+    'schemaVersion': 1,
+    'contentVersion': revision,
+    'minimumAppContractVersion': 1,
+    'publishedAt': '2026-10-31T00:00:00Z',
+    'checksum': _rootChecksumV1,
+    'packs': <Object?>[
+      <String, Object?>{
+        'code': 'JAVA_SENIOR',
+        'variant': 'canonical',
+        'revision': revision,
+        'checksum': _packManifest(revision)['checksum'],
+      },
+    ],
+    'practiceTests': <Object?>[],
+    'catalogues': <Object?>[],
+    'tombstones': <Object?>[],
+  };
+  final decoded = const ContentManifestDecoder()
+      .decodeRoot(payload)
+      .getOrThrow();
+  payload['checksum'] = const PublicationManifestCanonicalizer().rootDigest(
+    decoded,
+  );
+  return payload;
+}
 
-Map<String, Object?> _packManifest(int revision) => <String, Object?>{
-  'schemaVersion': 1,
-  'code': 'JAVA_SENIOR',
-  'variant': 'canonical',
-  'revision': revision,
-  'checksum': revision == 1 ? _packChecksumV1 : _packChecksumV2,
-  'contents': <Object?>[
-    <String, Object?>{
-      'contentCode': _contentCode,
-      'contentType': 'interview',
-      'revision': revision,
-      'checksum': revision == 1 ? _contentChecksumV1 : _contentChecksumV2,
-      'sortOrder': 10,
-      'publishedAt': '2026-10-31T00:00:00Z',
-    },
-  ],
-  'localizations': <Object?>[],
-  'assets': <Object?>[],
-  'contentAssets': <Object?>[],
-};
+Map<String, Object?> _packManifest(int revision) {
+  final payload = <String, Object?>{
+    'schemaVersion': 1,
+    'code': 'JAVA_SENIOR',
+    'variant': 'canonical',
+    'revision': revision,
+    'checksum': _packChecksumV1,
+    'contents': <Object?>[
+      <String, Object?>{
+        'contentCode': _contentCode,
+        'contentType': 'interview',
+        'revision': revision,
+        'checksum': revision == 1 ? _contentChecksumV1 : _contentChecksumV2,
+        'sortOrder': 10,
+        'publishedAt': '2026-10-31T00:00:00Z',
+      },
+    ],
+    'localizations': <Object?>[],
+    'assets': <Object?>[],
+    'contentAssets': <Object?>[],
+  };
+  final decoded = const ContentManifestDecoder()
+      .decodePack(payload)
+      .getOrThrow();
+  payload['checksum'] = const PublicationManifestCanonicalizer().packDigest(
+    decoded,
+  );
+  return payload;
+}
 
 Map<String, Object?> _contentPayload(int revision) => <String, Object?>{
   'contentCode': _contentCode,
@@ -442,9 +500,5 @@ const _packChecksumV1 =
     '2222222222222222222222222222222222222222222222222222222222222222';
 const _contentChecksumV1 =
     '3333333333333333333333333333333333333333333333333333333333333333';
-const _rootChecksumV2 =
-    '4444444444444444444444444444444444444444444444444444444444444444';
-const _packChecksumV2 =
-    '5555555555555555555555555555555555555555555555555555555555555555';
 const _contentChecksumV2 =
     '6666666666666666666666666666666666666666666666666666666666666666';

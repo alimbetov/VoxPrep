@@ -10,18 +10,22 @@ import 'access_providers.dart';
 import 'api_client_providers.dart';
 import 'app_configuration.dart';
 import 'billing_providers.dart';
+import 'release_switch.dart';
 
 final purchaseVerificationRepositoryProvider =
     Provider<PurchaseVerificationRepository>((ref) {
       final configuration = ref.watch(appConfigurationProvider);
-      if (configuration.mockPurchaseVerificationRequested &&
-          configuration.developmentMocksAllowed) {
+      final runMode = ref.watch(appRunModeProvider);
+      final mocksAllowed =
+          configuration.developmentMocksAllowed && runMode.isDevelopment;
+
+      if (configuration.mockPurchaseVerificationRequested && mocksAllowed) {
         return MockPurchaseVerificationRepository();
       }
 
-      // Staging and production always use the real Backend verification
-      // boundary. A release build therefore cannot manufacture FULL access by
-      // enabling CAREERSPEAK_MOCK_PURCHASE_VERIFICATION.
+      // Release mode always uses the real Backend verification boundary,
+      // including debug/profile builds started with
+      // CAREERSPEAK_RELEASE_ENABLED=true.
       return HttpPurchaseVerificationRepository(
         apiClient: ref.watch(apiClientProvider),
       );

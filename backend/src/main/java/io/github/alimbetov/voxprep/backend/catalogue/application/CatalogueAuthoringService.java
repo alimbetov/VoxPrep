@@ -11,7 +11,9 @@ import io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningTrackRe
 import io.github.alimbetov.voxprep.backend.catalogue.persistence.VerticalEntity;
 import io.github.alimbetov.voxprep.backend.catalogue.persistence.VerticalRepository;
 import io.github.alimbetov.voxprep.backend.sharedkernel.AvailabilityStatus;
+import java.util.Objects;
 import java.util.UUID;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -44,7 +46,7 @@ public class CatalogueAuthoringService {
             String iconAssetId,
             int sortOrder,
             AvailabilityStatus availability) {
-        return verticals.saveAndFlush(new VerticalEntity(
+        return save(verticals, new VerticalEntity(
                 code, sectionCode, title, description, iconAssetId, sortOrder, availability));
     }
 
@@ -72,7 +74,7 @@ public class CatalogueAuthoringService {
             String description,
             int sortOrder,
             AvailabilityStatus availability) {
-        return goals.saveAndFlush(new LearningGoalEntity(
+        return save(goals, new LearningGoalEntity(
                 code, requireVertical(verticalId), title, description, sortOrder, availability));
     }
 
@@ -87,7 +89,8 @@ public class CatalogueAuthoringService {
             AvailabilityStatus availability) {
         var entity = requireGoal(id);
         requireVersion(entity.getVersion(), expectedVersion);
-        entity.updateDetails(requireVertical(verticalId), title, description, sortOrder, availability);
+        requireSameParent("goal", id, "vertical", entity.getVertical().getId(), verticalId);
+        entity.updateDetails(entity.getVertical(), title, description, sortOrder, availability);
         return save(goals, entity);
     }
 
@@ -101,7 +104,7 @@ public class CatalogueAuthoringService {
             CatalogueCode careerTrackCode,
             int sortOrder,
             AvailabilityStatus availability) {
-        return tracks.saveAndFlush(new LearningTrackEntity(
+        return save(tracks, new LearningTrackEntity(
                 code, requireGoal(goalId), title, description, levelCode, careerTrackCode, sortOrder, availability));
     }
 
@@ -118,8 +121,9 @@ public class CatalogueAuthoringService {
             AvailabilityStatus availability) {
         var entity = requireTrack(id);
         requireVersion(entity.getVersion(), expectedVersion);
+        requireSameParent("track", id, "goal", entity.getGoal().getId(), goalId);
         entity.updateDetails(
-                requireGoal(goalId), title, description, levelCode, careerTrackCode, sortOrder, availability);
+                entity.getGoal(), title, description, levelCode, careerTrackCode, sortOrder, availability);
         return save(tracks, entity);
     }
 
@@ -132,7 +136,7 @@ public class CatalogueAuthoringService {
             CollectionAccessLevel accessLevel,
             int sortOrder,
             AvailabilityStatus availability) {
-        return collections.saveAndFlush(new LearningCollectionEntity(
+        return save(collections, new LearningCollectionEntity(
                 code, requireTrack(trackId), title, description, accessLevel, sortOrder, availability));
     }
 
@@ -148,7 +152,8 @@ public class CatalogueAuthoringService {
             AvailabilityStatus availability) {
         var entity = requireCollection(id);
         requireVersion(entity.getVersion(), expectedVersion);
-        entity.updateDetails(requireTrack(trackId), title, description, accessLevel, sortOrder, availability);
+        requireSameParent("collection", id, "track", entity.getTrack().getId(), trackId);
+        entity.updateDetails(entity.getTrack(), title, description, accessLevel, sortOrder, availability);
         return save(collections, entity);
     }
 
@@ -175,11 +180,25 @@ public class CatalogueAuthoringService {
         }
     }
 
+    private static void requireSameParent(
+            String entityType,
+            UUID entityId,
+            String parentType,
+            UUID actualParentId,
+            UUID requestedParentId) {
+        if (!Objects.equals(actualParentId, requestedParentId)) {
+            throw new CatalogueAuthoringConflictException(
+                    "Cannot move " + entityType + " " + entityId + " to another " + parentType);
+        }
+    }
+
     private static <T> T save(org.springframework.data.jpa.repository.JpaRepository<T, UUID> repository, T entity) {
         try {
             return repository.saveAndFlush(entity);
         } catch (OptimisticLockingFailureException exception) {
             throw new CatalogueAuthoringConflictException("Catalogue item was modified by another editor", exception);
+        } catch (DataIntegrityViolationException exception) {
+            throw new CatalogueAuthoringConflictException("Catalogue item conflicts with existing data", exception);
         }
     }
 }

@@ -51,14 +51,23 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
         final manifest = (fetched as Success<PackContentManifest>).value;
         _validateManifestTarget(target, manifest);
 
-        final payloadResult = await _fetchPayloads(target, manifest);
+        final payloadResult = await _fetchPayloads(
+          target,
+          manifest,
+          contentVersion: plan.target.contentVersion,
+          hasUniversalCatalogues: plan.target.catalogues.isNotEmpty,
+        );
         if (payloadResult case FailureResult<List<ContentPayload>>(
           :final failure,
         )) {
           return FailureResult(failure);
         }
 
-        final localizedPayloadResult = await _fetchLocalizedPayloads(manifest);
+        final localizedPayloadResult = await _fetchLocalizedPayloads(
+          manifest,
+          contentVersion: plan.target.contentVersion,
+          hasUniversalCatalogues: plan.target.catalogues.isNotEmpty,
+        );
         if (localizedPayloadResult
             case FailureResult<List<LocalizedContentPayload>>(:final failure)) {
           return FailureResult(failure);
@@ -118,14 +127,28 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
 
   Future<Result<List<ContentPayload>>> _fetchPayloads(
     PackRevisionRef pack,
-    PackContentManifest manifest,
-  ) async {
+    PackContentManifest manifest, {
+    required int contentVersion,
+    required bool hasUniversalCatalogues,
+  }) async {
     if (pack.identity.variant != 'canonical') {
       return const Success<List<ContentPayload>>(<ContentPayload>[]);
     }
 
     final payloads = <ContentPayload>[];
     for (final content in manifest.contents) {
+      if (await _isFrozenFullContent(
+        code: content.identity.code,
+        type: content.identity.type.name,
+        revision: content.revision,
+        checksum: content.checksum,
+        contentVersion: contentVersion,
+        enabled: manifest.schemaVersion >= 2 && hasUniversalCatalogues,
+      )) {
+        // Full content remains catalogued, but its body is not downloaded
+        // before entitlement. This preserves FREE startup of mixed releases.
+        continue;
+      }
       final target = ContentPayloadRef(
         identity: content.identity,
         revision: content.revision,
@@ -159,8 +182,10 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
   }
 
   Future<Result<List<LocalizedContentPayload>>> _fetchLocalizedPayloads(
-    PackContentManifest manifest,
-  ) async {
+    PackContentManifest manifest, {
+    required int contentVersion,
+    required bool hasUniversalCatalogues,
+  }) async {
     if (manifest.localizations.isEmpty) {
       return const Success<List<LocalizedContentPayload>>(
         <LocalizedContentPayload>[],
@@ -179,6 +204,15 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
 
     final payloads = <LocalizedContentPayload>[];
     for (final target in manifest.localizations) {
+      if (await _isFrozenFullContent(
+        code: target.identity.code,
+        type: target.identity.type.name,
+        revision: target.contentRevision,
+        contentVersion: contentVersion,
+        enabled: manifest.schemaVersion >= 2 && hasUniversalCatalogues,
+      )) {
+        continue;
+      }
       final fetched = await gateway.fetch(target);
       if (fetched case FailureResult<LocalizedContentPayload>(:final failure)) {
         return FailureResult<List<LocalizedContentPayload>>(failure);
@@ -228,7 +262,13 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
       for (final payload in localizedPayloads)
         _localizationKey(payload.ref): payload,
     };
-    if (localizedPayloadByKey.length != manifest.localizations.length) {
+    final lockedLocalizedCount = await _lockedLocalizationCount(
+      plan.target.contentVersion,
+      manifest,
+      plan.target.catalogues.isNotEmpty,
+    );
+    if (localizedPayloadByKey.length !=
+        manifest.localizations.length - lockedLocalizedCount) {
       throw const _SyncExecutorInvariant(
         ApplicationFailure(
           code: 'LOCALIZED_CONTENT_PAYLOAD_SET_MISMATCH',
@@ -238,8 +278,13 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
       );
     }
 
+    final lockedContentCount = await _lockedContentCount(
+      plan.target.contentVersion,
+      manifest,
+      plan.target.catalogues.isNotEmpty,
+    );
     if (target.identity.variant == 'canonical' &&
-        payloadByKey.length != manifest.contents.length) {
+        payloadByKey.length != manifest.contents.length - lockedContentCount) {
       throw const _SyncExecutorInvariant(
         ApplicationFailure(
           code: 'CONTENT_PAYLOAD_SET_MISMATCH',
@@ -332,7 +377,19 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
                 type,
                 content.revision,
               )];
-          if (payload == null || payload.ref.checksum != content.checksum) {
+          final locked = await _isFrozenFullContent(
+            code: content.identity.code,
+            type: content.identity.type.name,
+            revision: content.revision,
+            checksum: content.checksum,
+            contentVersion: plan.target.contentVersion,
+            enabled:
+                manifest.schemaVersion >= 2 &&
+                plan.target.catalogues.isNotEmpty,
+          );
+          if ((!locked && payload == null) ||
+              (locked && payload != null) ||
+              (payload != null && payload.ref.checksum != content.checksum)) {
             throw const _SyncExecutorInvariant(
               ApplicationFailure(
                 code: 'CONTENT_PAYLOAD_SET_MISMATCH',
@@ -363,7 +420,18 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
 
       for (final localization in manifest.localizations) {
         final payload = localizedPayloadByKey[_localizationKey(localization)];
-        if (payload == null || payload.ref.checksum != localization.checksum) {
+        final locked = await _isFrozenFullContent(
+          code: localization.identity.code,
+          type: localization.identity.type.name,
+          revision: localization.contentRevision,
+          contentVersion: plan.target.contentVersion,
+          enabled:
+              manifest.schemaVersion >= 2 && plan.target.catalogues.isNotEmpty,
+        );
+        if ((!locked && payload == null) ||
+            (locked && payload != null) ||
+            (payload != null &&
+                payload.ref.checksum != localization.checksum)) {
           throw const _SyncExecutorInvariant(
             ApplicationFailure(
               code: 'LOCALIZED_CONTENT_PAYLOAD_SET_MISMATCH',
@@ -372,7 +440,9 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
             ),
           );
         }
-        await _ensureLocalizedContentRead(payload, now);
+        if (payload != null) {
+          await _ensureLocalizedContentRead(payload, now);
+        }
         await _database
             .into(_database.packLocalizationRefs)
             .insert(
@@ -419,6 +489,118 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
         await _ensureContentAssetRefs(content, expected, assetById);
       }
     });
+  }
+
+  /// Determine the immutable published access level from the staged v2
+  /// catalogue graph. A shared FREE/FULL member remains FULL (server policy).
+  /// A missing owner is never interpreted as FREE.
+  Future<bool> _isFrozenFullContent({
+    required String code,
+    required String type,
+    required int revision,
+    String? checksum,
+    required int contentVersion,
+    required bool enabled,
+  }) async {
+    if (!enabled) return false; // Schema-v1 fixture compatibility.
+    final checksumClause = checksum == null ? '' : 'AND m.content_checksum = ?';
+    final rows = await _database
+        .customSelect(
+          '''
+      SELECT a.access_level
+      FROM learning_collection_member_reads AS m
+      JOIN learning_collection_access_reads AS a
+        ON a.content_version = m.content_version
+       AND a.collection_code = m.collection_code
+      WHERE m.content_version = ?
+        AND m.member_type = 'CONTENT'
+        AND m.content_code = ?
+        AND m.content_type = ?
+        AND m.content_revision = ?
+        $checksumClause
+      ''',
+          variables: <Variable<Object>>[
+            Variable<int>(contentVersion),
+            Variable<String>(code),
+            Variable<String>(type),
+            Variable<int>(revision),
+            if (checksum != null) Variable<String>(checksum),
+          ],
+        )
+        .get();
+    if (rows.isEmpty) {
+      throw const _SyncExecutorInvariant(
+        ApplicationFailure(
+          code: 'FROZEN_CONTENT_MEMBERSHIP_MISSING',
+          message: 'Published content has no exact catalogue owner.',
+        ),
+      );
+    }
+    final levels = rows.map((row) => row.read<String>('access_level')).toSet();
+    if (levels.any((level) => level != 'FREE' && level != 'FULL')) {
+      throw const _SyncExecutorInvariant(
+        ApplicationFailure(
+          code: 'FROZEN_CONTENT_ACCESS_INVALID',
+          message: 'Published content has an invalid frozen access level.',
+        ),
+      );
+    }
+    if (!levels.contains('FULL')) return false;
+
+    // The backend remains the final authority; a local FULL flag is used
+    // only if it was confirmed by the Backend entitlement endpoint. Other
+    // snapshot sources cannot authorize content payload prefetch.
+    final verified = await _database.customSelect('''
+      SELECT access_level, source
+      FROM learner_access_snapshot
+      WHERE id = 1
+      ''').getSingleOrNull();
+    return verified == null ||
+        verified.read<String>('access_level') != 'FULL' ||
+        verified.read<String>('source') != 'BACKEND_VERIFIED';
+  }
+
+  Future<int> _lockedContentCount(
+    int contentVersion,
+    PackContentManifest manifest,
+    bool hasUniversalCatalogues,
+  ) async {
+    if (manifest.schemaVersion < 2 || !hasUniversalCatalogues) return 0;
+    var count = 0;
+    for (final content in manifest.contents) {
+      if (await _isFrozenFullContent(
+        code: content.identity.code,
+        type: content.identity.type.name,
+        revision: content.revision,
+        checksum: content.checksum,
+        contentVersion: contentVersion,
+        enabled: true,
+      )) {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  Future<int> _lockedLocalizationCount(
+    int contentVersion,
+    PackContentManifest manifest,
+    bool hasUniversalCatalogues,
+  ) async {
+    if (manifest.schemaVersion < 2 || !hasUniversalCatalogues) return 0;
+    var count = 0;
+    for (final ref in manifest.localizations) {
+      if (await _isFrozenFullContent(
+        code: ref.identity.code,
+        type: ref.identity.type.name,
+        revision: ref.contentRevision,
+        contentVersion: contentVersion,
+        enabled: true,
+      )) {
+        count += 1;
+      }
+    }
+    return count;
   }
 
   Future<void> _ensureContentRecord(
@@ -881,7 +1063,17 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
                           row.revision.equals(ref.contentRevision),
                     ))
                     .getSingleOrNull();
-            if (payload == null) {
+            final locked = await _isFrozenFullContent(
+              code: ref.contentCode,
+              type: ref.contentType.toLowerCase(),
+              revision: ref.contentRevision,
+              checksum: local.checksum,
+              contentVersion: plan.target.contentVersion,
+              enabled:
+                  plan.target.schemaVersion >= 2 &&
+                  plan.target.catalogues.isNotEmpty,
+            );
+            if (payload == null && !locked) {
               throw const _SyncExecutorInvariant(
                 ApplicationFailure(
                   code: 'SYNC_TARGET_PAYLOAD_MISSING',
@@ -890,7 +1082,7 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
                 ),
               );
             }
-            if (payload.checksum != local.checksum) {
+            if (payload != null && payload.checksum != local.checksum) {
               throw const _SyncExecutorInvariant(
                 ApplicationFailure(
                   code: 'SYNC_TARGET_PAYLOAD_MISMATCH',
@@ -930,7 +1122,16 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
                         ),
                   ))
                   .getSingleOrNull();
-          if (payload == null) {
+          final locked = await _isFrozenFullContent(
+            code: ref.contentCode,
+            type: ref.contentType.toLowerCase(),
+            revision: ref.contentRevision,
+            contentVersion: plan.target.contentVersion,
+            enabled:
+                plan.target.schemaVersion >= 2 &&
+                plan.target.catalogues.isNotEmpty,
+          );
+          if (payload == null && !locked) {
             throw const _SyncExecutorInvariant(
               ApplicationFailure(
                 code: 'SYNC_TARGET_LOCALIZATION_MISSING',
@@ -939,7 +1140,7 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
               ),
             );
           }
-          if (payload.checksum != ref.checksum) {
+          if (payload != null && payload.checksum != ref.checksum) {
             throw const _SyncExecutorInvariant(
               ApplicationFailure(
                 code: 'SYNC_TARGET_LOCALIZATION_MISMATCH',

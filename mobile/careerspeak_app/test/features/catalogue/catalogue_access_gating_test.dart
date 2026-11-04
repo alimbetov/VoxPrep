@@ -1,5 +1,7 @@
 import 'package:careerspeak_app/app/access_providers.dart';
+import 'package:careerspeak_app/app/asset_resolver_providers.dart';
 import 'package:careerspeak_app/app/catalogue_payload_providers.dart';
+import 'package:careerspeak_app/app/repository_providers.dart';
 import 'package:careerspeak_app/application/content_delivery/learning_vertical.dart';
 import 'package:careerspeak_app/application/content_delivery/product_catalog.dart';
 import 'package:careerspeak_app/application/content_delivery/universal_catalogue_graph.dart';
@@ -29,7 +31,7 @@ void main() {
     );
 
     expect(find.text('Collection'), findsOneWidget);
-    expect(find.text('1 items · Full'), findsOneWidget);
+    expect(find.text('1 learning items'), findsOneWidget);
     expect(find.byIcon(Icons.lock_outline), findsOneWidget);
   });
 
@@ -48,10 +50,16 @@ void main() {
       collectionAccess: AccessLevel.full,
     );
 
-    expect(find.text('Full access required'), findsOneWidget);
-    expect(find.text('Collection is part of Full VoxPrep.'), findsOneWidget);
-    expect(find.text('Learning sequence'), findsNothing);
-    expect(find.text('CONTENT'), findsNothing);
+    expect(find.text('Unlock this learning collection'), findsOneWidget);
+    expect(
+      find.text('Collection is included with VoxPrep Full.'),
+      findsOneWidget,
+    );
+    expect(find.text('Your learning sequence'), findsNothing);
+    expect(
+      find.byKey(const ValueKey('collection-content-CONTENT')),
+      findsNothing,
+    );
   });
 
   testWidgets('FULL learner direct route can reveal FULL members', (
@@ -70,8 +78,11 @@ void main() {
     );
 
     expect(find.text('Full access required'), findsNothing);
-    expect(find.text('Learning sequence'), findsOneWidget);
-    expect(find.text('CONTENT'), findsOneWidget);
+    expect(find.text('Your learning sequence'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('collection-content-CONTENT')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('FREE learner can open explicitly FREE collection', (
@@ -90,8 +101,11 @@ void main() {
     );
 
     expect(find.text('Full access required'), findsNothing);
-    expect(find.text('Learning sequence'), findsOneWidget);
-    expect(find.text('CONTENT'), findsOneWidget);
+    expect(find.text('Your learning sequence'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('collection-content-CONTENT')),
+      findsOneWidget,
+    );
   });
 }
 
@@ -105,6 +119,11 @@ Future<void> _pump(
     ProviderScope(
       overrides: [
         learnerAccessLevelProvider.overrideWithValue(learnerAccess),
+        // These widget tests exercise catalogue rendering, not network asset
+        // delivery. The separate A1 suite tests real RustFS downloads.
+        catalogueIconAssetProvider.overrideWith((ref, assetId) async => null),
+        contentCoverAssetProvider.overrideWith((ref, request) async => null),
+        contentByIdentityProvider.overrideWith((ref, identity) async => null),
         universalCatalogueRepositoryProvider.overrideWithValue(
           _Repository(_snapshot(collectionAccess)),
         ),

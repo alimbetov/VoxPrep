@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:fragment="layout(title, activeSection, content)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="_csrf" th:if="${_csrf != null}" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:if="${_csrf != null}" th:content="${_csrf.headerName}">
+    <title th:text="${title} + ' · VoxPrep Content Studio'">VoxPrep Content Studio</title>
+    <link rel="stylesheet" th:href="@{/webjars/bootstrap/5.3.8/css/bootstrap.min.css}">
+    <style>
+        body { min-height: 100vh; background: #f5f6f8; }
+        .studio-shell { max-width: 1440px; }
+        .studio-nav .nav-link { color: #495057; border-radius: .5rem; }
+        .studio-nav .nav-link.active { color: #fff; background: #212529; }
+        .studio-card { border: 0; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg bg-white border-bottom">
+    <div class="container-fluid studio-shell px-4">
+        <a class="navbar-brand fw-semibold" th:href="@{/admin}">VoxPrep Content Studio</a>
+        <div class="d-flex align-items-center gap-3">
+            <span class="text-secondary small">ADMIN</span>
+            <form method="post" th:action="@{/logout}">
+                <button class="btn btn-outline-secondary btn-sm" type="submit">Sign out</button>
+            </form>
+        </div>
+    </div>
+</nav>
+
+<div class="container-fluid studio-shell px-4 py-4">
+    <div class="row g-4">
+        <div class="col-12 col-lg-2">
+            <aside class="studio-nav">
+                <nav class="nav nav-pills flex-column gap-1">
+                    <a class="nav-link" th:classappend="${activeSection == 'dashboard'} ? ' active'" th:href="@{/admin}">Dashboard</a>
+                    <a class="nav-link" th:classappend="${activeSection == 'catalogue'} ? ' active'" th:href="@{/admin/catalogue}">Catalogue</a>
+                    <a class="nav-link" th:classappend="${activeSection == 'content'} ? ' active'" th:href="@{/admin/content}">Content</a>
+                    <a class="nav-link" th:classappend="${activeSection == 'localization'} ? ' active'" th:href="@{/admin/localization}">Localization</a>
+                    <a class="nav-link" th:classappend="${activeSection == 'publication'} ? ' active'" th:href="@{/admin/publication}">Publication</a>
+                    <a class="nav-link" th:classappend="${activeSection == 'imports'} ? ' active'" th:href="@{/admin/imports}">Imports</a>
+                </nav>
+            </aside>
+        </div>
+        <main class="col-12 col-lg-10">
+            <div th:if="${flashSuccess}" class="alert alert-success" role="alert" th:text="${flashSuccess}"></div>
+            <div th:if="${flashInfo}" class="alert alert-info" role="alert" th:text="${flashInfo}"></div>
+            <div th:if="${flashWarning}" class="alert alert-warning" role="alert" th:text="${flashWarning}"></div>
+            <div th:if="${flashError}" class="alert alert-danger" role="alert" th:text="${flashError}"></div>
+            <th:block th:replace="${content}"></th:block>
+        </main>
+    </div>
+</div>
+
+<script th:src="@{/webjars/htmx.org/2.0.10/dist/htmx.min.js}"></script>
+<script th:src="@{/webjars/bootstrap/5.3.8/js/bootstrap.bundle.min.js}"></script>
+<script>
+    document.body.addEventListener('htmx:configRequest', function (event) {
+        const token = document.querySelector('meta[name="_csrf"]')?.content;
+        const header = document.querySelector('meta[name="_csrf_header"]')?.content;
+        if (token && header) {
+            event.detail.headers[header] = token;
+        }
+    });
+</script>
+</body>
+</html>

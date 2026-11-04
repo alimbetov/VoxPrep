@@ -16,8 +16,15 @@ paths:
   /api/v1/installations:
     post:
       operationId: registerInstallation
-      description: Idempotent installation registration/re-registration.
-      security: []
+      description: >-
+        Initial registration of an unclaimed installationId is anonymous.
+        Re-registration of an existing ACTIVE installation rotates its credential
+        only when the request presents its current Bearer token. Missing, stale,
+        blocked or revoked credentials fail with 401 and MUST NOT trigger an
+        anonymous retry using the existing installationId.
+      security:
+        - {}
+        - installationBearer: []
       requestBody:
         required: true
         content:
@@ -32,6 +39,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/InstallationRegistrationResponse'
         '400': { $ref: '#/components/responses/ApiError' }
+        '401': { $ref: '#/components/responses/ApiError' }
         '409': { $ref: '#/components/responses/ApiError' }
         '500': { $ref: '#/components/responses/ApiError' }
 
@@ -279,6 +287,29 @@ paths:
         '429': { $ref: '#/components/responses/ApiError' }
         '500': { $ref: '#/components/responses/ApiError' }
         '503': { $ref: '#/components/responses/ApiError' }
+
+  /api/v1/purchases/entitlement:
+    get:
+      operationId: getCurrentInstallationEntitlement
+      description: >-
+        Reconciles the cached Flutter FULL/FREE state against authoritative,
+        store-verified purchase claims. No Store proof or account registration
+        is required. Returns FREE after a verified refund/revocation. Offline
+        clients may retain the last cached snapshot until reconnect; the
+        backend continues to enforce current entitlement on protected data.
+      responses:
+        '200':
+          description: Current installation entitlement.
+          headers:
+            Cache-Control:
+              schema: { type: string, example: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseVerificationResponse'
+        '401': { $ref: '#/components/responses/ApiError' }
+        '403': { $ref: '#/components/responses/ApiError' }
+        '500': { $ref: '#/components/responses/ApiError' }
 
   /api/v1/purchases/verify:
     post:

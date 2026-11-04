@@ -34,26 +34,59 @@ public class CatalogueAdminQueryService {
     }
 
     @Transactional(readOnly = true)
+    public List<CatalogueSnapshot> listGoals(UUID verticalId) {
+        requireVertical(verticalId);
+        return goals.findAllByVertical_IdOrderBySortOrderAscCodeAsc(verticalId).stream()
+                .map(CatalogueSnapshot::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CatalogueSnapshot> listTracks(UUID goalId) {
+        requireGoal(goalId);
+        return tracks.findAllByGoal_IdOrderBySortOrderAscCodeAsc(goalId).stream()
+                .map(CatalogueSnapshot::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<CatalogueSnapshot> listCollections(UUID trackId) {
+        requireTrack(trackId);
+        return collections.findAllByTrack_IdOrderBySortOrderAscCodeAsc(trackId).stream()
+                .map(CatalogueSnapshot::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public CatalogueSnapshot getVertical(UUID id) {
-        return verticals.findById(id).map(CatalogueSnapshot::from)
-                .orElseThrow(() -> new CatalogueAuthoringNotFoundException("vertical", id));
+        return CatalogueSnapshot.from(requireVertical(id));
     }
 
     @Transactional(readOnly = true)
     public CatalogueSnapshot getGoal(UUID id) {
-        return goals.findById(id).map(CatalogueSnapshot::from)
-                .orElseThrow(() -> new CatalogueAuthoringNotFoundException("goal", id));
+        return CatalogueSnapshot.from(requireGoal(id));
     }
 
     @Transactional(readOnly = true)
     public CatalogueSnapshot getTrack(UUID id) {
-        return tracks.findById(id).map(CatalogueSnapshot::from)
-                .orElseThrow(() -> new CatalogueAuthoringNotFoundException("track", id));
+        return CatalogueSnapshot.from(requireTrack(id));
     }
 
     @Transactional(readOnly = true)
     public CatalogueSnapshot getCollection(UUID id) {
         return collections.findById(id).map(CatalogueSnapshot::from)
                 .orElseThrow(() -> new CatalogueAuthoringNotFoundException("collection", id));
+    }
+
+    private io.github.alimbetov.voxprep.backend.catalogue.persistence.VerticalEntity requireVertical(UUID id) {
+        return verticals.findById(id).orElseThrow(() -> new CatalogueAuthoringNotFoundException("vertical", id));
+    }
+
+    private io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningGoalEntity requireGoal(UUID id) {
+        return goals.findById(id).orElseThrow(() -> new CatalogueAuthoringNotFoundException("goal", id));
+    }
+
+    private io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningTrackEntity requireTrack(UUID id) {
+        return tracks.findById(id).orElseThrow(() -> new CatalogueAuthoringNotFoundException("track", id));
     }
 }

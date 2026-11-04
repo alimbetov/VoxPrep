@@ -159,14 +159,17 @@ done
 [[ "$READY" == "true" ]]
 printf '%s\n' 'A07-A09 PASS'
 
-printf '%s\n' 'A10: verify durable DB finalization and exact output identity'
+printf '%s\n' 'A10: verify durable DB finalization, exact output identity and content binding'
 ROW="$("${COMPOSE[@]}" exec -T postgres psql -At --username voxprep_bootstrap --dbname voxprep_test -F '|' -c "
   select j.status, a.status, a.kind, a.media_type, a.sha256, a.size_bytes, a.object_key,
-         j.finalized_by_worker, j.finalized_lease_token
+         j.finalized_by_worker, j.finalized_lease_token, b.role, b.source_fingerprint, b.file_asset_id
     from app.tts_job j
     join app.file_asset a on a.id = j.output_asset_id
+    join app.content_asset_binding b
+      on b.content_revision_id = j.content_revision_id
+     and b.file_asset_id = j.output_asset_id
    where j.id='${JOB_ID}' and j.file_id='${FILE_ID}';")"
-IFS='|' read -r JOB_STATUS ASSET_STATUS ASSET_KIND MEDIA_TYPE OUTPUT_SHA OUTPUT_SIZE OUTPUT_KEY FINAL_WORKER FINAL_LEASE <<<"$ROW"
+IFS='|' read -r JOB_STATUS ASSET_STATUS ASSET_KIND MEDIA_TYPE OUTPUT_SHA OUTPUT_SIZE OUTPUT_KEY FINAL_WORKER FINAL_LEASE BINDING_ROLE BINDING_FINGERPRINT BINDING_ASSET <<<"$ROW"
 [[ "$JOB_STATUS" == "READY" ]]
 [[ "$ASSET_STATUS" == "READY" ]]
 [[ "$ASSET_KIND" == "TTS_AUDIO" ]]
@@ -175,6 +178,9 @@ IFS='|' read -r JOB_STATUS ASSET_STATUS ASSET_KIND MEDIA_TYPE OUTPUT_SHA OUTPUT_
 [[ "$OUTPUT_SIZE" -gt 1000 ]]
 [[ "$FINAL_WORKER" == "b8-real-worker" ]]
 [[ -n "$FINAL_LEASE" ]]
+[[ "$BINDING_ROLE" == "PRONUNCIATION" ]]
+[[ "$BINDING_FINGERPRINT" == "$FINGERPRINT" ]]
+[[ "$BINDING_ASSET" == "$FILE_ID" ]]
 printf '%s\n' 'A10 PASS'
 
 printf '%s\n' 'A11: verify RustFS MP3 bytes, audio QC and secret non-leakage'

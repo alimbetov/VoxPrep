@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/fragments/shell :: layout(${formTitle}, ${activeSection}, ~{::main})}">
+<main>
+    <div class="mb-4">
+        <h1 class="h3 mb-1" th:text="${formTitle}">Catalogue form</h1>
+        <p class="text-secondary mb-0" th:if="${parent != null}">
+            Parent: <strong th:text="${parent.title()}">Parent</strong>
+            <span class="text-secondary" th:text="'(' + ${parent.code()} + ')'">(CODE)</span>
+        </p>
+    </div>
+
+    <div class="card studio-card">
+        <div class="card-body p-4">
+            <form method="post" th:action="${formAction}" th:object="${form}" novalidate>
+                <input type="hidden" th:field="*{expectedVersion}">
+                <input type="hidden" th:if="${formType == 'GOAL'}" th:field="*{verticalId}">
+                <input type="hidden" th:if="${formType == 'TRACK'}" th:field="*{goalId}">
+                <input type="hidden" th:if="${formType == 'COLLECTION'}" th:field="*{trackId}">
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Code</label>
+                        <input class="form-control" th:field="*{code}" th:readonly="${editing}">
+                        <div class="text-danger small" th:errors="*{code}"></div>
+                    </div>
+                    <div class="col-md-6" th:if="${formType == 'VERTICAL'}">
+                        <label class="form-label">Section code</label>
+                        <input class="form-control" th:field="*{sectionCode}">
+                        <div class="text-danger small" th:errors="*{sectionCode}"></div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Title</label>
+                        <input class="form-control" th:field="*{title}">
+                        <div class="text-danger small" th:errors="*{title}"></div>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" rows="4" th:field="*{description}"></textarea>
+                        <div class="text-danger small" th:errors="*{description}"></div>
+                    </div>
+                    <div class="col-md-6" th:if="${formType == 'VERTICAL'}">
+                        <label class="form-label">Icon asset id</label>
+                        <input class="form-control" th:field="*{iconAssetId}">
+                        <div class="text-danger small" th:errors="*{iconAssetId}"></div>
+                    </div>
+                    <div class="col-md-6" th:if="${formType == 'TRACK'}">
+                        <label class="form-label">Level code</label>
+                        <input class="form-control" th:field="*{levelCode}">
+                        <div class="text-danger small" th:errors="*{levelCode}"></div>
+                    </div>
+                    <div class="col-md-6" th:if="${formType == 'TRACK'}">
+                        <label class="form-label">Career track code</label>
+                        <input class="form-control" th:field="*{careerTrackCode}">
+                    </div>
+                    <div class="col-md-6" th:if="${formType == 'COLLECTION'}">
+                        <label class="form-label">Access level</label>
+                        <select class="form-select" th:field="*{accessLevel}">
+                            <option value="FREE">FREE</option>
+                            <option value="FULL">FULL</option>
+                        </select>
+                        <div class="text-danger small" th:errors="*{accessLevel}"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Sort order</label>
+                        <input class="form-control" type="number" min="0" th:field="*{sortOrder}">
+                        <div class="text-danger small" th:errors="*{sortOrder}"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Availability</label>
+                        <select class="form-select" th:field="*{availability}">
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="INACTIVE">INACTIVE</option>
+                        </select>
+                        <div class="text-danger small" th:errors="*{availability}"></div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 mt-4">
+                    <button class="btn btn-dark" type="submit">Save</button>
+                    <a class="btn btn-outline-secondary" th:href="@{/admin/catalogue}">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+</html>

@@ -28,6 +28,11 @@ void main() {
         reason: 'Content detail overflowed at $boundary',
       );
 
+      await tester.scrollUntilVisible(
+        find.byTooltip('Hint'),
+        160,
+        scrollable: find.byType(Scrollable).first,
+      );
       await tester.ensureVisible(find.byTooltip('Hint'));
       await tester.pumpAndSettle();
       expectNoLayoutExceptions(
