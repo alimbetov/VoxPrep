@@ -139,6 +139,19 @@
 
     <div class="card studio-card mb-4">
         <div class="card-body p-4">
+            <h2 class="h5 mb-3">Image assets</h2>
+            <p class="text-secondary">Choose an existing READY image or upload a new one. Published revisions cannot change bindings.</p>
+            <div class="d-flex gap-2" th:if="${revision.lifecycle.name() == 'DRAFT'}">
+                <a class="btn btn-outline-primary"
+                   th:href="@{/admin/media(revisionId=${revision.id},role='COVER_IMAGE')}">Choose cover image</a>
+                <a class="btn btn-outline-secondary"
+                   th:href="@{/admin/media(revisionId=${revision.id},role='CONTENT_IMAGE')}">Choose content image</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card studio-card mb-4">
+        <div class="card-body p-4">
             <h2 class="h5 mb-3">Lifecycle</h2>
             <p class="text-secondary" th:text="'Current state: ' + ${revision.lifecycle}">Current state</p>
 
