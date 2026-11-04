@@ -2,6 +2,10 @@ import 'package:careerspeak_app/app/careerspeak_app.dart';
 import 'package:careerspeak_app/app/learner_state_providers.dart';
 import 'package:careerspeak_app/app/mock_visual_preferences.dart';
 import 'package:careerspeak_app/app/repository_providers.dart';
+import 'package:careerspeak_app/application/ports/practice_test_attempt_repository.dart';
+import 'package:careerspeak_app/application/result/result.dart';
+import 'package:careerspeak_app/domain/practice_test_attempt.dart';
+import 'package:careerspeak_app/domain/practice_test_completion_key.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
 import 'package:careerspeak_app/data/mock/mock_content_repository.dart';
 import 'package:careerspeak_app/data/mock/mock_test_repository.dart';
@@ -97,12 +101,14 @@ void main() {
 
     final database = CareerSpeakDatabase(NativeDatabase.memory());
     addTearDown(database.close);
+    final attempts = _AcceptancePracticeTestAttemptRepository();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          // An isolated attempt store ensures this scenario starts at Q1,
-          // rather than resuming a durable attempt from another test.
           careerSpeakDatabaseProvider.overrideWithValue(database),
+          // MockTestRepository is not published into Drift. The test needs
+          // an isolated attempt adapter for that same mock test revision.
+          practiceTestAttemptRepositoryProvider.overrideWithValue(attempts),
           practiceTestRepositoryProvider.overrideWithValue(
             const MockTestRepository(),
           ),
@@ -223,4 +229,64 @@ class _AcceptanceVisualPreferencesController
   @override
   MockVisualPreferences build() =>
       MockVisualPreferences(textScale: initialTextScale);
+}
+
+final class _AcceptancePracticeTestAttemptRepository
+    implements PracticeTestAttemptRepository {
+  PracticeTestAttempt? _active;
+  final Set<PracticeTestCompletionKey> _completed =
+      <PracticeTestCompletionKey>{};
+
+  @override
+  Future<Result<PracticeTestAttempt?>> getActiveAttempt() async =>
+      Success<PracticeTestAttempt?>(_active);
+
+  @override
+  Future<Result<PracticeTestAttempt>> startActiveAttempt(String code) async {
+    final now = DateTime.utc(2026, 11, 4);
+    _active = PracticeTestAttempt(
+      practiceTestCode: code,
+      practiceTestRevision: 1,
+      currentIndex: 0,
+      answers: const <int, int>{},
+      startedAt: now,
+      updatedAt: now,
+    );
+    return Success<PracticeTestAttempt>(_active!);
+  }
+
+  @override
+  Future<Result<PracticeTestAttempt>> saveActiveAttempt(
+    PracticeTestAttempt attempt,
+  ) async {
+    _active = attempt;
+    return Success<PracticeTestAttempt>(attempt);
+  }
+
+  @override
+  Future<Result<Set<PracticeTestCompletionKey>>>
+  getCompletedPracticeTests() async => Success<Set<PracticeTestCompletionKey>>(
+    Set<PracticeTestCompletionKey>.unmodifiable(_completed),
+  );
+
+  @override
+  Future<Result<void>> completeActiveAttempt() async {
+    final active = _active;
+    if (active != null) {
+      _completed.add(
+        PracticeTestCompletionKey(
+          practiceTestCode: active.practiceTestCode,
+          revision: active.practiceTestRevision,
+        ),
+      );
+      _active = null;
+    }
+    return const Success<void>(null);
+  }
+
+  @override
+  Future<Result<void>> clearActiveAttempt() async {
+    _active = null;
+    return const Success<void>(null);
+  }
 }
