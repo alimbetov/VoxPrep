@@ -47,10 +47,17 @@ public class PurchaseLedger {
             VALUES (?,?,?,?,?,?,?,now())
             ON CONFLICT (provider,product_id,transaction_sha256) DO UPDATE
                SET purchase_state=CASE
+                       -- Authenticated store notifications/reconciliation outrank
+                       -- later client-submitted verifications of older proofs.
+                       WHEN app.store_purchase.latest_store_event_at IS NOT NULL
+                           THEN app.store_purchase.purchase_state
                        WHEN app.store_purchase.purchase_state='REVOKED' THEN 'REVOKED'
                        ELSE excluded.purchase_state END,
                    verified_at=COALESCE(app.store_purchase.verified_at,excluded.verified_at),
-                   environment=excluded.environment,
+                   environment=CASE
+                       WHEN app.store_purchase.latest_store_event_at IS NOT NULL
+                           THEN app.store_purchase.environment
+                       ELSE excluded.environment END,
                    updated_at=now()
             RETURNING id
             """, UUID.class, UUID.randomUUID(), decision.provider(), decision.productId(),
@@ -103,6 +110,13 @@ public class PurchaseLedger {
                                 StorePurchaseVerifier.Environment environment,
                                 StorePurchaseVerifier.State state, Instant eventAt) {
         Objects.requireNonNull(eventAt);
+        Objects.requireNonNull(environment);
+        Objects.requireNonNull(state);
+        if (!("GOOGLE_PLAY".equals(provider) || "APP_STORE".equals(provider))
+                || !LifetimePurchaseService.PRODUCT_ID.equals(productId)
+                || transactionHash == null || !transactionHash.matches("[0-9a-f]{64}")) {
+            throw new IllegalArgumentException("Invalid authenticated Store event identity");
+        }
         jdbc.update("""
             INSERT INTO app.store_purchase(id,provider,product_id,transaction_sha256,
                 purchase_state,environment,verified_at,updated_at,latest_store_event_at)

@@ -112,6 +112,92 @@ void main() {
       );
     });
 
+    test('retries a staged non-CURRENT N+1 with FK-safe children', () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      await _seedIconAsset(database, mediaType: 'image/png');
+      final materializer = DriftUniversalCatalogueGraphMaterializer(database);
+      final root = _root(201);
+      expect(
+        await materializer.materialize(root: root, payloads: _payloads()),
+        isA<Success<void>>(),
+      );
+      // A content-fetch failure can leave a complete, uncommitted N+1 graph.
+      // Re-running stage must not delete its immutable parent under RESTRICT FKs.
+      expect(
+        await materializer.materialize(root: root, payloads: _payloads()),
+        isA<Success<void>>(),
+      );
+      for (final table in <String>[
+        'publication_snapshots',
+        'vertical_section_reads',
+        'learning_vertical_reads',
+        'learning_goal_reads',
+        'learning_track_reads',
+        'learning_collection_reads',
+        'learning_collection_member_reads',
+        'learning_collection_access_reads',
+        'vertical_presentation_reads',
+      ]) {
+        final rows = await database
+            .customSelect('SELECT * FROM $table WHERE content_version = 201')
+            .get();
+        expect(rows, isNotEmpty, reason: '$table must survive N+1 retry');
+      }
+    });
+
+    test('failed staged N+1 rebuild rolls back all child changes', () async {
+      final database = createTestDatabase();
+      addTearDown(database.close);
+      await _seedIconAsset(database, mediaType: 'image/png');
+      final root = _root(202);
+      final materializer = DriftUniversalCatalogueGraphMaterializer(database);
+      expect(
+        await materializer.materialize(root: root, payloads: _payloads()),
+        isA<Success<void>>(),
+      );
+      // Exercise a real SQLite abort AFTER earlier child rows have been
+      // deleted and rewritten, rather than mocking a repository exception.
+      await database.customStatement("""
+        CREATE TRIGGER r5_injected_staging_abort
+        BEFORE INSERT ON learning_goal_reads
+        WHEN NEW.content_version = 202
+        BEGIN SELECT RAISE(ABORT, 'R5_SQLITE_STAGING_FAILURE'); END
+      """);
+      final interrupted = await materializer.materialize(
+        root: root,
+        payloads: _payloads(),
+      );
+      expect(interrupted, isA<FailureResult<void>>());
+      expect(
+        (interrupted as FailureResult<void>).failure.code,
+        'UNIVERSAL_CATALOGUE_MATERIALIZATION_FAILED',
+      );
+      // Rollback must restore the exact earlier graph; no parent disappears.
+      for (final table in <String>[
+        'publication_snapshots',
+        'vertical_section_reads',
+        'learning_vertical_reads',
+        'learning_goal_reads',
+        'learning_track_reads',
+        'learning_collection_reads',
+        'learning_collection_member_reads',
+      ]) {
+        expect(
+          await database
+              .customSelect('SELECT * FROM $table WHERE content_version = 202')
+              .get(),
+          isNotEmpty,
+          reason: '$table must survive a transaction abort',
+        );
+      }
+      await database.customStatement('DROP TRIGGER r5_injected_staging_abort');
+      expect(
+        await materializer.materialize(root: root, payloads: _payloads()),
+        isA<Success<void>>(),
+      );
+    });
+
     test('rejects cross-vertical graph before writing snapshot rows', () async {
       final database = createTestDatabase();
       addTearDown(database.close);

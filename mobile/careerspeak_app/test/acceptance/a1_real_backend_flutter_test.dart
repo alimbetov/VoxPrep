@@ -4,6 +4,8 @@ import 'package:careerspeak_app/application/assessment/assessment_revision_loade
 import 'package:careerspeak_app/application/content_sync/content_sync_coordinator.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_planner.dart';
 import 'package:careerspeak_app/application/content_sync/sync_models.dart';
+import 'package:careerspeak_app/application/content_delivery/content_payload.dart';
+import 'package:careerspeak_app/application/ports/content_payload_gateway.dart';
 import 'package:careerspeak_app/application/ports/api_client.dart';
 import 'package:careerspeak_app/application/ports/content_manifest_gateway.dart';
 import 'package:careerspeak_app/application/ports/installation_credential_store.dart';
@@ -39,6 +41,7 @@ const _freeCode = String.fromEnvironment('A1_FREE_CODE');
 const _fullCode = String.fromEnvironment('A1_FULL_CODE');
 const _testCode = String.fromEnvironment('A1_TEST_CODE');
 const _questionCode = String.fromEnvironment('A1_QUESTION_CODE');
+const _r5ControlDir = String.fromEnvironment('A1_R5_CONTROL_DIR');
 
 /// This is NOT a mock HTTP test. The JUnit A1 runner starts a real Spring Boot
 /// process, publishes committed PostgreSQL data, and points this test at its
@@ -77,8 +80,14 @@ void main() {
         expect(credentials.installationToken.value, isNotEmpty);
 
         final manifestGateway = HttpContentManifestGateway(apiClient: api);
-        final rootResult = (await manifestGateway.fetchRootManifest())
-            .getOrThrow();
+        final rootFetch = await manifestGateway.fetchRootManifest();
+        if (rootFetch case FailureResult<RootManifestFetch>(:final failure)) {
+          fail(
+            'A1 root manifest contract failure: code=${failure.code}, '
+            'message=${failure.message}, details=${failure.details}',
+          );
+        }
+        final rootResult = rootFetch.getOrThrow();
         expect(rootResult, isA<RootManifestChanged>());
         final root = (rootResult as RootManifestChanged).manifest;
         expect(root.schemaVersion, 2);
@@ -196,7 +205,135 @@ void main() {
         );
         final downloaded = (await manager.ensureLocal(image)).getOrThrow();
         expect(await File(downloaded.localPath).exists(), isTrue);
+        expect(
+          await File(downloaded.localPath).readAsBytes(),
+          mediaProbe.bodyBytes,
+        );
         expect(downloaded.reused, isFalse);
+
+        var expectedCurrentVersion = root.contentVersion;
+        if (_r5ControlDir.isNotEmpty) {
+          // An explicit learner marker keyed by stable content identity must survive
+          // changing the immutable revision and updating CURRENT.
+          await database
+              .into(database.favorites)
+              .insert(
+                FavoritesCompanion.insert(
+                  contentCode: _freeCode,
+                  contentType: 'PHRASE',
+                  createdAt: DateTime.now().toUtc(),
+                ),
+              );
+          await File('$_r5ControlDir/n1-ready').writeAsString('N1 synced');
+          final deadline = DateTime.now().add(const Duration(seconds: 150));
+          while (!await File('$_r5ControlDir/n2-ready').exists()) {
+            final error = File('$_r5ControlDir/n2-error');
+            if (await error.exists()) {
+              fail(
+                'R5 server publication N2 failed: ${await error.readAsString()}',
+              );
+            }
+            if (DateTime.now().isAfter(deadline)) {
+              fail('R5 N2 publisher timeout while Flutter retained N1');
+            }
+            await Future<void>.delayed(const Duration(milliseconds: 100));
+          }
+          final nextFetch = (await manifestGateway.fetchRootManifest())
+              .getOrThrow();
+          expect(nextFetch, isA<RootManifestChanged>());
+          final nextRoot = (nextFetch as RootManifestChanged).manifest;
+          expect(nextRoot.contentVersion, root.contentVersion + 1);
+          expect(nextRoot.checksum, isNot(root.checksum));
+          // Inject one real payload fetch failure after N+1 becomes available.
+          // The atomic CURRENT switch must not happen until all bytes are ready.
+          final interrupted = ContentSyncCoordinator(
+            journal: DriftSyncJournal(database),
+            manifestGateway: manifestGateway,
+            planner: const ContentSyncPlanner(),
+            executor: DriftSyncPlanExecutor(
+              database,
+              manifestGateway,
+              _FailOnceContentPayloadGateway(
+                HttpContentPayloadGateway(apiClient: api),
+              ),
+            ),
+            snapshotStager: DriftPublicationSnapshotStager(
+              database,
+              assessmentLoader,
+              HttpCataloguePayloadGateway(apiClient: api),
+              manifestGateway: manifestGateway,
+            ),
+          );
+          final failure = await interrupted.synchronize(
+            runId: 'r5-n2-injected-fetch-failure',
+            trigger: SyncTrigger.manual,
+            translationLocale: 'en',
+          );
+          expect(failure, isA<FailureResult<ContentSyncOutcome>>());
+          final stillN = (await DriftUniversalCatalogueRepository(
+            database,
+          ).readCurrent()).getOrThrow();
+          expect(stillN!.contentVersion, root.contentVersion);
+          final oldPage = (await DriftContentRepository(
+            database,
+          ).watchContent(const ContentQuery()).first).getOrThrow();
+          expect(
+            oldPage.items
+                .singleWhere((item) => item.code == _freeCode)
+                .revision,
+            1,
+          );
+          expect(
+            (await database.select(database.favorites).get()).any(
+              (row) => row.contentCode == _freeCode,
+            ),
+            isTrue,
+          );
+
+          // Retry with the production gateway and a fresh run ID.
+          final nextSync = await coordinator.synchronize(
+            runId: 'r5-real-publication-n-plus-one',
+            trigger: SyncTrigger.manual,
+            translationLocale: 'en',
+          );
+          if (nextSync case FailureResult<ContentSyncOutcome>(:final failure)) {
+            fail('R5 N2 sync failed: ${failure.code} ${failure.details}');
+          }
+          expect(nextSync, isA<Success<ContentSyncOutcome>>());
+          final newCurrent = (await DriftUniversalCatalogueRepository(
+            database,
+          ).readCurrent()).getOrThrow();
+          expect(newCurrent!.contentVersion, nextRoot.contentVersion);
+          expectedCurrentVersion = nextRoot.contentVersion;
+          final updatedPage = (await DriftContentRepository(
+            database,
+          ).watchContent(const ContentQuery()).first).getOrThrow();
+          final updated = updatedPage.items.singleWhere(
+            (item) => item.code == _freeCode,
+          );
+          expect(updated.revision, 2);
+          expect(updated.title, 'Interview introduction v2');
+          final favoritesAfterSync = await database
+              .select(database.favorites)
+              .get();
+          expect(
+            favoritesAfterSync.any(
+              (row) =>
+                  row.contentCode == _freeCode && row.contentType == 'PHRASE',
+            ),
+            isTrue,
+          );
+          final nextFreePack = nextRoot.packs.singleWhere(
+            (pack) => pack.identity.code == 'A1_FREE',
+          );
+          final nextPack = (await manifestGateway.fetchPackManifest(
+            nextFreePack,
+          )).getOrThrow();
+          expect(
+            nextPack.assets.any((asset) => asset.assetId == image.assetId),
+            isTrue,
+          );
+        }
 
         // A rejected installation credential cannot rotate itself and cannot
         // be replaced by registering the same UUID anonymously. The offline
@@ -238,7 +375,7 @@ void main() {
         final reopened = (await DriftUniversalCatalogueRepository(
           database,
         ).readCurrent()).getOrThrow();
-        expect(reopened!.contentVersion, root.contentVersion);
+        expect(reopened!.contentVersion, expectedCurrentVersion);
         expect(reopened.graph.collections, hasLength(2));
         final offlinePage = (await DriftContentRepository(
           database,
@@ -246,6 +383,23 @@ void main() {
         expect(offlinePage.items.any((item) => item.code == _freeCode), isTrue);
         final reused = (await manager.ensureLocal(image)).getOrThrow();
         expect(reused.reused, isTrue);
+        if (_r5ControlDir.isNotEmpty) {
+          final retained = await database.select(database.favorites).get();
+          expect(retained.any((row) => row.contentCode == _freeCode), isTrue);
+          final content = (await DriftContentRepository(
+            database,
+          ).watchContent(const ContentQuery()).first).getOrThrow();
+          expect(
+            content.items
+                .singleWhere((item) => item.code == _freeCode)
+                .revision,
+            2,
+          );
+        }
+        expect(
+          await File(reused.localPath).readAsBytes(),
+          mediaProbe.bodyBytes,
+        );
 
         // The marker is emitted only after a genuine live-backend exchange.
         // ignore: avoid_print
@@ -258,6 +412,28 @@ void main() {
     },
     skip: !_runRealBackend,
   );
+}
+
+final class _FailOnceContentPayloadGateway implements ContentPayloadGateway {
+  _FailOnceContentPayloadGateway(this._delegate);
+  final ContentPayloadGateway _delegate;
+  bool _failed = false;
+  @override
+  Future<Result<ContentPayload>> fetch(ContentPayloadRef target) {
+    if (!_failed) {
+      _failed = true;
+      return Future<Result<ContentPayload>>.value(
+        const FailureResult<ContentPayload>(
+          ApplicationFailure(
+            code: 'R5_INJECTED_N2_CONTENT_FETCH_FAILURE',
+            message: 'A required N+1 payload is unavailable.',
+            retryable: true,
+          ),
+        ),
+      );
+    }
+    return _delegate.fetch(target);
+  }
 }
 
 final class _MemoryCredentialStore implements InstallationCredentialStore {

@@ -235,6 +235,7 @@ public class CatalogueMvcController {
     @GetMapping("/collections/{id}/edit")
     public String editCollection(@PathVariable UUID id, Model model) {
         var snapshot = query.getCollection(id);
+        model.addAttribute("collectionMembersUrl", "/admin/catalogue/collections/" + id + "/members");
         return form(model, "COLLECTION", "Edit collection", "/admin/catalogue/collections/" + id,
                 mapper.toCollectionForm(snapshot), true, query.getTrack(snapshot.parentId()));
     }

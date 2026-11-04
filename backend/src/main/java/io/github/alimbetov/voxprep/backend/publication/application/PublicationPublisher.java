@@ -83,7 +83,11 @@ public class PublicationPublisher {
     @Transactional
     public PublicationPublishResult publish(UUID candidateId, Instant publishedAt) {
         Objects.requireNonNull(candidateId, "candidateId");
-        Objects.requireNonNull(publishedAt, "publishedAt");
+        // Flutter persists publication timestamps in second-precision Drift columns.
+        // Normalize before persisting and writing the immutable root so the checksum,
+        // publication metadata and HTTP representation all use the same instant.
+        publishedAt = Objects.requireNonNull(publishedAt, "publishedAt")
+                .truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
 
         PublicationCandidateEntity candidate = candidateRepository.findByIdForUpdate(candidateId)
                 .orElseThrow(() -> new IllegalArgumentException("publication candidate not found: " + candidateId));

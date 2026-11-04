@@ -79,7 +79,50 @@ class ContentStudioFoundationIntegrationTest {
 
         mockMvc.perform(get("/admin/publication").session(session))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Publication readiness")));
+                .andExpect(content().string(containsString("Current learner release")));
+    }
+
+    @Test
+    void initialContentRequiresCsrfAndCreatesDraftThroughMvc() throws Exception {
+        String code = "R5_HTTP_CREATE_" + UUID.randomUUID().toString().replace("-", "");
+        var unsafe = post("/admin/content/revisions")
+                .with(user("admin").roles("ADMIN"))
+                .param("contentCode", code)
+                .param("expectedVersion", "0")
+                .param("bodyType", "phrase")
+                .param("title", "R5 new content")
+                .param("subtitle", "R5")
+                .param("description", "HTTP editor acceptance")
+                .param("categoryCode", "GENERAL")
+                .param("levelCode", "B1")
+                .param("minutes", "2")
+                .param("skillCodes", "SPEAKING")
+                .param("availability", "ACTIVE")
+                .param("phrase", "Could you introduce yourself?")
+                .param("usage", "Professional introduction")
+                .param("examples", "I am a software developer.");
+        mockMvc.perform(unsafe).andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/admin/content/revisions")
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf())
+                        .param("contentCode", code)
+                        .param("expectedVersion", "0")
+                        .param("bodyType", "phrase")
+                        .param("title", "R5 new content")
+                        .param("subtitle", "R5")
+                        .param("description", "HTTP editor acceptance")
+                        .param("categoryCode", "GENERAL")
+                        .param("levelCode", "B1")
+                        .param("minutes", "2")
+                        .param("skillCodes", "SPEAKING")
+                        .param("availability", "ACTIVE")
+                        .param("phrase", "Could you introduce yourself?")
+                        .param("usage", "Professional introduction")
+                        .param("examples", "I am a software developer."))
+                .andExpect(status().isFound())
+                .andExpect(header().string(HttpHeaders.LOCATION,
+                        containsString("/admin/content/revisions/")));
     }
 
     @Test

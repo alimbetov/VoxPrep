@@ -1,0 +1,32 @@
+name: DEV Mock Fixture Contract
+
+on:
+  pull_request:
+    paths:
+      - 'tools/generate_demo_catalogue.py'
+      - 'tools/tests/**'
+      - 'mobile/careerspeak_app/lib/data/mock/**'
+      - 'backend/src/test/resources/fixtures/demo_catalogue_seed.json'
+      - '.github/workflows/dev-mock-fixtures.yml'
+  push:
+    branches:
+      - feat/r5-commercial-chain-qualification
+    paths:
+      - 'tools/generate_demo_catalogue.py'
+      - 'tools/tests/**'
+      - 'mobile/careerspeak_app/lib/data/mock/**'
+      - 'backend/src/test/resources/fixtures/demo_catalogue_seed.json'
+      - '.github/workflows/dev-mock-fixtures.yml'
+
+jobs:
+  generated-fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify committed Backend and Flutter fixtures
+        run: python tools/generate_demo_catalogue.py --check
+      - name: Determinism and FREE/FULL contract tests
+        run: python -m unittest discover -s tools/tests -p 'test_*.py' -v

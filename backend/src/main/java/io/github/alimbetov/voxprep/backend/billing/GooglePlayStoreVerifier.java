@@ -56,6 +56,18 @@ public class GooglePlayStoreVerifier {
                     || !product.equals(item.get("productId"))) {
                 return decision(product, token, StorePurchaseVerifier.State.REVOKED, null);
             }
+            // Lifetime unlock is NON_CONSUMABLE: a consumed purchase token
+            // must not be reused to grant perpetual access.
+            if (item.get("productOfferDetails") instanceof Map<?, ?> details) {
+                // A lifetime unlock must not be a consumed or rental item.
+                // A fully refunded single-quantity product is also ineligible.
+                Object refundable = details.get("refundableQuantity");
+                if ("CONSUMPTION_STATE_CONSUMED".equals(details.get("consumptionState"))
+                        || details.get("rentOfferDetails") != null
+                        || (refundable instanceof Number count && count.intValue() == 0)) {
+                    return decision(product, token, StorePurchaseVerifier.State.REVOKED, null);
+                }
+            }
             if (body.get("testPurchaseContext") != null && !acceptTestPurchases) {
                 return decision(product, token, StorePurchaseVerifier.State.REVOKED, null);
             }

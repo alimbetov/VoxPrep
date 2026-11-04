@@ -1,8 +1,9 @@
-# Production only. No live credentials or test/fixture tokens committed.
-# Startup fails if Store API credentials/Root CAs are missing.
+# Production deployment may run before Store registration.
+# Until real Store credentials exist, billing MUST fail closed.
+# Explicitly set VOXPREP_BILLING_MODE=production only after provider acceptance.
 voxprep:
   billing:
-    mode: production
+    mode: ${VOXPREP_BILLING_MODE:disabled}
     google:
       accept-test-purchases: false
     apple:

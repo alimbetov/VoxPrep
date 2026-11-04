@@ -13,14 +13,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import io.github.alimbetov.voxprep.backend.catalogue.domain.CatalogueCode;
 import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringService;
+import io.github.alimbetov.voxprep.backend.content.application.ContentAdminQueryService;
 import io.github.alimbetov.voxprep.backend.content.application.ContentDraftUpdate;
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
+import io.github.alimbetov.voxprep.backend.content.persistence.QuestionContentRevisionEntity;
+import io.github.alimbetov.voxprep.backend.content.persistence.QuestionOptionEmbeddable;
 import io.github.alimbetov.voxprep.backend.content.persistence.VocabularyContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.sharedkernel.AvailabilityStatus;
 import io.github.alimbetov.voxprep.backend.sharedkernel.BusinessCode;
 import io.github.alimbetov.voxprep.backend.sharedkernel.RevisionNumber;
 import io.github.alimbetov.voxprep.backend.sharedkernel.Sha256Digest;
 import java.util.List;
+import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +43,7 @@ class ContentMvcIntegrationTest {
     @Autowired private WebApplicationContext context;
     @Autowired private ContentRevisionRepository repository;
     @Autowired private ContentAuthoringService authoring;
+    @Autowired private ContentAdminQueryService adminQuery;
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -46,6 +51,118 @@ class ContentMvcIntegrationTest {
         mockMvc = MockMvcBuilders.webAppContextSetup(context)
                 .apply(springSecurity())
                 .build();
+    }
+
+    @Test
+    void initialRevisionFormExposesStructuredEditorsWithoutChangingWireContracts() throws Exception {
+        mockMvc.perform(get("/admin/content/revisions/new")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("data-content-types=\"interview\"")))
+                .andExpect(content().string(containsString("data-structured=\"options\"")))
+                .andExpect(content().string(containsString("data-structured=\"sections\"")))
+                .andExpect(content().string(containsString("content-structured-editor.js")));
+
+        mockMvc.perform(get("/admin/content/revisions/new"))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void approvedRevisionPickerSearchNeverIncludesDrafts() {
+        // Persist the draft and its typed child rows before changing lifecycle;
+        // PostgreSQL makes typed payload immutable once the revision is approved.
+        var approved = repository.saveAndFlush(vocabulary());
+        approved.markReadyForAudio();
+        approved.markReadyForReview();
+        approved.approve(Instant.now());
+        repository.saveAndFlush(approved);
+        var draft = repository.saveAndFlush(vocabulary());
+
+        var candidates = adminQuery.approvedCandidates("Vocabulary title", 0);
+        assertThat(candidates.getContent()).extracting("id").contains(approved.getId());
+        assertThat(candidates.getContent()).extracting("id").doesNotContain(draft.getId());
+    }
+
+    @Test
+    void practiceTestPickerListsOnlyApprovedQuestionsAndRequiresAdmin() throws Exception {
+        var approved = repository.saveAndFlush(question());
+        approved.markReadyForAudio();
+        approved.markReadyForReview();
+        approved.approve(Instant.now());
+        repository.saveAndFlush(approved);
+        var draft = repository.saveAndFlush(question());
+
+        mockMvc.perform(get("/admin/content/questions/approved")
+                        .with(user("admin").roles("ADMIN"))
+                        .param("q", "R5 question picker"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(approved.getId().toString())))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        containsString(draft.getId().toString()))));
+
+        mockMvc.perform(get("/admin/content/questions/approved")
+                        .with(user("learner").roles("USER")))
+                .andExpect(status().isForbidden());
+    }
+
+    private static QuestionContentRevisionEntity question() {
+        return new QuestionContentRevisionEntity(
+                new BusinessCode("mvc-question-" + UUID.randomUUID()),
+                new RevisionNumber(1),
+                new Sha256Digest("a".repeat(64)),
+                "R5 question picker",
+                "Question subtitle",
+                "Question description",
+                new CatalogueCode("INTERVIEW"),
+                new CatalogueCode("B2"),
+                2,
+                List.of(new CatalogueCode("SPEAKING")),
+                AvailabilityStatus.ACTIVE,
+                "What is the correct answer?",
+                "Explanation text",
+                List.of(
+                        new QuestionOptionEmbeddable("A", "Correct answer", true),
+                        new QuestionOptionEmbeddable("B", "Incorrect answer", false)));
+    }
+
+    @Test
+    void ttsJobPreparationRequiresAdminCsrfAndReadyForAudioRevision() throws Exception {
+        var draft = repository.saveAndFlush(vocabulary());
+        var ready = repository.saveAndFlush(vocabulary());
+        ready.markReadyForAudio();
+        repository.saveAndFlush(ready);
+
+        mockMvc.perform(get("/admin/content/revisions/{id}/edit", ready.getId())
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Generate audio for this revision")))
+                .andExpect(content().string(containsString("name=\"audioRole\"")));
+
+        mockMvc.perform(post("/admin/content/revisions/{id}/tts/prepare", ready.getId())
+                        .with(user("admin").roles("ADMIN"))
+                        .param("audioRole", "pronunciation")
+                        .param("voiceModelCode", "missing"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/admin/content/revisions/{id}/tts/prepare", draft.getId())
+                        .with(user("admin").roles("ADMIN")).with(csrf())
+                        .param("audioRole", "pronunciation")
+                        .param("voiceModelCode", "missing"))
+                .andExpect(status().isFound());
+    }
+
+    @Test
+    void ttsPreviewRejectsUnrelatedOrAbsentJobsAndNonAdminUsers() throws Exception {
+        UUID revisionId = UUID.randomUUID();
+        UUID jobId = UUID.randomUUID();
+
+        mockMvc.perform(get("/admin/content/revisions/{revisionId}/tts/jobs/{jobId}/preview",
+                        revisionId, jobId).with(user("admin").roles("ADMIN")))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(get("/admin/content/revisions/{revisionId}/tts/jobs/{jobId}/preview",
+                        revisionId, jobId).with(user("learner").roles("USER")))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -63,6 +180,7 @@ class ContentMvcIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Edit content")))
                 .andExpect(content().string(containsString("Vocabulary title")))
+                .andExpect(content().string(containsString("TTS audio review")))
                 .andExpect(content().string(containsString("negotiate")))
                 .andExpect(content().string(containsString("name=\"_csrf\"")));
 

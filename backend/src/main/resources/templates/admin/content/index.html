@@ -6,8 +6,9 @@
         <div>
             <span class="badge text-bg-secondary mb-2">MVC-R3.1</span>
             <h1 class="h3 mb-1">Content revisions</h1>
-            <p class="text-secondary mb-0">Edit existing draft revisions through the production authoring service.</p>
+            <p class="text-secondary mb-0">Create the first revision or edit existing drafts through the production authoring service.</p>
         </div>
+        <a class="btn btn-primary" th:href="@{/admin/content/revisions/new}">Create new content</a>
     </div>
 
     <div th:if="${flashSuccess}" class="alert alert-success" th:text="${flashSuccess}"></div>

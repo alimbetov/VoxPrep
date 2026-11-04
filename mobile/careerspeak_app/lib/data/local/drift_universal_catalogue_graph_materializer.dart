@@ -117,33 +117,43 @@ final class DriftUniversalCatalogueGraphMaterializer {
         }
 
         if (existing != null) {
+          // Retry after a partially completed N+1 sync: the staged graph is
+          // not CURRENT. Preserve its immutable root row and rebuild children
+          // in reverse FK order (parent cascade violates RESTRICT children).
+          for (final table in <String>[
+            'vertical_presentation_reads',
+            'learning_collection_member_reads',
+            'learning_collection_access_reads',
+            'learning_collection_reads',
+            'learning_track_reads',
+            'learning_goal_reads',
+            'learning_vertical_reads',
+            'vertical_section_reads',
+          ]) {
+            await _database.customStatement(
+              'DELETE FROM $table WHERE content_version = ?',
+              <Object?>[root.contentVersion],
+            );
+          }
+        } else {
+          final now = DateTime.now().toUtc().millisecondsSinceEpoch;
           await _database.customStatement(
-            'DELETE FROM publication_snapshots WHERE content_version = ?',
-            <Object?>[root.contentVersion],
+            '''
+            INSERT INTO publication_snapshots (
+              content_version, schema_version, minimum_app_contract_version,
+              published_at, checksum, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?)
+            ''',
+            <Object?>[
+              root.contentVersion,
+              root.schemaVersion,
+              root.minimumAppContractVersion,
+              root.publishedAt.millisecondsSinceEpoch,
+              root.checksum,
+              now,
+            ],
           );
         }
-
-        final now = DateTime.now().toUtc().millisecondsSinceEpoch;
-        await _database.customStatement(
-          '''
-          INSERT INTO publication_snapshots (
-            content_version,
-            schema_version,
-            minimum_app_contract_version,
-            published_at,
-            checksum,
-            created_at
-          ) VALUES (?, ?, ?, ?, ?, ?)
-          ''',
-          <Object?>[
-            root.contentVersion,
-            root.schemaVersion,
-            root.minimumAppContractVersion,
-            root.publishedAt.millisecondsSinceEpoch,
-            root.checksum,
-            now,
-          ],
-        );
 
         for (final section in graph.sections) {
           await _insertSection(root.contentVersion, section);

@@ -91,6 +91,29 @@ mvn -B -ntp spring-boot:run -Dspring-boot.run.profiles=dev
 
 The `dev` profile imports `../infra/secrets/dev/backend/`, connects to PostgreSQL on `127.0.0.1:5432` and RustFS on `127.0.0.1:9000`.
 
+## DEV/TEST generated catalogue fixture
+
+Backend test data shares a deterministic seed with Flutter. Generate both
+artifacts from the repository root (Python 3.12+):
+
+```powershell
+python tools/generate_demo_catalogue.py
+python tools/generate_demo_catalogue.py --check
+```
+
+The backend artifact is
+`src/test/resources/fixtures/demo_catalogue_seed.json`; Flutter consumes the
+matching generated Dart fixture. The default dataset contains 32 materials
+and includes a per-category FREE-first label for test scenarios. Use
+`--seed 42 --count 64` for alternative datasets; restore defaults before
+committing unless CI is adjusted.
+
+**Scope:** this is a test-resource JSON fixture, **not** a PostgreSQL seeder,
+HTTP content publication or production entitlement provider. It never writes
+to the database or changes purchased access. See
+[`R5_DEV_TEST_MOCK_DATA.md`](../docs/qualification/R5_DEV_TEST_MOCK_DATA.md).
+The `DEV Mock Fixture Contract` GitHub workflow validates synchronization.
+
 ## TEST acceptance
 
 GitHub Actions starts the real TEST PostgreSQL/RustFS contour and runs:

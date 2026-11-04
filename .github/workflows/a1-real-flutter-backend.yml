@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - feat/a1-real-flutter-backend-acceptance
+      - feat/r5-commercial-chain-qualification
   pull_request:
     paths:
       - 'backend/**'
@@ -61,7 +62,7 @@ jobs:
           docker compose --env-file infra/env/test.env.example -f infra/compose/compose.test.yml up -d --wait postgres rustfs
           docker compose --env-file infra/env/test.env.example -f infra/compose/compose.test.yml run --rm rustfs-bootstrap
 
-      - name: Live Spring Boot plus Flutter HTTP/Drift A1
+      - name: Live Spring Boot + Flutter A1 and HTTP Media Library R5
         env:
           VOXPREP_SECRET_DIR: ${{ github.workspace }}/infra/secrets/test/backend/
           VOXPREP_DB_URL: jdbc:postgresql://127.0.0.1:55432/voxprep_test
@@ -69,7 +70,8 @@ jobs:
           SPRING_PROFILES_ACTIVE: test
         run: |
           mvn -B -ntp -f backend/pom.xml \
-            -Dtest=A1RealBackendFlutterAcceptanceTest \
+            -Dtest=A1RealBackendFlutterAcceptanceTest,R5MediaLibraryLiveHttpAcceptanceTest \
+            -Dvoxprep.r5.enabled=true \
             -Dvoxprep.a1.enabled=true \
             -Dvoxprep.a1.flutter.dir=${{ github.workspace }}/mobile/careerspeak_app \
             test

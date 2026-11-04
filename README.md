@@ -305,6 +305,45 @@ Kubernetes
 Elasticsearch/OpenSearch
 ```
 
+## DEV/TEST mock data generator
+
+VoxPrep includes a deterministic shared fixture generator for local development
+and integration tests. Python 3.12+ is sufficient; no external services or
+third-party Python packages are required.
+
+From the repository root:
+
+```powershell
+python tools/generate_demo_catalogue.py
+python tools/generate_demo_catalogue.py --check
+python -m unittest discover -s tools/tests -p "test_*.py" -v
+```
+
+For a custom repeatable data set:
+
+```powershell
+python tools/generate_demo_catalogue.py --seed 42 --count 64
+```
+
+The default seed creates **32 example learning materials** and writes two
+synchronized artifacts:
+
+- `mobile/careerspeak_app/lib/data/mock/generated_demo_content.dart` — used
+  by Flutter's `MockContentRepository` for demo catalog browsing.
+- `backend/src/test/resources/fixtures/demo_catalogue_seed.json` — a
+  corresponding backend **test fixture**, not a database import.
+
+Sample JSON records include intended FREE/FULL classification for testing:
+the first entry in each category is FREE. These labels do **not** grant real
+entitlements or publish content. The generator never writes to PostgreSQL,
+RustFS or production stores. The `DEV Mock Fixture Contract` workflow checks
+that both outputs match the canonical seed.
+
+For details and limitations, see
+[DEV/TEST Mock Data Generator](docs/qualification/R5_DEV_TEST_MOCK_DATA.md).
+Flutter Web's Drift/SQLite initialization is a separate concern; this generator
+does not fix or bypass browser bootstrap.
+
 ## Normative specifications
 
 - [Universal Vertical Catalogue — implementation requirements v1.0](docs/backend/UNIVERSAL_VERTICAL_CATALOGUE.md)

@@ -21,11 +21,6 @@ public class ContentStudioController {
         return section(model, "localization", "Localization", "Localization authoring will be wired in MVC-R4.");
     }
 
-    @GetMapping("/publication")
-    public String publication(Model model) {
-        return section(model, "publication", "Publication", "Publication readiness will reuse the existing B6/R5 services.");
-    }
-
     @GetMapping("/imports")
     public String imports(Model model) {
         return section(model, "imports", "Imports", "Import tooling will be added without bypassing application services.");

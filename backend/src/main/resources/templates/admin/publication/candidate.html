@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/fragments/shell :: layout('Publication candidate', 'publication', ~{::main})}">
+<main>
+    <a class="btn btn-outline-secondary mb-3" th:href="@{/admin/publication}">Back to publication</a>
+    <h1 class="h3">Candidate <code th:text="${candidate.id}">UUID</code></h1>
+    <p>Status: <strong th:text="${candidate.status}">DRAFT</strong></p>
+    <p th:if="${candidate.rootSha256 != null}">Validated root: <code th:text="${candidate.rootSha256}"></code></p>
+
+    <form th:if="${candidate.status.name() == 'DRAFT'}"
+          th:action="@{/admin/publication/candidates/{id}/validate(id=${candidate.id})}" method="post">
+        <label class="form-label" for="exactRefs">Frozen manifest input — one line per exact approved revision</label>
+        <textarea class="form-control font-monospace mb-2" id="exactRefs" name="exactRefs" rows="10"
+                  required maxlength="65536"
+                  placeholder="CONTENT_CODE|phrase|1|64-character-lowercase-sha256"></textarea>
+        <p class="form-text">Format: code|type|revision|checksum. Publication validation rejects missing, unapproved, incompatible or duplicate revisions.</p>
+        <button class="btn btn-primary" type="submit">Validate and freeze manifest</button>
+    </form>
+
+    <div th:if="${candidate.status.name() == 'VALIDATED'}" class="card studio-card">
+        <div class="card-body">
+            <h2 class="h5">Frozen exact references</h2>
+            <ul class="font-monospace small">
+                <li th:each="ref : ${refs}" th:text="${ref.canonicalKey()}">Ref</li>
+            </ul>
+            <p class="text-danger small">Publishing changes the learner CURRENT root. Confirm the manifest is complete before proceeding.</p>
+            <form th:action="@{/admin/publication/candidates/{id}/publish(id=${candidate.id})}" method="post">
+                <button class="btn btn-danger" type="submit">Publish and activate CURRENT</button>
+            </form>
+        </div>
+    </div>
+</main>
+</html>
