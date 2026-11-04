@@ -196,6 +196,18 @@ First production slice committed on this branch:
 
 The ingestion transaction spans RustFS I/O for dedup arbitration. A storage write followed by DB rollback can leave an orphan. Existing H2 inventory/recovery is an advisory starting point; design an explicit durable ingest/reservation and recovery policy before production acceptance. Never auto-delete suspected orphans.
 
+## R5.1 implementation progress — live HTTP and publication screen (2026-11-04)
+
+The branch now contains additional production/UI/test changes:
+
+- `PublicationStudioMvcController` replaces the inactive `/admin/publication` placeholder and calls `PublicationCandidateManifestService.validateAndFreeze` and `PublicationPublisher.publish` instead of writing CURRENT directly. It provides DRAFT candidate creation, exact-manifest validation/freeze, approved candidate inspection, and publishing. The v1 form accepts exact `code|contentType|revision|sha256` lines: convenient catalogue-assisted selection remains a UX improvement, not a proven feature.
+- Two Thymeleaf pages render publication candidate status, frozen manifest, current learner root and explicit publish confirmation. Normal ADMIN session and CSRF policy remain active.
+- `R5MediaLibraryLiveHttpAcceptanceTest` is opt-in on the A1 PostgreSQL/RustFS environment and exercises real browser-like HTTP login/session/CSRF, image upload twice, dedup to the same asset ID, preview byte match, binding to two separate draft revisions, missing-CSRF rejection, and publication candidate creation/rejection. Draft entities are fixtures created through JPA: HTTP content creation is **not** yet proven by this test.
+- Existing `a1_real_backend_flutter_test.dart` now compares downloaded and reopened offline image bytes with the real backend HTTP media response. Existing A1 still seeds the published image by backend service, not by the Media Library HTTP picker.
+- The A1 workflow now includes the opt-in R5 HTTP test. Keep exact-SHA evidence: early CI iterations found a stale Content Studio placeholder assertion and Dart formatter difference; fixes were committed. Do not mark accepted until all final runs succeed.
+
+**Outstanding before R5-01..03 are accepted:** a single joined test that creates a real draft via HTTP, selects/binds an image, drives publication via the actual admin UI, verifies that exact asset in publication manifest and Flutter cache/offline after restart; tests for rejection of wrong asset kind, concurrent upload, error propagation, storage crash recovery; security and human-facing publication input validation. No real store/device tests have been performed.
+
 ## Second-pass review outcome
 
 **Specification completeness is improved, implementation is not claimed.** Existing PR is documentation-only. The reviewed code confirms particular failure modes and unimplemented contracts that acceptance must address, but this review has not executed a complete runtime test of media, stores or devices. Prioritise DEC-01 and DEC-02 before writing an offline premium implementation, then R5.1/R5.2. Keep PR draft and preserve existing CI gates.
