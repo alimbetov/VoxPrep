@@ -284,10 +284,12 @@ class CatalogueCollectionScreen extends ConsumerWidget {
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 12),
-          Row(
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 6,
+            runSpacing: 4,
             children: [
               const Icon(Icons.format_list_numbered_rounded, size: 18),
-              const SizedBox(width: 6),
               Text('${collection.members.length} learning items'),
             ],
           ),
