@@ -150,6 +150,105 @@ final class R5AdminHttpPublicationWorkflow {
         }
     }
 
+    UUID createCatalogue(UUID iconAssetId) throws Exception {
+        CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
+        try (HttpClient http = HttpClient.newBuilder().cookieHandler(cookies)
+                .connectTimeout(Duration.ofSeconds(5))
+                .followRedirects(HttpClient.Redirect.NEVER).build()) {
+            var login = get(http, "/login");
+            assertThat(login.statusCode()).isEqualTo(200);
+            assertThat(post(http, "/login", csrf(login.body()),
+                    "username=" + enc(username) + "&password=" + enc(password)).statusCode())
+                    .isEqualTo(302);
+            String token = csrf(get(http, "/admin/catalogue/verticals/new").body());
+            var vertical = post(http, "/admin/catalogue/verticals", token,
+                    "expectedVersion=0&code=A1_CAREER&sectionCode=A1_TECH"
+                            + "&title=Career+English&description=Technical+interviews"
+                            + "&iconAssetId=" + iconAssetId
+                            + "&sortOrder=0&availability=ACTIVE");
+            assertThat(vertical.statusCode()).isEqualTo(302);
+            UUID verticalId = queryId(vertical, "verticalId");
+            var goal = post(http, "/admin/catalogue/goals", token,
+                    "expectedVersion=0&code=A1_INTERVIEW&verticalId=" + verticalId
+                            + "&title=Interview+skills&description=Prepare+for+interviews"
+                            + "&sortOrder=0&availability=ACTIVE");
+            assertThat(goal.statusCode()).isEqualTo(302);
+            UUID goalId = queryId(goal, "goalId");
+            var track = post(http, "/admin/catalogue/tracks", token,
+                    "expectedVersion=0&code=A1_JAVA&goalId=" + goalId
+                            + "&title=Java+developer&description=Technical+English"
+                            + "&levelCode=B1&sortOrder=0&availability=ACTIVE");
+            assertThat(track.statusCode()).isEqualTo(302);
+            UUID trackId = queryId(track, "trackId");
+            for (String code : List.of("A1_FREE", "A1_FULL")) {
+                var collection = post(http, "/admin/catalogue/collections", token,
+                        "expectedVersion=0&code=" + code + "&trackId=" + trackId
+                                + "&title=" + (code.equals("A1_FREE") ? "Start+here" : "Advanced")
+                                + "&description=" + (code.equals("A1_FREE") ? "First+free+block" : "Premium+block")
+                                + "&accessLevel=" + (code.equals("A1_FREE") ? "FREE" : "FULL")
+                                + "&sortOrder=" + (code.equals("A1_FREE") ? 0 : 1)
+                                + "&availability=ACTIVE");
+                assertThat(collection.statusCode()).as(code).isEqualTo(302);
+            }
+            var page = get(http, "/admin/catalogue?trackId=" + trackId);
+            assertThat(page.statusCode()).isEqualTo(200);
+            assertThat(page.body()).contains("A1_FREE").contains("A1_FULL");
+            return trackId;
+        }
+    }
+
+    UUID appendMember(UUID collectionId, UUID revisionId) throws Exception {
+        CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
+        try (HttpClient http = HttpClient.newBuilder().cookieHandler(cookies)
+                .connectTimeout(Duration.ofSeconds(5))
+                .followRedirects(HttpClient.Redirect.NEVER).build()) {
+            var login = get(http, "/login");
+            assertThat(post(http, "/login", csrf(login.body()),
+                    "username=" + enc(username) + "&password=" + enc(password)).statusCode())
+                    .isEqualTo(302);
+            String path = "/admin/catalogue/collections/" + collectionId + "/members";
+            var page = get(http, path);
+            assertThat(page.statusCode()).isEqualTo(200);
+            var appended = post(http, path, csrf(page.body()), "revisionId=" + revisionId);
+            assertThat(appended.statusCode()).isEqualTo(302);
+            var refreshed = get(http, path);
+            assertThat(refreshed.statusCode()).isEqualTo(200);
+            assertThat(refreshed.body()).contains("revision 1");
+            var id = java.util.regex.Pattern.compile(
+                    "/members/([0-9a-f-]{36})/replace")
+                    .matcher(refreshed.body());
+            // The returned UUID identifies the persisted membership, not the revision.
+            assertThat(id.find()).isTrue();
+            return UUID.fromString(id.group(1));
+        }
+    }
+
+    UUID createCandidate() throws Exception {
+        CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
+        try (HttpClient http = HttpClient.newBuilder().cookieHandler(cookies)
+                .connectTimeout(Duration.ofSeconds(5))
+                .followRedirects(HttpClient.Redirect.NEVER).build()) {
+            var login = get(http, "/login");
+            assertThat(post(http, "/login", csrf(login.body()),
+                    "username=" + enc(username) + "&password=" + enc(password)).statusCode())
+                    .isEqualTo(302);
+            var page = get(http, "/admin/publication");
+            var created = post(http, "/admin/publication/candidates", csrf(page.body()), "");
+            assertThat(created.statusCode()).isEqualTo(302);
+            var path = base.resolve(created.headers().firstValue("location").orElseThrow()).getPath();
+            assertThat(path).matches("/admin/publication/candidates/[0-9a-f-]{36}");
+            return UUID.fromString(path.substring(path.lastIndexOf('/') + 1));
+        }
+    }
+
+    private UUID queryId(HttpResponse<String> response, String name) {
+        var uri = base.resolve(response.headers().firstValue("location").orElseThrow());
+        var match = java.util.regex.Pattern.compile("(?:^|&)" + name
+                + "=([0-9a-f-]{36})(?:&|$)").matcher(uri.getRawQuery());
+        assertThat(match.find()).as(name + " included in catalogue redirect").isTrue();
+        return UUID.fromString(match.group(1));
+    }
+
     void approveDraft(UUID revisionId) throws Exception {
         CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
         try (HttpClient http = HttpClient.newBuilder().cookieHandler(cookies)
