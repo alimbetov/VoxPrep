@@ -91,6 +91,8 @@ voxprep:
       package-name: ${VOXPREP_GOOGLE_PACKAGE_NAME:}
       voided-poll-delay-ms: ${VOXPREP_GOOGLE_VOIDED_POLL_DELAY_MS:900000}
       accept-test-purchases: ${VOXPREP_GOOGLE_ACCEPT_TEST_PURCHASES:false}
+      pubsub-audience: ${VOXPREP_GOOGLE_PUBSUB_AUDIENCE:}
+      pubsub-service-account-email: ${VOXPREP_GOOGLE_PUBSUB_SERVICE_ACCOUNT_EMAIL:}
     apple:
       environment: ${VOXPREP_APPLE_ENVIRONMENT:PRODUCTION}
       bundle-id: ${VOXPREP_APPLE_BUNDLE_ID:}
