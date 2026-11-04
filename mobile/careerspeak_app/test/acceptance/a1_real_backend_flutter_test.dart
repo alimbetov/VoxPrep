@@ -110,8 +110,9 @@ void main() {
           trigger: SyncTrigger.manual,
           translationLocale: 'en',
         );
-        if (synchronized
-            case FailureResult<ContentSyncOutcome>(:final failure)) {
+        if (synchronized case FailureResult<ContentSyncOutcome>(
+          :final failure,
+        )) {
           fail(
             'A1 live FREE/FULL sync: code=${failure.code}, '
             'message=${failure.message}, details=${failure.details}',
