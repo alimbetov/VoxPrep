@@ -36,41 +36,45 @@ void main() {
 
   Future<void> seed({String typedChecksum = _checksum}) async {
     final now = DateTime.utc(2026, 11, 4);
-    await database.into(database.contentCatalogReads).insert(
-      ContentCatalogReadsCompanion.insert(
-        contentCode: item.code,
-        contentType: 'INTERVIEW',
-        revision: item.revision,
-        checksum: _checksum,
-        title: item.title,
-        subtitle: item.subtitle,
-        description: item.description,
-        category: item.category,
-        level: item.level,
-        minutes: item.minutes,
-        hasAudio: item.hasAudio,
-        createdAt: now,
-      ),
-    );
-    await database.into(database.typedContentReads).insert(
-      TypedContentReadsCompanion.insert(
-        contentCode: item.code,
-        contentType: 'INTERVIEW',
-        revision: item.revision,
-        checksum: typedChecksum,
-        categoryCode: 'JAVA_BACKEND',
-        levelCode: 'B2',
-        skillCodesJson: jsonEncode(['SPEAKING']),
-        bodyKind: 'interview',
-        bodyJson: jsonEncode({
-          'kind': 'interview',
-          'prompt': 'What is dependency injection?',
-          'modelAnswer': 'Constructor injection.',
-          'keyPoints': ['Testability', 'Loose coupling'],
-        }),
-        createdAt: now,
-      ),
-    );
+    await database
+        .into(database.contentCatalogReads)
+        .insert(
+          ContentCatalogReadsCompanion.insert(
+            contentCode: item.code,
+            contentType: 'INTERVIEW',
+            revision: item.revision,
+            checksum: _checksum,
+            title: item.title,
+            subtitle: item.subtitle,
+            description: item.description,
+            category: item.category,
+            level: item.level,
+            minutes: item.minutes,
+            hasAudio: item.hasAudio,
+            createdAt: now,
+          ),
+        );
+    await database
+        .into(database.typedContentReads)
+        .insert(
+          TypedContentReadsCompanion.insert(
+            contentCode: item.code,
+            contentType: 'INTERVIEW',
+            revision: item.revision,
+            checksum: typedChecksum,
+            categoryCode: 'JAVA_BACKEND',
+            levelCode: 'B2',
+            skillCodesJson: jsonEncode(['SPEAKING']),
+            bodyKind: 'interview',
+            bodyJson: jsonEncode({
+              'kind': 'interview',
+              'prompt': 'What is dependency injection?',
+              'modelAnswer': 'Constructor injection.',
+              'keyPoints': ['Testability', 'Loose coupling'],
+            }),
+            createdAt: now,
+          ),
+        );
   }
 
   test('returns exact typed body from persisted immutable payload', () async {
