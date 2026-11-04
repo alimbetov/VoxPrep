@@ -120,12 +120,20 @@ class _TestCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            Row(
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: 12,
+              runSpacing: 10,
               children: [
-                const Icon(Icons.help_outline_rounded, size: 18),
-                const SizedBox(width: 6),
-                Text('${test.questionCount} questions'),
-                const Spacer(),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.help_outline_rounded, size: 18),
+                    const SizedBox(width: 6),
+                    Text('${test.questionCount} questions'),
+                  ],
+                ),
                 FilledButton.tonalIcon(
                   onPressed: () => context.push('/tests/${test.code}'),
                   icon: const Icon(Icons.play_arrow_rounded),
