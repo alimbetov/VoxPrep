@@ -500,7 +500,10 @@ final class AudioPlaybackController {
     await _closeCurrent(persistPosition: true);
     _disposed = true;
     await _writeTail;
-    await _states.close();
+    // A broadcast listener may be paused during widget teardown. Waiting for
+    // close() would deadlock controller disposal until that listener resumes.
+    // Close the sink now without making resource cleanup depend on listeners.
+    unawaited(_states.close());
   }
 
   static FailureResult<void> _closedFailure() => const FailureResult<void>(
