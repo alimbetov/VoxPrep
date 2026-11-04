@@ -208,6 +208,12 @@ The branch now contains additional production/UI/test changes:
 
 **Outstanding before R5-01..03 are accepted:** a single joined test that creates a real draft via HTTP, selects/binds an image, drives publication via the actual admin UI, verifies that exact asset in publication manifest and Flutter cache/offline after restart; tests for rejection of wrong asset kind, concurrent upload, error propagation, storage crash recovery; security and human-facing publication input validation. No real store/device tests have been performed.
 
+### R5.1/A1 joined acceptance upgrade
+
+The A1 live acceptance fixture now commits its catalog and content **before** publication; a test-only browser client uses a real ADMIN login session and CSRF over HTTP to attach the READY cover asset to the DRAFT, transition it through Content Studio ready-for-audio/review/approval, validate exact publication references and invoke the UI publish endpoint. The existing real Flutter subprocess then fetches that admin-activated CURRENT over HTTP and verifies the exact published image bytes both after download and after offline Drift reopen. This removes direct test calls to `ContentAssetBindingService.bind` and `PublicationPublisher.publish` for the featured FREE image.
+
+Scope boundary: the initial content and catalogue hierarchy remain controlled JPA fixtures and the image object is ingested via backend application service; the joined test does not prove Content Studio content creation or Media Library HTTP file upload for that **same** release. The separate R5 live media test proves the upload, deduplication and two draft bindings. Do not mark the entire real-editor-created publication path accepted until the remaining authoring/asset ingestion steps are driven through production HTTP within one joined scenario.
+
 ## Second-pass review outcome
 
 **Specification completeness is improved, implementation is not claimed.** Existing PR is documentation-only. The reviewed code confirms particular failure modes and unimplemented contracts that acceptance must address, but this review has not executed a complete runtime test of media, stores or devices. Prioritise DEC-01 and DEC-02 before writing an offline premium implementation, then R5.1/R5.2. Keep PR draft and preserve existing CI gates.
