@@ -17,6 +17,12 @@ class ProductionBillingStartupGuardTest {
                 production, "disabled", false, "PRODUCTION"))
                 .doesNotThrowAnyException();
         assertThatThrownBy(() -> new ProductionBillingStartupGuard(
+                production, "disabled", true, "PRODUCTION"))
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> new ProductionBillingStartupGuard(
+                production, "disabled", false, "SANDBOX"))
+                .isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> new ProductionBillingStartupGuard(
                 production, "simulated", false, "PRODUCTION"))
                 .isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(() -> new ProductionBillingStartupGuard(
