@@ -22,7 +22,8 @@ public final class ProductionBillingStartupGuard {
         // A production deployment may start while no Store accounts exist,
         // but disabled billing must fail closed: never accept simulator proofs.
         // Once real billing is enabled, all environment checks remain strict.
-        if (!(productionProfile && "disabled".equals(billingMode))
+        if (!(productionProfile && "disabled".equals(billingMode)
+                && !googleTestMode && "PRODUCTION".equals(appleEnvironment))
                 && (!"production".equals(billingMode)
                     || (productionProfile && (googleTestMode
                         || !"PRODUCTION".equals(appleEnvironment)))
