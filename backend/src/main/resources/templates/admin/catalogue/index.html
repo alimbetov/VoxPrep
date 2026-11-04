@@ -72,8 +72,8 @@
                         <small class="d-block text-secondary">
                             <span th:text="${item.code()}">CODE</span>
                             <span class="badge ms-1"
-                                  th:classappend="${item.accessLevel().name() == 'FULL'} ? 'text-bg-warning' : 'text-bg-success'"
-                                  th:text="${item.accessLevel().name() == 'FULL'} ? '$ FULL' : 'FREE'">FREE</span>
+                                  th:classappend="${item.accessLevel() == 'FULL'} ? 'text-bg-warning' : 'text-bg-success'"
+                                  th:text="${item.accessLevel() == 'FULL'} ? '$ FULL' : 'FREE'">FREE</span>
                         </small>
                         <a class="small" th:href="@{/admin/catalogue/collections/{id}/edit(id=${item.id()})}">Edit</a>
                     </div>
