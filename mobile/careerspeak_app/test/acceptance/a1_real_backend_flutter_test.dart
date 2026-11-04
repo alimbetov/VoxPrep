@@ -213,19 +213,23 @@ void main() {
         if (_r5ControlDir.isNotEmpty) {
           // An explicit learner marker keyed by stable content identity must survive
           // changing the immutable revision and updating CURRENT.
-          await database.into(database.favorites).insert(
-            FavoritesCompanion.insert(
-              contentCode: _freeCode,
-              contentType: 'PHRASE',
-              createdAt: DateTime.now().toUtc(),
-            ),
-          );
+          await database
+              .into(database.favorites)
+              .insert(
+                FavoritesCompanion.insert(
+                  contentCode: _freeCode,
+                  contentType: 'PHRASE',
+                  createdAt: DateTime.now().toUtc(),
+                ),
+              );
           await File('$_r5ControlDir/n1-ready').writeAsString('N1 synced');
           final deadline = DateTime.now().add(const Duration(seconds: 150));
           while (!await File('$_r5ControlDir/n2-ready').exists()) {
             final error = File('$_r5ControlDir/n2-error');
             if (await error.exists()) {
-              fail('R5 server publication N2 failed: ${await error.readAsString()}');
+              fail(
+                'R5 server publication N2 failed: ${await error.readAsString()}',
+              );
             }
             if (DateTime.now().isAfter(deadline)) {
               fail('R5 N2 publisher timeout while Flutter retained N1');
@@ -243,9 +247,7 @@ void main() {
             trigger: SyncTrigger.manual,
             translationLocale: 'en',
           );
-          if (nextSync case FailureResult<ContentSyncOutcome>(
-            :final failure,
-          )) {
+          if (nextSync case FailureResult<ContentSyncOutcome>(:final failure)) {
             fail('R5 N2 sync failed: ${failure.code} ${failure.details}');
           }
           expect(nextSync, isA<Success<ContentSyncOutcome>>());
@@ -262,10 +264,14 @@ void main() {
           );
           expect(updated.revision, 2);
           expect(updated.title, 'Interview introduction v2');
-          final favoritesAfterSync = await database.select(database.favorites).get();
+          final favoritesAfterSync = await database
+              .select(database.favorites)
+              .get();
           expect(
-            favoritesAfterSync.any((row) => row.contentCode == _freeCode
-                && row.contentType == 'PHRASE'),
+            favoritesAfterSync.any(
+              (row) =>
+                  row.contentCode == _freeCode && row.contentType == 'PHRASE',
+            ),
             isTrue,
           );
           final nextFreePack = nextRoot.packs.singleWhere(
@@ -331,9 +337,15 @@ void main() {
         if (_r5ControlDir.isNotEmpty) {
           final retained = await database.select(database.favorites).get();
           expect(retained.any((row) => row.contentCode == _freeCode), isTrue);
-          final content = (await DriftContentRepository(database)
-              .watchContent(const ContentQuery()).first).getOrThrow();
-          expect(content.items.singleWhere((item) => item.code == _freeCode).revision, 2);
+          final content = (await DriftContentRepository(
+            database,
+          ).watchContent(const ContentQuery()).first).getOrThrow();
+          expect(
+            content.items
+                .singleWhere((item) => item.code == _freeCode)
+                .revision,
+            2,
+          );
         }
         expect(
           await File(reused.localPath).readAsBytes(),
