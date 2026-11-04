@@ -383,7 +383,8 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
             revision: content.revision,
             checksum: content.checksum,
             contentVersion: plan.target.contentVersion,
-            enabled: manifest.schemaVersion >= 2 &&
+            enabled:
+                manifest.schemaVersion >= 2 &&
                 plan.target.catalogues.isNotEmpty,
           );
           if ((!locked && payload == null) ||
@@ -424,12 +425,13 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
           type: localization.identity.type.name,
           revision: localization.contentRevision,
           contentVersion: plan.target.contentVersion,
-          enabled: manifest.schemaVersion >= 2 &&
-              plan.target.catalogues.isNotEmpty,
+          enabled:
+              manifest.schemaVersion >= 2 && plan.target.catalogues.isNotEmpty,
         );
         if ((!locked && payload == null) ||
             (locked && payload != null) ||
-            (payload != null && payload.ref.checksum != localization.checksum)) {
+            (payload != null &&
+                payload.ref.checksum != localization.checksum)) {
           throw const _SyncExecutorInvariant(
             ApplicationFailure(
               code: 'LOCALIZED_CONTENT_PAYLOAD_SET_MISMATCH',
@@ -501,10 +503,10 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
     required bool enabled,
   }) async {
     if (!enabled) return false; // Schema-v1 fixture compatibility.
-    final checksumClause =
-        checksum == null ? '' : 'AND m.content_checksum = ?';
-    final rows = await _database.customSelect(
-      '''
+    final checksumClause = checksum == null ? '' : 'AND m.content_checksum = ?';
+    final rows = await _database
+        .customSelect(
+          '''
       SELECT a.access_level
       FROM learning_collection_member_reads AS m
       JOIN learning_collection_access_reads AS a
@@ -517,14 +519,15 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
         AND m.content_revision = ?
         $checksumClause
       ''',
-      variables: <Variable<Object>>[
-        Variable<int>(contentVersion),
-        Variable<String>(code),
-        Variable<String>(type),
-        Variable<int>(revision),
-        if (checksum != null) Variable<String>(checksum),
-      ],
-    ).get();
+          variables: <Variable<Object>>[
+            Variable<int>(contentVersion),
+            Variable<String>(code),
+            Variable<String>(type),
+            Variable<int>(revision),
+            if (checksum != null) Variable<String>(checksum),
+          ],
+        )
+        .get();
     if (rows.isEmpty) {
       throw const _SyncExecutorInvariant(
         ApplicationFailure(
