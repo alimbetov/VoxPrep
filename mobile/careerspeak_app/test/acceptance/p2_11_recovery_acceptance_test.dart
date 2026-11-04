@@ -159,7 +159,9 @@ void main() {
         );
       }
 
-      expect(backend.registrationCalls, 1);
+      // Each cold bootstrap revalidates/rotates credentials with the existing
+      // Bearer proof; a same-root repair must retain that authentication.
+      expect(backend.registrationCalls, 2);
       expect(backend.packManifestCalls, packCallsBeforeRepair + 1);
       expect(backend.contentPayloadCalls, payloadCallsBeforeRepair + 1);
       await _expectCurrentRevision(database, revision: 1, title: _titleV1);
