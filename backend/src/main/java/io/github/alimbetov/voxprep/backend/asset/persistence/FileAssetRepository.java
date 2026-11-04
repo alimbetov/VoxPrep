@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetStatus;
+import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetKind;
 import org.springframework.data.domain.Pageable;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.Lock;
@@ -13,6 +14,12 @@ import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface FileAssetRepository extends JpaRepository<FileAssetEntity, UUID> {
+
+    List<FileAssetEntity> findByKindInAndStatusOrderByCreatedAtDesc(
+            List<FileAssetKind> kinds, FileAssetStatus status, Pageable page);
+
+    Optional<FileAssetEntity> findFirstByKindAndMediaTypeAndSha256AndSizeBytesAndStatus(
+            FileAssetKind kind, String mediaType, String sha256, long sizeBytes, FileAssetStatus status);
 
     Optional<FileAssetEntity> findByBucketAndObjectKey(String bucket, String objectKey);
 
