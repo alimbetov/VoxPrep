@@ -32,6 +32,37 @@ final class R5AdminHttpPublicationWorkflow {
         this.password = password;
     }
 
+    UUID createPhrase(String code, String title, String phrase) throws Exception {
+        CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
+        try (HttpClient http = HttpClient.newBuilder().cookieHandler(cookies)
+                .connectTimeout(Duration.ofSeconds(5))
+                .followRedirects(HttpClient.Redirect.NEVER).build()) {
+            var login = get(http, "/login");
+            assertThat(login.statusCode()).isEqualTo(200);
+            var auth = post(http, "/login", csrf(login.body()),
+                    "username=" + enc(username) + "&password=" + enc(password));
+            assertThat(auth.statusCode()).isEqualTo(302);
+            var page = get(http, "/admin/content/revisions/new");
+            assertThat(page.statusCode()).isEqualTo(200);
+            assertThat(page.body()).contains("Create first content revision");
+            String payload = "contentCode=" + enc(code)
+                    + "&expectedVersion=0&bodyType=phrase"
+                    + "&title=" + enc(title)
+                    + "&subtitle=CareerSpeak&description=Live+HTTP+created+content"
+                    + "&categoryCode=GENERAL&levelCode=B1&minutes=2"
+                    + "&skillCodes=SPEAKING&availability=ACTIVE"
+                    + "&phrase=" + enc(phrase)
+                    + "&usage=Interview+preparation&examples=" + enc(phrase + " Example.");
+            var created = post(http, "/admin/content/revisions", csrf(page.body()), payload);
+            assertThat(created.statusCode()).as("create first revision POST").isEqualTo(302);
+            String location = created.headers().firstValue("location").orElseThrow();
+            assertThat(location).matches("/admin/content/revisions/[0-9a-f-]{36}/edit");
+            UUID id = UUID.fromString(location.split("/")[4]);
+            assertThat(get(http, location).body()).contains(code).contains("DRAFT");
+            return id;
+        }
+    }
+
     void bindAndPublish(UUID revisionId, UUID assetId, UUID candidateId,
             List<PublicationExactContentRef> refs) throws Exception {
         CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
