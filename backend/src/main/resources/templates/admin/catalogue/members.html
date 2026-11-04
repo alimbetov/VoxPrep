@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/fragments/shell :: layout('Collection members', 'catalogue', ~{::main})}">
+<main>
+    <h1 class="h3">Collection <code th:text="${collectionCode}">CODE</code></h1>
+    <p class="text-secondary">Replace a published collection slot with a newer APPROVED revision. Historical releases remain immutable.</p>
+    <div class="card studio-card mb-3" th:each="member : ${members}">
+        <div class="card-body">
+            <div class="mb-2">
+                Position <span th:text="${member.position}">0</span>:
+                <strong th:text="${member.code}">CODE</strong>
+                <span>revision <span th:text="${member.revision}">1</span></span>
+            </div>
+            <form method="post" th:action="@{/admin/catalogue/collections/{cid}/members/{mid}/replace(cid=${collectionId},mid=${member.id})}">
+                <label class="form-label">Approved replacement revision ID</label>
+                <div class="input-group">
+                    <input class="form-control" name="newRevisionId" required type="text"
+                           pattern="[0-9a-fA-F-]{36}" placeholder="UUID of newer approved revision">
+                    <button class="btn btn-outline-primary" type="submit">Replace for next publication</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <p th:if="${#lists.isEmpty(members)}" class="text-secondary">No collection content members have been assigned.</p>
+    <a class="btn btn-outline-secondary" th:href="@{/admin/catalogue}">Back to catalogue</a>
+</main>
+</html>
