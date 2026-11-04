@@ -47,7 +47,8 @@ void main() {
             'Select country',
             'Preferred English accent',
             'Country',
-            'Storage',
+            'Accessibility',
+            'Offline learning',
           ]) {
             final target = find.text(label);
             // A lazily built ListView might not have created this Text yet.
@@ -78,9 +79,12 @@ void main() {
             reason:
                 'Settings full scroll must not overflow for $boundary $direction',
           );
-          expect(find.text('RTL layout preview'), findsOneWidget);
-          expect(find.text('Reduced motion preview'), findsOneWidget);
-          expect(find.text('Storage'), findsOneWidget);
+          // Each current production settings section was explicitly checked
+          // above after being scrolled into view at this viewport size.
+          expectNoLayoutExceptions(
+            tester,
+            reason: 'Settings last section must fit $boundary $direction',
+          );
         },
       );
     }
