@@ -85,12 +85,17 @@ void main() {
       );
       expect(find.text('Review answers'), findsOneWidget);
 
+      final reviewQuestion = find.textContaining('1. ');
       await tester.scrollUntilVisible(
-        find.textContaining('1. '),
+        reviewQuestion,
         250,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.tap(find.textContaining('1. '));
+      // scrollUntilVisible can stop as soon as an item is built, although its
+      // center still falls outside a short accessibility viewport.
+      await tester.ensureVisible(reviewQuestion);
+      await tester.pumpAndSettle();
+      await tester.tap(reviewQuestion);
       await tester.pumpAndSettle();
 
       expectNoLayoutExceptions(
