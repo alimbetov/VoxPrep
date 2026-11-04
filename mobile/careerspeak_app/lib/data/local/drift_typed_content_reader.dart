@@ -20,8 +20,9 @@ final class DriftTypedContentReader {
   final CareerSpeakDatabase _database;
 
   Future<TypedContentBody?> getForVisible(ContentItem item) async {
-    final rows = await _database.customSelect(
-      '''
+    final rows = await _database
+        .customSelect(
+          '''
       SELECT c.checksum, c.title, c.subtitle, c.description,
              c.category, c.level, c.minutes, c.has_audio,
              t.category_code, t.level_code, t.skill_codes_json,
@@ -34,16 +35,17 @@ final class DriftTypedContentReader {
       WHERE c.content_code = ? AND c.content_type = ?
         AND c.revision = ?
       ''',
-      variables: <Variable<Object>>[
-        Variable<String>(item.code),
-        Variable<String>(contentTypeToStorage(item.type)),
-        Variable<int>(item.revision),
-      ],
-      readsFrom: {
-        _database.contentCatalogReads,
-        _database.typedContentReads,
-      },
-    ).get();
+          variables: <Variable<Object>>[
+            Variable<String>(item.code),
+            Variable<String>(contentTypeToStorage(item.type)),
+            Variable<int>(item.revision),
+          ],
+          readsFrom: {
+            _database.contentCatalogReads,
+            _database.typedContentReads,
+          },
+        )
+        .get();
 
     // Older locally created mock/legacy material can lack a typed body.
     if (rows.isEmpty) return null;
