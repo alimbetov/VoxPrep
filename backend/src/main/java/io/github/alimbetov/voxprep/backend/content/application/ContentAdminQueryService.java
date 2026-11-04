@@ -51,6 +51,26 @@ public class ContentAdminQueryService {
         return selected.map(ContentRevisionSnapshot::from);
     }
 
+    /** Exact approved question revisions only; bounded search for Practice Test picker. */
+    @Transactional(readOnly = true)
+    public Page<QuestionChoice> approvedQuestions(String titleQuery, int page) {
+        if (page < 0 || page > 10000) {
+            throw new IllegalArgumentException("Invalid question page");
+        }
+        String title = titleQuery == null ? "" : titleQuery.strip();
+        if (title.length() > 100) {
+            throw new IllegalArgumentException("Question search exceeds 100 characters");
+        }
+        var statuses = List.of(ContentLifecycleStatus.APPROVED, ContentLifecycleStatus.PUBLISHED);
+        var pageable = PageRequest.of(page, 30, Sort.by(Sort.Direction.DESC, "updatedAt"));
+        return repository.searchApprovedQuestions(statuses, title, pageable)
+                .map(entity -> new QuestionChoice(entity.getId(),
+                        entity.getContentCode().value(), entity.getRevisionNumber().value(),
+                        entity.getTitle()));
+    }
+
+    public record QuestionChoice(UUID id, String code, int revision, String title) {}
+
     @Transactional(readOnly = true)
     public ContentRevisionSnapshot get(UUID revisionId) {
         return repository.findById(revisionId)
