@@ -47,8 +47,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 @EnabledIfSystemProperty(named = "voxprep.a1.enabled", matches = "true")
 class A1RealBackendFlutterAcceptanceTest {
 
-    private static final Instant APPROVED = Instant.parse("2026-11-03T09:00:00Z");
-    private static final Instant PUBLISHED = Instant.parse("2026-11-03T10:00:00Z");
     private static final String FREE_CODE = "A1_FREE_PHRASE";
     private static final String FULL_CODE = "A1_FULL_PHRASE";
     private static final String TEST_CODE = "A1_FREE_EXAM";
@@ -109,15 +107,7 @@ class A1RealBackendFlutterAcceptanceTest {
         var test = revisions.findById(practiceTestId).orElseThrow();
         assessmentConfig.configure(test.getId(), "exam", List.of(3));
 
-        // The FREE draft is reviewed via real Content Studio HTTP after image binding.
-        for (var revision : List.of(full, question, test)) {
-            revision.markReadyForAudio();
-            revisions.saveAndFlush(revision);
-            revision.markReadyForReview();
-            revisions.saveAndFlush(revision);
-            revision.approve(APPROVED);
-            revisions.saveAndFlush(revision);
-        }
+        // All draft lifecycle transitions are exercised via ADMIN HTTP below.
 
         var vertical = verticals.saveAndFlush(new VerticalEntity(
                 new CatalogueCode("A1_CAREER"), new CatalogueCode("A1_TECH"),
@@ -155,6 +145,9 @@ class A1RealBackendFlutterAcceptanceTest {
 
         var fixture = adminPublication.get();
         assertThat(fixture).isNotNull();
+        browser.approveDraft(fullId);
+        browser.approveDraft(questionId);
+        browser.approveDraft(practiceTestId);
         new R5AdminHttpPublicationWorkflow(serverPort, adminUsername, adminPassword)
                 .bindAndPublish(fixture.revisionId(), fixture.assetId(),
                         fixture.candidateId(), fixture.refs());
@@ -247,13 +240,4 @@ class A1RealBackendFlutterAcceptanceTest {
     private record PublicationHttpFixture(UUID revisionId, UUID assetId, UUID candidateId,
             UUID collectionId, UUID memberId, List<PublicationExactContentRef> refs) {}
 
-    private PhraseContentRevisionEntity phrase(String code, String title, String phrase) {
-        return revisions.saveAndFlush(new PhraseContentRevisionEntity(
-                new BusinessCode(code), new RevisionNumber(1),
-                new Sha256Digest(code.equals(FREE_CODE) ? "c".repeat(64) : "d".repeat(64)),
-                title, "CareerSpeak", "Live A1 test content",
-                new CatalogueCode("GENERAL"), new CatalogueCode("B1"), 2,
-                List.of(new CatalogueCode("SPEAKING")), AvailabilityStatus.ACTIVE,
-                phrase, "Interview preparation", List.of(phrase + " Example.")));
-    }
 }
