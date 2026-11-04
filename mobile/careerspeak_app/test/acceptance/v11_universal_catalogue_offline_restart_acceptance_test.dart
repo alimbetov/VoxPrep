@@ -83,7 +83,9 @@ void main() {
         translationLocale: 'en',
       );
       if (synchronized case FailureResult<ContentSyncOutcome>(:final failure)) {
-        fail('Demo publication failed: ${failure.code}; details=${failure.details}');
+        fail(
+          'Demo publication failed: ${failure.code}; details=${failure.details}',
+        );
       }
       expect(synchronized, isA<Success<ContentSyncOutcome>>());
 
