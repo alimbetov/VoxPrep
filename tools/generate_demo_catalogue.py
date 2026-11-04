@@ -79,7 +79,9 @@ def flutter_source(data):
             f"    type: ContentType.{item['type']},",
             f"    title: '{escape(item['title'])}',",
             f"    subtitle: '{escape(item['subtitle'])}',",
-            f"    description: '{escape(item['description'])}',",
+            *( [f"    description: '{escape(item['description'])}',"]
+               if len(f"    description: '{escape(item['description'])}',") <= 80
+               else ["    description:", f"        '{escape(item['description'])}',"] ),
             f"    category: '{escape(item['category'])}',",
             f"    level: '{escape(item['level'])}',",
             f"    minutes: {item['minutes']},",
