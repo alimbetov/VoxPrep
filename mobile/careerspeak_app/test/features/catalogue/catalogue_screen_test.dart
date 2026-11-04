@@ -102,7 +102,14 @@ void main() {
       ),
     );
 
+    // At small test viewports, collection metadata is above the sequence
+    // and both cannot remain built in the same lazy ListView viewport.
     expect(find.text('Future Collection'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Your learning sequence'),
+      140,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Your learning sequence'), findsOneWidget);
     expect(
       find.byKey(const ValueKey('collection-content-CONTENT_ALPHA')),
