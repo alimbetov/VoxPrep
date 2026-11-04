@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:careerspeak_app/application/content_sync/content_sync_coordinator.dart';
 import 'package:careerspeak_app/application/content_sync/content_sync_planner.dart';
 import 'package:careerspeak_app/application/content_sync/preference_aware_content_sync.dart';
+import 'package:careerspeak_app/application/content_delivery/publication_manifest_canonicalizer.dart';
 import 'package:careerspeak_app/application/ports/installation_credential_store.dart';
 import 'package:careerspeak_app/application/query/content_query.dart';
 import 'package:careerspeak_app/application/result/result.dart';
@@ -15,6 +16,7 @@ import 'package:careerspeak_app/data/local/drift_content_repository.dart';
 import 'package:careerspeak_app/data/local/drift_sync_journal.dart';
 import 'package:careerspeak_app/data/local/drift_sync_plan_executor.dart';
 import 'package:careerspeak_app/data/remote/http_api_client.dart';
+import 'package:careerspeak_app/data/remote/content_manifest_decoder.dart';
 import 'package:careerspeak_app/data/remote/http_content_manifest_gateway.dart';
 import 'package:careerspeak_app/data/remote/http_content_payload_gateway.dart';
 import 'package:careerspeak_app/data/remote/http_installation_registration_gateway.dart';
@@ -392,45 +394,59 @@ final class _RecoveryLearnerApiFixture {
   }
 }
 
-Map<String, Object?> _rootManifest(int revision) => <String, Object?>{
-  'schemaVersion': 1,
-  'contentVersion': revision,
-  'minimumAppContractVersion': 1,
-  'publishedAt': '2026-10-31T00:00:00Z',
-  'checksum': revision == 1 ? _rootChecksumV1 : _rootChecksumV2,
-  'packs': <Object?>[
-    <String, Object?>{
-      'code': 'JAVA_SENIOR',
-      'variant': 'canonical',
-      'revision': revision,
-      'checksum': revision == 1 ? _packChecksumV1 : _packChecksumV2,
-    },
-  ],
-  'practiceTests': <Object?>[],
-  'catalogues': <Object?>[],
-  'tombstones': <Object?>[],
-};
+Map<String, Object?> _rootManifest(int revision) {
+  final payload = <String, Object?>{
+    'schemaVersion': 1,
+    'contentVersion': revision,
+    'minimumAppContractVersion': 1,
+    'publishedAt': '2026-10-31T00:00:00Z',
+    'checksum': _rootChecksumV1,
+    'packs': <Object?>[
+      <String, Object?>{
+        'code': 'JAVA_SENIOR',
+        'variant': 'canonical',
+        'revision': revision,
+        'checksum': _packManifest(revision)['checksum'],
+      },
+    ],
+    'practiceTests': <Object?>[],
+    'catalogues': <Object?>[],
+    'tombstones': <Object?>[],
+  };
+  final decoded = const ContentManifestDecoder().decodeRoot(payload)
+      .getOrThrow();
+  payload['checksum'] =
+      const PublicationManifestCanonicalizer().rootDigest(decoded);
+  return payload;
+}
 
-Map<String, Object?> _packManifest(int revision) => <String, Object?>{
-  'schemaVersion': 1,
-  'code': 'JAVA_SENIOR',
-  'variant': 'canonical',
-  'revision': revision,
-  'checksum': revision == 1 ? _packChecksumV1 : _packChecksumV2,
-  'contents': <Object?>[
-    <String, Object?>{
-      'contentCode': _contentCode,
-      'contentType': 'interview',
-      'revision': revision,
-      'checksum': revision == 1 ? _contentChecksumV1 : _contentChecksumV2,
-      'sortOrder': 10,
-      'publishedAt': '2026-10-31T00:00:00Z',
-    },
-  ],
-  'localizations': <Object?>[],
-  'assets': <Object?>[],
-  'contentAssets': <Object?>[],
-};
+Map<String, Object?> _packManifest(int revision) {
+  final payload = <String, Object?>{
+    'schemaVersion': 1,
+    'code': 'JAVA_SENIOR',
+    'variant': 'canonical',
+    'revision': revision,
+    'checksum': _packChecksumV1,
+    'contents': <Object?>[
+      <String, Object?>{
+        'contentCode': _contentCode,
+        'contentType': 'interview',
+        'revision': revision,
+        'checksum': revision == 1 ? _contentChecksumV1 : _contentChecksumV2,
+        'sortOrder': 10,
+        'publishedAt': '2026-10-31T00:00:00Z',
+      },
+    ],
+    'localizations': <Object?>[],
+    'assets': <Object?>[],
+    'contentAssets': <Object?>[],
+  };
+  final decoded = const ContentManifestDecoder().decodePack(payload)
+      .getOrThrow();
+  payload['checksum'] =
+      const PublicationManifestCanonicalizer().packDigest(decoded);
+  return payload;
+}
 
 Map<String, Object?> _contentPayload(int revision) => <String, Object?>{
   'contentCode': _contentCode,
@@ -478,9 +494,5 @@ const _packChecksumV1 =
     '2222222222222222222222222222222222222222222222222222222222222222';
 const _contentChecksumV1 =
     '3333333333333333333333333333333333333333333333333333333333333333';
-const _rootChecksumV2 =
-    '4444444444444444444444444444444444444444444444444444444444444444';
-const _packChecksumV2 =
-    '5555555555555555555555555555555555555555555555555555555555555555';
 const _contentChecksumV2 =
     '6666666666666666666666666666666666666666666666666666666666666666';
