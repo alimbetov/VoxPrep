@@ -128,7 +128,10 @@ public abstract class ContentRevisionEntity extends AbstractJpaEntity {
     protected abstract void validateBodyForFreeze();
 
     public final ContentRevisionIdentity getIdentity() {
-        return new ContentRevisionIdentity(contentCode, getContentType(), revisionNumber);
+        // Invoking this final method on a Hibernate lazy proxy does not
+        // initialize its fields. Call the virtual getters so Hibernate can
+        // resolve the referenced revision before constructing its identity.
+        return new ContentRevisionIdentity(getContentCode(), getContentType(), getRevisionNumber());
     }
 
     public final void replaceDraftMetadata(
