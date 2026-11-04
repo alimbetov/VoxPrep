@@ -129,6 +129,100 @@ final class R5AdminHttpPublicationWorkflow {
         }
     }
 
+    UUID reviseAndPublish(UUID previousRevisionId, UUID assetId, UUID collectionId,
+            UUID oldMemberId, List<PublicationExactContentRef> oldRefs,
+            java.util.function.Function<UUID, PublicationExactContentRef> revisedRef)
+            throws Exception {
+        CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
+        try (HttpClient http = HttpClient.newBuilder().cookieHandler(cookies)
+                .connectTimeout(Duration.ofSeconds(5))
+                .followRedirects(HttpClient.Redirect.NEVER).build()) {
+            var login = get(http, "/login");
+            assertThat(login.statusCode()).isEqualTo(200);
+            assertThat(post(http, "/login", csrf(login.body()),
+                    "username=" + enc(username) + "&password=" + enc(password)).statusCode()).isEqualTo(302);
+            String oldEdit = "/admin/content/revisions/" + previousRevisionId + "/edit";
+            var oldPage = get(http, oldEdit);
+            assertThat(oldPage.statusCode()).isEqualTo(200);
+            String token = csrf(oldPage.body());
+            var created = post(http, "/admin/content/revisions/" + previousRevisionId + "/next", token,
+                    "expectedVersion=" + version(oldPage.body()));
+            assertThat(created.statusCode()).isEqualTo(302);
+            String editPath = created.headers().firstValue("location").orElseThrow();
+            assertThat(editPath).matches("/admin/content/revisions/[0-9a-f-]{36}/edit");
+            UUID revisedId = UUID.fromString(editPath.split("/")[4]);
+
+            // Editing the *new* DRAFT must change both checksum and actual learner text.
+            var page = get(http, editPath);
+            assertThat(page.statusCode()).isEqualTo(200);
+            String payload = "expectedVersion=" + version(page.body())
+                    + "&bodyType=phrase&title=" + enc("Interview introduction v2")
+                    + "&subtitle=CareerSpeak&description=Revised+learning+content"
+                    + "&categoryCode=GENERAL&levelCode=B1&minutes=2"
+                    + "&skillCodes=SPEAKING&availability=ACTIVE"
+                    + "&phrase=" + enc("Could you introduce yourself professionally?")
+                    + "&usage=Updated+interview+preparation"
+                    + "&examples=" + enc("I can introduce myself professionally.");
+            var updated = post(http, "/admin/content/revisions/" + revisedId, token, payload);
+            assertThat(updated.statusCode()).isEqualTo(302);
+            var bound = post(http, "/admin/media/bind", token,
+                    "revisionId=" + revisedId + "&role=COVER_IMAGE&assetId=" + assetId);
+            assertThat(bound.statusCode()).isEqualTo(302);
+
+            for (String step : List.of("ready-for-audio", "review", "approve")) {
+                var edit = get(http, editPath);
+                assertThat(edit.statusCode()).isEqualTo(200);
+                var response = post(http, "/admin/content/revisions/" + revisedId + "/" + step,
+                        token, "expectedVersion=" + version(edit.body())
+                                + "&reason=R5_N2&comment=HTTP+publication+upgrade");
+                assertThat(response.statusCode()).as(step).isEqualTo(302);
+            }
+            assertThat(get(http, editPath).body()).contains("APPROVED");
+
+            // Replace the collection slot via production MVC, never mutate frozen N.
+            var memberPage = get(http, "/admin/catalogue/collections/" + collectionId + "/members");
+            assertThat(memberPage.statusCode()).isEqualTo(200);
+            var replaced = post(http, "/admin/catalogue/collections/" + collectionId
+                    + "/members/" + oldMemberId + "/replace", token, "newRevisionId=" + revisedId);
+            assertThat(replaced.statusCode()).isEqualTo(302);
+
+            PublicationExactContentRef next = revisedRef.apply(revisedId);
+            assertThat(next.identity().revisionNumber().value()).isEqualTo(2);
+            List<PublicationExactContentRef> refs = oldRefs.stream()
+                    .map(ref -> ref.identity().contentCode().equals(next.identity().contentCode())
+                            && ref.identity().contentType() == next.identity().contentType()
+                            ? next : ref)
+                    .toList();
+            var draft = post(http, "/admin/publication/candidates", token, "");
+            assertThat(draft.statusCode()).isEqualTo(302);
+            String candidatePath = draft.headers().firstValue("location").orElseThrow();
+            StringBuilder lines = new StringBuilder();
+            for (var ref : refs) {
+                if (!lines.isEmpty()) lines.append('\n');
+                lines.append(ref.identity().contentCode().value()).append('|')
+                        .append(ref.identity().contentType().wireName()).append('|')
+                        .append(ref.identity().revisionNumber().value()).append('|')
+                        .append(ref.checksum().value());
+            }
+            var validated = post(http, candidatePath + "/validate", token,
+                    "exactRefs=" + enc(lines.toString()));
+            assertThat(validated.statusCode()).isEqualTo(302);
+            var frozen = get(http, candidatePath);
+            assertThat(frozen.statusCode()).isEqualTo(200);
+            assertThat(frozen.body()).contains("VALIDATED");
+            var published = post(http, candidatePath + "/publish", token, "");
+            assertThat(published.statusCode()).isEqualTo(302);
+            assertThat(get(http, "/admin/publication").body()).contains("Current learner release");
+            return revisedId;
+        }
+    }
+
+    private static String version(String html) {
+        var match = VERSION.matcher(html);
+        assertThat(match.find()).as("expectedVersion field").isTrue();
+        return match.group(1);
+    }
+
     private HttpResponse<String> get(HttpClient http, String path) throws Exception {
         return http.send(HttpRequest.newBuilder(base.resolve(path)).GET().build(),
                 HttpResponse.BodyHandlers.ofString());
