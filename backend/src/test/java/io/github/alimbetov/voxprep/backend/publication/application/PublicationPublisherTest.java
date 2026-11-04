@@ -94,13 +94,13 @@ class PublicationPublisherTest {
     }
 
     @Test
-    void truncatesNanosecondPublishTimeToFlutterCanonicalMicroseconds() {
+    void truncatesNanosecondPublishTimeToFlutterPersistedSeconds() {
         UUID candidateId = UUID.randomUUID();
         var candidate = validatedCandidate(ROOT);
         var ref = ref("phrase-publisher-micros", ContentType.PHRASE, 1, 'f');
         var persisted = new PublicationCandidateManifestRefEntity(candidateId, 0, ref);
         Instant nanos = Instant.parse("2026-11-04T08:12:34.123456789Z");
-        Instant micros = Instant.parse("2026-11-04T08:12:34.123456Z");
+        Instant seconds = Instant.parse("2026-11-04T08:12:34Z");
 
         when(candidateRepository.findByIdForUpdate(candidateId)).thenReturn(Optional.of(candidate));
         when(manifestRepository.findAllByCandidateIdOrderByPositionAsc(candidateId))
@@ -115,10 +115,10 @@ class PublicationPublisherTest {
 
         var result = publisher.publish(candidateId, nanos);
 
-        assertThat(result.publishedAt()).isEqualTo(micros);
-        verify(contentFreezer).freeze(List.of(ref), micros);
+        assertThat(result.publishedAt()).isEqualTo(seconds);
+        verify(contentFreezer).freeze(List.of(ref), seconds);
         verify(current).switchTo(org.mockito.ArgumentMatchers.any(PublicationReleaseEntity.class),
-                org.mockito.ArgumentMatchers.eq(micros));
+                org.mockito.ArgumentMatchers.eq(seconds));
     }
 
     @Test
