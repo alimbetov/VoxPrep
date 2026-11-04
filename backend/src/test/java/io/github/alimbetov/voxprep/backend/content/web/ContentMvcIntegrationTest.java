@@ -126,6 +126,20 @@ class ContentMvcIntegrationTest {
     }
 
     @Test
+    void ttsPreviewRejectsUnrelatedOrAbsentJobsAndNonAdminUsers() throws Exception {
+        UUID revisionId = UUID.randomUUID();
+        UUID jobId = UUID.randomUUID();
+
+        mockMvc.perform(get("/admin/content/revisions/{revisionId}/tts/jobs/{jobId}/preview",
+                        revisionId, jobId).with(user("admin").roles("ADMIN")))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(get("/admin/content/revisions/{revisionId}/tts/jobs/{jobId}/preview",
+                        revisionId, jobId).with(user("learner").roles("USER")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void adminCanListOpenAndUpdateVocabularyDraft() throws Exception {
         var revision = repository.saveAndFlush(vocabulary());
         var initialVersion = revision.getVersion();
@@ -140,6 +154,7 @@ class ContentMvcIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Edit content")))
                 .andExpect(content().string(containsString("Vocabulary title")))
+                .andExpect(content().string(containsString("TTS audio review")))
                 .andExpect(content().string(containsString("negotiate")))
                 .andExpect(content().string(containsString("name=\"_csrf\"")));
 
