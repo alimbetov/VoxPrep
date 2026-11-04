@@ -150,6 +150,32 @@ final class R5AdminHttpPublicationWorkflow {
         }
     }
 
+    void approveDraft(UUID revisionId) throws Exception {
+        CookieManager cookies = new CookieManager(null, CookiePolicy.ACCEPT_ALL);
+        try (HttpClient http = HttpClient.newBuilder().cookieHandler(cookies)
+                .connectTimeout(Duration.ofSeconds(5))
+                .followRedirects(HttpClient.Redirect.NEVER).build()) {
+            var login = get(http, "/login");
+            assertThat(login.statusCode()).isEqualTo(200);
+            assertThat(post(http, "/login", csrf(login.body()),
+                    "username=" + enc(username) + "&password=" + enc(password)).statusCode())
+                    .isEqualTo(302);
+            String editPath = "/admin/content/revisions/" + revisionId + "/edit";
+            var initial = get(http, editPath);
+            assertThat(initial.statusCode()).isEqualTo(200);
+            String token = csrf(initial.body());
+            for (String step : List.of("ready-for-audio", "review", "approve")) {
+                var edit = get(http, editPath);
+                assertThat(edit.statusCode()).isEqualTo(200);
+                var response = post(http, "/admin/content/revisions/" + revisionId + "/" + step,
+                        token, "expectedVersion=" + version(edit.body())
+                                + "&reason=R5_AUTHORING&comment=Real+HTTP+review");
+                assertThat(response.statusCode()).as(step).isEqualTo(302);
+            }
+            assertThat(get(http, editPath).body()).contains("APPROVED");
+        }
+    }
+
     UUID reviseAndPublish(UUID previousRevisionId, UUID assetId, UUID collectionId,
             UUID oldMemberId, List<PublicationExactContentRef> oldRefs,
             java.util.function.Function<UUID, PublicationExactContentRef> revisedRef)
