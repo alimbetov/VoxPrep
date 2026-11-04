@@ -1138,7 +1138,7 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
               ),
             );
           }
-          if (payload.checksum != ref.checksum) {
+          if (payload != null && payload.checksum != ref.checksum) {
             throw const _SyncExecutorInvariant(
               ApplicationFailure(
                 code: 'SYNC_TARGET_LOCALIZATION_MISMATCH',
