@@ -19,11 +19,15 @@ public final class ProductionBillingStartupGuard {
             @Value("${voxprep.billing.google.accept-test-purchases:false}") boolean googleTestMode,
             @Value("${voxprep.billing.apple.environment:PRODUCTION}") String appleEnvironment) {
         boolean productionProfile = Arrays.asList(environment.getActiveProfiles()).contains("prod");
-        if (!"production".equals(billingMode)
-                || (productionProfile && (googleTestMode
-                    || !"PRODUCTION".equals(appleEnvironment)))
-                || (!productionProfile && (!googleTestMode
-                    || !"SANDBOX".equals(appleEnvironment)))) {
+        // A production deployment may start while no Store accounts exist,
+        // but disabled billing must fail closed: never accept simulator proofs.
+        // Once real billing is enabled, all environment checks remain strict.
+        if (!(productionProfile && "disabled".equals(billingMode))
+                && (!"production".equals(billingMode)
+                    || (productionProfile && (googleTestMode
+                        || !"PRODUCTION".equals(appleEnvironment)))
+                    || (!productionProfile && (!googleTestMode
+                        || !"SANDBOX".equals(appleEnvironment))))) {
             throw new IllegalStateException(
                     "Staging/prod billing must use real store adapters and their correct store environments");
         }
