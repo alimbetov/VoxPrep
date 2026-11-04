@@ -129,3 +129,11 @@ Implementation refs: `4c3839e` (atomic wire writer), `bffa4be` (B7 real catalogu
 **Renderer diagnostics:** The former 3-minute hang was replaced by explicit, rapid errors using same-container Riverpod bootstrap and real onboarding completion. A responsive ContentCard fix is implemented; its Renderer exact-SHA result is still pending. CI now prints canonical dart-format diffs, and those known differences have been corrected in the present source changes.
 
 **Remaining P0 (do not merge):** v2 real Backend+Postgres+RustFS+Flutter/Drift acceptance, all six decoded graph catalogues with valid icon assets, FREE/FULL deny and restore replay, Google Play/App Store server verification and store sandbox receipt tests, media streaming limits, and exact-SHA full CI including Renderer Acceptance. XML import remains deferred.
+
+## 2026-11-04 B8 production-contract implementation checkpoint
+
+**Implemented in feat/commercial-release:** privacy-minimal PostgreSQL entitlement ledger + migrations; `POST /api/v1/purchases/verify`; `GET /api/v1/purchases/entitlement`; stable Flutter purchase event keys and StoreKit transaction ID; Google productsv2, acknowledge, Voided Purchases polling; Apple server transaction-info, verified JWS and signed refund/revoke notifications; strict dev/test simulator; real staging sandbox; production defaults and mode guard; purchase/restore/replay/refund Postgres tests; online entitlement downgrade after refund. Contract and required key setup: `docs/B8_STORE_PURCHASE_CONTRACTS_AND_DEPLOYMENT.md`.
+
+**Evidence:** Backend B1, Infrastructure, Worker and RustFS were green on earlier exact SHA `ae42735`, after correcting Postgres TIMESTAMPTZ binding. This is *not* an acceptance claim for later commits. Official Play Console and App Store Connect accounts/keys are not connected; sandbox device E2E and FULL entitlement restore are unverified.
+
+**Known remaining P0:** real store sandbox purchase/restore/refund on both platforms; production credentials and notification endpoint config; exact-SHA green Flutter Main + Flutter Mock UI + Renderer; full publication v2 + RustFS + Drift offline acceptance; Store concurrency/rate limits and cross-device stolen-proof abuse hardening. Do not merge or launch.

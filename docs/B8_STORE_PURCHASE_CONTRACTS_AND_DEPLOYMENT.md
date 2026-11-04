@@ -128,10 +128,20 @@ These strings are never valid proof in production. Flutter's mock billing adapte
 - [ ] Latest SHA must pass full B1/Flutter/Renderer CI; existing unit/integration tests do not prove real store authority yet.
 - [ ] Real Play Console license-tester purchases and Apple StoreKit sandbox transactions on isolated staging, including acknowledgment and restore.
 - [ ] Configure production keys, App Store Connect V2 notification endpoint, Google permissions and alerting (requires developer accounts).
-- [ ] Expose and consume an authoritative entitlement refresh endpoint in Flutter to synchronize refunds after reconnect. Previously downloaded offline files cannot be remotely recalled while the device is offline.
+- [x] `GET /api/v1/purchases/entitlement` added; Flutter refreshes authoritative status after authenticated online bootstrap and downgrades cached FULL when a refund is detected. Added Flutter tests for refund, success, offline and malformed payload. Existing offline downloads cannot be remotely recalled while a device is offline; continuous foreground revalidation remains future hardening.
 - [ ] Add per-install rate limits, App Attest/Play Integrity risk checks if needed, unusual restore-rate alerting, and Store notification history backfill.
 - [ ] Full Backend ↔ Flutter v2 catalogue/media/assessment/Drift offline qualification, twelve-language QA, responsive Renderer CI.
 
 **Replay/security limitation without app accounts:** a Store-verified transaction ID/purchase token is not in itself proof that a second anonymous device belongs to the original purchaser if the token leaks. We allow legitimate Store restore and share access across installations only after rechecking the Store, but cannot eliminate stolen-proof cross-device replay without device attestation or user binding. Never portray hash uniqueness as a complete anti-fraud solution. Use short request rate limits, no proof logging and optional Play Integrity/App Attest.
 
 **Release decision:** NO MERGE / NO COMMERCIAL LAUNCH until official sandbox E2E, refund/restore and all exact-SHA CI gates are accepted.
+
+## 8. Implementation log — 2026-11-04
+
+- B8 PostgreSQL ledger, store purchase claims, single event semantic fingerprint, immutable provider identity and verified entitlement, `d55e5f0`.
+- Google productsv2/OAuth2 plus nonconsumable acknowledge and Apple server transaction/JWS authenticity (Apple official Java library), `0facf43`.
+- Google Voided Purchases scheduled reconciliation, signed Apple Notification V2 handlers, monotonic refund/reversal state, `28fd1e3`.
+- Strict dev/test simulator `sim:v1:`, staging real test Store environment, prod real paid environment, `65de684`; production startup guard rejects simulated overrides.
+- Flutter stable event key and Apple transaction ID, `68d8ded`, mock purchase/restore stable ownership, `bd4251b`.
+- Postgres B8 integration tests passed Backend Foundation on `ae42735` for purchase, restore, replay, refund and reversal; **this does not prove store network credentials or device restore**.
+- Authoritative online entitlement revalidation API + Flutter startup reconciliation, added after `db1233f`; pending latest exact-SHA Flutter acceptance.

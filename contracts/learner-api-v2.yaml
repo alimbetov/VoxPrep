@@ -288,6 +288,29 @@ paths:
         '500': { $ref: '#/components/responses/ApiError' }
         '503': { $ref: '#/components/responses/ApiError' }
 
+  /api/v1/purchases/entitlement:
+    get:
+      operationId: getCurrentInstallationEntitlement
+      description: >-
+        Reconciles the cached Flutter FULL/FREE state against authoritative,
+        store-verified purchase claims. No Store proof or account registration
+        is required. Returns FREE after a verified refund/revocation. Offline
+        clients may retain the last cached snapshot until reconnect; the
+        backend continues to enforce current entitlement on protected data.
+      responses:
+        '200':
+          description: Current installation entitlement.
+          headers:
+            Cache-Control:
+              schema: { type: string, example: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PurchaseVerificationResponse'
+        '401': { $ref: '#/components/responses/ApiError' }
+        '403': { $ref: '#/components/responses/ApiError' }
+        '500': { $ref: '#/components/responses/ApiError' }
+
   /api/v1/purchases/verify:
     post:
       operationId: verifyStorePurchase
