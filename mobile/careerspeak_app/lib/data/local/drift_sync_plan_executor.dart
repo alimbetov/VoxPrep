@@ -1063,7 +1063,16 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
                           row.revision.equals(ref.contentRevision),
                     ))
                     .getSingleOrNull();
-            if (payload == null) {
+            final locked = await _isFrozenFullContent(
+              code: ref.contentCode,
+              type: ref.contentType.toLowerCase(),
+              revision: ref.contentRevision,
+              checksum: local.checksum,
+              contentVersion: plan.target.contentVersion,
+              enabled: plan.target.schemaVersion >= 2 &&
+                  plan.target.catalogues.isNotEmpty,
+            );
+            if (payload == null && !locked) {
               throw const _SyncExecutorInvariant(
                 ApplicationFailure(
                   code: 'SYNC_TARGET_PAYLOAD_MISSING',
@@ -1072,7 +1081,7 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
                 ),
               );
             }
-            if (payload.checksum != local.checksum) {
+            if (payload != null && payload.checksum != local.checksum) {
               throw const _SyncExecutorInvariant(
                 ApplicationFailure(
                   code: 'SYNC_TARGET_PAYLOAD_MISMATCH',
@@ -1112,7 +1121,15 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
                         ),
                   ))
                   .getSingleOrNull();
-          if (payload == null) {
+          final locked = await _isFrozenFullContent(
+            code: ref.contentCode,
+            type: ref.contentType.toLowerCase(),
+            revision: ref.contentRevision,
+            contentVersion: plan.target.contentVersion,
+            enabled: plan.target.schemaVersion >= 2 &&
+                plan.target.catalogues.isNotEmpty,
+          );
+          if (payload == null && !locked) {
             throw const _SyncExecutorInvariant(
               ApplicationFailure(
                 code: 'SYNC_TARGET_LOCALIZATION_MISSING',
