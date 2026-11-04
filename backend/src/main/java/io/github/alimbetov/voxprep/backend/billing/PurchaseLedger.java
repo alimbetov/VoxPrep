@@ -47,10 +47,17 @@ public class PurchaseLedger {
             VALUES (?,?,?,?,?,?,?,now())
             ON CONFLICT (provider,product_id,transaction_sha256) DO UPDATE
                SET purchase_state=CASE
+                       -- Authenticated store notifications/reconciliation outrank
+                       -- later client-submitted verifications of older proofs.
+                       WHEN app.store_purchase.latest_store_event_at IS NOT NULL
+                           THEN app.store_purchase.purchase_state
                        WHEN app.store_purchase.purchase_state='REVOKED' THEN 'REVOKED'
                        ELSE excluded.purchase_state END,
                    verified_at=COALESCE(app.store_purchase.verified_at,excluded.verified_at),
-                   environment=excluded.environment,
+                   environment=CASE
+                       WHEN app.store_purchase.latest_store_event_at IS NOT NULL
+                           THEN app.store_purchase.environment
+                       ELSE excluded.environment END,
                    updated_at=now()
             RETURNING id
             """, UUID.class, UUID.randomUUID(), decision.provider(), decision.productId(),
