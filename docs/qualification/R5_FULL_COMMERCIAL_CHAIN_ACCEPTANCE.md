@@ -183,6 +183,19 @@ Record one row per R5 test with: test ID; commit SHA; PR; environment; app build
 
 No user accounts/cloud progress, face recognition, visual similarity ML, new object-storage service, full CMS workflow engine, public media CDN, subscriptions, server-side review history, or multi-user authoring roles. These are not preconditions for release. This document defines acceptance; production changes and tests must be delivered incrementally in subsequent exact-SHA commits, never claimed complete from documentation alone.
 
+## Implementation ledger — R5.1 partial (2026-11-04)
+
+First production slice committed on this branch:
+
+- Added `MediaLibraryService`: list READY assets by compatible role, verify preview checksum/size, reuse identical READY image by compatible kind+MIME+size+SHA-256, PostgreSQL advisory lock around deduplicating upload, and delegate binding to existing immutable-revision guard.
+- Added `MediaLibraryMvcController` and server-rendered `admin/media/index.html`: authenticated `/admin/media` picker, bounded upload, checksum-checked preview, POST bind to draft; linked the picker from Content Studio content form.
+- Added repository queries, multipart bounds, and `MediaLibraryServiceTest` security/integrity unit cases.
+- No new tables or public RustFS URLs. Object storage bucket uses the existing `voxprep.storage.bucket` configuration.
+
+**Not yet accepted:** no verified exact-SHA CI for this implementation; no complete MVC HTTP/CSRF integration test; no actual browser/device evidence; no metadata search/tag/license editor; no dimensions/decompression-bomb enforcement, image optimization or thumbnail processing; no crash-consistent concurrent fault-injection acceptance; no Publication UI or XML importer completion. Signature matching is an initial validation layer, not complete image decoding/security. Do not claim ML1–ML6 or R5-01/02/13 closed from these commits. Root N/N+1, billing, restore and offline remain R5 follow-up slices.
+
+The ingestion transaction spans RustFS I/O for dedup arbitration. A storage write followed by DB rollback can leave an orphan. Existing H2 inventory/recovery is an advisory starting point; design an explicit durable ingest/reservation and recovery policy before production acceptance. Never auto-delete suspected orphans.
+
 ## Second-pass review outcome
 
 **Specification completeness is improved, implementation is not claimed.** Existing PR is documentation-only. The reviewed code confirms particular failure modes and unimplemented contracts that acceptance must address, but this review has not executed a complete runtime test of media, stores or devices. Prioritise DEC-01 and DEC-02 before writing an offline premium implementation, then R5.1/R5.2. Keep PR draft and preserve existing CI gates.
