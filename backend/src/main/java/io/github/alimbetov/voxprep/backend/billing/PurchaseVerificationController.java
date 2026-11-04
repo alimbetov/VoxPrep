@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +32,14 @@ public class PurchaseVerificationController {
                         request.provider(), request.productId(),
                         request.purchaseEventId(), request.verificationData()));
         return ResponseEntity.ok().header("Cache-Control", "no-store").body(result);
+    }
+
+    @GetMapping("/api/v1/purchases/entitlement")
+    public ResponseEntity<LifetimePurchaseService.VerificationResult> entitlement(
+            @AuthenticationPrincipal InstallationPrincipal principal) {
+        if (principal == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        return ResponseEntity.ok().header("Cache-Control", "no-store")
+                .body(service.currentEntitlement(principal.installationId()));
     }
 
     public record Request(@NotBlank String provider, @NotBlank String productId,

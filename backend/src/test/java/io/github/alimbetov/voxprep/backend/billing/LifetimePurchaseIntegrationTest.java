@@ -36,6 +36,8 @@ class LifetimePurchaseIntegrationTest {
         assertThat(service.verify(second, request("GOOGLE_PLAY","restore-1",proof)).verified()).isTrue();
         assertThat(ledger.hasEntitlement(first)).isTrue();
         assertThat(ledger.hasEntitlement(second)).isTrue();
+        assertThat(service.currentEntitlement(second).verified()).isTrue();
+        assertThat(service.currentEntitlement(second).accessLevel()).isEqualTo("FULL");
     }
 
     @Test
@@ -59,6 +61,7 @@ class LifetimePurchaseIntegrationTest {
         assertThat(service.verify(restored,request("GOOGLE_PLAY","restore",granted)).verified()).isTrue();
         assertThat(service.verify(first,request("GOOGLE_PLAY","refund",revoked)).verified()).isFalse();
         assertThat(ledger.hasEntitlement(restored)).isFalse();
+        assertThat(service.currentEntitlement(restored).accessLevel()).isEqualTo("FREE");
         // Re-submitting an older GRANTED proof cannot undo a refund tombstone.
         assertThat(service.verify(first,request("GOOGLE_PLAY","stale-replay",granted)).verified()).isFalse();
     }

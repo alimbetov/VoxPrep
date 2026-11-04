@@ -77,6 +77,22 @@ public class PurchaseLedger {
         return active != null && active > 0;
     }
 
+    /** Authoritative entitlement status consumed by Flutter after reconnect. */
+    @Transactional(readOnly = true)
+    public java.util.Optional<Instant> verifiedAt(UUID installationId) {
+        var matches = jdbc.query("""
+            SELECT MAX(purchase.verified_at)
+              FROM app.store_purchase_claim claim
+              JOIN app.store_purchase purchase ON purchase.id = claim.purchase_id
+              JOIN app.installation i ON i.installation_id = claim.installation_id
+             WHERE claim.installation_id = ?
+               AND purchase.purchase_state = 'GRANTED' AND i.status = 'ACTIVE'
+            """, (rs, row) -> rs.getTimestamp(1), installationId);
+        return matches.isEmpty() || matches.getFirst() == null
+                ? java.util.Optional.empty()
+                : java.util.Optional.of(matches.getFirst().toInstant());
+    }
+
     /**
      * Store-authenticated revocations use a monotonic provider event time;
      * delayed/replayed notifications cannot overwrite more recent decisions.

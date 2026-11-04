@@ -42,6 +42,12 @@ public class LifetimePurchaseService {
                 full ? Instant.now() : null);
     }
 
+    public VerificationResult currentEntitlement(UUID installationId) {
+        return ledger.verifiedAt(Objects.requireNonNull(installationId))
+                .map(verifiedAt -> new VerificationResult(true, "FULL", verifiedAt))
+                .orElseGet(() -> new VerificationResult(false, "FREE", null));
+    }
+
     public record PurchaseProof(String provider, String productId, String purchaseEventId,
                                 String verificationData) {}
     public record VerificationResult(boolean verified, String accessLevel, Instant verifiedAt) {}
