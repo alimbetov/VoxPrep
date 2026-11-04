@@ -184,10 +184,15 @@ final class _Session implements AudioPlaybackSession {
       const Success<void>(null);
 
   @override
-  Future<Result<void>> stop() async => const Success<void>(null);
+  Future<Result<void>> stop() async {
+    debugPrint('[A1-AUDIO] fake session stop');
+    return const Success<void>(null);
+  }
 
   @override
-  Future<void> dispose() async {}
+  Future<void> dispose() async {
+    debugPrint('[A1-AUDIO] fake session dispose');
+  }
 }
 
 final class _LearnerState implements LearnerStateRepository {
@@ -225,5 +230,8 @@ final class _LearnerState implements LearnerStateRepository {
     ContentIdentity identity, {
     required int positionMs,
     int? lastRevisionSeen,
-  }) async => const Success<void>(null);
+  }) async {
+    debugPrint('[A1-AUDIO] fake progress save');
+    return const Success<void>(null);
+  }
 }
