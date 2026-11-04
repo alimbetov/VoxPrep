@@ -30,6 +30,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * A1 system test: real committed PostgreSQL publication + live Spring MVC HTTP
@@ -70,9 +72,11 @@ class A1RealBackendFlutterAcceptanceTest {
     @Autowired private PublicationCandidateRepository candidates;
     @Autowired private PublicationCandidateManifestService manifests;
     @Autowired private PublicationPublisher publisher;
+    @Autowired private PlatformTransactionManager transactionManager;
 
     @Test
     void flutterSynchronizesActualMixedFreeFullPublishedRelease() throws Exception {
+        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
         var icon = ingest.ingest(new FileAssetIngestService.IngestCommand(
                 FileAssetKind.COVER_IMAGE,
                 "voxprep-assets",
@@ -149,6 +153,7 @@ class A1RealBackendFlutterAcceptanceTest {
         assertThat(validation.valid()).as("Publication fixture validation: %s", validation.issues()).isTrue();
         var publication = publisher.publish(candidate.getId(), PUBLISHED);
         assertThat(publication.replayed()).isFalse();
+        }); // Commit the fixture before the separate Flutter process reads HTTP.
 
         var flutterDirectory = new File(System.getProperty(
                 "voxprep.a1.flutter.dir", "../mobile/careerspeak_app"));
