@@ -83,7 +83,7 @@ void main() {
 
     expect(find.text('Future Track'), findsOneWidget);
     expect(find.text('Future Collection'), findsOneWidget);
-    expect(find.text('1 items'), findsOneWidget);
+    expect(find.text('1 learning items'), findsOneWidget);
   });
 
   testWidgets('collection preserves ordered learning sequence', (tester) async {
@@ -100,7 +100,7 @@ void main() {
     );
 
     expect(find.text('Future Collection'), findsOneWidget);
-    expect(find.text('Learning sequence'), findsOneWidget);
+    expect(find.text('Your learning sequence'), findsOneWidget);
     expect(find.text('CONTENT_ALPHA'), findsOneWidget);
     expect(find.text('Step 1'), findsOneWidget);
   });
@@ -113,7 +113,7 @@ void main() {
       const CatalogueVerticalScreen(verticalCode: 'UNKNOWN_VERTICAL'),
     );
 
-    expect(find.text('Learning vertical is unavailable.'), findsOneWidget);
+    expect(find.text('This learning path is unavailable.'), findsOneWidget);
   });
 
   testWidgets('goal cannot be opened through a different vertical', (
@@ -129,7 +129,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Learning goal is unavailable.'), findsOneWidget);
+    expect(find.text('This learning goal is unavailable.'), findsOneWidget);
     expect(find.text('Future Goal'), findsNothing);
   });
 
@@ -147,7 +147,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Learning track is unavailable.'), findsOneWidget);
+    expect(find.text('This learning track is unavailable.'), findsOneWidget);
     expect(find.text('Future Track'), findsNothing);
   });
 
@@ -166,7 +166,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Learning collection is unavailable.'), findsOneWidget);
+    expect(find.text('This learning collection is unavailable.'), findsOneWidget);
     expect(find.text('Future Collection'), findsNothing);
   });
 
@@ -183,7 +183,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Learning collection is unavailable.'), findsOneWidget);
+    expect(find.text('This learning collection is unavailable.'), findsOneWidget);
   });
 
   testWidgets('inactive vertical is never learner-visible', (tester) async {
@@ -212,7 +212,7 @@ void main() {
 
     expect(find.text('Future Goal'), findsNothing);
     expect(
-      find.text('No learning goals are published for this vertical.'),
+      find.text('No learning goals are available for this path yet.'),
       findsOneWidget,
     );
   });
@@ -232,7 +232,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Learning track is unavailable.'), findsOneWidget);
+    expect(find.text('This learning track is unavailable.'), findsOneWidget);
   });
 
   testWidgets('inactive collection cannot be deep-linked', (tester) async {
@@ -251,7 +251,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Learning collection is unavailable.'), findsOneWidget);
+    expect(find.text('This learning collection is unavailable.'), findsOneWidget);
   });
 
   testWidgets('missing CURRENT catalogue renders an explicit empty state', (
