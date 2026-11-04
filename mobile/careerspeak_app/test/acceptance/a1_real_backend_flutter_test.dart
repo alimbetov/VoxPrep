@@ -135,8 +135,10 @@ void main() {
           ),
         );
         expect(premium, isA<FailureResult<ApiResponse>>());
+        final premiumFailure = (premium as FailureResult<ApiResponse>).failure;
+        expect(premiumFailure.code, 'FORBIDDEN');
         expect(
-          (premium as FailureResult<ApiResponse>).failure.code,
+          premiumFailure.details['backendCode'],
           'PREMIUM_UNLOCK_REQUIRED',
         );
 
