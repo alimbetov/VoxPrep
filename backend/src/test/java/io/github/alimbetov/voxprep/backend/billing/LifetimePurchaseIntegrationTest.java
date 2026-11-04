@@ -174,13 +174,16 @@ class LifetimePurchaseIntegrationTest {
         String validHash = PurchaseDigest.sha256("unrelated-refund");
         assertThatThrownBy(() -> ledger.applyStoreEvent("NOT_A_STORE", PRODUCT,
                 validHash, Environment.SIMULATED, State.REVOKED, at))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(org.springframework.dao.InvalidDataAccessApiUsageException.class)
+                .hasCauseInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> ledger.applyStoreEvent("GOOGLE_PLAY",
                 "unrelated_product", validHash, Environment.SIMULATED,
-                State.REVOKED, at)).isInstanceOf(IllegalArgumentException.class);
+                State.REVOKED, at)).isInstanceOf(org.springframework.dao.InvalidDataAccessApiUsageException.class)
+                .hasCauseInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(() -> ledger.applyStoreEvent("GOOGLE_PLAY",
                 PRODUCT, "malformed", Environment.SIMULATED,
-                State.REVOKED, at)).isInstanceOf(IllegalArgumentException.class);
+                State.REVOKED, at)).isInstanceOf(org.springframework.dao.InvalidDataAccessApiUsageException.class)
+                .hasCauseInstanceOf(IllegalArgumentException.class);
         assertThat(service.currentEntitlement(id).verified()).isFalse();
     }
 
