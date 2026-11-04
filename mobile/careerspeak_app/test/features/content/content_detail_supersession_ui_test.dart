@@ -28,6 +28,7 @@ void main() {
         learnerState: learnerState,
       );
 
+      debugPrint('[A1-AUDIO] entering test');
       try {
         await tester.pumpWidget(
           ProviderScope(
@@ -40,6 +41,7 @@ void main() {
             ),
           ),
         );
+        debugPrint('[A1-AUDIO] widget mounted');
         // Do not pumpAndSettle against an asynchronous playback state:
         // an in-flight audio resolve deliberately has an animated spinner.
         for (
@@ -50,6 +52,7 @@ void main() {
         ) {
           await tester.pump();
         }
+        debugPrint('[A1-AUDIO] initial play button located');
         expect(find.widgetWithText(FilledButton, 'Play'), findsOneWidget);
 
         final play = tester.widget<FilledButton>(
@@ -65,12 +68,14 @@ void main() {
         ) {
           await tester.pump();
         }
+        debugPrint('[A1-AUDIO] resolve calls: ${resolver.pending.length}');
         expect(resolver.pending, hasLength(2));
 
         resolver.complete(0, _asset('superseded'));
         await tester.pump();
         expect(find.textContaining('Audio playback failed:'), findsNothing);
 
+        debugPrint('[A1-AUDIO] losing completion handled');
         resolver.complete(1, _asset('winner'));
         for (var frame = 0; frame < 5; frame++) {
           await tester.pump();
@@ -78,14 +83,19 @@ void main() {
         expect(find.textContaining('Audio playback failed:'), findsNothing);
         expect(find.text('Pause'), findsOneWidget);
         expect(engine.openedAssetIds, <String>['winner']);
+        debugPrint('[A1-AUDIO] winning completion asserted');
       } finally {
+        debugPrint('[A1-AUDIO] entering cleanup');
         // Riverpod's StreamProvider is listening to controller.states.
         // Unmount it *before* awaiting the broadcast controller's close().
         // Otherwise test finalization can await a paused FakeAsync listener
         // indefinitely even if the supersession behavior is correct.
         await tester.pumpWidget(const SizedBox.shrink());
+        debugPrint('[A1-AUDIO] widget unmounted');
         await tester.pump();
+        debugPrint('[A1-AUDIO] controller closing');
         await controller.dispose();
+        debugPrint('[A1-AUDIO] controller closed');
       }
     },
   );
