@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/fragments/shell :: layout('Create content', 'content', ~{::main})}">
+<main>
+    <h1 class="h3">Create first content revision</h1>
+    <p class="text-secondary">New content starts in DRAFT revision 1. The editor and publication lifecycle validate it before release.</p>
+    <form method="post" th:action="@{/admin/content/revisions}" th:object="${form}">
+        <input type="hidden" th:field="*{expectedVersion}">
+        <div th:if="${#fields.hasErrors('*')}" class="alert alert-danger">
+            <div th:each="error : ${#fields.errors('*')}" th:text="${error}"></div>
+        </div>
+        <div class="card studio-card mb-4"><div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6"><label class="form-label">Content code</label><input name="contentCode" class="form-control" required maxlength="128" pattern="[A-Za-z0-9][A-Za-z0-9._-]*" placeholder="INTERVIEW_INTRO_01"></div>
+                <div class="col-md-6"><label class="form-label">Content type</label><select class="form-select" th:field="*{bodyType}">
+                    <option value="phrase">Phrase</option><option value="vocabulary">Vocabulary</option>
+                    <option value="interview">Interview</option><option value="topic">Topic</option>
+                    <option value="shadowing">Shadowing</option><option value="question">Question</option>
+                    <option value="practice_test">Practice test</option>
+                </select></div>
+                <div class="col-12"><label class="form-label">Title</label><input th:field="*{title}" class="form-control" required maxlength="512"></div>
+                <div class="col-12"><label class="form-label">Subtitle</label><input th:field="*{subtitle}" class="form-control" required maxlength="512"></div>
+                <div class="col-12"><label class="form-label">Description</label><textarea th:field="*{description}" class="form-control" required maxlength="4000"></textarea></div>
+                <div class="col-md-4"><label class="form-label">Category</label><input th:field="*{categoryCode}" class="form-control" required></div>
+                <div class="col-md-4"><label class="form-label">Level</label><input th:field="*{levelCode}" class="form-control" required></div>
+                <div class="col-md-2"><label class="form-label">Minutes</label><input th:field="*{minutes}" type="number" min="1" class="form-control" required></div>
+                <div class="col-md-2"><label class="form-label">Availability</label><select th:field="*{availability}" class="form-select"><option value="ACTIVE">ACTIVE</option><option value="INACTIVE">INACTIVE</option></select></div>
+                <div class="col-12"><label class="form-label">Skills (one code per line)</label><textarea th:field="*{skillCodes}" class="form-control"></textarea></div>
+            </div>
+        </div></div>
+        <div class="card studio-card mb-4"><div class="card-body">
+            <h2 class="h5">Content body</h2>
+            <p class="text-secondary small">Fill only the fields applicable to the selected type. After creation use the standard draft editor.</p>
+            <div class="row g-3">
+                <div class="col-md-6"><label class="form-label">Phrase</label><input th:field="*{phrase}" class="form-control"></div>
+                <div class="col-md-6"><label class="form-label">Usage</label><input th:field="*{usage}" class="form-control"></div>
+                <div class="col-12"><label class="form-label">Examples (one per line)</label><textarea th:field="*{examples}" class="form-control"></textarea></div>
+                <div class="col-md-4"><label class="form-label">Term</label><input th:field="*{term}" class="form-control"></div>
+                <div class="col-md-4"><label class="form-label">Definition</label><input th:field="*{definition}" class="form-control"></div>
+                <div class="col-md-4"><label class="form-label">Part of speech</label><input th:field="*{partOfSpeech}" class="form-control"></div>
+                <div class="col-12"><label class="form-label">Prompt</label><textarea th:field="*{prompt}" class="form-control"></textarea></div>
+                <div class="col-12"><label class="form-label">Model answer</label><textarea th:field="*{modelAnswer}" class="form-control"></textarea></div>
+                <div class="col-12"><label class="form-label">Key points (one per line)</label><textarea th:field="*{keyPoints}" class="form-control"></textarea></div>
+                <div class="col-12"><label class="form-label">Topic sections (heading|text per line)</label><textarea th:field="*{sections}" class="form-control"></textarea></div>
+                <div class="col-12"><label class="form-label">Transcript</label><textarea th:field="*{transcript}" class="form-control"></textarea></div>
+                <div class="col-12"><label class="form-label">Segments (startMs|endMs|text)</label><textarea th:field="*{segments}" class="form-control"></textarea></div>
+                <div class="col-12"><label class="form-label">Question text</label><textarea th:field="*{questionText}" class="form-control"></textarea></div>
+                <div class="col-12"><label class="form-label">Explanation</label><textarea th:field="*{explanation}" class="form-control"></textarea></div>
+                <div class="col-12"><label class="form-label">Options (key|true|text per line)</label><textarea th:field="*{options}" class="form-control"></textarea></div>
+                <div class="col-12"><label class="form-label">Practice test instructions</label><textarea th:field="*{instructions}" class="form-control"></textarea></div>
+                <div class="col-md-4"><label class="form-label">Passing score percent</label><input type="number" min="0" max="100" th:field="*{passingScorePercent}" class="form-control"></div>
+                <div class="col-12"><label class="form-label">Question revision IDs (one UUID per line)</label><textarea th:field="*{questionRevisionIds}" class="form-control"></textarea></div>
+            </div>
+        </div></div>
+        <button class="btn btn-primary" type="submit">Create DRAFT revision 1</button>
+        <a class="btn btn-outline-secondary" th:href="@{/admin/content}">Cancel</a>
+    </form>
+</main>
+</html>
