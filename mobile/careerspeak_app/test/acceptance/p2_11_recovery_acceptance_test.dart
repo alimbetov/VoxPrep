@@ -413,10 +413,12 @@ Map<String, Object?> _rootManifest(int revision) {
     'catalogues': <Object?>[],
     'tombstones': <Object?>[],
   };
-  final decoded = const ContentManifestDecoder().decodeRoot(payload)
+  final decoded = const ContentManifestDecoder()
+      .decodeRoot(payload)
       .getOrThrow();
-  payload['checksum'] =
-      const PublicationManifestCanonicalizer().rootDigest(decoded);
+  payload['checksum'] = const PublicationManifestCanonicalizer().rootDigest(
+    decoded,
+  );
   return payload;
 }
 
@@ -441,10 +443,12 @@ Map<String, Object?> _packManifest(int revision) {
     'assets': <Object?>[],
     'contentAssets': <Object?>[],
   };
-  final decoded = const ContentManifestDecoder().decodePack(payload)
+  final decoded = const ContentManifestDecoder()
+      .decodePack(payload)
       .getOrThrow();
-  payload['checksum'] =
-      const PublicationManifestCanonicalizer().packDigest(decoded);
+  payload['checksum'] = const PublicationManifestCanonicalizer().packDigest(
+    decoded,
+  );
   return payload;
 }
 
