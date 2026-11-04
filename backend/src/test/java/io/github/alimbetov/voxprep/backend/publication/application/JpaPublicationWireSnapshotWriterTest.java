@@ -221,6 +221,7 @@ class JpaPublicationWireSnapshotWriterTest {
             when(member.getContentRevision()).thenReturn(revision);
             when(revision.getIdentity()).thenReturn(ref.identity());
             when(revision.getChecksum()).thenReturn(ref.checksum());
+            when(revision.getPublishedAt()).thenReturn(NOW);
             when(revision.getContentType()).thenReturn(ContentType.PHRASE);
             when(revision.getContentCode()).thenReturn(new BusinessCode("PHRASE_ONE"));
             when(revision.getId()).thenReturn(REVISION);
