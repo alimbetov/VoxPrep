@@ -1,0 +1,56 @@
+package io.github.alimbetov.voxprep.backend.catalogue.web.mvc;
+
+import io.github.alimbetov.voxprep.backend.catalogue.application.CollectionMembershipRevisionService;
+import io.github.alimbetov.voxprep.backend.catalogue.persistence.CollectionContentMemberRepository;
+import io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningCollectionRepository;
+import io.github.alimbetov.voxprep.backend.content.web.AdminContentStudioMvc;
+import java.util.UUID;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+/** Operator action; no JSON API bypasses session authentication or CSRF. */
+@AdminContentStudioMvc
+@Controller
+@RequestMapping("/admin/catalogue/collections/{collectionId}/members")
+public class CollectionMembershipMvcController {
+    private final LearningCollectionRepository collections;
+    private final CollectionContentMemberRepository members;
+    private final CollectionMembershipRevisionService membership;
+
+    public CollectionMembershipMvcController(LearningCollectionRepository collections,
+            CollectionContentMemberRepository members, CollectionMembershipRevisionService membership) {
+        this.collections = collections;
+        this.members = members;
+        this.membership = membership;
+    }
+
+    @GetMapping
+    public String index(@PathVariable UUID collectionId, Model model) {
+        var collection = collections.findById(collectionId)
+                .orElseThrow(() -> new IllegalArgumentException("Collection not found"));
+        model.addAttribute("activeSection", "catalogue");
+        model.addAttribute("collection", collection);
+        model.addAttribute("members", members.findAllByCollectionIdOrderByPositionAsc(collectionId).stream()
+                .map(member -> new MemberView(member.getId(), member.getPosition(),
+                        member.getContentRevision().getContentCode().value(),
+                        member.getContentRevision().getRevisionNumber().value()))
+                .toList());
+        return "admin/catalogue/members";
+    }
+
+    @PostMapping("/{memberId}/replace")
+    public String replace(@PathVariable UUID collectionId, @PathVariable UUID memberId,
+            @RequestParam UUID newRevisionId, RedirectAttributes redirect) {
+        membership.replace(collectionId, memberId, newRevisionId);
+        redirect.addFlashAttribute("flashSuccess", "Collection member now references new approved revision.");
+        return "redirect:/admin/catalogue/collections/" + collectionId + "/members";
+    }
+
+    public record MemberView(UUID id, int position, String code, int revision) {}
+}
