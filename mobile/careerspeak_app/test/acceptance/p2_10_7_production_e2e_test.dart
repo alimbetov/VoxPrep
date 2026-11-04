@@ -245,8 +245,11 @@ void main() {
       // Dispose ProviderScope and its Drift subscriptions before closing the
       // database in tearDown. This also proves the E2E owns no dangling work.
       await tester.pumpWidget(const SizedBox.shrink());
+      container.dispose();
       debugPrint('RENDERER_CHECKPOINT cleanup-widget-disposed');
-      await tester.pump();
+      // Riverpod retries use fake-async timers; after disposing the owner,
+      // advance the clock once to assert that no retry timers survive.
+      await tester.pump(const Duration(milliseconds: 500));
     },
   );
 }
