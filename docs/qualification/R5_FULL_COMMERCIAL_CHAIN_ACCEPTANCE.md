@@ -226,7 +226,47 @@ Scope boundary: the initial content and catalogue hierarchy remain controlled JP
 - The first N+1 run found a production defect: the frozen pack writer used the *new release* timestamp for unchanged exact content revisions; Flutter correctly rejected it as `CONTENT_REVISION_IMMUTABLE_CONFLICT`. Writer now uses `revision.getPublishedAt()`, leaving the root's new `publishedAt` independent. The unit writer fixture was updated to represent an already-published revision.
 - HTTP redirect assertions were fixed to accept absolute Spring MVC `Location`; Flutter formatting is enforced by CI. Every change must be re-qualified at the final commit SHA.
 
-**Still out of scope for this slice:** HTTP authoring of complete catalogue hierarchy + membership creation, real image upload within the exact same A1 publication (separately exercised by the Media Library HTTP test), real store transactions, restore/refund/device tests, interrupted N+1 rollback fault injection, and a full production learner UI interaction test. Acceptance statements must not merge these independent gates.
+**Still out of scope for this slice:** real image upload within the exact same A1 publication (separately exercised by the Media Library HTTP test), real store transactions, restore/refund/device tests, interrupted N+1 rollback fault injection, and a full production learner UI interaction test. Acceptance statements must not merge these independent gates.
+
+## R5.3 — complete ADMIN HTTP authoring and publication chain (2026-11-04)
+
+The real A1 acceptance has now passed with the following production HTTP path:
+
+```
+Content Studio create first revisions (phrase, question, practice test)
+  → Media READY image (application ingest, already separately HTTP-qualified)
+  → ADMIN catalogue Vertical → Goal → Track → FREE/FULL Collections
+  → HTTP image binding + content review/approval
+  → HTTP initial CollectionContentMember append (CSRF/session)
+  → ADMIN publication candidate → validate/freeze → publish CURRENT N
+  → real Flutter HTTP → Drift N + local favorite + image bytes
+  → ADMIN next revision → edit → approve → replace collection slot
+  → ADMIN candidate N+1 → immutable publish
+  → same Flutter process + SQLite database sync to N+1
+  → new title/revision + preserved favorite + offline reopen
+```
+
+The `CollectionMembershipRevisionService.append` serializes slot allocation under
+the PostgreSQL collection-row lock, refuses unapproved revisions, repeated
+exact revisions and duplicate logical identities, and maintains contiguous
+positions. Admin POST remains protected by the existing Spring Security CSRF.
+
+**Verified:** A1 real integration workflow on SHA
+`99bb51abdf124b237ecf0efe5c8a060ea657afb6` succeeded.
+B1/B8/H2/Renderer and A1 Flutter Regression also succeeded on that SHA.
+Do not infer a final all-green check set or apply this evidence to later SHAs
+without querying their workflow results.
+
+**Boundary:** The A1 test still invokes the FileAsset ingest and assessment
+configuration application services, with a separate opt-in real Media Library
+HTTP/CSRF/dedup acceptance. These are not *catalogue or membership fixture*
+writes. Actual production store purchase/restore/revoke acceptance and
+interrupted N+1 recovery remain separate gates.
+
+**Next acceptance:** inject interruption during N+1 staging/commit and verify
+atomic CURRENT and learner-state retention; then exercise purchase/restore and
+store notifications in provider sandbox using actual Google Play / Apple
+contracts, not simulated entitlements.
 
 ## Second-pass review outcome
 
