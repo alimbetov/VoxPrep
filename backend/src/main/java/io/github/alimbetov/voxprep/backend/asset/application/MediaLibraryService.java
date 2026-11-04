@@ -36,7 +36,7 @@ public class MediaLibraryService {
     public MediaLibraryService(FileAssetRepository files, FileAssetIngestService ingest,
             ContentAssetBindingService bindings, ObjectStoragePort storage,
             JdbcTemplate jdbc, org.springframework.transaction.PlatformTransactionManager manager,
-            @Value("${voxprep.media-library.bucket:voxprep-assets}") String bucket) {
+            @Value("${voxprep.storage.bucket}") String bucket) {
         this.files = files;
         this.ingest = ingest;
         this.bindings = bindings;
