@@ -90,36 +90,36 @@
                     <div class="col-md-6"><label class="form-label">Term</label><input class="form-control" th:field="*{term}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></div>
                     <div class="col-md-6"><label class="form-label">Part of speech</label><input class="form-control" th:field="*{partOfSpeech}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></div>
                     <div class="col-12"><label class="form-label">Definition</label><textarea class="form-control" rows="3" th:field="*{definition}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea></div>
-                    <div class="col-12"><label class="form-label">Examples</label><textarea class="form-control" rows="4" th:field="*{examples}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">One example per line.</div></div>
+                    <div class="col-12"><label class="form-label">Examples</label><textarea data-structured="examples" class="form-control" rows="4" th:field="*{examples}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">One example per line.</div></div>
                 </div>
 
                 <div th:if="${form.bodyType == 'interview'}" class="row g-3">
                     <div class="col-12"><label class="form-label">Prompt</label><textarea class="form-control" rows="3" th:field="*{prompt}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea></div>
                     <div class="col-12"><label class="form-label">Model answer</label><textarea class="form-control" rows="5" th:field="*{modelAnswer}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea></div>
-                    <div class="col-12"><label class="form-label">Key points</label><textarea class="form-control" rows="4" th:field="*{keyPoints}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">One key point per line.</div></div>
+                    <div class="col-12"><label class="form-label">Key points</label><textarea data-structured="keyPoints" class="form-control" rows="4" th:field="*{keyPoints}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">One key point per line.</div></div>
                 </div>
 
                 <div th:if="${form.bodyType == 'topic'}">
                     <label class="form-label">Sections</label>
-                    <textarea class="form-control font-monospace" rows="10" th:field="*{sections}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea>
+                    <textarea data-structured="sections" class="form-control font-monospace" rows="10" th:field="*{sections}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea>
                     <div class="form-text">One section per line: <code>heading|text</code>.</div>
                 </div>
 
                 <div th:if="${form.bodyType == 'phrase'}" class="row g-3">
                     <div class="col-12"><label class="form-label">Phrase</label><input class="form-control" th:field="*{phrase}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></div>
                     <div class="col-12"><label class="form-label">Usage</label><textarea class="form-control" rows="3" th:field="*{usage}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea></div>
-                    <div class="col-12"><label class="form-label">Examples</label><textarea class="form-control" rows="4" th:field="*{examples}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">One example per line.</div></div>
+                    <div class="col-12"><label class="form-label">Examples</label><textarea data-structured="examples" class="form-control" rows="4" th:field="*{examples}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">One example per line.</div></div>
                 </div>
 
                 <div th:if="${form.bodyType == 'shadowing'}" class="row g-3">
                     <div class="col-12"><label class="form-label">Transcript</label><textarea class="form-control" rows="6" th:field="*{transcript}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea></div>
-                    <div class="col-12"><label class="form-label">Segments</label><textarea class="form-control font-monospace" rows="8" th:field="*{segments}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">One segment per line: <code>startMs|endMs|text</code>. Start/end may be empty.</div></div>
+                    <div class="col-12"><label class="form-label">Segments</label><textarea data-structured="segments" class="form-control font-monospace" rows="8" th:field="*{segments}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">One segment per line: <code>startMs|endMs|text</code>. Start/end may be empty.</div></div>
                 </div>
 
                 <div th:if="${form.bodyType == 'question'}" class="row g-3">
                     <div class="col-12"><label class="form-label">Question</label><textarea class="form-control" rows="3" th:field="*{questionText}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea></div>
                     <div class="col-12"><label class="form-label">Explanation</label><textarea class="form-control" rows="4" th:field="*{explanation}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea></div>
-                    <div class="col-12"><label class="form-label">Options</label><textarea class="form-control font-monospace" rows="8" th:field="*{options}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">One option per line: <code>key|true|text</code>.</div></div>
+                    <div class="col-12"><label class="form-label">Options</label><textarea data-structured="options" class="form-control font-monospace" rows="8" th:field="*{options}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">One option per line: <code>key|true|text</code>.</div></div>
                 </div>
 
                 <div th:if="${form.bodyType == 'practice_test'}" class="row g-3">
