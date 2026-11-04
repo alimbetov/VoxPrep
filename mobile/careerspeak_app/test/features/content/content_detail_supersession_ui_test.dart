@@ -64,7 +64,12 @@ void main() {
       expect(find.textContaining('Audio playback failed:'), findsNothing);
 
       resolver.complete(1, _asset('winner'));
-      await tester.pumpAndSettle();
+      // A resolving spinner is an intentionally non-settling animation.
+      // Pump a bounded number of frames so a regression fails with its
+      // actual UI state rather than exhausting the CI timeout.
+      for (var frame = 0; frame < 5; frame++) {
+        await tester.pump();
+      }
 
       expect(find.textContaining('Audio playback failed:'), findsNothing);
       expect(find.text('Pause'), findsOneWidget);
