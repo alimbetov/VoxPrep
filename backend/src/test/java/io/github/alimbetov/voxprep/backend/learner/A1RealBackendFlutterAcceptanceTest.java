@@ -83,9 +83,16 @@ class A1RealBackendFlutterAcceptanceTest {
 
     @Test
     void flutterSynchronizesActualMixedFreeFullPublishedRelease() throws Exception {
-        // Real HTTP creation: initial FREE revision is no longer a JPA fixture.
-        UUID authoredId = new R5AdminHttpPublicationWorkflow(serverPort, adminUsername, adminPassword)
-                .createPhrase(FREE_CODE, "Interview introduction", "Could you introduce yourself?");
+        // All four source content revisions are created through authenticated
+        // Content Studio MVC HTTP. JPA is used only to assemble unrelated
+        // catalogue/membership fixture rows and assert the resulting identities.
+        var browser = new R5AdminHttpPublicationWorkflow(serverPort, adminUsername, adminPassword);
+        UUID authoredId = browser.createPhrase(FREE_CODE, "Interview introduction",
+                "Could you introduce yourself?");
+        UUID fullId = browser.createPhrase(FULL_CODE, "Advanced interview strategies",
+                "What was your hardest architecture decision?");
+        UUID questionId = browser.createQuestion(QUESTION_CODE);
+        UUID practiceTestId = browser.createPracticeTest(TEST_CODE, questionId);
         var adminPublication = new java.util.concurrent.atomic.AtomicReference<PublicationHttpFixture>();
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
         var icon = ingest.ingest(new FileAssetIngestService.IngestCommand(
@@ -97,26 +104,9 @@ class A1RealBackendFlutterAcceptanceTest {
                 Base64.getDecoder().decode(ICON_PNG)));
 
         var free = revisions.findById(authoredId).orElseThrow();
-        var full = phrase(FULL_CODE, "Advanced interview strategies",
-                "What was your hardest architecture decision?");
-
-        var question = revisions.saveAndFlush(new QuestionContentRevisionEntity(
-                new BusinessCode(QUESTION_CODE), new RevisionNumber(1),
-                new Sha256Digest("a".repeat(64)),
-                "Dependency injection", "Choose the best answer", "Java basics",
-                new CatalogueCode("GENERAL"), new CatalogueCode("B1"), 1,
-                List.of(new CatalogueCode("GRAMMAR")), AvailabilityStatus.ACTIVE,
-                "What is dependency injection?", "Decoupling construction from use.",
-                List.of(
-                        new QuestionOptionEmbeddable("A", "Pass dependencies through a constructor", true),
-                        new QuestionOptionEmbeddable("B", "Use global mutable state", false))));
-        var test = revisions.saveAndFlush(new PracticeTestContentRevisionEntity(
-                new BusinessCode(TEST_CODE), new RevisionNumber(1),
-                new Sha256Digest("b".repeat(64)),
-                "Backend basics", "First assessment", "Knowledge check",
-                new CatalogueCode("GENERAL"), new CatalogueCode("B1"), 3,
-                List.of(new CatalogueCode("GRAMMAR")), AvailabilityStatus.ACTIVE,
-                "Choose one option", 80, List.of(question.getId())));
+        var full = revisions.findById(fullId).orElseThrow();
+        var question = revisions.findById(questionId).orElseThrow();
+        var test = revisions.findById(practiceTestId).orElseThrow();
         assessmentConfig.configure(test.getId(), "exam", List.of(3));
 
         // The FREE draft is reviewed via real Content Studio HTTP after image binding.
