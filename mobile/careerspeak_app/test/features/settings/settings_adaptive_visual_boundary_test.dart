@@ -57,7 +57,10 @@ void main() {
               attempt < 18 && target.evaluate().isEmpty;
               attempt++
             ) {
-              await tester.drag(find.byType(Scrollable).first, const Offset(0, -180));
+              await tester.drag(
+                find.byType(Scrollable).first,
+                const Offset(0, -180),
+              );
               await tester.pumpAndSettle();
             }
             expect(target, findsWidgets);
