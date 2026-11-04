@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -53,12 +54,15 @@ public class PublicationStudioMvcController {
     }
 
     @GetMapping
+    @Transactional(readOnly = true)
     public String index(Model model) {
         model.addAttribute("activeSection", "publication");
         model.addAttribute("candidates", candidates.findAll(
                 PageRequest.of(0, 100, Sort.by(Sort.Direction.DESC, "createdAt"))).getContent());
         model.addAttribute("currentRelease", current.findById(PublicationCurrentEntity.SINGLETON_ID)
-                .map(PublicationCurrentEntity::getRelease).orElse(null));
+                .map(PublicationCurrentEntity::getRelease)
+                .map(release -> new CurrentReleaseView(release.getContentVersion(), release.getRootSha256()))
+                .orElse(null));
         return "admin/publication/index";
     }
 
@@ -109,6 +113,8 @@ public class PublicationStudioMvcController {
                 "CURRENT publication v" + result.contentVersion() + ", SHA-256 " + result.rootSha256());
         return "redirect:/admin/publication";
     }
+
+    public record CurrentReleaseView(long contentVersion, String rootSha256) {}
 
     static List<PublicationExactContentRef> parseRefs(String source) {
         List<PublicationExactContentRef> refs = new ArrayList<>();
