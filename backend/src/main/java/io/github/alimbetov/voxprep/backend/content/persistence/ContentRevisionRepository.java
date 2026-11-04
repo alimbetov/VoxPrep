@@ -19,6 +19,15 @@ public interface ContentRevisionRepository extends JpaRepository<ContentRevision
             Collection<ContentLifecycleStatus> statuses, String title, Pageable pageable);
 
 
+    @Query("""
+            select q from QuestionContentRevisionEntity q
+            where q.lifecycle in :statuses
+              and (:title = '' or lower(q.title) like lower(concat('%', :title, '%')))
+            """)
+    Page<QuestionContentRevisionEntity> searchApprovedQuestions(
+            @Param("statuses") Collection<ContentLifecycleStatus> statuses,
+            @Param("title") String title, Pageable pageable);
+
     @Query(value = "select id from app.content_revision where id = :id for update", nativeQuery = true)
     Optional<UUID> lockRevisionIdForUpdate(@Param("id") UUID id);
 
