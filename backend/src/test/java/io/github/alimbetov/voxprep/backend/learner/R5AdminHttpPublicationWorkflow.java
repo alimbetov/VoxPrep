@@ -213,7 +213,7 @@ final class R5AdminHttpPublicationWorkflow {
             assertThat(appended.statusCode()).isEqualTo(302);
             var refreshed = get(http, path);
             assertThat(refreshed.statusCode()).isEqualTo(200);
-            assertThat(refreshed.body()).contains("revision 1");
+            assertThat(refreshed.body()).contains("Replace for next publication");
             var id = java.util.regex.Pattern.compile(
                     "/members/([0-9a-f-]{36})/replace")
                     .matcher(refreshed.body());
