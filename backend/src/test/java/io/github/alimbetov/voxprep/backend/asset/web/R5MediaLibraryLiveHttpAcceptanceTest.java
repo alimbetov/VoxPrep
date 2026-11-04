@@ -106,6 +106,20 @@ class R5MediaLibraryLiveHttpAcceptanceTest {
                 assertThat(binding.getFileAsset().getId()).isEqualTo(imageId);
             }
 
+            // Actual publication controller must reject an empty candidate without
+            // allowing an invalid root to become CURRENT.
+            var createCandidate = form(http, base.resolve("/admin/publication/candidates"), token, "");
+            assertThat(createCandidate.statusCode()).isEqualTo(302);
+            String candidatePath = createCandidate.headers().firstValue("location").orElseThrow();
+            assertThat(candidatePath).contains("/admin/publication/candidates/");
+            var candidatePage = get(http, base.resolve(candidatePath));
+            assertThat(candidatePage.statusCode()).isEqualTo(200);
+            var rejected = form(http, base.resolve(candidatePath + "/validate"),
+                    token, "exactRefs=");
+            assertThat(rejected.statusCode()).isEqualTo(302);
+            var draftAfterFailure = get(http, base.resolve(candidatePath));
+            assertThat(draftAfterFailure.body()).contains("DRAFT");
+
             var missingCsrf = http.send(HttpRequest.newBuilder(base.resolve("/admin/media/bind"))
                     .header("Content-Type", "application/x-www-form-urlencoded")
                     .POST(HttpRequest.BodyPublishers.ofString(
