@@ -16,6 +16,8 @@ import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringS
 import io.github.alimbetov.voxprep.backend.content.application.ContentAdminQueryService;
 import io.github.alimbetov.voxprep.backend.content.application.ContentDraftUpdate;
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
+import io.github.alimbetov.voxprep.backend.content.persistence.QuestionContentRevisionEntity;
+import io.github.alimbetov.voxprep.backend.content.persistence.QuestionOptionEmbeddable;
 import io.github.alimbetov.voxprep.backend.content.persistence.VocabularyContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.sharedkernel.AvailabilityStatus;
 import io.github.alimbetov.voxprep.backend.sharedkernel.BusinessCode;
@@ -79,6 +81,48 @@ class ContentMvcIntegrationTest {
         var candidates = adminQuery.approvedCandidates("Vocabulary title", 0);
         assertThat(candidates.getContent()).extracting("id").contains(approved.getId());
         assertThat(candidates.getContent()).extracting("id").doesNotContain(draft.getId());
+    }
+
+    @Test
+    void practiceTestPickerListsOnlyApprovedQuestionsAndRequiresAdmin() throws Exception {
+        var approved = repository.saveAndFlush(question());
+        approved.markReadyForAudio();
+        approved.markReadyForReview();
+        approved.approve(Instant.now());
+        repository.saveAndFlush(approved);
+        var draft = repository.saveAndFlush(question());
+
+        mockMvc.perform(get("/admin/content/questions/approved")
+                        .with(user("admin").roles("ADMIN"))
+                        .param("q", "R5 question picker"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(approved.getId().toString())))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        containsString(draft.getId().toString()))));
+
+        mockMvc.perform(get("/admin/content/questions/approved")
+                        .with(user("learner").roles("USER")))
+                .andExpect(status().isForbidden());
+    }
+
+    private static QuestionContentRevisionEntity question() {
+        return new QuestionContentRevisionEntity(
+                new BusinessCode("mvc-question-" + UUID.randomUUID()),
+                new RevisionNumber(1),
+                new Sha256Digest("a".repeat(64)),
+                "R5 question picker",
+                "Question subtitle",
+                "Question description",
+                new CatalogueCode("INTERVIEW"),
+                new CatalogueCode("B2"),
+                2,
+                List.of(new CatalogueCode("SPEAKING")),
+                AvailabilityStatus.ACTIVE,
+                "What is the correct answer?",
+                "Explanation text",
+                List.of(
+                        new QuestionOptionEmbeddable("A", "Correct answer", true),
+                        new QuestionOptionEmbeddable("B", "Incorrect answer", false)));
     }
 
     @Test
