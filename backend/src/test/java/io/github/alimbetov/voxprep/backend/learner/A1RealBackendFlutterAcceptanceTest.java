@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIfSystemProperty;
@@ -60,6 +61,12 @@ class A1RealBackendFlutterAcceptanceTest {
     @Value("${local.server.port}")
     private int serverPort;
 
+    @Value("${voxprep.security.admin.username}")
+    private String adminUsername;
+
+    @Value("${voxprep.security.admin.password}")
+    private String adminPassword;
+
     @Autowired private ContentRevisionRepository revisions;
     @Autowired private FileAssetIngestService ingest;
     @Autowired private ContentAssetBindingService binding;
@@ -76,6 +83,7 @@ class A1RealBackendFlutterAcceptanceTest {
 
     @Test
     void flutterSynchronizesActualMixedFreeFullPublishedRelease() throws Exception {
+        var adminPublication = new java.util.concurrent.atomic.AtomicReference<PublicationHttpFixture>();
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
         var icon = ingest.ingest(new FileAssetIngestService.IngestCommand(
                 FileAssetKind.COVER_IMAGE,
@@ -89,7 +97,6 @@ class A1RealBackendFlutterAcceptanceTest {
                 "Could you introduce yourself?");
         var full = phrase(FULL_CODE, "Advanced interview strategies",
                 "What was your hardest architecture decision?");
-        binding.bind(free.getId(), ContentAssetRole.COVER_IMAGE, icon.getId(), null);
 
         var question = revisions.saveAndFlush(new QuestionContentRevisionEntity(
                 new BusinessCode(QUESTION_CODE), new RevisionNumber(1),
@@ -149,11 +156,16 @@ class A1RealBackendFlutterAcceptanceTest {
                 new PublicationExactContentRef(full.getIdentity(), full.getChecksum()),
                 new PublicationExactContentRef(test.getIdentity(), test.getChecksum()),
                 new PublicationExactContentRef(question.getIdentity(), question.getChecksum()));
-        var validation = manifests.validateAndFreeze(candidate.getId(), refs, APPROVED.plusSeconds(600));
-        assertThat(validation.valid()).as("Publication fixture validation: %s", validation.issues()).isTrue();
-        var publication = publisher.publish(candidate.getId(), PUBLISHED);
-        assertThat(publication.replayed()).isFalse();
-        }); // Commit the fixture before the separate Flutter process reads HTTP.
+        adminPublication.set(new PublicationHttpFixture(free.getId(), icon.getId(), candidate.getId(), refs));
+        }); // Commit fixture before ADMIN HTTP binding and publish (separate transaction).
+
+        var fixture = adminPublication.get();
+        assertThat(fixture).isNotNull();
+        new R5AdminHttpPublicationWorkflow(serverPort, adminUsername, adminPassword)
+                .bindAndPublish(fixture.revisionId(), fixture.assetId(),
+                        fixture.candidateId(), fixture.refs());
+        // Flutter must consume the publication produced by Content Studio HTTP, not
+        // by a direct test call to PublicationPublisher or ContentAssetBindingService.
 
         var flutterDirectory = new File(System.getProperty(
                 "voxprep.a1.flutter.dir", "../mobile/careerspeak_app"));
@@ -202,6 +214,9 @@ class A1RealBackendFlutterAcceptanceTest {
         assertThat(process.exitValue()).as("Real Flutter HTTP/Drift A1 acceptance:\n%s", output).isZero();
         assertThat(output.toString()).contains("A1_REAL_BACKEND_ACCEPTED");
     }
+
+    private record PublicationHttpFixture(UUID revisionId, UUID assetId, UUID candidateId,
+            List<PublicationExactContentRef> refs) {}
 
     private PhraseContentRevisionEntity phrase(String code, String title, String phrase) {
         return revisions.saveAndFlush(new PhraseContentRevisionEntity(
