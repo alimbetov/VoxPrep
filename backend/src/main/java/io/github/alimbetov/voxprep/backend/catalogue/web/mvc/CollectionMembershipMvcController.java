@@ -6,6 +6,7 @@ import io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningCollect
 import io.github.alimbetov.voxprep.backend.content.web.AdminContentStudioMvc;
 import java.util.UUID;
 import org.springframework.stereotype.Controller;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -31,11 +32,13 @@ public class CollectionMembershipMvcController {
     }
 
     @GetMapping
+    @Transactional(readOnly = true)
     public String index(@PathVariable UUID collectionId, Model model) {
         var collection = collections.findById(collectionId)
                 .orElseThrow(() -> new IllegalArgumentException("Collection not found"));
         model.addAttribute("activeSection", "catalogue");
-        model.addAttribute("collection", collection);
+        model.addAttribute("collectionCode", collection.getCode().value());
+        model.addAttribute("collectionId", collectionId);
         model.addAttribute("members", members.findAllByCollectionIdOrderByPositionAsc(collectionId).stream()
                 .map(member -> new MemberView(member.getId(), member.getPosition(),
                         member.getContentRevision().getContentCode().value(),
