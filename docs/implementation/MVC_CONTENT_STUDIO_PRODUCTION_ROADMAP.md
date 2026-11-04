@@ -1,6 +1,6 @@
 # MVC Content Studio production roadmap (R5 follow-up)
 
-Status: MVC-R5 Practice Test question selector implemented; MVC-R6 real-job status/MP3-preview initial slice implemented; exact-head CI and real audio acceptance pending; NOT release accepted.
+Status: MVC-R5 Practice Test question selector implemented; MVC-R6 real-job status, generation command and verified MP3-preview implemented; exact-head CI and real audio acceptance pending; NOT release accepted.
 Branch: feat/r5-commercial-chain-qualification. R5 store gates remain independent and mandatory.
 
 ## Existing guarantees
@@ -36,8 +36,9 @@ Branch: feat/r5-commercial-chain-qualification. R5 store gates remain independen
 
 - Editor embeds existing revision-scoped TTS jobs (role, language, model, attempts, status, failure code) rather than mock records.
 - READY audio preview `GET /admin/content/revisions/{revisionId}/tts/jobs/{jobId}/preview` verifies exact revision ownership, TTS_AUDIO kind, READY job/asset state, audio/mpeg and media size/hash through LearnerMediaService. Never exposes RustFS keys or Worker access.
-- No regeneration button until the existing Backend job/fingerprint application service is identified and authorized for admin review; implementing a direct database write or Worker HTTP call would violate TTS contract.
-- Remaining: generation/regeneration commands with idempotency and role-selection, per-job model/voice controls, real Piper→RustFS→MVC playback acceptance, failures/retries and concurrency tests.
+- The content editor offers role and ACTIVE voice model selection for READY_FOR_AUDIO content. POST /admin/content/revisions/{revisionId}/tts/prepare delegates to existing TtsJobPreparationService, preserving advisory-locked fingerprint idempotency, immutable job/file identities and backend-owned TTS lifecycle. Identical fingerprint returns existing job; altered model/revision gives new job. Session auth + CSRF apply.
+- No forced regeneration of identical fingerprint, no Worker direct call, no mutating APPROVED or PUBLISHED revisions.
+- Remaining: real Piper→RustFS→MVC playback acceptance, failure/retry UX, concurrency qualification, detailed QC and business approval integration.
 
 ## Work remaining (NOT implemented)
 
