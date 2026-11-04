@@ -10,6 +10,7 @@ import 'package:careerspeak_app/application/ports/installation_credential_store.
 import 'package:careerspeak_app/application/query/content_query.dart';
 import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/application/services/asset_download_manager.dart';
+import 'package:careerspeak_app/application/services/installation_auth_recovery_api_client.dart';
 import 'package:careerspeak_app/application/services/installation_bootstrap_service.dart';
 import 'package:careerspeak_app/application/services/installation_identity_service.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
@@ -196,6 +197,33 @@ void main() {
         final downloaded = (await manager.ensureLocal(image)).getOrThrow();
         expect(await File(downloaded.localPath).exists(), isTrue);
         expect(downloaded.reused, isFalse);
+
+        // A rejected installation credential cannot rotate itself and cannot
+        // be replaced by registering the same UUID anonymously. The offline
+        // data remains intact; no fresh token is created by the 401 handler.
+        const rejectedToken = 'invalid-a1-credential';
+        await store.writeInstallationToken(InstallationToken(rejectedToken));
+        final protectedApi = InstallationAuthRecoveryApiClient(
+          delegate: api,
+          credentialStore: store,
+        );
+        final rejected = await protectedApi.send(
+          ApiRequest(
+            method: ApiMethod.get,
+            path: '/api/v1/content/phrase/$_freeCode/revisions/1',
+          ),
+        );
+        expect(rejected, isA<FailureResult<ApiResponse>>());
+        expect((rejected as FailureResult<ApiResponse>).failure.code,
+            'UNAUTHORIZED');
+        final illegalRotation = await HttpInstallationRegistrationGateway(
+          apiClient: api,
+          credentialStore: store,
+        ).register(credentials.installationId);
+        expect(illegalRotation, isA<FailureResult<InstallationToken>>());
+        expect(await store.readInstallationToken(),
+            InstallationToken(rejectedToken));
+        await store.writeInstallationToken(credentials.installationToken);
 
         // No HTTP client or Spring Boot is consulted for local state after
         // the database is closed and reopened from a real SQLite file.
