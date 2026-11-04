@@ -7,11 +7,14 @@ import '../result/result.dart';
 /// Reconciles the cached purchase snapshot with server-authoritative ownership.
 /// Offline errors preserve the last local snapshot; online FREE clears stale FULL.
 final class EntitlementStatusRefreshService {
-  const EntitlementStatusRefreshService({
+  factory EntitlementStatusRefreshService({
     required ApiClient apiClient,
     required AccessSnapshotRepository repository,
-  }) : _apiClient = apiClient,
-       _repository = repository;
+  }) {
+    return EntitlementStatusRefreshService._(apiClient, repository);
+  }
+
+  const EntitlementStatusRefreshService._(this._apiClient, this._repository);
 
   final ApiClient _apiClient;
   final AccessSnapshotRepository _repository;
