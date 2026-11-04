@@ -4,6 +4,7 @@ import io.github.alimbetov.voxprep.backend.content.application.ContentAdminQuery
 import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringConflictException;
 import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringService;
 import io.github.alimbetov.voxprep.backend.content.application.ContentRevisionSnapshot;
+import io.github.alimbetov.voxprep.backend.content.domain.ContentLifecycleStatus;
 import io.github.alimbetov.voxprep.backend.sharedkernel.AvailabilityStatus;
 import io.github.alimbetov.voxprep.backend.tts.application.TtsReviewQueryService;
 import io.github.alimbetov.voxprep.backend.sharedkernel.BusinessCode;
@@ -229,6 +230,10 @@ public class ContentMvcController {
         model.addAttribute("form", form);
         model.addAttribute("lifecycleForm", lifecycleForm);
         model.addAttribute("ttsJobs", ttsReview.latest(revision.id()));
+        if (revision.lifecycle() == ContentLifecycleStatus.READY_FOR_AUDIO) {
+            model.addAttribute("ttsModels", ttsReview.availableModels());
+            model.addAttribute("ttsRoles", ttsReview.rolesFor(revision.contentType()));
+        }
         model.addAttribute("availabilityValues", AvailabilityStatus.values());
         return "admin/content/form";
     }
