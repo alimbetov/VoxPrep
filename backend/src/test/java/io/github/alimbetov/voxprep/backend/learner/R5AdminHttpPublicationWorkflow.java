@@ -18,6 +18,8 @@ import java.util.regex.Pattern;
 
 /** Test-only browser client; real servlet HTTP, session cookie, Thymeleaf CSRF, PostgreSQL. */
 final class R5AdminHttpPublicationWorkflow {
+    private static final Pattern VERSION = Pattern.compile(
+            "name=\\\"expectedVersion\\\"[^>]*value=\\\"([0-9]+)\\\"");
     private static final Pattern CSRF = Pattern.compile(
             "name=\"_csrf\"[^>]*value=\"([^\"]+)\"|name=\"_csrf\"[^>]*content=\"([^\"]+)\"");
     private final URI base;
@@ -50,6 +52,22 @@ final class R5AdminHttpPublicationWorkflow {
             assertThat(bind.statusCode()).isEqualTo(302);
             assertThat(bind.headers().firstValue("location").orElse(""))
                     .contains("/admin/content/revisions/" + revisionId + "/edit");
+
+            // Prove actual Content Studio lifecycle DRAFT → READY_FOR_AUDIO
+            // → READY_FOR_REVIEW → APPROVED before publication.
+            String editPath = "/admin/content/revisions/" + revisionId + "/edit";
+            for (String step : List.of("ready-for-audio", "review", "approve")) {
+                var edit = get(http, editPath);
+                assertThat(edit.statusCode()).isEqualTo(200);
+                var version = VERSION.matcher(edit.body());
+                assertThat(version.find()).as("expectedVersion exists in lifecycle form").isTrue();
+                String payload = "expectedVersion=" + enc(version.group(1))
+                        + "&reason=R5_ACCEPTANCE&comment=Live+HTTP+workflow";
+                var change = post(http,
+                        "/admin/content/revisions/" + revisionId + "/" + step, token, payload);
+                assertThat(change.statusCode()).as(step).isEqualTo(302);
+            }
+            assertThat(get(http, editPath).body()).contains("APPROVED");
 
             StringBuilder lines = new StringBuilder();
             for (var ref : refs) {
