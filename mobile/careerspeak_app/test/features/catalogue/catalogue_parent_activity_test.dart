@@ -25,7 +25,7 @@ void main() {
       const CatalogueGoalScreen(verticalCode: 'VERTICAL_A', goalCode: 'GOAL_A'),
     );
 
-    expect(find.text('Learning goal is unavailable.'), findsOneWidget);
+    expect(find.text('This learning goal is unavailable.'), findsOneWidget);
     expect(find.text('Goal A'), findsNothing);
   });
 
@@ -42,7 +42,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Learning track is unavailable.'), findsOneWidget);
+    expect(find.text('This learning track is unavailable.'), findsOneWidget);
     expect(find.text('Track A'), findsNothing);
   });
 
@@ -60,7 +60,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Learning collection is unavailable.'), findsOneWidget);
+    expect(find.text('This learning collection is unavailable.'), findsOneWidget);
     expect(find.text('Collection A'), findsNothing);
   });
 
@@ -78,7 +78,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Learning collection is unavailable.'), findsOneWidget);
+      expect(find.text('This learning collection is unavailable.'), findsOneWidget);
     },
   );
 
