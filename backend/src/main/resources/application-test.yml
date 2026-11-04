@@ -9,6 +9,8 @@ spring:
     contexts: test
 
 voxprep:
+  billing:
+    mode: simulated
   storage:
     endpoint: ${VOXPREP_STORAGE_ENDPOINT:http://127.0.0.1:19000}
   security:
