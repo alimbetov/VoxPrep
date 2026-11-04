@@ -59,7 +59,9 @@ class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> {
           ),
         );
         final localizedHint = localized.asData?.value?.hint;
-        final typed = ref.watch(typedContentByIdentityProvider(widget.identity));
+        final typed = ref.watch(
+          typedContentByIdentityProvider(widget.identity),
+        );
 
         return Column(
           children: [
