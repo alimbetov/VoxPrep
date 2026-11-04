@@ -36,10 +36,16 @@ public class LifetimePurchaseService {
         // can become a GRANTED ledger entry; the Flutter Boolean is never trusted.
         StoreDecision decision = verifier.verify(proof.provider(), proof.productId(),
                 proof.verificationData());
-        boolean entitled = ledger.record(installationId, proof.purchaseEventId(), semanticHash, decision);
-        boolean full = decision.state() == StorePurchaseVerifier.State.GRANTED && entitled;
-        return new VerificationResult(full, full ? "FULL" : "FREE",
-                full ? Instant.now() : null);
+        // Provider adapter mistakes must fail closed before any durable claim.
+        if (decision == null || !proof.provider().equals(decision.provider())
+                || !PRODUCT_ID.equals(decision.productId())) {
+            throw new IllegalArgumentException("Verified store identity does not match request");
+        }
+        ledger.record(installationId, proof.purchaseEventId(), semanticHash, decision);
+        // An independently authenticated store event may already have superseded
+        // this proof. Return the authoritative ledger state, never just the
+        // verifier's possibly stale GRANTED response.
+        return currentEntitlement(installationId);
     }
 
     public VerificationResult currentEntitlement(UUID installationId) {
