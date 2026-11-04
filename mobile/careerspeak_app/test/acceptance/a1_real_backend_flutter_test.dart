@@ -30,7 +30,7 @@ import 'package:careerspeak_app/data/remote/http_installation_registration_gatew
 import 'package:careerspeak_app/domain/installation_credentials.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http';
+import 'package:http/http.dart' as http;
 
 const _runRealBackend = bool.fromEnvironment('A1_REAL_BACKEND');
 const _backendUrl = String.fromEnvironment('A1_API_BASE_URL');
