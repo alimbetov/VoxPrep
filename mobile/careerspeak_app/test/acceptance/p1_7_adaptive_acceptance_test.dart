@@ -10,6 +10,7 @@ import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
   const widths = <double>[360, 600, 840, 1200];
@@ -47,7 +48,11 @@ void main() {
     await _pumpApp(tester, width: 360, textScale: MockTextScalePreview.normal);
 
     await _navigate(tester, 'Learn');
-    await tester.tap(find.text('Dependency Injection').first);
+    // Learn now opens the universal catalogue, whereas the content detail
+    // route remains deep-linkable. Verify the actual route across resizing.
+    GoRouter.of(
+      tester.element(find.byType(NavigationBar)),
+    ).go('/content/interview/JAVA_DI_001');
     await tester.pumpAndSettle();
 
     expect(find.text('Dependency Injection'), findsWidgets);
@@ -142,6 +147,11 @@ Future<void> _pumpApp(
 
   final database = CareerSpeakDatabase(NativeDatabase.memory());
   addTearDown(database.close);
+  // Navigation/resize acceptance begins after onboarding. Production sends
+  // a fresh installation to /onboarding; do not bypass redirect semantics.
+  await database.customStatement(
+    'UPDATE onboarding_state SET completed = 1, generation = 1 WHERE id = 1',
+  );
 
   await tester.pumpWidget(
     ProviderScope(
