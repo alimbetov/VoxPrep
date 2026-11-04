@@ -268,6 +268,27 @@ atomic CURRENT and learner-state retention; then exercise purchase/restore and
 store notifications in provider sandbox using actual Google Play / Apple
 contracts, not simulated entitlements.
 
+## R5.4 — interrupted N+1 sync qualification
+
+The Flutter A1 acceptance includes a test-only one-shot `ContentPayloadGateway`
+failure when fetching N+1 payload bytes after publication. Before retrying,
+it asserts that the persistent Drift CURRENT still references N, the FREE
+content still resolves to revision 1, and the learner's stable-identity
+favorite remains present. It then reruns real HTTP synchronization with an
+unmodified production gateway and verifies N+1, the revised title, the same
+favorite and offline reopen.
+
+This test covers **precommit payload-fetch interruption**. It does not prove
+power loss during SQLite commit, a corrupted staged payload, killed backend
+during publication, or an OS-level process kill. Those are separate
+fault-injection cases. The implementation commit must pass exact-SHA A1 before
+this subsection can be marked ACCEPTED.
+
+Next external commerce acceptance uses actual sandbox purchase/restore
+transactions, provider notification delivery, replayed transaction rejection,
+refund/revoke entitlement removal and offline entitlement recovery. Mock store
+responses do not count as real provider acceptance.
+
 ## Second-pass review outcome
 
 **Specification completeness is improved, implementation is not claimed.** Existing PR is documentation-only. The reviewed code confirms particular failure modes and unimplemented contracts that acceptance must address, but this review has not executed a complete runtime test of media, stores or devices. Prioritise DEC-01 and DEC-02 before writing an offline premium implementation, then R5.1/R5.2. Keep PR draft and preserve existing CI gates.
