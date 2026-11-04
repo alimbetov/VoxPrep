@@ -74,6 +74,7 @@ void main() {
             repository: assessmentRepository,
           ),
           catalogueGateway,
+          manifestGateway: manifestGateway,
         ),
       );
 
