@@ -51,7 +51,10 @@ void main() {
     );
 
     expect(find.text('Unlock this learning collection'), findsOneWidget);
-    expect(find.text('Collection is included with VoxPrep Full.'), findsOneWidget);
+    expect(
+      find.text('Collection is included with VoxPrep Full.'),
+      findsOneWidget,
+    );
     expect(find.text('Your learning sequence'), findsNothing);
     expect(find.text('CONTENT'), findsNothing);
   });
