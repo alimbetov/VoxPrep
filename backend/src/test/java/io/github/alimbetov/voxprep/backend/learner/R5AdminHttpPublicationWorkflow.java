@@ -42,7 +42,7 @@ final class R5AdminHttpPublicationWorkflow {
         return createContent(code, "Dependency injection", "question",
                 "&questionText=" + enc("What is dependency injection?")
                         + "&explanation=" + enc("Decoupling construction from use.")
-                        + "&options=" + enc("A|true|Pass dependencies through a constructor\\n"
+                        + "&options=" + enc("A|true|Pass dependencies through a constructor\n"
                                 + "B|false|Use global mutable state"));
     }
 
