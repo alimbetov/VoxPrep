@@ -110,6 +110,13 @@ public class PurchaseLedger {
                                 StorePurchaseVerifier.Environment environment,
                                 StorePurchaseVerifier.State state, Instant eventAt) {
         Objects.requireNonNull(eventAt);
+        Objects.requireNonNull(environment);
+        Objects.requireNonNull(state);
+        if (!("GOOGLE_PLAY".equals(provider) || "APP_STORE".equals(provider))
+                || !LifetimePurchaseService.PRODUCT_ID.equals(productId)
+                || transactionHash == null || !transactionHash.matches("[0-9a-f]{64}")) {
+            throw new IllegalArgumentException("Invalid authenticated Store event identity");
+        }
         jdbc.update("""
             INSERT INTO app.store_purchase(id,provider,product_id,transaction_sha256,
                 purchase_state,environment,verified_at,updated_at,latest_store_event_at)
