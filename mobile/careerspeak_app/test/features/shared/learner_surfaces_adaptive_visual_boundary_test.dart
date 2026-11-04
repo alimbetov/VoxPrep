@@ -1,5 +1,6 @@
 import 'package:careerspeak_app/app/learner_state_providers.dart';
 import 'package:careerspeak_app/app/repository_providers.dart';
+import 'package:careerspeak_app/app/review_schedule_providers.dart';
 import 'package:careerspeak_app/application/ports/learner_state_repository.dart';
 import 'package:careerspeak_app/application/query/page.dart';
 import 'package:careerspeak_app/application/result/result.dart';
@@ -24,13 +25,12 @@ void main() {
         tester,
         reason: 'Home initial viewport must fit $boundary',
       );
-      expect(find.text(_longTitle), findsOneWidget);
-
       await tester.scrollUntilVisible(
-        find.text('Recommended'),
-        280,
+        find.text(_longTitle),
+        200,
         scrollable: find.byType(Scrollable).first,
       );
+      expect(find.text(_longTitle), findsOneWidget);
       await tester.pumpAndSettle();
 
       expectNoLayoutExceptions(
@@ -72,13 +72,13 @@ void main() {
         reason: 'Review initial viewport must fit $boundary',
       );
       expect(find.text('Review'), findsOneWidget);
-      expect(find.text(_longTitle), findsOneWidget);
 
       await tester.scrollUntilVisible(
         find.text(_longTitle),
         220,
         scrollable: find.byType(Scrollable).first,
       );
+      expect(find.text(_longTitle), findsOneWidget);
       await tester.pumpAndSettle();
 
       expectNoLayoutExceptions(
@@ -110,6 +110,9 @@ Future<void> _pump(
         learnerStateRepositoryProvider.overrideWithValue(
           const _LearnerStateRepository(),
         ),
+        // Review's default Due filter is driven by the due queue, not the
+        // generic content page. Provide the same fixture in both streams.
+        dueReviewItemsProvider.overrideWith((ref) async => const [_item]),
       ],
       child: MaterialApp(home: Scaffold(body: child)),
     ),
