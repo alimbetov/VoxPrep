@@ -94,6 +94,34 @@ class PublicationPublisherTest {
     }
 
     @Test
+    void truncatesNanosecondPublishTimeToFlutterCanonicalMicroseconds() {
+        UUID candidateId = UUID.randomUUID();
+        var candidate = validatedCandidate(ROOT);
+        var ref = ref("phrase-publisher-micros", ContentType.PHRASE, 1, 'f');
+        var persisted = new PublicationCandidateManifestRefEntity(candidateId, 0, ref);
+        Instant nanos = Instant.parse("2026-11-04T08:12:34.123456789Z");
+        Instant micros = Instant.parse("2026-11-04T08:12:34.123456Z");
+
+        when(candidateRepository.findByIdForUpdate(candidateId)).thenReturn(Optional.of(candidate));
+        when(manifestRepository.findAllByCandidateIdOrderByPositionAsc(candidateId))
+                .thenReturn(List.of(persisted));
+        when(validator.validate(List.of(ref))).thenReturn(
+                new PublicationValidationResult(List.of(ref.canonicalKey()), List.of(), ROOT));
+        when(currentRepository.findByIdForUpdate(PublicationCurrentEntity.SINGLETON_ID))
+                .thenReturn(Optional.of(current));
+        when(versionAllocator.nextVersion()).thenReturn(11L);
+        when(releaseRepository.saveAndFlush(org.mockito.ArgumentMatchers.any(PublicationReleaseEntity.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        var result = publisher.publish(candidateId, nanos);
+
+        assertThat(result.publishedAt()).isEqualTo(micros);
+        verify(contentFreezer).freeze(List.of(ref), micros);
+        verify(current).switchTo(org.mockito.ArgumentMatchers.any(PublicationReleaseEntity.class),
+                org.mockito.ArgumentMatchers.eq(micros));
+    }
+
+    @Test
     void replayReturnsExistingReleaseWithoutAllocatingVersionOrMovingCurrent() {
         UUID candidateId = UUID.randomUUID();
         PublicationCandidateEntity candidate = validatedCandidate(ROOT);
