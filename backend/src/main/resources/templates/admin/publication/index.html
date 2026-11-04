@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/fragments/shell :: layout('Publication', 'publication', ~{::main})}">
+<main>
+    <h1 class="h3 mb-3">Publication</h1>
+    <p class="text-secondary">Only validated exact-revision manifests can be published. Activation is atomic.</p>
+    <div class="card studio-card mb-4"><div class="card-body">
+        <h2 class="h5">Current learner release</h2>
+        <p th:if="${currentRelease == null}">No active release</p>
+        <div th:if="${currentRelease != null}">
+            <strong>Content version <span th:text="${currentRelease.contentVersion}">1</span></strong>
+            <p class="small font-monospace text-break" th:text="${currentRelease.rootSha256}"></p>
+        </div>
+    </div></div>
+    <form th:action="@{/admin/publication/candidates}" method="post" class="mb-4">
+        <button class="btn btn-primary" type="submit">Create draft publication candidate</button>
+    </form>
+    <h2 class="h5 mb-3">Candidates</h2>
+    <div class="list-group">
+        <a class="list-group-item list-group-item-action" th:each="candidate : ${candidates}"
+           th:href="@{/admin/publication/candidates/{id}(id=${candidate.id})}">
+            <strong th:text="${candidate.id}">ID</strong>
+            <span class="badge text-bg-secondary ms-2" th:text="${candidate.status}">DRAFT</span>
+        </a>
+    </div>
+</main>
+</html>
