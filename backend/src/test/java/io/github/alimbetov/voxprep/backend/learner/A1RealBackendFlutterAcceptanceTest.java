@@ -2,24 +2,14 @@ package io.github.alimbetov.voxprep.backend.learner;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import io.github.alimbetov.voxprep.backend.asset.application.ContentAssetBindingService;
 import io.github.alimbetov.voxprep.backend.asset.application.FileAssetIngestService;
-import io.github.alimbetov.voxprep.backend.asset.domain.ContentAssetRole;
 import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetKind;
 import io.github.alimbetov.voxprep.backend.catalogue.domain.CatalogueCode;
-import io.github.alimbetov.voxprep.backend.catalogue.domain.CollectionAccessLevel;
-import io.github.alimbetov.voxprep.backend.catalogue.persistence.*;
+import io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningCollectionRepository;
 import io.github.alimbetov.voxprep.backend.content.application.AssessmentDeliveryConfigurationService;
-import io.github.alimbetov.voxprep.backend.content.persistence.*;
-import io.github.alimbetov.voxprep.backend.publication.application.PublicationCandidateManifestService;
-import io.github.alimbetov.voxprep.backend.publication.application.PublicationPublisher;
-import io.github.alimbetov.voxprep.backend.publication.domain.PublicationCandidateStatus;
+import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
 import io.github.alimbetov.voxprep.backend.publication.domain.PublicationExactContentRef;
-import io.github.alimbetov.voxprep.backend.publication.persistence.PublicationCandidateEntity;
-import io.github.alimbetov.voxprep.backend.publication.persistence.PublicationCandidateRepository;
-import io.github.alimbetov.voxprep.backend.sharedkernel.*;
 import java.io.File;
-import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -31,8 +21,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.transaction.PlatformTransactionManager;
-import org.springframework.transaction.support.TransactionTemplate;
 
 /**
  * A1 system test: real committed PostgreSQL publication + live Spring MVC HTTP
@@ -67,17 +55,8 @@ class A1RealBackendFlutterAcceptanceTest {
 
     @Autowired private ContentRevisionRepository revisions;
     @Autowired private FileAssetIngestService ingest;
-    @Autowired private ContentAssetBindingService binding;
-    @Autowired private VerticalRepository verticals;
-    @Autowired private LearningGoalRepository goals;
-    @Autowired private LearningTrackRepository tracks;
     @Autowired private LearningCollectionRepository collections;
-    @Autowired private CollectionContentMemberRepository members;
     @Autowired private AssessmentDeliveryConfigurationService assessmentConfig;
-    @Autowired private PublicationCandidateRepository candidates;
-    @Autowired private PublicationCandidateManifestService manifests;
-    @Autowired private PublicationPublisher publisher;
-    @Autowired private PlatformTransactionManager transactionManager;
 
     @Test
     void flutterSynchronizesActualMixedFreeFullPublishedRelease() throws Exception {
@@ -91,66 +70,40 @@ class A1RealBackendFlutterAcceptanceTest {
                 "What was your hardest architecture decision?");
         UUID questionId = browser.createQuestion(QUESTION_CODE);
         UUID practiceTestId = browser.createPracticeTest(TEST_CODE, questionId);
-        var adminPublication = new java.util.concurrent.atomic.AtomicReference<PublicationHttpFixture>();
-        new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
+        // Only storage ingestion and assessment scoring configuration use
+        // backend application services; neither creates catalogue/membership rows.
         var icon = ingest.ingest(new FileAssetIngestService.IngestCommand(
-                FileAssetKind.COVER_IMAGE,
-                "voxprep-assets",
-                "acceptance/a1/real-backend-icon.png",
-                "image/png",
-                Map.of(),
+                FileAssetKind.COVER_IMAGE, "voxprep-assets",
+                "acceptance/a1/real-backend-icon.png", "image/png", Map.of(),
                 Base64.getDecoder().decode(ICON_PNG)));
+        assessmentConfig.configure(practiceTestId, "exam", List.of(3));
 
-        var free = revisions.findById(authoredId).orElseThrow();
-        var full = revisions.findById(fullId).orElseThrow();
-        var question = revisions.findById(questionId).orElseThrow();
-        var test = revisions.findById(practiceTestId).orElseThrow();
-        assessmentConfig.configure(test.getId(), "exam", List.of(3));
-
-        // All draft lifecycle transitions are exercised via ADMIN HTTP below.
-
-        var vertical = verticals.saveAndFlush(new VerticalEntity(
-                new CatalogueCode("A1_CAREER"), new CatalogueCode("A1_TECH"),
-                "Career English", "Technical interviews", icon.getId().toString(),
-                0, AvailabilityStatus.ACTIVE));
-        var goal = goals.saveAndFlush(new LearningGoalEntity(
-                new CatalogueCode("A1_INTERVIEW"), vertical,
-                "Interview skills", "Prepare for interviews", 0, AvailabilityStatus.ACTIVE));
-        var track = tracks.saveAndFlush(new LearningTrackEntity(
-                new CatalogueCode("A1_JAVA"), goal,
-                "Java developer", "Technical English", new CatalogueCode("B1"), null,
-                0, AvailabilityStatus.ACTIVE));
-        var freeCollection = collections.saveAndFlush(new LearningCollectionEntity(
-                new CatalogueCode("A1_FREE"), track, "Start here",
-                "First free block", CollectionAccessLevel.FREE,
-                0, AvailabilityStatus.ACTIVE));
-        var fullCollection = collections.saveAndFlush(new LearningCollectionEntity(
-                new CatalogueCode("A1_FULL"), track, "Advanced",
-                "Premium block", CollectionAccessLevel.FULL,
-                1, AvailabilityStatus.ACTIVE));
-        var primaryMember = members.saveAndFlush(new CollectionContentMemberEntity(freeCollection, 0, free));
-        members.saveAndFlush(new CollectionContentMemberEntity(freeCollection, 1, test));
-        members.saveAndFlush(new CollectionContentMemberEntity(fullCollection, 0, full));
-
-        var candidate = candidates.saveAndFlush(new PublicationCandidateEntity(
-                PublicationCandidateStatus.DRAFT));
-        var refs = List.of(
-                new PublicationExactContentRef(free.getIdentity(), free.getChecksum()),
-                new PublicationExactContentRef(full.getIdentity(), full.getChecksum()),
-                new PublicationExactContentRef(test.getIdentity(), test.getChecksum()),
-                new PublicationExactContentRef(question.getIdentity(), question.getChecksum()));
-        adminPublication.set(new PublicationHttpFixture(free.getId(), icon.getId(), candidate.getId(),
-                freeCollection.getId(), primaryMember.getId(), refs));
-        }); // Commit fixture before ADMIN HTTP binding and publish (separate transaction).
-
-        var fixture = adminPublication.get();
-        assertThat(fixture).isNotNull();
+        // Real ADMIN HTTP creates the entire catalogue graph.
+        browser.createCatalogue(icon.getId());
         browser.approveDraft(fullId);
         browser.approveDraft(questionId);
         browser.approveDraft(practiceTestId);
-        new R5AdminHttpPublicationWorkflow(serverPort, adminUsername, adminPassword)
-                .bindAndPublish(fixture.revisionId(), fixture.assetId(),
-                        fixture.candidateId(), fixture.refs());
+
+        UUID freeCollectionId = collections.findByCode(new CatalogueCode("A1_FREE"))
+                .orElseThrow().getId();
+        UUID fullCollectionId = collections.findByCode(new CatalogueCode("A1_FULL"))
+                .orElseThrow().getId();
+        // Read-only repository lookups resolve IDs created by the actual MVC.
+        // The only writes to collection membership are CSRF-protected HTTP.
+        UUID primaryMemberId = browser.appendMember(freeCollectionId, authoredId);
+        browser.appendMember(freeCollectionId, practiceTestId);
+        browser.appendMember(fullCollectionId, fullId);
+
+        var refs = List.of(authoredId, fullId, practiceTestId, questionId).stream()
+                .map(id -> revisions.findById(id).orElseThrow())
+                .map(revision -> new PublicationExactContentRef(
+                        revision.getIdentity(), revision.getChecksum()))
+                .toList();
+        var fixture = new PublicationHttpFixture(authoredId, icon.getId(),
+                browser.createCandidate(), freeCollectionId, primaryMemberId, refs);
+        browser.bindAndPublish(fixture.revisionId(), fixture.assetId(),
+                fixture.candidateId(), fixture.refs());
+
         // Flutter must consume the publication produced by Content Studio HTTP, not
         // by a direct test call to PublicationPublisher or ContentAssetBindingService.
 
