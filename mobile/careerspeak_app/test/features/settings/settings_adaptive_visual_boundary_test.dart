@@ -40,16 +40,26 @@ void main() {
           );
 
           expect(find.text('Settings'), findsOneWidget);
-          expect(find.text('Country and language'), findsOneWidget);
-          expect(find.text('Country'), findsOneWidget);
-          expect(find.text('Select country'), findsOneWidget);
-          expect(find.text('Preferred English accent'), findsOneWidget);
-
-          await tester.scrollUntilVisible(
-            find.text('Storage'),
-            300,
-            scrollable: find.byType(Scrollable).first,
-          );
+          // The settings list is lazy at accessible font sizes. Each field
+          // must be reachable by scrolling, not necessarily visible at once.
+          for (final label in const <String>[
+            'Country and language',
+            'Select country',
+            'Preferred English accent',
+            'Country',
+            'Storage',
+          ]) {
+            await tester.scrollUntilVisible(
+              find.text(label).first,
+              180,
+              scrollable: find.byType(Scrollable).first,
+            );
+            expect(find.text(label), findsWidgets);
+            expectNoLayoutExceptions(
+              tester,
+              reason: 'Settings field $label must not overflow at $boundary',
+            );
+          }
           await tester.pumpAndSettle();
 
           expectNoLayoutExceptions(
