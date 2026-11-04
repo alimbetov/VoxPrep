@@ -56,7 +56,10 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Your learning sequence'), findsNothing);
-    expect(find.byKey(const ValueKey('collection-content-CONTENT')), findsNothing);
+    expect(
+      find.byKey(const ValueKey('collection-content-CONTENT')),
+      findsNothing,
+    );
   });
 
   testWidgets('FULL learner direct route can reveal FULL members', (
@@ -76,7 +79,10 @@ void main() {
 
     expect(find.text('Full access required'), findsNothing);
     expect(find.text('Your learning sequence'), findsOneWidget);
-    expect(find.byKey(const ValueKey('collection-content-CONTENT')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('collection-content-CONTENT')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('FREE learner can open explicitly FREE collection', (
@@ -96,7 +102,10 @@ void main() {
 
     expect(find.text('Full access required'), findsNothing);
     expect(find.text('Your learning sequence'), findsOneWidget);
-    expect(find.byKey(const ValueKey('collection-content-CONTENT')), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('collection-content-CONTENT')),
+      findsOneWidget,
+    );
   });
 }
 
