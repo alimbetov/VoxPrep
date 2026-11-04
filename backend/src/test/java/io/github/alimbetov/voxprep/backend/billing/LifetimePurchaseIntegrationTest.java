@@ -168,6 +168,23 @@ class LifetimePurchaseIntegrationTest {
     }
 
     @Test
+    void invalidStoreNotificationIdentityNeverWritesPurchaseState() {
+        UUID id = installation();
+        Instant at = Instant.parse("2026-11-04T13:00:00Z");
+        String validHash = PurchaseDigest.sha256("unrelated-refund");
+        assertThatThrownBy(() -> ledger.applyStoreEvent("NOT_A_STORE", PRODUCT,
+                validHash, Environment.SIMULATED, State.REVOKED, at))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ledger.applyStoreEvent("GOOGLE_PLAY",
+                "unrelated_product", validHash, Environment.SIMULATED,
+                State.REVOKED, at)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> ledger.applyStoreEvent("GOOGLE_PLAY",
+                PRODUCT, "malformed", Environment.SIMULATED,
+                State.REVOKED, at)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(service.currentEntitlement(id).verified()).isFalse();
+    }
+
+    @Test
     void malformedSimulationsNeverGrantRealEntitlement() {
         UUID id=installation();
         assertThatThrownBy(() -> service.verify(id,request(
