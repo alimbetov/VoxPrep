@@ -42,10 +42,12 @@ void main() {
         );
         // Do not pumpAndSettle against an asynchronous playback state:
         // an in-flight audio resolve deliberately has an animated spinner.
-        for (var frame = 0;
-            frame < 5 &&
-                find.widgetWithText(FilledButton, 'Play').evaluate().isEmpty;
-            frame++) {
+        for (
+          var frame = 0;
+          frame < 5 &&
+              find.widgetWithText(FilledButton, 'Play').evaluate().isEmpty;
+          frame++
+        ) {
           await tester.pump();
         }
         expect(find.widgetWithText(FilledButton, 'Play'), findsOneWidget);
@@ -56,9 +58,11 @@ void main() {
         play.onPressed!();
         play.onPressed!();
 
-        for (var frame = 0;
-            frame < 30 && resolver.pending.length < 2;
-            frame++) {
+        for (
+          var frame = 0;
+          frame < 30 && resolver.pending.length < 2;
+          frame++
+        ) {
           await tester.pump();
         }
         expect(resolver.pending, hasLength(2));
