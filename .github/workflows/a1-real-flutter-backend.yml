@@ -69,7 +69,8 @@ jobs:
           SPRING_PROFILES_ACTIVE: test
         run: |
           mvn -B -ntp -f backend/pom.xml \
-            -Dtest=A1RealBackendFlutterAcceptanceTest \
+            -Dtest=A1RealBackendFlutterAcceptanceTest,R5MediaLibraryLiveHttpAcceptanceTest \
+            -Dvoxprep.r5.enabled=true \
             -Dvoxprep.a1.enabled=true \
             -Dvoxprep.a1.flutter.dir=${{ github.workspace }}/mobile/careerspeak_app \
             test
