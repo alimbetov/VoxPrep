@@ -4,6 +4,16 @@
 <main>
     <h1 class="h3">Collection <code th:text="${collectionCode}">CODE</code></h1>
     <p class="text-secondary">Replace a published collection slot with a newer APPROVED revision. Historical releases remain immutable.</p>
+    <div class="card studio-card mb-3"><div class="card-body">
+        <h2 class="h5">Add approved content</h2>
+        <form method="post" th:action="@{/admin/catalogue/collections/{cid}/members(cid=${collectionId})}">
+            <label class="form-label">Approved revision UUID</label>
+            <div class="input-group">
+                <input name="revisionId" class="form-control" required pattern="[0-9a-fA-F-]{36}">
+                <button class="btn btn-primary" type="submit">Append</button>
+            </div>
+        </form>
+    </div></div>
     <div class="card studio-card mb-3" th:each="member : ${members}">
         <div class="card-body">
             <div class="mb-2">
