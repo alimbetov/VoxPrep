@@ -262,7 +262,13 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
       for (final payload in localizedPayloads)
         _localizationKey(payload.ref): payload,
     };
-    if (localizedPayloadByKey.length != manifest.localizations.length) {
+    final lockedLocalizedCount = await _lockedLocalizationCount(
+      plan.target.contentVersion,
+      manifest,
+      plan.target.catalogues.isNotEmpty,
+    );
+    if (localizedPayloadByKey.length !=
+        manifest.localizations.length - lockedLocalizedCount) {
       throw const _SyncExecutorInvariant(
         ApplicationFailure(
           code: 'LOCALIZED_CONTENT_PAYLOAD_SET_MISMATCH',
@@ -272,8 +278,13 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
       );
     }
 
+    final lockedContentCount = await _lockedContentCount(
+      plan.target.contentVersion,
+      manifest,
+      plan.target.catalogues.isNotEmpty,
+    );
     if (target.identity.variant == 'canonical' &&
-        payloadByKey.length != manifest.contents.length) {
+        payloadByKey.length != manifest.contents.length - lockedContentCount) {
       throw const _SyncExecutorInvariant(
         ApplicationFailure(
           code: 'CONTENT_PAYLOAD_SET_MISMATCH',
@@ -366,7 +377,18 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
                 type,
                 content.revision,
               )];
-          if (payload == null || payload.ref.checksum != content.checksum) {
+          final locked = await _isFrozenFullContent(
+            code: content.identity.code,
+            type: content.identity.type.name,
+            revision: content.revision,
+            checksum: content.checksum,
+            contentVersion: plan.target.contentVersion,
+            enabled: manifest.schemaVersion >= 2 &&
+                plan.target.catalogues.isNotEmpty,
+          );
+          if ((!locked && payload == null) ||
+              (locked && payload != null) ||
+              (payload != null && payload.ref.checksum != content.checksum)) {
             throw const _SyncExecutorInvariant(
               ApplicationFailure(
                 code: 'CONTENT_PAYLOAD_SET_MISMATCH',
@@ -397,7 +419,17 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
 
       for (final localization in manifest.localizations) {
         final payload = localizedPayloadByKey[_localizationKey(localization)];
-        if (payload == null || payload.ref.checksum != localization.checksum) {
+        final locked = await _isFrozenFullContent(
+          code: localization.identity.code,
+          type: localization.identity.type.name,
+          revision: localization.contentRevision,
+          contentVersion: plan.target.contentVersion,
+          enabled: manifest.schemaVersion >= 2 &&
+              plan.target.catalogues.isNotEmpty,
+        );
+        if ((!locked && payload == null) ||
+            (locked && payload != null) ||
+            (payload != null && payload.ref.checksum != localization.checksum)) {
           throw const _SyncExecutorInvariant(
             ApplicationFailure(
               code: 'LOCALIZED_CONTENT_PAYLOAD_SET_MISMATCH',
@@ -406,7 +438,9 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
             ),
           );
         }
-        await _ensureLocalizedContentRead(payload, now);
+        if (payload != null) {
+          await _ensureLocalizedContentRead(payload, now);
+        }
         await _database
             .into(_database.packLocalizationRefs)
             .insert(
