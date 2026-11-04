@@ -4,6 +4,7 @@ import io.github.alimbetov.voxprep.backend.catalogue.application.CollectionMembe
 import io.github.alimbetov.voxprep.backend.catalogue.persistence.CollectionContentMemberRepository;
 import io.github.alimbetov.voxprep.backend.catalogue.persistence.LearningCollectionRepository;
 import io.github.alimbetov.voxprep.backend.content.web.AdminContentStudioMvc;
+import io.github.alimbetov.voxprep.backend.content.application.ContentAdminQueryService;
 import java.util.UUID;
 import org.springframework.stereotype.Controller;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,22 +24,29 @@ public class CollectionMembershipMvcController {
     private final LearningCollectionRepository collections;
     private final CollectionContentMemberRepository members;
     private final CollectionMembershipRevisionService membership;
+    private final ContentAdminQueryService contentQuery;
 
     public CollectionMembershipMvcController(LearningCollectionRepository collections,
-            CollectionContentMemberRepository members, CollectionMembershipRevisionService membership) {
+            CollectionContentMemberRepository members, CollectionMembershipRevisionService membership,
+            ContentAdminQueryService contentQuery) {
         this.collections = collections;
         this.members = members;
         this.membership = membership;
+        this.contentQuery = contentQuery;
     }
 
     @GetMapping
     @Transactional(readOnly = true)
-    public String index(@PathVariable UUID collectionId, Model model) {
+    public String index(@PathVariable UUID collectionId,
+            @RequestParam(defaultValue = "") String q,
+            @RequestParam(defaultValue = "0") int page, Model model) {
         var collection = collections.findById(collectionId)
                 .orElseThrow(() -> new IllegalArgumentException("Collection not found"));
         model.addAttribute("activeSection", "catalogue");
         model.addAttribute("collectionCode", collection.getCode().value());
         model.addAttribute("collectionId", collectionId);
+        model.addAttribute("approvedCandidates", contentQuery.approvedCandidates(q, page));
+        model.addAttribute("candidateQuery", q);
         model.addAttribute("members", members.findAllByCollectionIdOrderByPositionAsc(collectionId).stream()
                 .map(member -> new MemberView(member.getId(), member.getPosition(),
                         member.getContentRevision().getContentCode().value(),
