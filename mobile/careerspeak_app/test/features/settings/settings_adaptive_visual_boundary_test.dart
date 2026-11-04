@@ -52,13 +52,12 @@ void main() {
             final target = find.text(label);
             // A lazily built ListView might not have created this Text yet.
             // Calling .first before materialization throws StateError.
-            for (var attempt = 0;
-                attempt < 18 && target.evaluate().isEmpty;
-                attempt++) {
-              await tester.drag(
-                find.byType(Scrollable).first,
-                const Offset(0, -180),
-              );
+            for (
+              var attempt = 0;
+              attempt < 18 && target.evaluate().isEmpty;
+              attempt++
+            ) {
+              await tester.drag(find.byType(Scrollable).first, const Offset(0, -180));
               await tester.pumpAndSettle();
             }
             expect(target, findsWidgets);
