@@ -49,6 +49,20 @@ class ContentMvcIntegrationTest {
     }
 
     @Test
+    void initialRevisionFormExposesStructuredEditorsWithoutChangingWireContracts() throws Exception {
+        mockMvc.perform(get("/admin/content/revisions/new")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("data-content-types=\\\"interview\\\"")))
+                .andExpect(content().string(containsString("data-structured=\\\"options\\\"")))
+                .andExpect(content().string(containsString("data-structured=\\\"sections\\\"")))
+                .andExpect(content().string(containsString("content-structured-editor.js")));
+
+        mockMvc.perform(get("/admin/content/revisions/new"))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
     void adminCanListOpenAndUpdateVocabularyDraft() throws Exception {
         var revision = repository.saveAndFlush(vocabulary());
         var initialVersion = revision.getVersion();
