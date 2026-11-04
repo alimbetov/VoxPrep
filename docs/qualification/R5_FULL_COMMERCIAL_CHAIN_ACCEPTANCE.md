@@ -1,24 +1,24 @@
 # R5 — Full Commercial Chain Qualification
 
-Status: PROPOSED / NOT ACCEPTED
+Status: REVIEWED CONTRACT v1.1 / IMPLEMENTATION NOT ACCEPTED
 Baseline: `main` at `e68a9dcb3e736111ffee422fe8b1b425918fa4ae`
-Prerequisites: R1 release defect remediation, R2 Content Studio + image Media Library completion, R3 real store acceptance.
+Dependencies: R1 release defect remediation, R2 Content Studio + image Media Library completion. Real store acceptance is an R5 sub-gate (not a prerequisite or circular dependency).
 
 ## Objective
 
 Prove one coherent production-code path, not a sequence of unrelated mocked unit tests:
 
 ```text
-ADMIN creates content + selects READY image from Media Library by assetId
+ADMIN creates content using authenticated MVC HTTP; uploads/selects READY image from Media Library by assetId
 → DRAFT validation / review / approval
 → immutable Backend publication (root N)
 → authenticated Flutter installation + HTTP sync
 → Drift CURRENT(root N), checked media, learner reading/audio/assessment/progress
 → FREE paywall / one-time purchase / server verified FULL entitlement
-→ restore via trusted store proof on reinstall/new installation
+→ restore purchase entitlement from provider-owned transaction proof on reinstall/new installation (separate from installation credential recovery)
 → publish immutable root N+1
 → Flutter atomic upgrade, retained learner state + old READY during transition
-→ process kill/reopen, network disabled, verified offline material/audio/test/review
+→ process kill/reopen, network disabled, verified offline material/audio/test/review under explicit offline entitlement policy
 ```
 
 **Critical rule:** Do not report `R5 ACCEPTED` from mocked stores or from the existing A1 test alone. Store verification in CI can use a deterministic simulator only for contract/logic qualification; real store acceptance is separate and mandatory.
@@ -33,22 +33,56 @@ ADMIN creates content + selects READY image from Media Library by assetId
 
 Do not introduce a new storage service, second entitlement source, learner account or Flutter mock runtime switch.
 
-## Test matrix: R5-01–R5-12
+## Test matrix: R5-01–R5-16
 
 | ID | Step / positive acceptance | Required observable evidence |
 | --- | --- | --- |
-| R5-01 | ADMIN creates catalogue/content via authenticated Content Studio MVC, selects existing READY image by ID | HTTP form/request, DB draft and binding exact `revisionId + role + assetId` |
-| R5-02 | Upload same image twice and bind it to distinct drafts | identical SHA-256 bytes resolve to one reusable physical blob; no duplicate storage; binding count >=2; never mutate published revision |
+| R5-01 | ADMIN logs in, creates catalogue + draft with real HTTP MVC + CSRF, selects READY image via picker | Real form submissions, actor audit, DB draft, exact `revisionId + role + assetId`; no direct fixture insertion for authoring proof |
+| R5-02 | Upload identical image twice (including concurrent requests), bind to distinct draft revisions | unique physical blob within defined dedup scope; stable returned assetId where compatible; two bindings; DB+RustFS integrity and reference-safe deletion |
 | R5-03 | Review/approve, publish root N | commit and immutable root, exact revision/asset references and checksums, ACTIVE + PUBLISHED only |
 | R5-04 | Real Flutter installation registers and syncs using HTTP | real Postgres + RustFS + Spring Boot + production Flutter codecs + persistent Drift CURRENT=N |
 | R5-05 | FREE learner reads/listens/tests; paid content denied | FREE media size and SHA verified, local markers/attempts persisted, FULL HTTP responds 403 with expected machine code |
 | R5-06 | Purchase transitions entitlement FREE→FULL | backend verifies store proof, durable ledger grants once, premium API becomes accessible; no grant on client boolean |
-| R5-07 | Reinstall/new installation restores non-consumable | device uses store-owned purchase history/proof, new installation obtains entitlement; cannot claim by guessing another installation UUID |
+| R5-07 | Reinstall/new installation restores non-consumable independent of prior app token | fresh installation, store-origin proof independently reverified, ledger claim established; UUID-only claim blocked; local progress NOT restored |
 | R5-08 | Refund/revoke and replay safety | authorized store event downgrades premium, stale/duplicate/reordered events do not restore revoked access |
 | R5-09 | ADMIN modifies published content by new draft and publishes root N+1 | prior root/content immutable, no in-place mutation; all references/checksums valid |
 | R5-10 | Flutter synchronizes N→N+1 | atomic CURRENT switch; progress/markers/attempts retained by explicit identity rules |
-| R5-11 | Network interruption/corruption during staged upgrade | retains CURRENT=N and old READY; restart/retry never mixes N and N+1 |
-| R5-12 | Close app, disable network, reopen | verified downloaded image/audio and local content available; review and history intact; remote locked/unavailable bytes never fabricated |
+| R5-11 | Network interruption, crash, corrupt candidate or unsupported schema during staged upgrade | CURRENT=N and old READY preserved across process restart; journal replay safe; no mixed graph, locale, manifest or asset refs |
+| R5-12 | Kill app, disable network, reopen and complete an offline learning operation | only verified downloaded image/audio, locally available tests and content accessible; review, attempts and history intact; offline premium access follows written policy | 
+| R5-13 | Simulate crash at FileAsset REGISTERED/write/verify/READY boundaries | durable recoverable state or safely detected orphan; bounded recovery, no broken READY, no silent object deletion | 
+| R5-14 | Installation token lost/rejected/revoked while local learner state exists | no UUID-only rotation or account takeover; preserve local data; explicit user recovery UX and separate store restore action | 
+| R5-15 | Exhaustive purchase ledger transition/reordering/concurrency matrix | GRANTED/PENDING/REVOKED/REFUND_REVERSED consistent; older verify cannot defeat revoke tombstone; atomic concurrent same purchase claims | 
+| R5-16 | R5 end-to-end observable reproducibility | per-stage correlated IDs, N/N+1, redacted ledger evidence, exact git SHA, application build and environment; independent assertion of each stage |
+
+## Architecture review findings and design decisions (2026-11-04)
+
+### AR-01 — The existing A1 starts below the Content Studio boundary (P0)
+
+The existing `A1RealBackendFlutterAcceptanceTest` seeds `FileAssetIngestService`, `ContentAssetBindingService`, JPA repositories and publisher directly inside a test transaction. This is a valid backend-to-Flutter integration test, but **not** evidence that authenticated admin UI can create, validate, select media, approve and publish a draft. R5 must exercise authenticated MVC HTTP requests, CSRF, real session, validation, role access and state transitions before invoking publication. Internal DB inspection is allowed only as an assertion, not as a shortcut for creating the object under test.
+
+### AR-02 — Reinstall restore is not installation 401 recovery (P0)
+
+`InstallationRegistrationService` requires proof of the *current* bearer token to rotate an existing installation. Never bypass this with a known UUID. Reinstall/new installation has a newly registered identity and verifies store-owned original transaction/purchase token to recover **entitlement only**. A rejected or lost token for an existing installation cannot be transparently renewed with rejected proof: present explicit bounded recovery UX, preserve Drift progress, and do not make a second anonymous installation under the original UUID. Define backup/migration separately; restore does not imply learner history portability.
+
+### AR-03 — Offline premium policy is a release decision (P0)
+
+Chosen v1 contract: server controls fresh entitlement; device may use **previously verified and downloaded** FULL assets offline for the lifetime of the local signed/verified entitlement snapshot subject to a bounded configurable offline freshness period. No server call is required for already verified FREE content. Once freshness expires while offline, the product must show a clear revalidation-required state and must not grant new premium downloads; do not erase local files/progress. On reconnection force authoritative entitlement refresh before premium network requests; revoke/refund removes premium access even if bytes remain cached. Client-side clock rollback must not extend freshness; use monotonic/last-server-time rules and qualify process restart. The exact freshness TTL and failure grace duration must be selected in a separate versioned configuration decision before R5 implementation; until then offline-premium sub-gate is BLOCKED. Do not claim instantaneous refund enforcement for a disconnected device.
+
+### AR-04 — Media dedup must respect existing asset kinds (P1)
+
+`FileAssetEntity` currently has unique `(bucket, object_key)` but no content-hash unique constraint, and `ContentAssetBindingService.bind` checks exact `FileAssetKind` against `COVER_IMAGE` / `CONTENT_IMAGE`. R5 must NOT assume that identical bytes across differing kinds can share the same `FileAsset` ID. Implement either dedup within compatible kind+mediaType+sha256+size, or design an independently versioned physical blob identity with separate logical roles. Prefer the smaller compatible-kind solution for v1; use DB-level concurrency arbitration, deterministic re-read and explicit behavior for non-READY matches. Revalidate actual image signatures/dimensions; do not trust MIME label or filename; do not dedup audio against images. No automatic deletion of referenced or unknown RustFS objects.
+
+### AR-05 — FileAsset ingest crash consistency (P1)
+
+`FileAssetIngestService.ingest` writes REGISTERED via `saveAndFlush`, then performs RustFS I/O; `saveAndFlush` alone does **not** commit an enclosing transaction. R5 must test caller-owned transaction rollback, interruption after object write, storage timeout, checksum mismatch, failed verification and repeated recovery. Specify transaction boundaries before claiming durable REGISTERED; assess the current H2 reconciler instead of adding a duplicate cleanup service. Ensure object keys remain immutable, non-user-controlled and scoped.
+
+### AR-06 — Ledger state-machine needs temporal proof (P0)
+
+`PurchaseLedger.record` currently upserts GRANTED/PENDING/REVOKED using a `REVOKED` guard; `applyStoreEvent` uses provider event time for monotonic ordering, and `updateState` directly changes state. Tests must prove the combined paths cannot resurrect a refunded purchase through stale `verify`, delayed notifications, concurrent restore, scheduler reconciliation or clock skew. The system must distinguish explicit verified refund reversal from replaying an older GRANTED assertion. A purchase may be legitimately claimable by another installation after independent store verification; never grant via an unverified UUID or local client flag. Document whether installs are bounded and detect cross-account purchase abuse without retaining raw transaction tokens.
+
+### AR-07 — Exact-root and learner identity semantics (P0)
+
+Prove publication candidate validation + atomic activation for both N and N+1; retain immutable exact revisions, content/localization/assets and assessment membership. Assert that progress and attempt history keying follows explicit stable business identity + exact revision where applicable; no silent migration of incompatible assessment questions. Verify old READY persists while N+1 downloads, and local candidate staging recovery is deterministic. Direct FULL media and assessment endpoints must enforce the same entitlement as the catalogue.
 
 ## Adversarial gates (non-negotiable)
 
@@ -63,6 +97,15 @@ Do not introduce a new storage service, second entitlement source, learner accou
 - Store restore does **not** restore device-local learner progress: no cloud user profile exists. Verify entitlement recovery separately from learner-data backup/migration.
 - Local offline availability and server-side revocation have an unavoidable disconnected-device boundary: verify that a device revalidates revoked entitlement upon reconnection; document the offline paid-cache policy.
 
+## Non-functional and operational acceptance
+
+- Performance budgets must be **measured and recorded**, not invented: define tested device tiers, content catalogue size, first sync, delta sync, offline reopen, image thumbnail latency, peak backend heap and network byte totals. R5 is blocked if target budgets are not agreed and reported.
+- Security: ADMIN login/session/CSRF, XML parsing XXE, image decompression bombs/polyglots, bounded uploads, rate limits for install/register and purchases, no cross-installation entitlement leaks, secret-free logs, and replay-safe store notifications.
+- Resilience: database restart, RustFS restart, TTS outage, store API timeout, HTTP retry, process kill during CURRENT commit and idempotent replay. Distinguish fail-closed (no entitlement) from temporary offline usability.
+- Accessibility and devices: narrow/large Flutter layouts, locale/RTL, screen reader, font scaling, Android and iOS real devices; validate essential purchase/restore error copy.
+- Data and legal: image provenance/licensing and author audit, retained local progress, privacy-minimal purchase records, explicit offline policy; backup/restore drill for PostgreSQL and RustFS with coordinated recoverability.
+- Observability: correlation of HTTP request ID, publication version, file asset ID (not secret object path), installation pseudonymous ID, purchase ledger event ID, test build and git SHA. No PII/raw proof tokens in reports.
+
 ## Environments and evidence
 
 | Track | Runtime | Evidence | Can close |
@@ -73,6 +116,10 @@ Do not introduce a new storage service, second entitlement source, learner accou
 | R5-DEVICE | Android/iOS actual physical devices, app restart, storage and network toggles | manual acceptance checklist/screens/videos and test build identifiers | device release gate |
 
 Never log raw tokens, store proof, server keys or personal purchaser identifiers. Use a dedicated test product and test users; do not perform real money purchases automatically.
+
+## Acceptance evidence ledger (mandatory per gate)
+
+Record one row per R5 test with: test ID; commit SHA; PR; environment; app build/platform; publication root N/N+1; assetId and hash (test-only); sanitized purchase provider/state; automated job URL; device evidence; PASS/FAIL/BLOCKED; timestamp; responsible reviewer; defect link and re-test SHA. No checkbox may be marked PASS without direct evidence. For all store sub-gates include separate purchase, restore, refund/revoke and pending/outage evidence on each supported platform.
 
 ## Required CI structure
 
@@ -94,7 +141,11 @@ Never log raw tokens, store proof, server keys or personal purchaser identifiers
 
 ## Release decision
 
-`R5 ACCEPTED` requires all R5-01..R5-12 green or explicitly split into scoped CI vs live-store evidence, both store tracks qualified, no unresolved critical/high severity security or data-loss defects, reproducible build SHA, and signed-off results. If any gate is missing, label `R5 PARTIAL / BLOCKED`, never `PRODUCTION READY`.
+`R5 ACCEPTED` requires all R5-01..R5-16 green or explicitly split into scoped CI vs live-store evidence, both store tracks qualified with actual store credentials/test-account transactions, no unresolved critical/high severity security or data-loss defects, reproducible build SHA, and signed-off results, agreed nonfunctional budgets, executable recovery playbooks and no unverified in-scope P0/P1 defects. If any gate is missing, label `R5 PARTIAL / BLOCKED`, never `PRODUCTION READY`.
+
+## Out of scope / avoid premature expansion
+
+No user accounts/cloud progress, face recognition, visual similarity ML, new object-storage service, full CMS workflow engine, public media CDN, subscriptions, server-side review history, or multi-user authoring roles. These are not preconditions for release. This document defines acceptance; production changes and tests must be delivered incrementally in subsequent exact-SHA commits, never claimed complete from documentation alone.
 
 ## Existing evidence is narrower
 
