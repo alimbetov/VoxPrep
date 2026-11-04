@@ -14,6 +14,7 @@ import io.github.alimbetov.voxprep.backend.content.review.ContentReviewAction;
 import io.github.alimbetov.voxprep.backend.content.review.ContentReviewAuditEntity;
 import io.github.alimbetov.voxprep.backend.content.review.ContentReviewAuditRepository;
 import io.github.alimbetov.voxprep.backend.sharedkernel.RevisionNumber;
+import io.github.alimbetov.voxprep.backend.sharedkernel.BusinessCode;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.UUID;
@@ -43,6 +44,49 @@ public class ContentAuthoringService {
         this.repository = repository;
         this.reviewAuditRepository = reviewAuditRepository;
         this.clock = clock;
+    }
+
+    /**
+     * Creates a first DRAFT revision through the production authoring boundary.
+     * Duplicate identity and revision sequence are guarded by PostgreSQL.
+     */
+    @Transactional
+    public ContentRevisionEntity createInitialRevision(BusinessCode code, ContentDraftUpdate update) {
+        java.util.Objects.requireNonNull(code, "code");
+        java.util.Objects.requireNonNull(update, "update");
+        var number = new RevisionNumber(1);
+        var body = update.body();
+        ContentRevisionEntity created = switch (body) {
+            case ContentDraftUpdate.VocabularyBody value -> new VocabularyContentRevisionEntity(
+                    code, number, update.checksum(), update.title(), update.subtitle(), update.description(),
+                    update.categoryCode(), update.levelCode(), update.minutes(), update.skillCodes(),
+                    update.availability(), value.term(), value.definition(), value.partOfSpeech(), value.examples());
+            case ContentDraftUpdate.InterviewBody value -> new InterviewContentRevisionEntity(
+                    code, number, update.checksum(), update.title(), update.subtitle(), update.description(),
+                    update.categoryCode(), update.levelCode(), update.minutes(), update.skillCodes(),
+                    update.availability(), value.prompt(), value.modelAnswer(), value.keyPoints());
+            case ContentDraftUpdate.TopicBody value -> new TopicContentRevisionEntity(
+                    code, number, update.checksum(), update.title(), update.subtitle(), update.description(),
+                    update.categoryCode(), update.levelCode(), update.minutes(), update.skillCodes(),
+                    update.availability(), value.sections());
+            case ContentDraftUpdate.PhraseBody value -> new PhraseContentRevisionEntity(
+                    code, number, update.checksum(), update.title(), update.subtitle(), update.description(),
+                    update.categoryCode(), update.levelCode(), update.minutes(), update.skillCodes(),
+                    update.availability(), value.phrase(), value.usage(), value.examples());
+            case ContentDraftUpdate.ShadowingBody value -> new ShadowingContentRevisionEntity(
+                    code, number, update.checksum(), update.title(), update.subtitle(), update.description(),
+                    update.categoryCode(), update.levelCode(), update.minutes(), update.skillCodes(),
+                    update.availability(), value.transcript(), value.segments());
+            case ContentDraftUpdate.QuestionBody value -> new QuestionContentRevisionEntity(
+                    code, number, update.checksum(), update.title(), update.subtitle(), update.description(),
+                    update.categoryCode(), update.levelCode(), update.minutes(), update.skillCodes(),
+                    update.availability(), value.questionText(), value.explanation(), value.options());
+            case ContentDraftUpdate.PracticeTestBody value -> new PracticeTestContentRevisionEntity(
+                    code, number, update.checksum(), update.title(), update.subtitle(), update.description(),
+                    update.categoryCode(), update.levelCode(), update.minutes(), update.skillCodes(),
+                    update.availability(), value.instructions(), value.passingScorePercent(), value.questionRevisionIds());
+        };
+        return save(created);
     }
 
     @Transactional
