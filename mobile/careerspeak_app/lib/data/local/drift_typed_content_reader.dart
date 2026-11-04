@@ -85,8 +85,9 @@ final class DriftTypedContentReader {
     });
     return switch (decoded) {
       Success<ContentPayload>(:final value) => value.body,
-      FailureResult<ContentPayload>(:final failure) =>
-        throw StateError('Persisted typed content failed validation: ${failure.code}'),
+      FailureResult<ContentPayload>(:final failure) => throw StateError(
+        'Persisted typed content failed validation: ${failure.code}',
+      ),
     };
   }
 }
