@@ -118,6 +118,33 @@ sim:v1:APP_STORE:REVOKED:apple01
 
 These strings are never valid proof in production. Flutter's mock billing adapter now emits them. The mock restore reuses the originally owned transaction, unlike an arbitrary new purchase.
 
+## 6.1 Run Flutter against simulated and real Store environments
+
+For local Backend development, create an installation normally and use the exact same
+Flutter HTTP verification code, with only the Store purchase emitter mocked:
+
+```bash
+# Start Java service with --spring.profiles.active=dev and local DB/RustFS secrets.
+# Android emulator example; use a permitted HTTPS dev URL on a physical device.
+flutter run \
+  --dart-define=VOXPREP_ENV=development \
+  --dart-define=VOXPREP_API_URL=http://10.0.2.2:8080 \
+  --dart-define=VOXPREP_MOCK_BILLING=true \
+  --dart-define=VOXPREP_MOCK_PURCHASE=false
+```
+
+- `VOXPREP_MOCK_BILLING=true` emits deterministic `sim:v1:...` purchase proof.
+- `VOXPREP_MOCK_PURCHASE=false` sends that proof to the real local Backend,
+  exercises Postgres purchase ledger, `POST /verify` and `GET /entitlement`.
+- With `VOXPREP_MOCK_PURCHASE=true`, Flutter verifies locally; use only for
+  isolated UI tests, not integration acceptance.
+- `staging` and `prod` builds must set both Flutter mock flags to `false`;
+  provide `VOXPREP_STAGING_HOSTS`/`VOXPREP_PROD_HOSTS`, use HTTPS and a
+  genuinely reachable API. Test purchases come from actual Google license
+  testing / Apple StoreKit sandbox, not `sim:v1:` strings.
+- Android cleartext HTTP may be blocked by manifest/network security: configure
+  local debug network policy or use HTTPS. Never enable cleartext release-wide.
+
 ## 7. Acceptance ledger and limitations
 
 - [x] Exact JSON shape for Flutter `POST /api/v1/purchases/verify`.
