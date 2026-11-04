@@ -1,3 +1,4 @@
+import 'package:careerspeak_app/app/access_providers.dart';
 import 'package:careerspeak_app/app/asset_resolver_providers.dart';
 import 'package:careerspeak_app/app/catalogue_payload_providers.dart';
 import 'package:careerspeak_app/app/repository_providers.dart';
@@ -96,6 +97,11 @@ void main() {
         mode: VerticalCataloguePresentationMode.shelves,
       );
 
+      await tester.scrollUntilVisible(
+        find.text('Your learning sequence'),
+        140,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Your learning sequence'), findsOneWidget);
       expectNoLayoutExceptions(
         tester,
@@ -115,6 +121,7 @@ Future<void> _pumpCatalogue(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        learnerAccessLevelProvider.overrideWithValue(AccessLevel.full),
         // These widget tests exercise catalogue rendering, not network asset
         // delivery. The separate A1 suite tests real RustFS downloads.
         catalogueIconAssetProvider.overrideWith((ref, assetId) async => null),
