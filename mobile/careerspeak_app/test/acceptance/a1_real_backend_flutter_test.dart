@@ -214,15 +214,19 @@ void main() {
           ),
         );
         expect(rejected, isA<FailureResult<ApiResponse>>());
-        expect((rejected as FailureResult<ApiResponse>).failure.code,
-            'UNAUTHORIZED');
+        expect(
+          (rejected as FailureResult<ApiResponse>).failure.code,
+          'UNAUTHORIZED',
+        );
         final illegalRotation = await HttpInstallationRegistrationGateway(
           apiClient: api,
           credentialStore: store,
         ).register(credentials.installationId);
         expect(illegalRotation, isA<FailureResult<InstallationToken>>());
-        expect(await store.readInstallationToken(),
-            InstallationToken(rejectedToken));
+        expect(
+          await store.readInstallationToken(),
+          InstallationToken(rejectedToken),
+        );
         await store.writeInstallationToken(credentials.installationToken);
 
         // No HTTP client or Spring Boot is consulted for local state after
