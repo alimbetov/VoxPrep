@@ -79,7 +79,7 @@ class ContentStudioFoundationIntegrationTest {
 
         mockMvc.perform(get("/admin/publication").session(session))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Publication readiness")));
+                .andExpect(content().string(containsString("Current learner release")));
     }
 
     @Test
