@@ -41,6 +41,13 @@ public class ProductionStorePurchaseConfiguration {
     }
 
     @Bean
+    GooglePubSubPushAuthenticator googlePubSubPushAuthenticator(
+            @Value("${voxprep.billing.google.pubsub-audience:}") String audience,
+            @Value("${voxprep.billing.google.pubsub-service-account-email:}") String serviceAccountEmail) {
+        return new GooglePubSubPushAuthenticator(audience, serviceAccountEmail);
+    }
+
+    @Bean
     AppleStoreVerifier appleStoreVerifier(
             @Value("${voxprep.billing.apple.environment:PRODUCTION}") String environmentName,
             @Value("${voxprep.billing.apple.bundle-id:}") String bundle,
