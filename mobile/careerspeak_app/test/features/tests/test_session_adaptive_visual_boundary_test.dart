@@ -78,6 +78,11 @@ void main() {
         tester,
         reason: 'Practice result must fit $boundary',
       );
+      await tester.scrollUntilVisible(
+        find.text('Review answers'),
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Review answers'), findsOneWidget);
 
       await tester.scrollUntilVisible(
