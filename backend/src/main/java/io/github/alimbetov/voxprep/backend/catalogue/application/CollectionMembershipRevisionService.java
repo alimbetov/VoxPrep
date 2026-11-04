@@ -27,6 +27,37 @@ public class CollectionMembershipRevisionService {
         this.revisions = revisions;
     }
 
+    /**
+     * Appends one exact approved revision. The collection row is locked so
+     * simultaneous editors cannot allocate the same contiguous position.
+     */
+    @Transactional
+    public CollectionContentMemberEntity append(UUID collectionId, UUID revisionId) {
+        var collection = collections.lockCollection(Objects.requireNonNull(collectionId))
+                .orElseThrow(() -> new IllegalArgumentException("Collection not found"));
+        var revision = revisions.findById(Objects.requireNonNull(revisionId))
+                .orElseThrow(() -> new IllegalArgumentException("Content revision not found"));
+        if (revision.getLifecycle() != ContentLifecycleStatus.APPROVED
+                && revision.getLifecycle() != ContentLifecycleStatus.PUBLISHED) {
+            throw new IllegalStateException("Only APPROVED or PUBLISHED content can be assigned to a collection");
+        }
+        var assigned = members.findAllByCollectionIdOrderByPositionAsc(collectionId);
+        if (assigned.stream().anyMatch(member -> member.getContentRevision().getId().equals(revisionId))) {
+            throw new IllegalArgumentException("Exact revision already belongs to collection");
+        }
+        if (assigned.stream().anyMatch(member -> member.getContentRevision().getContentCode()
+                .equals(revision.getContentCode())
+                && member.getContentRevision().getContentType() == revision.getContentType())) {
+            throw new IllegalArgumentException("Collection already contains this content identity; replace revision instead");
+        }
+        for (int position = 0; position < assigned.size(); position++) {
+            if (assigned.get(position).getPosition() != position) {
+                throw new IllegalStateException("Existing collection positions are not contiguous");
+            }
+        }
+        return members.saveAndFlush(new CollectionContentMemberEntity(collection, assigned.size(), revision));
+    }
+
     @Transactional
     public void replace(UUID collectionId, UUID oldMemberId, UUID newRevisionId) {
         var collection = collections.lockCollection(Objects.requireNonNull(collectionId))
