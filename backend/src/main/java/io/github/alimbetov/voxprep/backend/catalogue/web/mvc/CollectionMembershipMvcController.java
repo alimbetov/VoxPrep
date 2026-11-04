@@ -47,6 +47,14 @@ public class CollectionMembershipMvcController {
         return "admin/catalogue/members";
     }
 
+    @PostMapping
+    public String append(@PathVariable UUID collectionId,
+            @RequestParam UUID revisionId, RedirectAttributes redirect) {
+        membership.append(collectionId, revisionId);
+        redirect.addFlashAttribute("flashSuccess", "Approved content added to collection.");
+        return "redirect:/admin/catalogue/collections/" + collectionId + "/members";
+    }
+
     @PostMapping("/{memberId}/replace")
     public String replace(@PathVariable UUID collectionId, @PathVariable UUID memberId,
             @RequestParam UUID newRevisionId, RedirectAttributes redirect) {
