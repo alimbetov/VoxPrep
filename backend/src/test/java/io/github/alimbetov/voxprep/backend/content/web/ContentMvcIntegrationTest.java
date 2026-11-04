@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import io.github.alimbetov.voxprep.backend.catalogue.domain.CatalogueCode;
 import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringService;
+import io.github.alimbetov.voxprep.backend.content.application.ContentAdminQueryService;
 import io.github.alimbetov.voxprep.backend.content.application.ContentDraftUpdate;
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
 import io.github.alimbetov.voxprep.backend.content.persistence.VocabularyContentRevisionEntity;
@@ -21,6 +22,7 @@ import io.github.alimbetov.voxprep.backend.sharedkernel.BusinessCode;
 import io.github.alimbetov.voxprep.backend.sharedkernel.RevisionNumber;
 import io.github.alimbetov.voxprep.backend.sharedkernel.Sha256Digest;
 import java.util.List;
+import java.time.Instant;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +41,7 @@ class ContentMvcIntegrationTest {
     @Autowired private WebApplicationContext context;
     @Autowired private ContentRevisionRepository repository;
     @Autowired private ContentAuthoringService authoring;
+    @Autowired private ContentAdminQueryService adminQuery;
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -60,6 +63,20 @@ class ContentMvcIntegrationTest {
 
         mockMvc.perform(get("/admin/content/revisions/new"))
                 .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
+    void approvedRevisionPickerSearchNeverIncludesDrafts() {
+        var approved = vocabulary();
+        approved.markReadyForAudio();
+        approved.markReadyForReview();
+        approved.approve(Instant.now());
+        repository.saveAndFlush(approved);
+        var draft = repository.saveAndFlush(vocabulary());
+
+        var candidates = adminQuery.approvedCandidates("Vocabulary title", 0);
+        assertThat(candidates.getContent()).extracting("id").contains(approved.getId());
+        assertThat(candidates.getContent()).extracting("id").doesNotContain(draft.getId());
     }
 
     @Test
