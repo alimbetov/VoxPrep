@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - feat/a1-real-flutter-backend-acceptance
+      - feat/r5-commercial-chain-qualification
   pull_request:
     paths:
       - 'backend/**'
