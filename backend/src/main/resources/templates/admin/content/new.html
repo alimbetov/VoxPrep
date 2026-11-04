@@ -34,19 +34,19 @@
             <div class="row g-3">
                 <div class="col-md-6" data-content-types="phrase"><label class="form-label">Phrase</label><input th:field="*{phrase}" class="form-control"></div>
                 <div class="col-md-6" data-content-types="phrase"><label class="form-label">Usage</label><input th:field="*{usage}" class="form-control"></div>
-                <div class="col-12" data-content-types="phrase,vocabulary"><label class="form-label">Examples (one per line)</label><textarea th:field="*{examples}" class="form-control"></textarea></div>
+                <div class="col-12" data-content-types="phrase,vocabulary"><label class="form-label">Examples (one per line)</label><textarea data-structured="examples" th:field="*{examples}" class="form-control"></textarea></div>
                 <div class="col-md-4" data-content-types="vocabulary"><label class="form-label">Term</label><input th:field="*{term}" class="form-control"></div>
                 <div class="col-md-4" data-content-types="vocabulary"><label class="form-label">Definition</label><input th:field="*{definition}" class="form-control"></div>
                 <div class="col-md-4" data-content-types="vocabulary"><label class="form-label">Part of speech</label><input th:field="*{partOfSpeech}" class="form-control"></div>
                 <div class="col-12" data-content-types="interview"><label class="form-label">Prompt</label><textarea th:field="*{prompt}" class="form-control"></textarea></div>
                 <div class="col-12" data-content-types="interview"><label class="form-label">Model answer</label><textarea th:field="*{modelAnswer}" class="form-control"></textarea></div>
-                <div class="col-12" data-content-types="interview"><label class="form-label">Key points (one per line)</label><textarea th:field="*{keyPoints}" class="form-control"></textarea></div>
-                <div class="col-12" data-content-types="topic"><label class="form-label">Topic sections (heading|text per line)</label><textarea th:field="*{sections}" class="form-control"></textarea></div>
+                <div class="col-12" data-content-types="interview"><label class="form-label">Key points (one per line)</label><textarea data-structured="keyPoints" th:field="*{keyPoints}" class="form-control"></textarea></div>
+                <div class="col-12" data-content-types="topic"><label class="form-label">Topic sections (heading|text per line)</label><textarea data-structured="sections" th:field="*{sections}" class="form-control"></textarea></div>
                 <div class="col-12" data-content-types="shadowing"><label class="form-label">Transcript</label><textarea th:field="*{transcript}" class="form-control"></textarea></div>
-                <div class="col-12" data-content-types="shadowing"><label class="form-label">Segments (startMs|endMs|text)</label><textarea th:field="*{segments}" class="form-control"></textarea></div>
+                <div class="col-12" data-content-types="shadowing"><label class="form-label">Segments (startMs|endMs|text)</label><textarea data-structured="segments" th:field="*{segments}" class="form-control"></textarea></div>
                 <div class="col-12" data-content-types="question"><label class="form-label">Question text</label><textarea th:field="*{questionText}" class="form-control"></textarea></div>
                 <div class="col-12" data-content-types="question"><label class="form-label">Explanation</label><textarea th:field="*{explanation}" class="form-control"></textarea></div>
-                <div class="col-12" data-content-types="question"><label class="form-label">Options (key|true|text per line)</label><textarea th:field="*{options}" class="form-control"></textarea></div>
+                <div class="col-12" data-content-types="question"><label class="form-label">Options (key|true|text per line)</label><textarea data-structured="options" th:field="*{options}" class="form-control"></textarea></div>
                 <div class="col-12" data-content-types="practice_test"><label class="form-label">Practice test instructions</label><textarea th:field="*{instructions}" class="form-control"></textarea></div>
                 <div class="col-md-4" data-content-types="practice_test"><label class="form-label">Passing score percent</label><input type="number" min="0" max="100" th:field="*{passingScorePercent}" class="form-control"></div>
                 <div class="col-12" data-content-types="practice_test"><label class="form-label">Question revision IDs (one UUID per line)</label><textarea th:field="*{questionRevisionIds}" class="form-control"></textarea></div>
