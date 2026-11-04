@@ -289,10 +289,46 @@ transactions, provider notification delivery, replayed transaction rejection,
 refund/revoke entitlement removal and offline entitlement recovery. Mock store
 responses do not count as real provider acceptance.
 
-## Second-pass review outcome
+## R5.4 & R5.5 evidence update — 2026-11-04
 
-**Specification completeness is improved, implementation is not claimed.** Existing PR is documentation-only. The reviewed code confirms particular failure modes and unimplemented contracts that acceptance must address, but this review has not executed a complete runtime test of media, stores or devices. Prioritise DEC-01 and DEC-02 before writing an offline premium implementation, then R5.1/R5.2. Keep PR draft and preserve existing CI gates.
+**R5.4 A1 HTTP + interrupted N+1 is green** at exact SHA
+`d3544fbb17c33d52265f5da7ea46380cfc2c6dae` on GitHub Actions
+`A1 Real Flutter Backend Acceptance`. The A1 contract exercises
+CONTENT Studio ADMIN HTTP → catalogue/collection → publication N →
+real Flutter and Drift → injected N+1 content fetch failure with N
+still CURRENT → retry to N+1 → preserved learner favorite and offline reopen.
 
-## Existing evidence is narrower
+A subsequent R5.4 hardening slice adds two real SQLite tests:
+(a) rebuild an already-staged N+1 graph under RESTRICT foreign keys;
+(b) SQLite `RAISE(ABORT)` inside graph insertion, verify rollback and retry.
+The earlier production materializer bug attempted to delete
+`publication_snapshots` while dependent rows had RESTRICT FKs; the
+fix preserves the immutable parent and rebuilds child projections in
+reverse dependency order inside one transaction. New tests require
+independent exact-SHA qualification. **Do not infer that the entire 8/8
+CI suite passed from A1 alone.**
 
-Existing A1 demonstrates live published mixed FREE/FULL data, HTTP, RustFS image delivery, checksums, Flutter Drift CURRENT and offline reopen. It does **not** demonstrate Content Studio initiated publication, new image picker, actual purchase/restore, refund with live stores, root N→N+1 upgrade, or complete application offline learning. These remain work, not presumed outcomes.
+**R5.5 billing ledger hardening implemented:** client verify events cannot
+overwrite a more recent authenticated provider decision (identified by
+`latest_store_event_at`); a Store adapter's returned provider/product must
+match the request before creating a claim; API verify returns current
+authoritative ledger entitlement, not a client-submitted state. Added
+PostgreSQL integration tests for late GRANTED proofs after Store REVOKED
+and Store PENDING, plus mismatch tests. This work is NOT yet live
+provider sandbox acceptance.
+
+**Remaining required evidence:** real Google Play license tester and
+Apple StoreKit sandbox transaction from separate clean installations;
+REST verify with correctly scoped OAuth / Apple signed JWS;
+store-notification replay, refund and revoke; production
+package/bundle/product checks; explicit DEC-01/02 offline entitlement
+security policy; real UI purchase/restore on Android and iOS; and
+production release fingerprint/signing evidence. Keep PR draft.
+
+## Review history
+
+The original R5 specification was documentation-only. R5.1–R5.5
+subsequently added production Media Library, authoring, publication,
+recovery and billing components. Acceptance is recorded separately per
+exact SHA and execution environment; **mocked billing never constitutes
+a real Google/Apple payment acceptance.**
