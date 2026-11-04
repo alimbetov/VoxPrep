@@ -29,7 +29,7 @@ void main() {
     );
 
     expect(find.text('Collection'), findsOneWidget);
-    expect(find.text('1 items · Full'), findsOneWidget);
+    expect(find.text('1 learning items'), findsOneWidget);
     expect(find.byIcon(Icons.lock_outline), findsOneWidget);
   });
 
@@ -48,9 +48,9 @@ void main() {
       collectionAccess: AccessLevel.full,
     );
 
-    expect(find.text('Full access required'), findsOneWidget);
-    expect(find.text('Collection is part of Full VoxPrep.'), findsOneWidget);
-    expect(find.text('Learning sequence'), findsNothing);
+    expect(find.text('Unlock this learning collection'), findsOneWidget);
+    expect(find.text('Collection is included with VoxPrep Full.'), findsOneWidget);
+    expect(find.text('Your learning sequence'), findsNothing);
     expect(find.text('CONTENT'), findsNothing);
   });
 
@@ -70,7 +70,7 @@ void main() {
     );
 
     expect(find.text('Full access required'), findsNothing);
-    expect(find.text('Learning sequence'), findsOneWidget);
+    expect(find.text('Your learning sequence'), findsOneWidget);
     expect(find.text('CONTENT'), findsOneWidget);
   });
 
@@ -90,7 +90,7 @@ void main() {
     );
 
     expect(find.text('Full access required'), findsNothing);
-    expect(find.text('Learning sequence'), findsOneWidget);
+    expect(find.text('Your learning sequence'), findsOneWidget);
     expect(find.text('CONTENT'), findsOneWidget);
   });
 }
