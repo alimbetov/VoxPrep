@@ -190,11 +190,12 @@ Future<void> _navigate(WidgetTester tester, String label) async {
 Future<void> _tapScrollableText(WidgetTester tester, String text) async {
   final target = find.text(text);
 
-  for (var attempt = 0; attempt < 8 && target.evaluate().isEmpty; attempt++) {
-    final scrollables = find.byType(Scrollable);
-    expect(scrollables, findsWidgets);
-    await tester.drag(scrollables.first, const Offset(0, -300));
-    await tester.pumpAndSettle();
+  if (target.evaluate().isEmpty) {
+    await tester.scrollUntilVisible(
+      target,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
   }
 
   expect(target, findsOneWidget);
