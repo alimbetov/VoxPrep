@@ -56,8 +56,9 @@ final class R5AdminHttpPublicationWorkflow {
             var created = post(http, "/admin/content/revisions", csrf(page.body()), payload);
             assertThat(created.statusCode()).as("create first revision POST").isEqualTo(302);
             String location = created.headers().firstValue("location").orElseThrow();
-            assertThat(location).matches("/admin/content/revisions/[0-9a-f-]{36}/edit");
-            UUID id = UUID.fromString(location.split("/")[4]);
+            String createdPath = base.resolve(location).getPath();
+            assertThat(createdPath).matches("/admin/content/revisions/[0-9a-f-]{36}/edit");
+            UUID id = UUID.fromString(createdPath.split("/")[4]);
             assertThat(get(http, location).body()).contains(code).contains("DRAFT");
             return id;
         }
@@ -148,7 +149,7 @@ final class R5AdminHttpPublicationWorkflow {
             var created = post(http, "/admin/content/revisions/" + previousRevisionId + "/next", token,
                     "expectedVersion=" + version(oldPage.body()));
             assertThat(created.statusCode()).isEqualTo(302);
-            String editPath = created.headers().firstValue("location").orElseThrow();
+            String editPath = base.resolve(created.headers().firstValue("location").orElseThrow()).getPath();
             assertThat(editPath).matches("/admin/content/revisions/[0-9a-f-]{36}/edit");
             UUID revisedId = UUID.fromString(editPath.split("/")[4]);
 
