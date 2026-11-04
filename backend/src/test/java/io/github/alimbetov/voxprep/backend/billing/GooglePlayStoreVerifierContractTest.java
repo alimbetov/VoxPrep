@@ -38,6 +38,26 @@ class GooglePlayStoreVerifierContractTest {
     }
 
     @Test
+    void rentalCannotBecomeLifetimeEntitlement() {
+        var response = response("PURCHASED", false, false, false)
+                .replace("\"consumptionState\"", "\"rentOfferDetails\": {}, \"consumptionState\"");
+        var transport = verifier(response, true);
+        assertThat(transport.verify(PRODUCT, "rental-token").state())
+                .isEqualTo(StorePurchaseVerifier.State.REVOKED);
+        assertThat(transport.requests).hasSize(1);
+    }
+
+    @Test
+    void fullyRefundedSingleQuantityPurchaseCannotBeRestored() {
+        var response = response("PURCHASED", false, false, false)
+                .replace("\"consumptionState\"", "\"refundableQuantity\": 0, \"consumptionState\"");
+        var transport = verifier(response, true);
+        assertThat(transport.verify(PRODUCT, "refunded-token").state())
+                .isEqualTo(StorePurchaseVerifier.State.REVOKED);
+        assertThat(transport.requests).hasSize(1);
+    }
+
+    @Test
     void pendingPurchaseCannotGrantOrBeAcknowledged() {
         var transport = verifier(response("PENDING", false, false, false), true);
         assertThat(transport.verify(PRODUCT, "purchase-token").state())
