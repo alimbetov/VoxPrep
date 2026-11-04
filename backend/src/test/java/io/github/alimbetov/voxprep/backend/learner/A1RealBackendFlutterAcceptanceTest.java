@@ -152,7 +152,7 @@ class A1RealBackendFlutterAcceptanceTest {
 
         var flutterDirectory = new File(System.getProperty(
                 "voxprep.a1.flutter.dir", "../mobile/careerspeak_app"));
-        assertThat(flutterDirectory.resolve("pubspec.yaml")).isFile();
+        assertThat(new File(flutterDirectory, "pubspec.yaml")).isFile();
 
         var command = List.of(
                 "flutter", "test",
