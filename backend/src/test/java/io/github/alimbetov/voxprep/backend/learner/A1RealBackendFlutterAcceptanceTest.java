@@ -83,6 +83,9 @@ class A1RealBackendFlutterAcceptanceTest {
 
     @Test
     void flutterSynchronizesActualMixedFreeFullPublishedRelease() throws Exception {
+        // Real HTTP creation: initial FREE revision is no longer a JPA fixture.
+        UUID authoredId = new R5AdminHttpPublicationWorkflow(serverPort, adminUsername, adminPassword)
+                .createPhrase(FREE_CODE, "Interview introduction", "Could you introduce yourself?");
         var adminPublication = new java.util.concurrent.atomic.AtomicReference<PublicationHttpFixture>();
         new TransactionTemplate(transactionManager).executeWithoutResult(status -> {
         var icon = ingest.ingest(new FileAssetIngestService.IngestCommand(
@@ -93,8 +96,7 @@ class A1RealBackendFlutterAcceptanceTest {
                 Map.of(),
                 Base64.getDecoder().decode(ICON_PNG)));
 
-        var free = phrase(FREE_CODE, "Interview introduction",
-                "Could you introduce yourself?");
+        var free = revisions.findById(authoredId).orElseThrow();
         var full = phrase(FULL_CODE, "Advanced interview strategies",
                 "What was your hardest architecture decision?");
 
