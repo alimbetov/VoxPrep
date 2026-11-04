@@ -550,13 +550,11 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
     // The backend remains the final authority; a local FULL flag is used
     // only if it was confirmed by the Backend entitlement endpoint. Other
     // snapshot sources cannot authorize content payload prefetch.
-    final verified = await _database.customSelect(
-      '''
+    final verified = await _database.customSelect('''
       SELECT access_level, source
       FROM learner_access_snapshot
       WHERE id = 1
-      ''',
-    ).getSingleOrNull();
+      ''').getSingleOrNull();
     return verified == null ||
         verified.read<String>('access_level') != 'FULL' ||
         verified.read<String>('source') != 'BACKEND_VERIFIED';
