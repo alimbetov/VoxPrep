@@ -229,7 +229,8 @@ public class JpaPublicationWireSnapshotWriter implements PublicationWireSnapshot
                                     "contentType", ref.identity().contentType().wireName(),
                                     "revision", ref.identity().revisionNumber().value(),
                                     "checksum", ref.checksum().value(),
-                                    "sortOrder", pos, "publishedAt", utc(publishedAt)));
+                                    "sortOrder", pos, "publishedAt", utc(Objects.requireNonNull(
+                                            revision.getPublishedAt(), "published exact revision timestamp"))));
                             for (var localized : localizations
                                     .findAllByContentRevisionIdOrderByLocaleAscLocalizationRevisionNumberDesc(revision.getId())) {
                                 if (localized.getLifecycle() != ContentLocalizationLifecycleStatus.APPROVED
