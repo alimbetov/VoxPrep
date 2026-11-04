@@ -17,11 +17,11 @@ void main() {
 
       await database.customSelect('SELECT 1').getSingle();
 
-      expect(database.schemaVersion, 10);
+      expect(database.schemaVersion, 18);
       final userVersion = await database
           .customSelect('PRAGMA user_version')
           .getSingle();
-      expect(userVersion.read<int>('user_version'), 10);
+      expect(userVersion.read<int>('user_version'), 18);
 
       final rows = await database
           .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
@@ -45,7 +45,7 @@ void main() {
     });
 
     test(
-      'opening a v1 database migrates through the full chain to v10',
+      'opening a v1 database migrates through the full chain to v18',
       () async {
         final verifier = SchemaVerifier(GeneratedHelper());
         final schema = await verifier.schemaAt(1);
@@ -57,7 +57,7 @@ void main() {
         final userVersion = await database
             .customSelect('PRAGMA user_version')
             .getSingle();
-        expect(userVersion.read<int>('user_version'), 10);
+        expect(userVersion.read<int>('user_version'), 18);
 
         final rows = await database
             .customSelect("SELECT name FROM sqlite_master WHERE type = 'table'")
@@ -84,7 +84,7 @@ void main() {
     );
 
     test(
-      'opening a v8 database migrates it to v10 without generated v9/v10 types',
+      'opening a v8 database migrates it to v18 without old generated types',
       () async {
         final verifier = SchemaVerifier(GeneratedHelper());
         final schema = await verifier.schemaAt(8);
@@ -96,7 +96,7 @@ void main() {
         final userVersion = await database
             .customSelect('PRAGMA user_version')
             .getSingle();
-        expect(userVersion.read<int>('user_version'), 10);
+        expect(userVersion.read<int>('user_version'), 18);
 
         final catalogueTable = await database
             .customSelect(
