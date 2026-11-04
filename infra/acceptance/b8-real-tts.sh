@@ -85,6 +85,9 @@ export SPRING_CONFIG_IMPORT="configtree:${ROOT}/infra/secrets/test/backend/"
 export VOXPREP_DB_URL="jdbc:postgresql://127.0.0.1:55432/voxprep_test"
 export VOXPREP_STORAGE_ENDPOINT="http://127.0.0.1:19000"
 export SERVER_PORT="$BACKEND_PORT"
+# Ephemeral MVC credentials: never use Store or production secrets.
+export VOXPREP_SECURITY_ADMIN_USERNAME="b8-reviewer"
+export VOXPREP_SECURITY_ADMIN_PASSWORD="$(openssl rand -hex 24)"
 java -jar "$BACKEND_JAR" >"$BACKEND_LOG" 2>&1 &
 BACKEND_PID=$!
 for _ in $(seq 1 60); do
@@ -210,4 +213,14 @@ if grep -Fq "$WORKER_TOKEN" "$WORKER_LOG" || grep -Fq "$WORKER_TOKEN" "$BACKEND_
   exit 1
 fi
 printf '%s\n' 'A11 PASS'
+printf '%s\n' 'A12: authenticated MVC preview verifies actual MP3 from RustFS'
+B8_BACKEND_URL="http://127.0.0.1:${BACKEND_PORT}" \\
+B8_CONTENT_REVISION="b8000000-0000-0000-0000-000000000005" \\
+B8_JOB_ID="$JOB_ID" \\
+B8_EXPECTED_SHA="$OUTPUT_SHA" \\
+B8_EXPECTED_SIZE="$OUTPUT_SIZE" \\
+B8_ADMIN_USERNAME="$VOXPREP_SECURITY_ADMIN_USERNAME" \\
+B8_ADMIN_PASSWORD="$VOXPREP_SECURITY_ADMIN_PASSWORD" \\
+python3 infra/acceptance/b8-mvc-preview.py
+printf '%s\n' 'A12 PASS'
 printf '%s\n' 'B8 REAL BACKEND <-> WORKER ACCEPTANCE PASSED'
