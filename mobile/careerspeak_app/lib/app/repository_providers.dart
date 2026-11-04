@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/content_delivery/localized_content_resolution.dart';
+import '../application/content_delivery/typed_content_body.dart';
 import '../application/ports/content_repository.dart';
 import '../application/ports/last_opened_content_repository.dart';
 import '../application/ports/localized_content_repository.dart';
@@ -10,6 +11,7 @@ import '../application/query/content_query.dart';
 import '../application/query/page.dart';
 import '../application/query/practice_test_query.dart';
 import '../data/local/drift_content_repository.dart';
+import '../data/local/drift_typed_content_reader.dart';
 import '../data/local/drift_last_opened_content_repository.dart';
 import '../data/local/drift_localized_content_repository.dart';
 import '../data/local/drift_practice_test_attempt_repository.dart';
@@ -65,6 +67,15 @@ final contentByIdentityProvider =
     FutureProvider.family<ContentItem?, ContentIdentity>((ref, identity) async {
       final repository = ref.watch(contentRepositoryProvider);
       return (await repository.getByIdentity(identity)).getOrThrow();
+    });
+
+/// Never looks up a typed body before the entitlement-aware content query.
+final typedContentByIdentityProvider =
+    FutureProvider.family<TypedContentBody?, ContentIdentity>((ref, identity) async {
+      final visible = await ref.watch(contentByIdentityProvider(identity).future);
+      if (visible == null) return null;
+      final reader = DriftTypedContentReader(ref.watch(careerSpeakDatabaseProvider));
+      return reader.getForVisible(visible);
     });
 
 final localizedContentProvider =
