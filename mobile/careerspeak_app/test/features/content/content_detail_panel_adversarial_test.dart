@@ -191,11 +191,25 @@ void main() {
     );
 
     expect(
-      tester.widget<IconButton>(find.ancestor(of: find.byTooltip('Back 10 seconds'), matching: find.byType(IconButton))).onPressed,
+      tester
+          .widget<IconButton>(
+            find.ancestor(
+              of: find.byTooltip('Back 10 seconds'),
+              matching: find.byType(IconButton),
+            ),
+          )
+          .onPressed,
       isNull,
     );
     expect(
-      tester.widget<IconButton>(find.ancestor(of: find.byTooltip('Forward 10 seconds'), matching: find.byType(IconButton))).onPressed,
+      tester
+          .widget<IconButton>(
+            find.ancestor(
+              of: find.byTooltip('Forward 10 seconds'),
+              matching: find.byType(IconButton),
+            ),
+          )
+          .onPressed,
       isNull,
     );
     expect(
