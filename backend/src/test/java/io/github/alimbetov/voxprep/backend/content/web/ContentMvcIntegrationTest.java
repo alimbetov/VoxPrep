@@ -126,6 +126,32 @@ class ContentMvcIntegrationTest {
     }
 
     @Test
+    void ttsJobPreparationRequiresAdminCsrfAndReadyForAudioRevision() throws Exception {
+        var draft = repository.saveAndFlush(vocabulary());
+        var ready = repository.saveAndFlush(vocabulary());
+        ready.markReadyForAudio();
+        repository.saveAndFlush(ready);
+
+        mockMvc.perform(get("/admin/content/revisions/{id}/edit", ready.getId())
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Generate audio for this revision")))
+                .andExpect(content().string(containsString("name=\"audioRole\"")));
+
+        mockMvc.perform(post("/admin/content/revisions/{id}/tts/prepare", ready.getId())
+                        .with(user("admin").roles("ADMIN"))
+                        .param("audioRole", "pronunciation")
+                        .param("voiceModelCode", "missing"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/admin/content/revisions/{id}/tts/prepare", draft.getId())
+                        .with(user("admin").roles("ADMIN")).with(csrf())
+                        .param("audioRole", "pronunciation")
+                        .param("voiceModelCode", "missing"))
+                .andExpect(status().isFound());
+    }
+
+    @Test
     void ttsPreviewRejectsUnrelatedOrAbsentJobsAndNonAdminUsers() throws Exception {
         UUID revisionId = UUID.randomUUID();
         UUID jobId = UUID.randomUUID();
