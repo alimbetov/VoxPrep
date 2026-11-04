@@ -35,7 +35,9 @@ void main() {
     final access = _MemoryAccessSnapshotRepository();
     await _pump(tester, billing, access: access);
 
-    await tester.ensureVisible(find.byKey(const Key('full-unlock-purchase-button')));
+    await tester.ensureVisible(
+      find.byKey(const Key('full-unlock-purchase-button')),
+    );
     await tester.pump();
     await tester.tap(find.byKey(const Key('full-unlock-purchase-button')));
     await tester.pumpAndSettle();
@@ -54,7 +56,9 @@ void main() {
     final access = _MemoryAccessSnapshotRepository();
     await _pump(tester, billing, access: access);
 
-    await tester.ensureVisible(find.byKey(const Key('full-unlock-restore-button')));
+    await tester.ensureVisible(
+      find.byKey(const Key('full-unlock-restore-button')),
+    );
     await tester.pump();
     await tester.tap(find.byKey(const Key('full-unlock-restore-button')));
     await tester.pumpAndSettle();
