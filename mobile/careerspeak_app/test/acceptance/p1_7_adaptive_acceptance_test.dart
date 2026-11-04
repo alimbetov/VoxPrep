@@ -95,9 +95,14 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
+    final database = CareerSpeakDatabase(NativeDatabase.memory());
+    addTearDown(database.close);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          // An isolated attempt store ensures this scenario starts at Q1,
+          // rather than resuming a durable attempt from another test.
+          careerSpeakDatabaseProvider.overrideWithValue(database),
           practiceTestRepositoryProvider.overrideWithValue(
             const MockTestRepository(),
           ),
