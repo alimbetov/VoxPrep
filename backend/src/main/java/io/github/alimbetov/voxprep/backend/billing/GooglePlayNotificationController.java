@@ -65,6 +65,10 @@ public final class GooglePlayNotificationController {
         final Instant eventAt;
         try {
             eventAt = Instant.ofEpochMilli(Long.parseLong(String.valueOf(notice.get("eventTimeMillis"))));
+            if (eventAt.isAfter(Instant.now().plusSeconds(300))
+                    || eventAt.isBefore(Instant.parse("2020-01-01T00:00:00Z"))) {
+                return ResponseEntity.badRequest().build();
+            }
         } catch (RuntimeException invalidTime) {
             return ResponseEntity.badRequest().build();
         }
@@ -95,8 +99,17 @@ public final class GooglePlayNotificationController {
                 if (productType == 2 && refundType == 1
                         && voided.get("purchaseToken") instanceof String token
                         && !token.isBlank() && token.length() <= 8192) {
+                    // Authenticated Pub/Sub delivery proves the push identity,
+                    // but not the embedded refund claim. Requery Google before
+                    // revoking; if Store state has not converged, request retry.
+                    var decision = google.verify(LifetimePurchaseService.PRODUCT_ID, token);
+                    if (decision.state() != StorePurchaseVerifier.State.REVOKED
+                            || !"GOOGLE_PLAY".equals(decision.provider())
+                            || !LifetimePurchaseService.PRODUCT_ID.equals(decision.productId())) {
+                        return ResponseEntity.status(503).build();
+                    }
                     ledger.applyStoreEvent("GOOGLE_PLAY", LifetimePurchaseService.PRODUCT_ID,
-                            PurchaseDigest.sha256(token), StorePurchaseVerifier.Environment.PRODUCTION,
+                            decision.transactionSha256(), decision.environment(),
                             StorePurchaseVerifier.State.REVOKED, eventAt);
                 }
             }
