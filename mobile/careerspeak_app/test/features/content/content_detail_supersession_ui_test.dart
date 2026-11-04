@@ -94,12 +94,24 @@ void main() {
         debugPrint('[A1-AUDIO] widget unmounted');
         await tester.pump();
         debugPrint('[A1-AUDIO] controller closing');
-        // Disposal awaits an audio event-subscription cancellation and a
-        // persisted-progress future. Drive both outside widget FakeAsync,
-        // which otherwise leaves these asynchronous completions suspended.
-        await tester.runAsync(() async {
-          await controller.dispose();
-        });
+        // Controller work was created inside FakeAsync. Keep driving the
+        // widget binding while its cancellation/progress futures drain; a
+        // plain await (including runAsync) can starve those fake-zone tasks.
+        var disposed = false;
+        Object? disposalError;
+        final disposal = controller.dispose().then(
+          (_) => disposed = true,
+          onError: (Object error) {
+            disposalError = error;
+            disposed = true;
+          },
+        );
+        for (var frame = 0; frame < 40 && !disposed; frame++) {
+          await tester.pump(const Duration(milliseconds: 1));
+        }
+        expect(disposalError, isNull);
+        expect(disposed, isTrue, reason: 'audio controller teardown must finish');
+        await disposal;
         debugPrint('[A1-AUDIO] controller closed');
       }
     },
