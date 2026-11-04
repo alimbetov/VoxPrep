@@ -97,6 +97,11 @@ void main() {
         tester,
         reason: 'Expanded answer review must fit $boundary',
       );
+      await tester.scrollUntilVisible(
+        find.textContaining('Correct answer:'),
+        160,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.textContaining('Correct answer:'), findsOneWidget);
     });
   }
