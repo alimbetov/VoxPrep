@@ -5,6 +5,7 @@ import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringC
 import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringService;
 import io.github.alimbetov.voxprep.backend.content.application.ContentRevisionSnapshot;
 import io.github.alimbetov.voxprep.backend.sharedkernel.AvailabilityStatus;
+import io.github.alimbetov.voxprep.backend.sharedkernel.BusinessCode;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import java.util.function.Supplier;
@@ -45,6 +46,48 @@ public class ContentMvcController {
         model.addAttribute("activeSection", "content");
         model.addAttribute("revisions", query.list(page, PAGE_SIZE));
         return "admin/content/index";
+    }
+
+    @GetMapping("/revisions/new")
+    public String newRevision(Model model) {
+        var form = new ContentMvcForms.DraftForm();
+        form.setExpectedVersion(0L);
+        form.setMinutes(2);
+        form.setAvailability("ACTIVE");
+        form.setBodyType("phrase");
+        form.setSkillCodes("SPEAKING");
+        return newRevisionForm(model, form);
+    }
+
+    @PostMapping("/revisions")
+    public String createRevision(
+            @RequestParam String contentCode,
+            @Valid @ModelAttribute("form") ContentMvcForms.DraftForm form,
+            BindingResult binding,
+            Model model,
+            RedirectAttributes redirect) {
+        if (form.getExpectedVersion() == null || form.getExpectedVersion() != 0L) {
+            binding.reject("content.initial.version", "New content must start at revision 1");
+        }
+        if (binding.hasErrors()) {
+            return newRevisionForm(model, form);
+        }
+        try {
+            var created = authoring.createInitialRevision(new BusinessCode(contentCode), mapper.toCommand(form));
+            redirect.addFlashAttribute("flashSuccess", "New content draft created.");
+            return editRedirect(created.getId());
+        } catch (IllegalArgumentException exception) {
+            binding.reject("content.initial.invalid", safeBodyMessage(exception));
+            return newRevisionForm(model, form);
+        } catch (IllegalStateException exception) {
+            throw conflict(exception);
+        }
+    }
+
+    private static String newRevisionForm(Model model, ContentMvcForms.DraftForm form) {
+        model.addAttribute("activeSection", "content");
+        model.addAttribute("form", form);
+        return "admin/content/new";
     }
 
     @GetMapping("/revisions/{revisionId}/edit")
