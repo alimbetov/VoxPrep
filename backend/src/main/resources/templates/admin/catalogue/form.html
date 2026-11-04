@@ -54,12 +54,24 @@
                         <input class="form-control" th:field="*{careerTrackCode}">
                     </div>
                     <div class="col-md-6" th:if="${formType == 'COLLECTION'}">
-                        <label class="form-label">Access level</label>
-                        <select class="form-select" th:field="*{accessLevel}">
-                            <option value="FREE">FREE</option>
-                            <option value="FULL">FULL</option>
-                        </select>
-                        <div class="text-danger small" th:errors="*{accessLevel}"></div>
+                        <fieldset aria-describedby="collectionAccessHelp">
+                            <legend class="form-label fw-semibold">Learner access</legend>
+                            <div class="form-check border rounded p-3 ps-5 mb-2">
+                                <input class="form-check-input" type="radio" th:field="*{accessLevel}"
+                                       id="accessFree" value="FREE">
+                                <label class="form-check-label" for="accessFree"><strong>FREE</strong> — Available without purchase</label>
+                            </div>
+                            <div class="form-check border rounded p-3 ps-5">
+                                <input class="form-check-input" type="radio" th:field="*{accessLevel}"
+                                       id="accessFull" value="FULL">
+                                <label class="form-check-label" for="accessFull"><strong>&#36; FULL</strong> — Lifetime unlock required</label>
+                            </div>
+                            <div id="collectionAccessHelp" class="form-text">
+                                Access belongs to the collection, not individual content revisions.
+                                FULL is one lifetime unlock, not a separate purchase for each item.
+                            </div>
+                            <div class="text-danger small" th:errors="*{accessLevel}"></div>
+                        </fieldset>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Sort order</label>
