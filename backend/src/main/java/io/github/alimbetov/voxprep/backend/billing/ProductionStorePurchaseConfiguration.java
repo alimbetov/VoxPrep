@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import tools.jackson.databind.ObjectMapper;
 
 /**
@@ -21,6 +22,7 @@ import tools.jackson.databind.ObjectMapper;
  * No simulations or local data can grant an entitlement in this mode.
  */
 @Configuration
+@EnableScheduling
 @ConditionalOnProperty(prefix="voxprep.billing",name="mode",havingValue="production")
 public class ProductionStorePurchaseConfiguration {
 

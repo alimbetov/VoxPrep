@@ -3,6 +3,7 @@ package io.github.alimbetov.voxprep.backend.billing;
 import com.apple.itunes.storekit.client.AppStoreServerAPIClient;
 import com.apple.itunes.storekit.model.Environment;
 import com.apple.itunes.storekit.model.Type;
+import com.apple.itunes.storekit.model.ResponseBodyV2DecodedPayload;
 import com.apple.itunes.storekit.verification.SignedDataVerifier;
 import com.apple.itunes.storekit.verification.VerificationException;
 import java.io.IOException;
@@ -37,6 +38,22 @@ public class AppleStoreVerifier {
             throw new PurchaseVerificationUnavailableException();
         }
     }
+
+    /** Only signed App Store Server Notifications V2 are accepted here. */
+    public NotificationDecision verifyNotification(String signedPayload) throws VerificationException {
+        var notice = signed.verifyAndDecodeNotification(signedPayload);
+        if (notice.getNotificationType() == null || notice.getData() == null
+                || notice.getData().getSignedTransactionInfo() == null
+                || notice.getSignedDate() == null) {
+            throw new IllegalArgumentException("Incomplete signed Apple notification");
+        }
+        var decision = verifiedTransaction(notice.getData().getSignedTransactionInfo(), null);
+        return new NotificationDecision(notice.getNotificationType().name(), decision,
+                Instant.ofEpochMilli(notice.getSignedDate()));
+    }
+
+    public record NotificationDecision(String notificationType,
+                                       StorePurchaseVerifier.StoreDecision purchase, Instant signedAt) {}
 
     public StorePurchaseVerifier.StoreDecision verifiedTransaction(
             String signedTransaction, String expectedTransactionId) throws VerificationException {

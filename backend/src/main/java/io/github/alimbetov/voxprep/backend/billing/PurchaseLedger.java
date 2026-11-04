@@ -45,8 +45,10 @@ public class PurchaseLedger {
                      purchase_state,environment,verified_at,updated_at)
             VALUES (?,?,?,?,?,?,?,now())
             ON CONFLICT (provider,product_id,transaction_sha256) DO UPDATE
-               SET purchase_state=excluded.purchase_state,
-                   verified_at=excluded.verified_at,
+               SET purchase_state=CASE
+                       WHEN app.store_purchase.purchase_state='REVOKED' THEN 'REVOKED'
+                       ELSE excluded.purchase_state END,
+                   verified_at=COALESCE(app.store_purchase.verified_at,excluded.verified_at),
                    environment=excluded.environment,
                    updated_at=now()
             RETURNING id
@@ -72,6 +74,34 @@ public class PurchaseLedger {
                AND i.status='ACTIVE'
             """, Integer.class, installationId);
         return active != null && active > 0;
+    }
+
+    /**
+     * Store-authenticated revocations use a monotonic provider event time;
+     * delayed/replayed notifications cannot overwrite more recent decisions.
+     * Insert a tombstone even when the notification arrives before first verify.
+     */
+    @Transactional
+    public void applyStoreEvent(String provider, String productId, String transactionHash,
+                                StorePurchaseVerifier.Environment environment,
+                                StorePurchaseVerifier.State state, Instant eventAt) {
+        Objects.requireNonNull(eventAt);
+        jdbc.update("""
+            INSERT INTO app.store_purchase(id,provider,product_id,transaction_sha256,
+                purchase_state,environment,verified_at,updated_at,latest_store_event_at)
+            VALUES (?,?,?,?,?,?,?,now(),?)
+            ON CONFLICT (provider,product_id,transaction_sha256) DO UPDATE
+              SET purchase_state=excluded.purchase_state,
+                  latest_store_event_at=excluded.latest_store_event_at,
+                  updated_at=now(),
+                  verified_at=CASE WHEN excluded.purchase_state='GRANTED'
+                     THEN COALESCE(app.store_purchase.verified_at,excluded.verified_at)
+                     ELSE app.store_purchase.verified_at END
+            WHERE app.store_purchase.latest_store_event_at IS NULL
+               OR app.store_purchase.latest_store_event_at < excluded.latest_store_event_at
+            """, UUID.randomUUID(), provider, productId, transactionHash,
+                state.name(), environment.name(),
+                state == StorePurchaseVerifier.State.GRANTED ? eventAt : null, eventAt);
     }
 
     /** Called only after an independently authenticated Store notification or reconciliation. */

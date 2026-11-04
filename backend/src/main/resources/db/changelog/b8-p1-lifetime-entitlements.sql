@@ -33,3 +33,11 @@ RESET ROLE;
 --rollback DROP TABLE app.store_purchase_claim;
 --rollback DROP TABLE app.store_purchase;
 --rollback RESET ROLE;
+
+--changeset voxprep:b8-p1-0002-refund-reconciliation-monotonic
+SET ROLE voxprep_owner;
+ALTER TABLE app.store_purchase ADD COLUMN latest_store_event_at timestamptz;
+RESET ROLE;
+--rollback SET ROLE voxprep_owner;
+--rollback ALTER TABLE app.store_purchase DROP COLUMN latest_store_event_at;
+--rollback RESET ROLE;
