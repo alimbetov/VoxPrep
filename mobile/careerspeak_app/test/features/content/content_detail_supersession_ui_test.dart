@@ -48,7 +48,14 @@ void main() {
       play.onPressed!();
       play.onPressed!();
 
-      await _waitUntil(() => resolver.pending.length == 2);
+      for (var attempt = 0;
+          attempt < 30 && resolver.pending.length < 2;
+          attempt++) {
+        // Widget tests run in FakeAsync: delayed(Duration.zero) cannot make
+        // progress until the test binding pumps the microtask queue.
+        await tester.pump();
+      }
+      expect(resolver.pending, hasLength(2));
       resolver.complete(0, _asset('superseded'));
       await tester.pump();
 
@@ -82,13 +89,6 @@ ResolvedAsset _asset(String id) => ResolvedAsset(
   localPath: '/tmp/$id.mp3',
   mediaType: 'audio/mpeg',
 );
-
-Future<void> _waitUntil(bool Function() predicate) async {
-  for (var i = 0; i < 100 && !predicate(); i += 1) {
-    await Future<void>.delayed(Duration.zero);
-  }
-  expect(predicate(), isTrue);
-}
 
 final class _ControlledResolver {
   final List<Completer<Result<ResolvedAsset>>> pending =
