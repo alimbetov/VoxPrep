@@ -59,6 +59,7 @@ class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> {
           ),
         );
         final localizedHint = localized.asData?.value?.hint;
+        final typed = ref.watch(typedContentByIdentityProvider(widget.identity));
 
         return Column(
           children: [
@@ -71,6 +72,9 @@ class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> {
               child: ContentDetailPanel(
                 item: value,
                 localizedHint: localizedHint,
+                typedBody: typed.asData?.value,
+                typedBodyLoading: typed.isLoading,
+                typedBodyError: typed.hasError,
               ),
             ),
           ],
