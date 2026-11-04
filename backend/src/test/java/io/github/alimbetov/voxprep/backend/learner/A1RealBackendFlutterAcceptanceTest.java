@@ -173,14 +173,34 @@ class A1RealBackendFlutterAcceptanceTest {
         Process process = new ProcessBuilder(command)
                 .directory(flutterDirectory)
                 .redirectErrorStream(true)
-                .inheritIO()
                 .start();
+        // Capture child diagnostics rather than inheriting JVM stdout, which
+        // corrupts the Maven Surefire wire protocol and hides Flutter failures.
+        var output = new StringBuilder();
+        Thread drain = Thread.ofVirtual().start(() -> {
+            try (var reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(
+                            process.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    synchronized (output) {
+                        if (output.length() < 100_000) {
+                            output.append(line).append('\n');
+                        }
+                    }
+                }
+            } catch (java.io.IOException exception) {
+                synchronized (output) {
+                    output.append("Flutter log capture failed: ").append(exception.getMessage());
+                }
+            }
+        });
         boolean completed = process.waitFor(8, TimeUnit.MINUTES);
-        if (!completed) {
-            process.destroyForcibly();
-        }
-        assertThat(completed).as("Flutter A1 exceeded its bounded timeout").isTrue();
-        assertThat(process.exitValue()).as("Real Flutter HTTP/Drift A1 acceptance").isZero();
+        if (!completed) process.destroyForcibly();
+        drain.join(10_000);
+        assertThat(completed).as("Flutter A1 exceeded timeout; output:\n%s", output).isTrue();
+        assertThat(process.exitValue()).as("Real Flutter HTTP/Drift A1 acceptance:\n%s", output).isZero();
+        assertThat(output.toString()).contains("A1_REAL_BACKEND_ACCEPTED");
     }
 
     private PhraseContentRevisionEntity phrase(String code, String title, String phrase) {
