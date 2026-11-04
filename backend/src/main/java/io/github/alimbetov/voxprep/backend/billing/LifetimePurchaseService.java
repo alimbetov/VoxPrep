@@ -36,7 +36,8 @@ public class LifetimePurchaseService {
         // can become a GRANTED ledger entry; the Flutter Boolean is never trusted.
         StoreDecision decision = verifier.verify(proof.provider(), proof.productId(),
                 proof.verificationData());
-        boolean full = ledger.record(installationId, proof.purchaseEventId(), semanticHash, decision);
+        boolean entitled = ledger.record(installationId, proof.purchaseEventId(), semanticHash, decision);
+        boolean full = decision.state() == StorePurchaseVerifier.State.GRANTED && entitled;
         return new VerificationResult(full, full ? "FULL" : "FREE",
                 full ? Instant.now() : null);
     }

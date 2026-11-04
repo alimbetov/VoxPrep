@@ -23,14 +23,17 @@ public class GooglePlayStoreVerifier {
     private final GoogleCredentials credentials;
     private final HttpClient http;
     private final ObjectMapper json;
+    private final boolean acceptTestPurchases;
 
-    public GooglePlayStoreVerifier(String packageName, GoogleCredentials credentials, ObjectMapper json) {
+    public GooglePlayStoreVerifier(String packageName, GoogleCredentials credentials,
+                                   ObjectMapper json, boolean acceptTestPurchases) {
         if (packageName == null || !packageName.matches("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+")) {
             throw new IllegalArgumentException("Configured Google Play package name is invalid");
         }
         this.packageName = packageName;
         this.credentials = Objects.requireNonNull(credentials);
         this.json = Objects.requireNonNull(json);
+        this.acceptTestPurchases = acceptTestPurchases;
         this.http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(4)).build();
     }
 
@@ -51,6 +54,9 @@ public class GooglePlayStoreVerifier {
             if (!(lines instanceof List<?> lineItems) || lineItems.size() != 1
                     || !(lineItems.getFirst() instanceof Map<?, ?> item)
                     || !product.equals(item.get("productId"))) {
+                return decision(product, token, StorePurchaseVerifier.State.REVOKED, null);
+            }
+            if (body.get("testPurchaseContext") != null && !acceptTestPurchases) {
                 return decision(product, token, StorePurchaseVerifier.State.REVOKED, null);
             }
             if (!(body.get("purchaseStateContext") instanceof Map<?, ?> ctx)) {
@@ -77,7 +83,11 @@ public class GooglePlayStoreVerifier {
                     throw new PurchaseVerificationUnavailableException();
                 }
             }
-            return decision(product, token, StorePurchaseVerifier.State.GRANTED,
+            return new StorePurchaseVerifier.StoreDecision("GOOGLE_PLAY", product,
+                    PurchaseDigest.sha256(token), StorePurchaseVerifier.State.GRANTED,
+                    body.get("testPurchaseContext") != null
+                            ? StorePurchaseVerifier.Environment.SANDBOX
+                            : StorePurchaseVerifier.Environment.PRODUCTION,
                     Instant.parse(purchasedAt));
         } catch (PurchaseVerificationUnavailableException ex) {
             throw ex;

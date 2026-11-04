@@ -1,0 +1,9 @@
+# Real store sandbox acceptance. This is NOT a simulated verifier.
+# Run on isolated staging with Store-issued test transactions and mounted keys.
+voxprep:
+  billing:
+    mode: production
+    google:
+      accept-test-purchases: true
+    apple:
+      environment: SANDBOX

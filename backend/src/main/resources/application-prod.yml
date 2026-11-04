@@ -3,3 +3,7 @@
 voxprep:
   billing:
     mode: production
+    google:
+      accept-test-purchases: false
+    apple:
+      environment: PRODUCTION

@@ -29,11 +29,12 @@ public class ProductionStorePurchaseConfiguration {
     @Bean
     GooglePlayStoreVerifier googlePlayStoreVerifier(
             @Value("${voxprep.billing.google.package-name:}") String packageName,
+            @Value("${voxprep.billing.google.accept-test-purchases:false}") boolean acceptTestPurchases,
             ObjectMapper json) {
         try {
             var credentials = GoogleCredentials.getApplicationDefault().createScoped(
                     List.of("https://www.googleapis.com/auth/androidpublisher"));
-            return new GooglePlayStoreVerifier(packageName, credentials, json);
+            return new GooglePlayStoreVerifier(packageName, credentials, json, acceptTestPurchases);
         } catch (Exception ex) {
             throw new IllegalStateException("Google Play service account credentials are missing", ex);
         }
@@ -41,14 +42,17 @@ public class ProductionStorePurchaseConfiguration {
 
     @Bean
     AppleStoreVerifier appleStoreVerifier(
+            @Value("${voxprep.billing.apple.environment:PRODUCTION}") String environmentName,
             @Value("${voxprep.billing.apple.bundle-id:}") String bundle,
             @Value("${voxprep.billing.apple.app-apple-id:0}") long appAppleId,
             @Value("${voxprep.billing.apple.issuer-id:}") String issuer,
             @Value("${voxprep.billing.apple.key-id:}") String keyId,
             @Value("${voxprep.billing.apple.key-file:}") String keyFile,
             @Value("${voxprep.billing.apple.roots-dir:}") String rootsDir) {
-        if (bundle.isBlank() || issuer.isBlank() || keyId.isBlank()
-                || keyFile.isBlank() || rootsDir.isBlank() || appAppleId <= 0) {
+        if (!Set.of("PRODUCTION", "SANDBOX").contains(environmentName)
+                || bundle.isBlank() || issuer.isBlank() || keyId.isBlank()
+                || keyFile.isBlank() || rootsDir.isBlank()
+                || ("PRODUCTION".equals(environmentName) && appAppleId <= 0)) {
             throw new IllegalStateException("Apple App Store production credentials are incomplete");
         }
         try {
@@ -58,10 +62,11 @@ public class ProductionStorePurchaseConfiguration {
             if (rootPaths.isEmpty()) throw new IllegalStateException("Apple root CA certificates missing");
             var certs = new java.util.HashSet<java.io.InputStream>();
             for (Path path : rootPaths) certs.add(new ByteArrayInputStream(Files.readAllBytes(path)));
+            var environment = Environment.valueOf(environmentName);
             var client = new AppStoreServerAPIClient(
-                    Files.readString(Path.of(keyFile)), keyId, issuer, bundle, Environment.PRODUCTION);
-            var verifier = new SignedDataVerifier(certs, bundle, appAppleId,
-                    Environment.PRODUCTION, true);
+                    Files.readString(Path.of(keyFile)), keyId, issuer, bundle, environment);
+            var verifier = new SignedDataVerifier(certs, bundle,
+                    appAppleId > 0 ? appAppleId : null, environment, true);
             return new AppleStoreVerifier(client, verifier, LifetimePurchaseService.PRODUCT_ID);
         } catch (Exception ex) {
             throw new IllegalStateException("Cannot initialize verified App Store API", ex);
