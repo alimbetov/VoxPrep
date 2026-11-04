@@ -419,6 +419,36 @@ const _snapshotVisibilityPredicate = '''
         AND member.content_type = l.content_type
         AND member.content_revision = l.revision
     )
+  )
+  AND NOT EXISTS (
+    SELECT 1
+    FROM content_manifest_states publication
+    JOIN learning_collection_member_reads member
+      ON member.content_version = publication.current_content_version
+    JOIN learning_collection_access_reads access
+      ON access.content_version = member.content_version
+     AND access.collection_code = member.collection_code
+    WHERE publication.id = 1
+      AND member.member_type = 'CONTENT'
+      AND member.content_code = l.content_code
+      AND member.content_type = lower(l.content_type)
+      AND member.content_revision = l.revision
+      AND access.access_level = 'FULL'
+      AND (
+        NOT EXISTS (
+          SELECT 1 FROM learner_access_snapshot entitlement
+          WHERE entitlement.id = 1
+            AND entitlement.access_level = 'FULL'
+            AND entitlement.source = 'BACKEND_VERIFIED'
+        )
+        OR NOT EXISTS (
+          SELECT 1 FROM content_catalog_reads body
+          WHERE body.content_code = l.content_code
+            AND body.content_type = l.content_type
+            AND body.revision = l.revision
+            AND body.checksum = l.checksum
+        )
+      )
   )''';
 
 const _catalogSelectPrefix =

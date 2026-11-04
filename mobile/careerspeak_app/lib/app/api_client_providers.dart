@@ -63,15 +63,12 @@ final installationBootstrapServiceProvider =
       );
     });
 
-/// Learner-facing API client. One installation-authentication 401 may renew the
-/// credential and replay the exact logical request once. A second 401 is
-/// returned fail-closed by the raw delegate.
+/// Learner-facing API client. A rejected installation Bearer token is
+/// not proof for rotation and remains a 401. Only a token already replaced
+/// locally by an independent successful rotation permits one bounded replay.
 final apiClientProvider = Provider<ApiClient>((ref) {
   return InstallationAuthRecoveryApiClient(
     delegate: ref.watch(rawApiClientProvider),
     credentialStore: ref.watch(installationCredentialStoreProvider),
-    renewCredentials: ref
-        .watch(installationBootstrapServiceProvider)
-        .ensureCredentials,
   );
 });

@@ -1,4 +1,7 @@
+import 'package:careerspeak_app/app/access_providers.dart';
+import 'package:careerspeak_app/app/asset_resolver_providers.dart';
 import 'package:careerspeak_app/app/catalogue_payload_providers.dart';
+import 'package:careerspeak_app/app/repository_providers.dart';
 import 'package:careerspeak_app/application/content_delivery/learning_vertical.dart';
 import 'package:careerspeak_app/application/content_delivery/product_catalog.dart';
 import 'package:careerspeak_app/application/content_delivery/universal_catalogue_graph.dart';
@@ -72,6 +75,16 @@ void main() {
       );
 
       expect(find.text(_longVerticalTitle), findsOneWidget);
+      // On a 2x text-scaled phone the goal cards are below the lazy-list
+      // viewport. Scroll until their description is actually materialized.
+      for (
+        var attempt = 0;
+        attempt < 15 && find.text(_longDescription).evaluate().isEmpty;
+        attempt++
+      ) {
+        await tester.drag(find.byType(Scrollable).first, const Offset(0, -160));
+        await tester.pumpAndSettle();
+      }
       expect(find.text(_longDescription), findsWidgets);
       expectNoLayoutExceptions(
         tester,
@@ -94,7 +107,12 @@ void main() {
         mode: VerticalCataloguePresentationMode.shelves,
       );
 
-      expect(find.text('Learning sequence'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Your learning sequence'),
+        140,
+        scrollable: find.byType(Scrollable).first,
+      );
+      expect(find.text('Your learning sequence'), findsOneWidget);
       expectNoLayoutExceptions(
         tester,
         reason: 'Collection sequence overflowed at $boundary',
@@ -113,6 +131,12 @@ Future<void> _pumpCatalogue(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        learnerAccessLevelProvider.overrideWithValue(AccessLevel.full),
+        // These widget tests exercise catalogue rendering, not network asset
+        // delivery. The separate A1 suite tests real RustFS downloads.
+        catalogueIconAssetProvider.overrideWith((ref, assetId) async => null),
+        contentCoverAssetProvider.overrideWith((ref, request) async => null),
+        contentByIdentityProvider.overrideWith((ref, identity) async => null),
         universalCatalogueRepositoryProvider.overrideWithValue(
           _FakeRepository(_snapshot(mode)),
         ),

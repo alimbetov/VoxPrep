@@ -299,7 +299,7 @@ class _Grid extends StatelessWidget {
             ? 0.9
             : textScale >= 1.3
             ? 1.1
-            : 1.45;
+            : 1.25;
         return GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -341,13 +341,15 @@ class _VerticalCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    Text(
-                      vertical.title,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.titleMedium,
+                    Flexible(
+                      child: Text(
+                        vertical.title,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Flexible(
                       child: Text(
                         vertical.description,

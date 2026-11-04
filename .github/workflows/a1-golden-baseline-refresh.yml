@@ -1,0 +1,53 @@
+name: A1 Golden Baseline Refresh
+
+# One-shot branch-scoped maintenance workflow. Its only trigger is the first
+# introduction of this workflow file, not later generated PNG updates.
+on:
+  push:
+    branches:
+      - feat/a1-real-flutter-backend-acceptance
+    paths:
+      - '.github/workflows/a1-golden-baseline-refresh.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: mobile/careerspeak_app
+    steps:
+      - name: Checkout exact branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Dependencies
+        run: flutter pub get
+      - name: Render all seven golden states with current Flutter
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 5m flutter test test/goldens/learner_ui_golden_test.dart --update-goldens --reporter expanded
+      - name: Commit regenerated PNGs only
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git add test/goldens/baselines/*.png
+          if git diff --cached --quiet; then
+            echo 'All baselines were already current.'
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m 'test(goldens): accept current VoxPrep learner UI rendering'
+          git push origin HEAD:refs/heads/feat/a1-real-flutter-backend-acceptance

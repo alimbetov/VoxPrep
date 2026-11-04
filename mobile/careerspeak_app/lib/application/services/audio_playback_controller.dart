@@ -292,7 +292,10 @@ final class AudioPlaybackController {
     final shouldPersist = _state.phase != AudioPlaybackPhase.completed;
 
     ++_generation;
-    await _eventSubscription?.cancel();
+    // _generation already invalidates any late event. Cancellation is
+    // asynchronous for some playback engines and must not block Stop/Dispose.
+    final subscription = _eventSubscription;
+    if (subscription != null) unawaited(subscription.cancel());
     _eventSubscription = null;
     _session = null;
 
@@ -456,7 +459,10 @@ final class AudioPlaybackController {
         persistPosition && _state.phase != AudioPlaybackPhase.completed;
 
     ++_generation;
-    await _eventSubscription?.cancel();
+    // _generation already invalidates any late event. Cancellation is
+    // asynchronous for some playback engines and must not block Stop/Dispose.
+    final subscription = _eventSubscription;
+    if (subscription != null) unawaited(subscription.cancel());
     _eventSubscription = null;
     _session = null;
 
@@ -500,7 +506,10 @@ final class AudioPlaybackController {
     await _closeCurrent(persistPosition: true);
     _disposed = true;
     await _writeTail;
-    await _states.close();
+    // A broadcast listener may be paused during widget teardown. Waiting for
+    // close() would deadlock controller disposal until that listener resumes.
+    // Close the sink now without making resource cleanup depend on listeners.
+    unawaited(_states.close());
   }
 
   static FailureResult<void> _closedFailure() => const FailureResult<void>(

@@ -192,6 +192,9 @@ Map<String, CataloguePayload> buildDemoVerticalCataloguePayloads() {
         'trackCode': '${spec.code}_TRACK',
         'title': '${spec.title} Essentials',
         'description': 'Representative demo collection for ${spec.title}.',
+        // Demo payloads are locally readable and have no verified purchase.
+        // The publication contract therefore marks every demo body FREE.
+        'accessLevel': 'FREE',
         'sortOrder': 0,
         'active': true,
         'members': _membersFor(spec.code),

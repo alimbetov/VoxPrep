@@ -188,6 +188,34 @@ Future<void> _seedCurrentLocalizedSnapshot(CareerSpeakDatabase database) async {
         ),
       );
 
+  // A committed v1 root also requires canonical membership for reads.
+  await database
+      .into(database.contentPackRevisions)
+      .insert(
+        ContentPackRevisionsCompanion.insert(
+          packCode: 'JAVA_SENIOR',
+          variantKey: 'canonical',
+          revision: 1,
+          schemaVersion: 1,
+          checksum: _packChecksum,
+          state: 'CURRENT',
+          sourceContentVersion: 42,
+          stagedAt: now,
+          currentAt: Value(now),
+        ),
+      );
+  await database
+      .into(database.packContentRefs)
+      .insert(
+        PackContentRefsCompanion.insert(
+          packCode: 'JAVA_SENIOR',
+          variantKey: 'canonical',
+          packRevision: 1,
+          contentCode: _identity.code,
+          contentType: 'INTERVIEW',
+          contentRevision: 1,
+        ),
+      );
   await database
       .into(database.contentPackRevisions)
       .insert(

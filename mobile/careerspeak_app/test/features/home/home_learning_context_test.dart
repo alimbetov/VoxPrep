@@ -82,6 +82,11 @@ void main() {
       dueItems: const <ContentItem>[dueItem],
     );
 
+    await tester.scrollUntilVisible(
+      find.text('Due'),
+      160,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(find.text('Due'), findsOneWidget);
     expect(find.text('1'), findsOneWidget);
   });

@@ -1,4 +1,6 @@
+import 'package:careerspeak_app/app/asset_resolver_providers.dart';
 import 'package:careerspeak_app/app/catalogue_payload_providers.dart';
+import 'package:careerspeak_app/app/repository_providers.dart';
 import 'package:careerspeak_app/application/content_delivery/learning_vertical.dart';
 import 'package:careerspeak_app/application/content_delivery/product_catalog.dart';
 import 'package:careerspeak_app/application/content_delivery/universal_catalogue_graph.dart';
@@ -25,7 +27,7 @@ void main() {
       const CatalogueGoalScreen(verticalCode: 'VERTICAL_A', goalCode: 'GOAL_A'),
     );
 
-    expect(find.text('Learning goal is unavailable.'), findsOneWidget);
+    expect(find.text('This learning goal is unavailable.'), findsOneWidget);
     expect(find.text('Goal A'), findsNothing);
   });
 
@@ -42,7 +44,7 @@ void main() {
       ),
     );
 
-    expect(find.text('Learning track is unavailable.'), findsOneWidget);
+    expect(find.text('This learning track is unavailable.'), findsOneWidget);
     expect(find.text('Track A'), findsNothing);
   });
 
@@ -60,7 +62,10 @@ void main() {
       ),
     );
 
-    expect(find.text('Learning collection is unavailable.'), findsOneWidget);
+    expect(
+      find.text('This learning collection is unavailable.'),
+      findsOneWidget,
+    );
     expect(find.text('Collection A'), findsNothing);
   });
 
@@ -78,7 +83,10 @@ void main() {
         ),
       );
 
-      expect(find.text('Learning collection is unavailable.'), findsOneWidget);
+      expect(
+        find.text('This learning collection is unavailable.'),
+        findsOneWidget,
+      );
     },
   );
 
@@ -106,6 +114,11 @@ Future<void> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
+        // These widget tests exercise catalogue rendering, not network asset
+        // delivery. The separate A1 suite tests real RustFS downloads.
+        catalogueIconAssetProvider.overrideWith((ref, assetId) async => null),
+        contentCoverAssetProvider.overrideWith((ref, request) async => null),
+        contentByIdentityProvider.overrideWith((ref, identity) async => null),
         universalCatalogueRepositoryProvider.overrideWithValue(
           _FakeRepository(snapshot),
         ),

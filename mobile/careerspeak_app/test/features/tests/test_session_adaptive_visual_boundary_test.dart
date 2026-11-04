@@ -63,6 +63,10 @@ void main() {
         250,
         scrollable: find.byType(Scrollable).first,
       );
+      // scrollUntilVisible can build a tile before its hit target enters the
+      // viewport. Ensure the actual action is tappable at large text scales.
+      await tester.ensureVisible(find.text(_optionA));
+      await tester.pumpAndSettle();
       await tester.tap(find.text(_optionA));
       await tester.pump();
 
@@ -71,6 +75,10 @@ void main() {
         250,
         scrollable: find.byType(Scrollable).first,
       );
+      // scrollUntilVisible can build a tile before its hit target enters the
+      // viewport. Ensure the actual action is tappable at large text scales.
+      await tester.ensureVisible(find.text('Submit'));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Submit'));
       await tester.pumpAndSettle();
 
@@ -78,19 +86,34 @@ void main() {
         tester,
         reason: 'Practice result must fit $boundary',
       );
+      await tester.scrollUntilVisible(
+        find.text('Review answers'),
+        180,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Review answers'), findsOneWidget);
 
+      final reviewQuestion = find.textContaining('1. ');
       await tester.scrollUntilVisible(
-        find.textContaining('1. '),
+        reviewQuestion,
         250,
         scrollable: find.byType(Scrollable).first,
       );
-      await tester.tap(find.textContaining('1. '));
+      // scrollUntilVisible can stop as soon as an item is built, although its
+      // center still falls outside a short accessibility viewport.
+      await tester.ensureVisible(reviewQuestion);
+      await tester.pumpAndSettle();
+      await tester.tap(reviewQuestion);
       await tester.pumpAndSettle();
 
       expectNoLayoutExceptions(
         tester,
         reason: 'Expanded answer review must fit $boundary',
+      );
+      await tester.scrollUntilVisible(
+        find.textContaining('Correct answer:'),
+        160,
+        scrollable: find.byType(Scrollable).first,
       );
       expect(find.textContaining('Correct answer:'), findsOneWidget);
     });

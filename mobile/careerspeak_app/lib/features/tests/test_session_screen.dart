@@ -187,7 +187,13 @@ class _QuestionPane extends StatelessWidget {
               'Question ${session.currentIndex + 1} of ${test.questions.length}',
               style: Theme.of(context).textTheme.titleMedium,
             );
-            final skill = Chip(label: Text(question.skill));
+            final skill = Chip(
+              label: Text(
+                question.skill,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            );
 
             if (stacked) {
               return Column(
@@ -200,7 +206,7 @@ class _QuestionPane extends StatelessWidget {
               children: [
                 Expanded(child: progressText),
                 const SizedBox(width: 12),
-                skill,
+                Flexible(child: skill),
               ],
             );
           },
