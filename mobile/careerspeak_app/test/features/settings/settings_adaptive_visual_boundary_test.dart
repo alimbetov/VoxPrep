@@ -49,12 +49,21 @@ void main() {
             'Country',
             'Storage',
           ]) {
-            await tester.scrollUntilVisible(
-              find.text(label).first,
-              180,
-              scrollable: find.byType(Scrollable).first,
-            );
-            expect(find.text(label), findsWidgets);
+            final target = find.text(label);
+            // A lazily built ListView might not have created this Text yet.
+            // Calling .first before materialization throws StateError.
+            for (var attempt = 0;
+                attempt < 18 && target.evaluate().isEmpty;
+                attempt++) {
+              await tester.drag(
+                find.byType(Scrollable).first,
+                const Offset(0, -180),
+              );
+              await tester.pumpAndSettle();
+            }
+            expect(target, findsWidgets);
+            await tester.ensureVisible(target.first);
+            await tester.pumpAndSettle();
             expectNoLayoutExceptions(
               tester,
               reason: 'Settings field $label must not overflow at $boundary',
