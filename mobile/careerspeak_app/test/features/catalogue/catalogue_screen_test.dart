@@ -220,7 +220,7 @@ void main() {
 
     expect(find.text('Future Goal'), findsNothing);
     expect(
-      find.text('No learning goals are available for this path yet.'),
+      find.text('No learning goals are available here yet.'),
       findsOneWidget,
     );
   });
