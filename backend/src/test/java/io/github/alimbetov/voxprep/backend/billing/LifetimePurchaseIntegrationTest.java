@@ -84,6 +84,43 @@ class LifetimePurchaseIntegrationTest {
     }
 
     @Test
+    void storeRevokeOutranksLateClientGrantForTheSameTransaction() {
+        UUID id = installation();
+        String granted = fixture("GOOGLE_PLAY", "GRANTED", "r5-revoked-after-grant");
+        assertThat(service.verify(id, request("GOOGLE_PLAY", "grant-1", granted)).verified()).isTrue();
+        String hash = PurchaseDigest.sha256("sim:v1:GOOGLE_PLAY:r5-revoked-after-grant");
+        ledger.applyStoreEvent("GOOGLE_PLAY", PRODUCT, hash, Environment.SIMULATED,
+                State.REVOKED, Instant.parse("2026-11-04T12:00:00Z"));
+        assertThat(service.currentEntitlement(id).accessLevel()).isEqualTo("FREE");
+        // Even though an old store proof still decodes to GRANTED, it cannot
+        // undo a more recent, independently authenticated store decision.
+        assertThat(service.verify(id, request("GOOGLE_PLAY", "stale-after-notification", granted))
+                .verified()).isFalse();
+        assertThat(service.currentEntitlement(id).accessLevel()).isEqualTo("FREE");
+    }
+
+    @Test
+    void storePendingOutranksOldClientGrantUntilNewAuthenticatedStoreEvent() {
+        UUID id = installation();
+        String granted = fixture("APP_STORE", "GRANTED", "r5-store-pending");
+        assertThat(service.verify(id, request("APP_STORE", "initial-grant", granted)).verified())
+                .isTrue();
+        String hash = PurchaseDigest.sha256("sim:v1:APP_STORE:r5-store-pending");
+        Instant eventAt = Instant.parse("2026-11-04T12:10:00Z");
+        ledger.applyStoreEvent("APP_STORE", PRODUCT, hash, Environment.SIMULATED,
+                State.PENDING, eventAt);
+        assertThat(service.verify(id, request("APP_STORE", "late-client-grant", granted))
+                .verified()).isFalse();
+        assertThat(service.currentEntitlement(id).accessLevel()).isEqualTo("FREE");
+        ledger.applyStoreEvent("APP_STORE", PRODUCT, hash, Environment.SIMULATED,
+                State.GRANTED, eventAt.plusSeconds(1));
+        assertThat(service.currentEntitlement(id).accessLevel()).isEqualTo("FULL");
+        ledger.applyStoreEvent("APP_STORE", PRODUCT, hash, Environment.SIMULATED,
+                State.REVOKED, eventAt.minusSeconds(1));
+        assertThat(service.currentEntitlement(id).accessLevel()).isEqualTo("FULL");
+    }
+
+    @Test
     void malformedSimulationsNeverGrantRealEntitlement() {
         UUID id=installation();
         assertThatThrownBy(() -> service.verify(id,request(
