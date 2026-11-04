@@ -75,11 +75,17 @@ void main() {
       );
 
       expect(find.text(_longVerticalTitle), findsOneWidget);
-      await tester.scrollUntilVisible(
-        find.text(_longDescription).first,
-        100,
-        scrollable: find.byType(Scrollable).first,
-      );
+      // On a 2x text-scaled phone the goal cards are below the lazy-list
+      // viewport. Scroll until their description is actually materialized.
+      for (var attempt = 0;
+          attempt < 15 && find.text(_longDescription).evaluate().isEmpty;
+          attempt++) {
+        await tester.drag(
+          find.byType(Scrollable).first,
+          const Offset(0, -160),
+        );
+        await tester.pumpAndSettle();
+      }
       expect(find.text(_longDescription), findsWidgets);
       expectNoLayoutExceptions(
         tester,
