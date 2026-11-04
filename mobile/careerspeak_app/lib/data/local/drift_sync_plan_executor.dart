@@ -51,14 +51,23 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
         final manifest = (fetched as Success<PackContentManifest>).value;
         _validateManifestTarget(target, manifest);
 
-        final payloadResult = await _fetchPayloads(target, manifest);
+        final payloadResult = await _fetchPayloads(
+          target,
+          manifest,
+          contentVersion: plan.target.contentVersion,
+          hasUniversalCatalogues: plan.target.catalogues.isNotEmpty,
+        );
         if (payloadResult case FailureResult<List<ContentPayload>>(
           :final failure,
         )) {
           return FailureResult(failure);
         }
 
-        final localizedPayloadResult = await _fetchLocalizedPayloads(manifest);
+        final localizedPayloadResult = await _fetchLocalizedPayloads(
+          manifest,
+          contentVersion: plan.target.contentVersion,
+          hasUniversalCatalogues: plan.target.catalogues.isNotEmpty,
+        );
         if (localizedPayloadResult
             case FailureResult<List<LocalizedContentPayload>>(:final failure)) {
           return FailureResult(failure);
@@ -118,14 +127,28 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
 
   Future<Result<List<ContentPayload>>> _fetchPayloads(
     PackRevisionRef pack,
-    PackContentManifest manifest,
-  ) async {
+    PackContentManifest manifest, {
+    required int contentVersion,
+    required bool hasUniversalCatalogues,
+  }) async {
     if (pack.identity.variant != 'canonical') {
       return const Success<List<ContentPayload>>(<ContentPayload>[]);
     }
 
     final payloads = <ContentPayload>[];
     for (final content in manifest.contents) {
+      if (await _isFrozenFullContent(
+        code: content.identity.code,
+        type: content.identity.type.name,
+        revision: content.revision,
+        checksum: content.checksum,
+        contentVersion: contentVersion,
+        enabled: manifest.schemaVersion >= 2 && hasUniversalCatalogues,
+      )) {
+        // Full content remains catalogued, but its body is not downloaded
+        // before entitlement. This preserves FREE startup of mixed releases.
+        continue;
+      }
       final target = ContentPayloadRef(
         identity: content.identity,
         revision: content.revision,
@@ -159,8 +182,10 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
   }
 
   Future<Result<List<LocalizedContentPayload>>> _fetchLocalizedPayloads(
-    PackContentManifest manifest,
-  ) async {
+    PackContentManifest manifest, {
+    required int contentVersion,
+    required bool hasUniversalCatalogues,
+  }) async {
     if (manifest.localizations.isEmpty) {
       return const Success<List<LocalizedContentPayload>>(
         <LocalizedContentPayload>[],
@@ -179,6 +204,15 @@ final class DriftSyncPlanExecutor implements SyncPlanExecutor {
 
     final payloads = <LocalizedContentPayload>[];
     for (final target in manifest.localizations) {
+      if (await _isFrozenFullContent(
+        code: target.identity.code,
+        type: target.identity.type.name,
+        revision: target.contentRevision,
+        contentVersion: contentVersion,
+        enabled: manifest.schemaVersion >= 2 && hasUniversalCatalogues,
+      )) {
+        continue;
+      }
       final fetched = await gateway.fetch(target);
       if (fetched case FailureResult<LocalizedContentPayload>(:final failure)) {
         return FailureResult<List<LocalizedContentPayload>>(failure);
