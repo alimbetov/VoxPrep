@@ -73,7 +73,9 @@ class ContentMvcIntegrationTest {
         // PostgreSQL makes typed payload immutable once the revision is approved.
         var approved = repository.saveAndFlush(vocabulary());
         approved.markReadyForAudio();
+        repository.saveAndFlush(approved);
         approved.markReadyForReview();
+        repository.saveAndFlush(approved);
         approved.approve(Instant.now());
         repository.saveAndFlush(approved);
         var draft = repository.saveAndFlush(vocabulary());
@@ -87,7 +89,9 @@ class ContentMvcIntegrationTest {
     void practiceTestPickerListsOnlyApprovedQuestionsAndRequiresAdmin() throws Exception {
         var approved = repository.saveAndFlush(question());
         approved.markReadyForAudio();
+        repository.saveAndFlush(approved);
         approved.markReadyForReview();
+        repository.saveAndFlush(approved);
         approved.approve(Instant.now());
         repository.saveAndFlush(approved);
         var draft = repository.saveAndFlush(question());
