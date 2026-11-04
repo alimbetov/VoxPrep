@@ -48,9 +48,11 @@ void main() {
       play.onPressed!();
       play.onPressed!();
 
-      for (var attempt = 0;
-          attempt < 30 && resolver.pending.length < 2;
-          attempt++) {
+      for (
+        var attempt = 0;
+        attempt < 30 && resolver.pending.length < 2;
+        attempt++
+      ) {
         // Widget tests run in FakeAsync: delayed(Duration.zero) cannot make
         // progress until the test binding pumps the microtask queue.
         await tester.pump();
