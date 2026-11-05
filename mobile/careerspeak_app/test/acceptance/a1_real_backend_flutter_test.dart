@@ -274,13 +274,14 @@ void main() {
           final n2FreeRef = n2PackManifest.contents.singleWhere(
             (content) => content.identity.code == _freeCode,
           );
-          final n2HttpContent = (await HttpContentPayloadGateway(
-            apiClient: api,
-          ).fetch(ContentPayloadRef(
-            identity: n2FreeRef.identity,
-            revision: n2FreeRef.revision,
-            checksum: n2FreeRef.checksum,
-          ))).getOrThrow();
+          final n2HttpContent =
+              (await HttpContentPayloadGateway(apiClient: api).fetch(
+                ContentPayloadRef(
+                  identity: n2FreeRef.identity,
+                  revision: n2FreeRef.revision,
+                  checksum: n2FreeRef.checksum,
+                ),
+              )).getOrThrow();
           expect(n2HttpContent.ref.revision, 2);
           expect(n2HttpContent.ref.checksum, n2FreeRef.checksum);
           await File('$_r5ControlDir/http-root-n2.json').writeAsString(
