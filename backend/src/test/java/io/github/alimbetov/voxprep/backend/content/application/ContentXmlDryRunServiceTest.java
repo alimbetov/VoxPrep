@@ -73,6 +73,39 @@ class ContentXmlDryRunServiceTest {
     }
 
     @Test
+    void detectsDomainErrorsDuringDryRunRatherThanAfterImport() throws Exception {
+        String template = new String(new ClassPathResource("imports/voxprep-content-template-v1.xml")
+                .getContentAsByteArray(), StandardCharsets.UTF_8);
+
+        var duplicateSkill = validator.validate(template.replace(
+                "<skill>SPEAKING</skill>",
+                "<skill>SPEAKING</skill><skill>SPEAKING</skill>")
+                .getBytes(StandardCharsets.UTF_8));
+        assertThat(duplicateSkill.valid()).isFalse();
+        assertThat(duplicateSkill.issues()).anyMatch(s -> s.contains("duplicate skill code"));
+
+        var singleAnswer = validator.validate(template.replace(
+                "<option key=\"B\" correct=\"false\">Hard-coded dependencies</option>", "")
+                .getBytes(StandardCharsets.UTF_8));
+        assertThat(singleAnswer.valid()).isFalse();
+        assertThat(singleAnswer.issues()).anyMatch(s -> s.contains("at least two options"));
+
+        var oversizedTimestamp = validator.validate(template.replace(
+                "endMs=\"1200\"", "endMs=\"2147483648\"")
+                .getBytes(StandardCharsets.UTF_8));
+        assertThat(oversizedTimestamp.valid()).isFalse();
+        assertThat(oversizedTimestamp.issues())
+                .anyMatch(s -> s.contains("invalid or overlapping segment times"));
+
+        var oversizedTitle = validator.validate(template.replace(
+                "<title>Architecture quiz</title>",
+                "<title>" + "T".repeat(257) + "</title>")
+                .getBytes(StandardCharsets.UTF_8));
+        assertThat(oversizedTitle.valid()).isFalse();
+        assertThat(oversizedTitle.issues()).anyMatch(s -> s.contains("invalid title"));
+    }
+
+    @Test
     void enforcesByteBoundAndRejectsDuplicateCodes() throws Exception {
         assertThat(validator.validate(new byte[ContentXmlDryRunService.MAX_BYTES + 1]).valid()).isFalse();
         var original = new ClassPathResource("imports/voxprep-content-template-v1.xml")
