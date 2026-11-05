@@ -341,9 +341,7 @@ void main() {
           );
           expect(corruptedResult, isA<FailureResult<ContentSyncOutcome>>());
           expect(
-            (corruptedResult as FailureResult<ContentSyncOutcome>)
-                .failure
-                .code,
+            (corruptedResult as FailureResult<ContentSyncOutcome>).failure.code,
             'CONTENT_PAYLOAD_MISMATCH',
           );
           final stillNAfterCorruption =
@@ -513,8 +511,7 @@ void main() {
   );
 }
 
-final class _CorruptOnceContentPayloadGateway
-    implements ContentPayloadGateway {
+final class _CorruptOnceContentPayloadGateway implements ContentPayloadGateway {
   _CorruptOnceContentPayloadGateway(this._delegate);
 
   final ContentPayloadGateway _delegate;
@@ -529,28 +526,31 @@ final class _CorruptOnceContentPayloadGateway
     _corrupted = true;
     final valid = fetched.value;
     // Return a well-formed digest that cannot match the exact requested ref.
-    final mismatchedDigest = target.checksum ==
+    final mismatchedDigest =
+        target.checksum ==
             'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
         ? 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
         : 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
-    return Success<ContentPayload>(ContentPayload(
-      ref: ContentPayloadRef(
-        identity: valid.ref.identity,
-        revision: valid.ref.revision,
-        checksum: mismatchedDigest,
+    return Success<ContentPayload>(
+      ContentPayload(
+        ref: ContentPayloadRef(
+          identity: valid.ref.identity,
+          revision: valid.ref.revision,
+          checksum: mismatchedDigest,
+        ),
+        title: valid.title,
+        subtitle: valid.subtitle,
+        description: valid.description,
+        categoryCode: valid.categoryCode,
+        category: valid.category,
+        levelCode: valid.levelCode,
+        level: valid.level,
+        minutes: valid.minutes,
+        hasAudio: valid.hasAudio,
+        skillCodes: valid.skillCodes,
+        body: valid.body,
       ),
-      title: valid.title,
-      subtitle: valid.subtitle,
-      description: valid.description,
-      categoryCode: valid.categoryCode,
-      category: valid.category,
-      levelCode: valid.levelCode,
-      level: valid.level,
-      minutes: valid.minutes,
-      hasAudio: valid.hasAudio,
-      skillCodes: valid.skillCodes,
-      body: valid.body,
-    ));
+    );
   }
 }
 
