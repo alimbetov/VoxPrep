@@ -52,6 +52,25 @@
             </table></div>
         </div>
     </div></div>
-    <p class="small text-secondary">Next phase MVC-R8: validated DRAFT creation through ContentAuthoringService, transactional batching, idempotency and error report. Currently disabled by design.</p>
+    <div th:if="${validation != null and validation.valid}" class="card studio-card mb-4">
+        <div class="card-body p-4">
+            <h2 class="h5">4. Import validated XML as DRAFT</h2>
+            <p class="text-secondary small">Choose the <strong>same XML file again</strong>. The backend compares its SHA-256 with your validated file (expires after 10 minutes), reruns validation, checks revision conflicts and approved Question references, then creates all new DRAFT revisions atomically. No approval or publication occurs.</p>
+            <form method="post" enctype="multipart/form-data" th:action="@{/admin/imports/import-drafts}">
+                <label for="validatedImportFile" class="form-label">Previously validated XML</label>
+                <input id="validatedImportFile" name="file" type="file" class="form-control mb-3"
+                       accept=".xml,application/xml,text/xml" required>
+                <button class="btn btn-warning" type="submit">Import as DRAFT</button>
+            </form>
+        </div>
+    </div>
+    <div th:if="${importError != null}" class="alert alert-danger" role="alert" th:text="${importError}">Import rejected.</div>
+    <div th:if="${importReport != null}" class="alert alert-success" role="status">
+        Import committed. New DRAFTs: <strong th:text="${importReport.created}">0</strong>.
+        Unchanged existing DRAFTs: <strong th:text="${importReport.alreadyPresent}">0</strong>.
+        Total records: <strong th:text="${importReport.total}">0</strong>.
+        All imported revisions still require editorial review and approval.
+    </div>
+    <p class="small text-secondary">Practice Test entries require already APPROVED/PUBLISHED Question revision UUIDs in PostgreSQL. Replace the sample placeholder before importing, or remove the Practice Test example. Invalid references reject the entire batch.</p>
 </main>
 </html>
