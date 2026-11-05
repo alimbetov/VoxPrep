@@ -86,7 +86,8 @@ class ContentBatchImportServiceTest {
     void duplicateIdentityFailsBeforeAnyWrite() {
         var json = new String(validJson(), StandardCharsets.UTF_8);
         var item = json.substring(json.indexOf("[{") + 1, json.lastIndexOf("]}"));
-        var duplicate = json.replace("]}", "," + item + "]}");
+        var end = json.lastIndexOf("]}");
+        var duplicate = json.substring(0, end) + "," + item + json.substring(end);
         assertThatThrownBy(() -> importer.importDrafts("content.json",
                 duplicate.getBytes(StandardCharsets.UTF_8)))
                 .isInstanceOf(IllegalArgumentException.class)
