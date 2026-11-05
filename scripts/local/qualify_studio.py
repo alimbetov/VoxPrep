@@ -7,7 +7,7 @@ import datetime as dt
 import hashlib
 import html
 from html.parser import HTMLParser
-import http.cookiejar
+from http.cookiejar import CookieJar
 import json
 import os
 from pathlib import Path
@@ -37,7 +37,7 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 
 
 def client():
-    jar = http.cookiejar.CookieJar()
+    jar = CookieJar()
     return urllib.request.build_opener(urllib.request.HTTPCookieProcessor(jar), NoRedirect()), jar
 
 
