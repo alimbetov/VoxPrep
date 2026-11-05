@@ -2,12 +2,17 @@ package io.github.alimbetov.voxprep.backend.content.web;
 
 import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringService;
 import io.github.alimbetov.voxprep.backend.content.application.ContentDraftUpdate;
+import io.github.alimbetov.voxprep.backend.content.domain.ContentLifecycleStatus;
+import io.github.alimbetov.voxprep.backend.content.persistence.QuestionContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
 import io.github.alimbetov.voxprep.backend.sharedkernel.BusinessCode;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import org.springframework.jdbc.core.ConnectionCallback;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.ObjectMapper;
@@ -24,13 +29,16 @@ public class ContentBatchImportService {
     private final ContentMvcMapper mapper;
     private final ContentAuthoringService authoring;
     private final ContentRevisionRepository revisions;
+    private final JdbcTemplate jdbc;
 
     public ContentBatchImportService(ObjectMapper json, ContentMvcMapper mapper,
-            ContentAuthoringService authoring, ContentRevisionRepository revisions) {
+            ContentAuthoringService authoring, ContentRevisionRepository revisions,
+            JdbcTemplate jdbc) {
         this.json = json;
         this.mapper = mapper;
         this.authoring = authoring;
         this.revisions = revisions;
+        this.jdbc = jdbc;
     }
 
     public record PreviewRow(String code, String contentType, String title, boolean alreadyExists) {}
@@ -49,13 +57,66 @@ public class ContentBatchImportService {
     @Transactional
     public int importDrafts(String filename, byte[] content) {
         var records = validate(filename, content);
-        int created = 0;
-        for (var row : records) {
-            if (row.exists()) continue; // Idempotent, do not edit human work.
-            authoring.createInitialRevision(row.code(), row.command());
-            created++;
+
+        // Match XML import's PostgreSQL advisory lock namespace so that
+        // concurrent JSON/XML uploads of the same identities serialize.
+        var identities = records.stream()
+                .map(row -> row.type() + ":" + row.code().value()).sorted().toList();
+        for (String identity : identities) {
+            jdbc.execute((ConnectionCallback<Void>) connection -> {
+                try (var statement = connection.prepareStatement(
+                        "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))")) {
+                    statement.setString(1, "voxprep:xml-import:" + identity);
+                    statement.execute();
+                }
+                return null;
+            });
         }
-        return created;
+
+        // Recheck under locks after validation; preview is advisory only.
+        records = validate(filename, content);
+        var missing = new ArrayList<Validated>();
+        for (var row : records) {
+            if (row.exists()) {
+                var id = revisions.findIdByExactIdentity(
+                        row.code().value(), row.type(), 1).orElseThrow();
+                var existing = revisions.findById(id).orElseThrow();
+                if (existing.getLifecycle() != ContentLifecycleStatus.DRAFT
+                        || !existing.getChecksum().equals(row.command().checksum())) {
+                    throw new IllegalArgumentException("Conflicting or immutable revision: "
+                            + row.code().value());
+                }
+            } else {
+                if (revisions.findLatestId(row.code().value(), row.type()).isPresent()) {
+                    throw new IllegalArgumentException("Later revision exists: "
+                            + row.code().value());
+                }
+                missing.add(row);
+            }
+
+            if (row.command().body() instanceof ContentDraftUpdate.PracticeTestBody test) {
+                var unique = new HashSet<UUID>();
+                for (UUID questionId : test.questionRevisionIds()) {
+                    if (!unique.add(questionId)) {
+                        throw new IllegalArgumentException("Duplicate Question revision");
+                    }
+                    var question = revisions.findById(questionId).orElseThrow(() ->
+                            new IllegalArgumentException("Unresolved Question revision"));
+                    if (!(question instanceof QuestionContentRevisionEntity)
+                            || (question.getLifecycle() != ContentLifecycleStatus.APPROVED
+                                && question.getLifecycle() != ContentLifecycleStatus.PUBLISHED)) {
+                        throw new IllegalArgumentException(
+                                "Practice Test requires approved Question revision");
+                    }
+                }
+            }
+        }
+        // All conflicts are identified before the first write. A later
+        // persistence failure rolls the complete batch back.
+        for (var row : missing) {
+            authoring.createInitialRevision(row.code(), row.command());
+        }
+        return missing.size();
     }
 
     private List<Validated> validate(String filename, byte[] content) {

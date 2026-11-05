@@ -8,6 +8,9 @@ import static org.mockito.Mockito.*;
 import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringService;
 import io.github.alimbetov.voxprep.backend.content.application.ContentDraftUpdate;
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
+import io.github.alimbetov.voxprep.backend.content.persistence.PhraseContentRevisionEntity;
+import io.github.alimbetov.voxprep.backend.content.domain.ContentLifecycleStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import io.github.alimbetov.voxprep.backend.sharedkernel.BusinessCode;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
@@ -20,8 +23,9 @@ import tools.jackson.databind.ObjectMapper;
 class ContentBatchImportServiceTest {
     private final ContentAuthoringService authoring = mock(ContentAuthoringService.class);
     private final ContentRevisionRepository revisions = mock(ContentRevisionRepository.class);
+    private final JdbcTemplate jdbc = mock(JdbcTemplate.class);
     private final ContentBatchImportService importer = new ContentBatchImportService(
-            new ObjectMapper(), new ContentMvcMapper(), authoring, revisions);
+            new ObjectMapper(), new ContentMvcMapper(), authoring, revisions, jdbc);
 
     @BeforeEach
     void setup() {
@@ -52,10 +56,41 @@ class ContentBatchImportServiceTest {
     }
 
     @Test
-    void existingFirstRevisionIsIdempotentlySkipped() {
+    void exactDraftReplayIsIdempotentButDifferentChecksumIsRejected() {
+        importer.importDrafts("content.json", validJson());
+        var capture = org.mockito.ArgumentCaptor.forClass(ContentDraftUpdate.class);
+        verify(authoring).createInitialRevision(any(BusinessCode.class), capture.capture());
+        clearInvocations(authoring);
+
+        var id = UUID.randomUUID();
+        var revision = mock(PhraseContentRevisionEntity.class);
+        when(revision.getLifecycle()).thenReturn(ContentLifecycleStatus.DRAFT);
+        when(revision.getChecksum()).thenReturn(capture.getValue().checksum());
         when(revisions.findIdByExactIdentity(anyString(), anyString(), eq(1)))
-                .thenReturn(Optional.of(UUID.randomUUID()));
+                .thenReturn(Optional.of(id));
+        when(revisions.findById(id)).thenReturn(Optional.of(revision));
+
         assertThat(importer.importDrafts("content.json", validJson())).isZero();
+        verifyNoInteractions(authoring);
+
+        var changed = new String(validJson(), StandardCharsets.UTF_8)
+                .replace("Greeting context", "Different content")
+                .getBytes(StandardCharsets.UTF_8);
+        assertThatThrownBy(() -> importer.importDrafts("content.json", changed))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Conflicting");
+        verifyNoInteractions(authoring);
+    }
+
+    @Test
+    void duplicateIdentityFailsBeforeAnyWrite() {
+        var json = new String(validJson(), StandardCharsets.UTF_8);
+        var item = json.substring(json.indexOf("[{") + 1, json.lastIndexOf("]}"));
+        var duplicate = json.replace("]}", "," + item + "]}");
+        assertThatThrownBy(() -> importer.importDrafts("content.json",
+                duplicate.getBytes(StandardCharsets.UTF_8)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Duplicate import identity");
         verifyNoInteractions(authoring);
     }
 
