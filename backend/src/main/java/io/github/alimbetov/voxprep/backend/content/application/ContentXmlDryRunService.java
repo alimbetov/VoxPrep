@@ -81,7 +81,11 @@ public final class ContentXmlDryRunService {
                 for (String field : List.of("title", "subtitle", "description", "categoryCode", "levelCode")) {
                     var child = one(entry, field);
                     if (child == null || child.getTextContent().isBlank()
-                            || child.getTextContent().length() > ("description".equals(field) ? 4000 : 512)) {
+                            || child.getTextContent().length() > switch (field) {
+                                case "title" -> 256;
+                                case "description" -> 4096;
+                                default -> 512;
+                            }) {
                         issue(problems, label + "invalid " + field);
                     }
                 }
@@ -101,10 +105,14 @@ public final class ContentXmlDryRunService {
                         issue(problems, label + "invalid minutes");
                     }
                 }
+                var skillCodes = new HashSet<String>();
                 for (Element skill : children(entry)) {
-                    if ("skill".equals(skill.getTagName())
-                            && !skill.getTextContent().matches("[A-Z0-9][A-Z0-9._-]{0,127}")) {
+                    if (!"skill".equals(skill.getTagName())) continue;
+                    String skillCode = skill.getTextContent();
+                    if (!skillCode.matches("[A-Z0-9][A-Z0-9._-]{0,127}")) {
                         issue(problems, label + "invalid skill code");
+                    } else if (!skillCodes.add(skillCode)) {
+                        issue(problems, label + "duplicate skill code");
                     }
                 }
                 Element body = one(entry, "body");
@@ -163,6 +171,7 @@ public final class ContentXmlDryRunService {
                         }
                         if ("true".equals(option.getAttribute("correct"))) correct++;
                     }
+                    if (optionKeys.size() < 2) issue(problems, label + "question requires at least two options");
                     if (correct != 1) issue(problems, label + "question requires exactly one correct option");
                 }
                 if ("shadowing".equals(type)) {
@@ -172,6 +181,7 @@ public final class ContentXmlDryRunService {
                         try {
                             long start = Long.parseLong(seg.getAttribute("startMs"));
                             long end = Long.parseLong(seg.getAttribute("endMs"));
+                            if (start > Integer.MAX_VALUE || end > Integer.MAX_VALUE) throw new NumberFormatException();
                             if (start < 0 || end <= start || start < previousEnd) throw new NumberFormatException();
                             previousEnd = end;
                         } catch (NumberFormatException ex) { issue(problems, label + "invalid or overlapping segment times"); }
@@ -183,6 +193,12 @@ public final class ContentXmlDryRunService {
                                 && (one(section, "heading") == null || one(section, "text") == null)) {
                             issue(problems, label + "section requires heading and text");
                         }
+                    }
+                }
+                if ("vocabulary".equals(type)) {
+                    var partOfSpeech = one(body, "partOfSpeech");
+                    if (partOfSpeech != null && partOfSpeech.getTextContent().length() > 128) {
+                        issue(problems, label + "partOfSpeech exceeds 128 characters");
                     }
                 }
                 validateStrictBody(type, body, label, problems);
