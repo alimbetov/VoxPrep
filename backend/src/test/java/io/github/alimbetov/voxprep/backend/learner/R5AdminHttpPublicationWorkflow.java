@@ -99,7 +99,8 @@ final class R5AdminHttpPublicationWorkflow {
                     "revisionId=" + revisionId + "&role=COVER_IMAGE&assetId=" + assetId);
             assertThat(bound.statusCode()).isEqualTo(302);
             assertThat(get(http, "/admin/content/revisions/" + revisionId + "/edit").body())
-                    .contains("DRAFT");
+                    .contains("DRAFT")
+                    .contains("/admin/media/" + assetId + "/preview");
         }
     }
 
