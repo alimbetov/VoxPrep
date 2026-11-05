@@ -66,6 +66,7 @@ class A1RealBackendFlutterAcceptanceTest {
         var browser = new R5AdminHttpPublicationWorkflow(serverPort, adminUsername, adminPassword);
         UUID authoredId = browser.createPhrase(FREE_CODE, "Interview introduction",
                 "Could you introduce yourself?");
+        captureBrowserEvidence("draft", authoredId);
         UUID fullId = browser.createPhrase(FULL_CODE, "Advanced interview strategies",
                 "What was your hardest architecture decision?");
         UUID questionId = browser.createQuestion(QUESTION_CODE);
@@ -85,6 +86,7 @@ class A1RealBackendFlutterAcceptanceTest {
         browser.approveDraft(fullId);
         browser.approveDraft(questionId);
         browser.approveDraft(practiceTestId);
+        captureBrowserEvidence("approved", authoredId);
 
         UUID freeCollectionId = collections.findByCode(new CatalogueCode("A1_FREE"))
                 .orElseThrow().getId();
@@ -105,6 +107,7 @@ class A1RealBackendFlutterAcceptanceTest {
                 browser.createCandidate(), freeCollectionId, primaryMemberId, refs);
         browser.bindAndPublish(fixture.revisionId(), fixture.assetId(),
                 fixture.candidateId(), fixture.refs());
+        captureBrowserEvidence("current", authoredId);
 
         // Flutter must consume the publication produced by Content Studio HTTP, not
         // by a direct test call to PublicationPublisher or ContentAssetBindingService.
@@ -202,6 +205,40 @@ class A1RealBackendFlutterAcceptanceTest {
             java.nio.file.Files.copy(source, evidenceDir.resolve(fileName),
                     java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         }
+    }
+
+    private void captureBrowserEvidence(String stage, UUID revisionId) throws Exception {
+        var evidenceDir = java.nio.file.Path.of("target", "r1-evidence");
+        java.nio.file.Files.createDirectories(evidenceDir);
+        var script = java.nio.file.Path.of(System.getProperty(
+                "voxprep.a1.browser.script", "../infra/acceptance/r1-content-studio-browser.py"))
+                .toAbsolutePath();
+        assertThat(java.nio.file.Files.exists(script))
+                .as("real Chromium screenshot script must exist").isTrue();
+        var runner = new ProcessBuilder("python3", script.toString())
+                .redirectErrorStream(true);
+        var environment = runner.environment();
+        environment.put("VOXPREP_R1_BASE_URL", "http://127.0.0.1:" + serverPort);
+        environment.put("VOXPREP_R1_ADMIN_USERNAME", adminUsername);
+        environment.put("VOXPREP_R1_ADMIN_PASSWORD", adminPassword);
+        environment.put("VOXPREP_R1_REVISION_ID", revisionId.toString());
+        environment.put("VOXPREP_R1_STAGE", stage);
+        environment.put("VOXPREP_R1_OUTPUT_DIR", evidenceDir.toAbsolutePath().toString());
+        Process process = runner.start();
+        boolean done = process.waitFor(60, TimeUnit.SECONDS);
+        if (!done) process.destroyForcibly();
+        String diagnostics = new String(process.getInputStream().readAllBytes(),
+                java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(done).as("Chromium %s timeout: %s", stage, diagnostics).isTrue();
+        assertThat(process.exitValue()).as("Chromium %s failed: %s", stage, diagnostics).isZero();
+        String imageName = switch (stage) {
+            case "draft" -> "01-content-draft.png";
+            case "approved" -> "02-content-approved.png";
+            case "current" -> "03-publication-current.png";
+            default -> throw new IllegalArgumentException(stage);
+        };
+        assertThat(java.nio.file.Files.size(evidenceDir.resolve(imageName)))
+                .as("real browser screenshot %s", imageName).isGreaterThan(1024);
     }
 
     private record PublicationHttpFixture(UUID revisionId, UUID assetId, UUID candidateId,
