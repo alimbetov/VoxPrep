@@ -64,6 +64,27 @@ public class ContentXmlImportService {
             });
         }
 
+        var inspected = inspect(plan);
+        for (PlannedDraft item : inspected.missing()) {
+            authoring.createInitialRevision(new BusinessCode(item.code()), item.command());
+        }
+        // Transaction commits only after all new DRAFT revisions are persisted.
+        return new ImportReport(inspected.missing().size(), inspected.existing(), plan.size());
+    }
+
+    /** Read-only preflight shared with import; import always runs it again under locks. */
+    @Transactional(readOnly = true)
+    public ImportPlan preflight(byte[] xml) {
+        var structure = validation.validate(xml);
+        if (!structure.valid()) {
+            throw new IllegalArgumentException("XML validation failed.");
+        }
+        var items = parsePlan(xml);
+        var inspection = inspect(items);
+        return new ImportPlan(inspection.missing().size(), inspection.existing(), items.size());
+    }
+
+    private Inspection inspect(List<PlannedDraft> plan) {
         int existing = 0;
         List<PlannedDraft> missing = new ArrayList<>();
         // Preflight *all* records before the first database write.
@@ -102,11 +123,7 @@ public class ContentXmlImportService {
             }
         }
 
-        for (PlannedDraft item : missing) {
-            authoring.createInitialRevision(new BusinessCode(item.code()), item.command());
-        }
-        // Transaction commits only after all new DRAFT revisions are persisted.
-        return new ImportReport(missing.size(), existing, plan.size());
+        return new Inspection(List.copyOf(missing), existing);
     }
 
     private List<PlannedDraft> parsePlan(byte[] xml) {
@@ -143,5 +160,7 @@ public class ContentXmlImportService {
     }
 
     private record PlannedDraft(String code, String type, ContentDraftUpdate command) {}
+    private record Inspection(List<PlannedDraft> missing, int existing) {}
+    public record ImportPlan(int toCreate, int alreadyPresent, int total) {}
     public record ImportReport(int created, int alreadyPresent, int total) {}
 }
