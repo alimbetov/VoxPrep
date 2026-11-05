@@ -87,8 +87,24 @@ public final class ContentXmlDryRunService {
                 }
                 for (String field : List.of("categoryCode", "levelCode")) {
                     var child = one(entry, field);
-                    if (child != null && !child.getTextContent().matches("[A-Za-z0-9][A-Za-z0-9._-]{0,127}")) {
+                    if (child != null && !child.getTextContent().matches("[A-Z0-9][A-Z0-9._-]{0,127}")) {
                         issue(problems, label + "invalid " + field + " code");
+                    }
+                }
+                var minutesElement = one(entry, "minutes");
+                if (minutesElement != null) {
+                    try {
+                        if (Integer.parseInt(minutesElement.getTextContent()) < 1) {
+                            issue(problems, label + "minutes must be positive");
+                        }
+                    } catch (NumberFormatException ex) {
+                        issue(problems, label + "invalid minutes");
+                    }
+                }
+                for (Element skill : children(entry)) {
+                    if ("skill".equals(skill.getTagName())
+                            && !skill.getTextContent().matches("[A-Z0-9][A-Z0-9._-]{0,127}")) {
+                        issue(problems, label + "invalid skill code");
                     }
                 }
                 Element body = one(entry, "body");
@@ -110,11 +126,11 @@ public final class ContentXmlDryRunService {
                 }
                 String[] required = switch (type) {
                     case "phrase" -> new String[] {"phrase", "usage"};
-                    case "vocabulary" -> new String[] {"term", "definition"};
+                    case "vocabulary" -> new String[] {"term", "definition", "partOfSpeech"};
                     case "interview" -> new String[] {"prompt", "modelAnswer"};
                     case "topic" -> new String[] {"section"};
                     case "shadowing" -> new String[] {"transcript", "segment"};
-                    case "question" -> new String[] {"questionText", "option"};
+                    case "question" -> new String[] {"questionText", "explanation", "option"};
                     case "practice_test" -> new String[] {"instructions", "passingScorePercent", "questionRevisionId"};
                     default -> new String[0];
                 };
