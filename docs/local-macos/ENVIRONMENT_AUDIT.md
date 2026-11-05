@@ -5,6 +5,20 @@ Source SHA: `fc02331b1574162382d4436d38bf3e5e0a14d45e`; starting main
 `9ae3d7e646e3e39d0886765bfa6a60d77dde0529` is an ancestor (exit 0).
 Checkout was clean before implementation. This is environment evidence, not E2E acceptance.
 
+Follow-up 2026-11-05: after operator cleanup, `df -h .` reports **36 GiB**
+available (82% used). The original disk blocker below is historical and is now
+resolved. Isolated infrastructure startup and pinned image pulls have begun;
+this does not yet qualify A1 or A2–A5.
+
+Initial A1 execution: `./scripts/local/up.sh` exited 0; PostgreSQL and RustFS
+became healthy and RustFS bootstrap exited 0. `./scripts/local/smoke-infra.sh`
+exited 0: authenticated runtime SQL succeeds, runtime has app USAGE but no CREATE
+and no liquibase USAGE; RustFS 1.0.4 readiness reports ready. Evidence:
+`artifacts/local-smoke/a1-initial/` (smoke/status/image logs). This run used source
+HEAD `4fd313a971cb0da95c4c89806641c79476c79a02` with the new smoke script and this
+report uncommitted; it is preliminary evidence, not exact-SHA qualification.
+S3 roundtrip, persistence restart and actual Liquibase-table denial remain NOT RUN.
+
 Run `./scripts/local/audit.sh` from the checkout. The first recorded run is
 `artifacts/local-smoke/20261105T160120Z/index.json`: each entry contains the exact
 command, UTC timestamp, exit code and output file. All 19 probes exited 0;
