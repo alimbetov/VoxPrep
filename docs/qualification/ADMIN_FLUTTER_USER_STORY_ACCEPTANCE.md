@@ -13,7 +13,7 @@ Primary PR: #50. This document distinguishes **implementation**,
 | US-P1-01 | As author, I want one catalogue source | Same codes, types, revisions, access levels and membership in generated fixture, Backend published CURRENT and Flutter Drift after sync | NOT ACCEPTED: generated backend JSON and Flutter mock catalogue are not the publication source of truth |
 | US-P1-02 | As admin, I want working Localization navigation | Admin Localization entry opens real revisions and editing forms, not placeholder | Redirect to `/admin/content` committed; reviewer still navigates via per-revision localization |
 | US-P1-03 | As admin, I want typed XML/JSON import | Preview validates schema and typed bodies, import is transactional/idempotent, documents remain DRAFT, bad payload rolls back | Implemented in `/admin/imports` with same-session file SHA-256 preview and test coverage; exact-SHA CI and manual browser acceptance pending |
-| US-P1-04 | As developer, I want Chrome demo without infrastructure | `flutter run -d chrome` with explicit demo flag opens working Home/Learn/Tests/Settings without creating Drift/HTTP clients | NOT ACCEPTED: production bootstrap still composes SQLite/HTTP; test-only mock adapters do not solve Web |
+| US-P1-04 | As developer, I want Chrome demo without infrastructure | Explicit `demo_web_main.dart` debug entrypoint runs generated Home/Learn/Tests/Review/Settings without Drift or HTTP | Isolated DEV Web Preview implemented and widget tested; real Chrome launch/manual visual acceptance pending; production Flutter remains separate |
 | US-P1-05 | As admin, I want browser end-to-end acceptance | Browser create → image → translation → TTS → review → approve → publish CURRENT → real Flutter HTTP → Drift → offline | NOT ACCEPTED: partial A1 automatic tests exist; full real browser path unverified |
 
 ## Runtime profiles
@@ -53,3 +53,11 @@ real JSON/XML validator and Draft creator. See
 [`ADMIN_CONTENT_IMPORT_V1.md`](ADMIN_CONTENT_IMPORT_V1.md) for schema,
 constraints and user workflow. This is not interchangeable with the DEV
 seed generator and does not perform publication on behalf of an admin.
+
+## Chrome DEV Web Preview
+
+Start the explicitly separated browser-only demonstration with
+`flutter run -d chrome -t lib/demo_web_main.dart --dart-define=VOXPREP_DEMO=true`.
+Details: [`FLUTTER_WEB_DEV_PREVIEW.md`](FLUTTER_WEB_DEV_PREVIEW.md).
+The preview does not make production Flutter's own SQLite dependency
+irrelevant; real app browser support is still an independent requirement.
