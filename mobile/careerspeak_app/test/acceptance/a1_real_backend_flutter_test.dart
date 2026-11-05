@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:careerspeak_app/application/assessment/assessment_revision_loader.dart';
@@ -502,6 +503,38 @@ void main() {
           await File(reused.localPath).readAsBytes(),
           mediaProbe.bodyBytes,
         );
+
+        if (_r5ControlDir.isNotEmpty) {
+          // Machine-readable evidence from actual HTTP manifest and reopened
+          // on-disk Drift state. No access tokens or raw private assets.
+          final offlineCollection = reopened.graph.collections.singleWhere(
+            (collection) => collection.code == 'A1_FREE',
+          );
+          final evidence = <String, Object?>{
+            'source': 'A1 real PostgreSQL + authenticated HTTP + Drift',
+            'rootN': <String, Object?>{
+              'contentVersion': root.contentVersion,
+              'checksum': root.checksum,
+            },
+            'offlineCurrent': <String, Object?>{
+              'contentVersion': reopened.contentVersion,
+              'contentCode': offlineFree.code,
+              'contentType': offlineFree.type.name,
+              'revision': offlineFree.revision,
+              'phrase': (offlineBody as PhraseBody).phrase,
+              'freeCollectionMembers': offlineCollection.members
+                  .map((member) => member.identityKey)
+                  .toList(),
+            },
+            'failureInjection': <String, Object?>{
+              'missingPayloadRejected': true,
+              'checksumMismatchRejected': true,
+              'preservedN': true,
+            },
+          };
+          await File('$_r5ControlDir/flutter-drift-evidence.json')
+              .writeAsString(const JsonEncoder.withIndent('  ').convert(evidence));
+        }
 
         // The marker is emitted only after a genuine live-backend exchange.
         // ignore: avoid_print
