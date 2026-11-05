@@ -142,10 +142,10 @@
             <h2 class="h5 mb-3">Image assets</h2>
             <p class="text-secondary">Choose an existing READY image or upload a new one. Published revisions cannot change bindings.</p>
             <div class="d-flex gap-2" th:if="${revision.lifecycle.name() == 'DRAFT'}">
-                <a class="btn btn-outline-primary"
-                   th:href="@{/admin/media(revisionId=${revision.id},role='COVER_IMAGE')}">Choose cover image</a>
-                <a class="btn btn-outline-secondary"
-                   th:href="@{/admin/media(revisionId=${revision.id},role='CONTENT_IMAGE')}">Choose content image</a>
+                <button type="button" class="btn btn-outline-primary" data-media-role="COVER_IMAGE"
+                        th:attr="data-media-revision=${revision.id}">Choose cover image</button>
+                <button type="button" class="btn btn-outline-secondary" data-media-role="CONTENT_IMAGE"
+                        th:attr="data-media-revision=${revision.id}">Choose content image</button>
             </div>
         </div>
     </div>
@@ -264,5 +264,6 @@
             </form>
         </div>
     </div>
+    <th:block th:replace="~{admin/fragments/media-picker :: picker}"></th:block>
 </main>
 </html>

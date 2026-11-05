@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -25,6 +26,30 @@ public class MediaLibraryMvcController {
 
     public MediaLibraryMvcController(MediaLibraryService library) {
         this.library = library;
+    }
+
+    @GetMapping("/images")
+    @ResponseBody
+    public java.util.List<ImageChoice> images(@RequestParam(defaultValue = "COVER_IMAGE") ContentAssetRole role,
+            @RequestParam(defaultValue = "0") int page) {
+        return library.list(role, page).stream().map(ImageChoice::from).toList();
+    }
+
+    @PostMapping("/images")
+    @ResponseBody
+    public ImageChoice uploadImage(@RequestParam ContentAssetRole role,
+            @RequestParam("file") MultipartFile file) throws java.io.IOException {
+        if (file.isEmpty() || file.getSize() > 10L * 1024 * 1024) {
+            throw new IllegalArgumentException("Invalid image size");
+        }
+        return ImageChoice.from(library.upload(role, file.getContentType(), file.getBytes()));
+    }
+
+    public record ImageChoice(UUID id, String mediaType, long sizeBytes, String previewUrl) {
+        static ImageChoice from(io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetEntity asset) {
+            return new ImageChoice(asset.getId(), asset.getMediaType(), asset.getSizeBytes(),
+                    "/admin/media/" + asset.getId() + "/preview");
+        }
     }
 
     @GetMapping

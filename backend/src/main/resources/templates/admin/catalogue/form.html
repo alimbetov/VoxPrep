@@ -40,8 +40,14 @@
                         <div class="text-danger small" th:errors="*{description}"></div>
                     </div>
                     <div class="col-md-6" th:if="${formType == 'VERTICAL'}">
-                        <label class="form-label">Icon asset id</label>
-                        <input class="form-control" th:field="*{iconAssetId}">
+                        <label class="form-label" for="chooseIcon">Icon image</label>
+                        <input type="hidden" th:field="*{iconAssetId}">
+                        <div class="mb-2"><img data-media-preview-for="iconAssetId" alt="Selected icon"
+                             style="width:96px;height:96px;object-fit:contain" th:hidden="${#strings.isEmpty(form.iconAssetId)}"
+                             th:src="${#strings.isEmpty(form.iconAssetId) ? '' : '/admin/media/' + form.iconAssetId + '/preview'}"></div>
+                        <button type="button" id="chooseIcon" class="btn btn-outline-primary"
+                                data-media-target="iconAssetId" data-media-role="COVER_IMAGE">Choose from Media Library</button>
+                        <div class="form-text" data-media-label-for="iconAssetId">Select an image from the library.</div>
                         <div class="text-danger small" th:errors="*{iconAssetId}"></div>
                     </div>
                     <div class="col-md-6" th:if="${formType == 'TRACK'}">
@@ -96,5 +102,6 @@
             </form>
         </div>
     </div>
+    <th:block th:replace="~{admin/fragments/media-picker :: picker}"></th:block>
 </main>
 </html>

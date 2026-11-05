@@ -55,7 +55,7 @@ public class InstallationSecurityConfiguration {
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers("/login").permitAll()
                         .anyRequest().hasRole("ADMIN"))
-                .formLogin(Customizer.withDefaults())
+                .formLogin(login -> login.defaultSuccessUrl("/admin", false))
                 .logout(Customizer.withDefaults());
         return http.build();
     }
