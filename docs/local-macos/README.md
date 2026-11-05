@@ -7,8 +7,10 @@
 **State:** A0 host/source audit recorded in [ENVIRONMENT_AUDIT.md](ENVIRONMENT_AUDIT.md)
 and [DEPENDENCIES.md](DEPENDENCIES.md); reproducible inventory: `scripts/local/audit.sh`.
 A1 infrastructure and post-migration permission gates **PASS** on the SHA recorded
-in [ACCEPTANCE_REPORT.md](ACCEPTANCE_REPORT.md). Backend startup/readiness pass;
-A2 Content Studio and A3–A5 are not accepted. Full-stack acceptance remains pending.
+in [ACCEPTANCE_REPORT.md](ACCEPTANCE_REPORT.md).
+A2 API-02–API-06 **CLOSED / PASS**, including the shared image picker; see
+[A2_ACCEPTANCE.md](A2_ACCEPTANCE.md) for its qualified SHA and evidence.
+A3–A5 remain pending. Full-stack acceptance remains NOT ACCEPTED.
 
 ## Repository baseline inspected
 

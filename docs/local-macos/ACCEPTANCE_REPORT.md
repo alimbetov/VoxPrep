@@ -1,5 +1,9 @@
 # Local Mac acceptance — A1 milestone
 
+This section preserves the original A1 qualification. Current A2 results are in
+[A2_ACCEPTANCE.md](A2_ACCEPTANCE.md): API-02–API-06 PASS on that report's SHA.
+The NOT RUN A2 rows below describe the earlier A1 milestone only.
+
 Date: 2026-11-05, 21:26 Asia/Almaty (16:26 UTC).
 Host: macOS 15.6 / arm64. Qualified source SHA:
 `1faaeb55240937288b5dad2695fc9a3fb519a73b` (clean checkout).
