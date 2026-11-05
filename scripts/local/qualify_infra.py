@@ -9,6 +9,7 @@ import platform
 import subprocess
 import sys
 import urllib.request
+import urllib.error
 import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -83,6 +84,7 @@ try:
     report['images'] = run(['docker', 'image', 'inspect', 'postgres:18.6-bookworm', 'rustfs/rustfs:1.0.4',
                             '--format', '{{.RepoDigests}} {{.Os}}/{{.Architecture}}'])
     run([str(ROOT / 'scripts/local/smoke-infra.sh')])
+    report['compose_status'] = run(COMPOSE + ['ps', '-a'])
     s3('PUT', path, payload)
     created_object = True
     assert s3('GET', path) == payload, 'S3 bytes differ before restart'
@@ -121,6 +123,15 @@ finally:
     try:
         if created_object:
             s3('DELETE', path)
+            try:
+                s3('GET', path)
+                raise RuntimeError('Deleted S3 object still exists')
+            except urllib.error.HTTPError as error:
+                if error.code != 404:
+                    raise
+                report['checks'].append({'command': ['S3', 'GET', path, '(verify deletion)'],
+                                         'timestamp': dt.datetime.now(dt.timezone.utc).isoformat(),
+                                         'exit_code': 0, 'http_status': 404})
         if created_table:
             sql('migrator', f'DROP TABLE app.{table};')
     except Exception as error:
