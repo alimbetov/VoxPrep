@@ -268,11 +268,15 @@ void main() {
               'source': 'production HTTP root manifest',
               'contentVersion': nextRoot.contentVersion,
               'checksum': nextRoot.checksum,
-              'packs': nextRoot.packs.map((pack) => <String, Object?>{
-                'code': pack.identity.code,
-                'revision': pack.revision,
-                'checksum': pack.checksum,
-              }).toList(),
+              'packs': nextRoot.packs
+                  .map(
+                    (pack) => <String, Object?>{
+                      'code': pack.identity.code,
+                      'revision': pack.revision,
+                      'checksum': pack.checksum,
+                    },
+                  )
+                  .toList(),
             }),
           );
           // Inject one real payload fetch failure after N+1 becomes available.
@@ -544,8 +548,9 @@ void main() {
               'preservedN': true,
             },
           };
-          await File('$_r5ControlDir/flutter-drift-evidence.json')
-              .writeAsString(const JsonEncoder.withIndent('  ').convert(evidence));
+          await File(
+            '$_r5ControlDir/flutter-drift-evidence.json',
+          ).writeAsString(const JsonEncoder.withIndent('  ').convert(evidence));
         }
 
         // The marker is emitted only after a genuine live-backend exchange.
