@@ -8,6 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.UUID;
+import java.util.Locale;
 
 public final class CatalogueMvcForms {
 
@@ -16,6 +17,10 @@ public final class CatalogueMvcForms {
     private static final String CODE_MESSAGE = "Use uppercase Latin letters (A-Z), digits, dots, underscores or hyphens. Start with a letter or digit; no spaces.";
 
     private static final String AVAILABILITY_PATTERN = "ACTIVE|INACTIVE";
+
+    private static String normalizeCode(String value) {
+        return value == null ? null : value.strip().toUpperCase(Locale.ROOT);
+    }
 
     public static final class VerticalForm {
         @NotNull @Min(0) private Long expectedVersion = 0L;
@@ -30,9 +35,9 @@ public final class CatalogueMvcForms {
         public Long getExpectedVersion() { return expectedVersion; }
         public void setExpectedVersion(Long expectedVersion) { this.expectedVersion = expectedVersion; }
         public String getCode() { return code; }
-        public void setCode(String code) { this.code = code; }
+        public void setCode(String code) { this.code = normalizeCode(code); }
         public String getSectionCode() { return sectionCode; }
-        public void setSectionCode(String sectionCode) { this.sectionCode = sectionCode; }
+        public void setSectionCode(String sectionCode) { this.sectionCode = normalizeCode(sectionCode); }
         public String getTitle() { return title; }
         public void setTitle(String title) { this.title = title; }
         public String getDescription() { return description; }
@@ -57,7 +62,7 @@ public final class CatalogueMvcForms {
         public Long getExpectedVersion() { return expectedVersion; }
         public void setExpectedVersion(Long expectedVersion) { this.expectedVersion = expectedVersion; }
         public String getCode() { return code; }
-        public void setCode(String code) { this.code = code; }
+        public void setCode(String code) { this.code = normalizeCode(code); }
         public UUID getVerticalId() { return verticalId; }
         public void setVerticalId(UUID verticalId) { this.verticalId = verticalId; }
         public String getTitle() { return title; }
@@ -84,7 +89,7 @@ public final class CatalogueMvcForms {
         public Long getExpectedVersion() { return expectedVersion; }
         public void setExpectedVersion(Long expectedVersion) { this.expectedVersion = expectedVersion; }
         public String getCode() { return code; }
-        public void setCode(String code) { this.code = code; }
+        public void setCode(String code) { this.code = normalizeCode(code); }
         public UUID getGoalId() { return goalId; }
         public void setGoalId(UUID goalId) { this.goalId = goalId; }
         public String getTitle() { return title; }
@@ -92,9 +97,9 @@ public final class CatalogueMvcForms {
         public String getDescription() { return description; }
         public void setDescription(String description) { this.description = description; }
         public String getLevelCode() { return levelCode; }
-        public void setLevelCode(String levelCode) { this.levelCode = levelCode; }
+        public void setLevelCode(String levelCode) { this.levelCode = normalizeCode(levelCode); }
         public String getCareerTrackCode() { return careerTrackCode; }
-        public void setCareerTrackCode(String careerTrackCode) { this.careerTrackCode = careerTrackCode; }
+        public void setCareerTrackCode(String careerTrackCode) { this.careerTrackCode = normalizeCode(careerTrackCode); }
         public Integer getSortOrder() { return sortOrder; }
         public void setSortOrder(Integer sortOrder) { this.sortOrder = sortOrder; }
         public String getAvailability() { return availability; }
@@ -114,7 +119,7 @@ public final class CatalogueMvcForms {
         public Long getExpectedVersion() { return expectedVersion; }
         public void setExpectedVersion(Long expectedVersion) { this.expectedVersion = expectedVersion; }
         public String getCode() { return code; }
-        public void setCode(String code) { this.code = code; }
+        public void setCode(String code) { this.code = normalizeCode(code); }
         public UUID getTrackId() { return trackId; }
         public void setTrackId(UUID trackId) { this.trackId = trackId; }
         public String getTitle() { return title; }

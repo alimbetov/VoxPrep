@@ -23,14 +23,14 @@
                         <label class="form-label" for="code">Code</label>
                         <input class="form-control" th:field="*{code}" th:readonly="${editing}"
                                maxlength="128" spellcheck="false" autocapitalize="characters" aria-describedby="codeHelp">
-                        <div class="form-text" id="codeHelp">Stable code, e.g. JAVA_BACKEND. Use A–Z, 0–9, dots, underscores or hyphens; no spaces. Maximum 128 characters.</div>
+                        <div class="form-text" id="codeHelp">Stable code, e.g. JAVA_BACKEND. Lowercase letters become uppercase; surrounding spaces are removed. Use Latin letters, digits, dots, underscores or hyphens. Maximum 128 characters.</div>
                         <div class="text-danger small" th:errors="*{code}"></div>
                     </div>
                     <div class="col-md-6" th:if="${formType == 'VERTICAL'}">
                         <label class="form-label" for="sectionCode">Section code</label>
                         <input class="form-control" th:field="*{sectionCode}" maxlength="128"
                                spellcheck="false" autocapitalize="characters" aria-describedby="sectionCodeHelp">
-                        <div class="form-text" id="sectionCodeHelp">Section grouping code, e.g. TECH. Use uppercase Latin letters and digits; dots, underscores and hyphens are allowed. No spaces.</div>
+                        <div class="form-text" id="sectionCodeHelp">Section grouping code, e.g. TECH. Lowercase letters become uppercase; surrounding spaces are removed. Use Latin letters, digits, dots, underscores or hyphens.</div>
                         <div class="text-danger small" th:errors="*{sectionCode}"></div>
                     </div>
                     <div class="col-12">
