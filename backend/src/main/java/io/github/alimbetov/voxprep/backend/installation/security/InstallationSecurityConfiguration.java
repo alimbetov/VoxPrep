@@ -56,6 +56,7 @@ public class InstallationSecurityConfiguration {
                         .requestMatchers("/login").permitAll()
                         .anyRequest().hasRole("ADMIN"))
                 .formLogin(login -> login.defaultSuccessUrl("/admin", false))
+                .exceptionHandling(errors -> errors.accessDeniedHandler(new StudioAccessDeniedHandler()))
                 .logout(Customizer.withDefaults());
         return http.build();
     }
