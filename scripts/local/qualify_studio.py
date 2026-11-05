@@ -4,6 +4,7 @@ DEV credentials and session/installation tokens stay in memory, never evidence.
 Each run adds a uniquely named fixture; existing publication/volumes are preserved.
 """
 import datetime as dt
+import copy
 import hashlib
 import html
 from html.parser import HTMLParser
@@ -132,7 +133,7 @@ def sql(query):
 
 
 def state():
-    return sql("SELECT json_build_object('revisions',(SELECT count(*) FROM app.content_revision),'releases',(SELECT count(*) FROM app.publication_release),'current',(SELECT release_id FROM app.publication_current))::text;")
+    return sql("SELECT json_build_object('revisions',(SELECT count(*) FROM app.content_revision),'assets',(SELECT count(*) FROM app.file_asset),'candidates',(SELECT count(*) FROM app.publication_candidate),'releases',(SELECT count(*) FROM app.publication_release),'current',(SELECT release_id FROM app.publication_current))::text;")
 
 
 def png():
@@ -186,7 +187,10 @@ try:
     for content in list(document)[1:]: document.remove(content)
     document[0].set('code',code)
     valid = ET.tostring(document,encoding='utf-8',xml_declaration=True)
-    bad = valid.replace(b'<minutes>2</minutes>',b'<minutes>0</minutes>')
+    invalid_document = copy.deepcopy(document)
+    second = copy.deepcopy(document[0]); second.set('code',code+'_INVALID')
+    second.find('minutes').text = '0'; invalid_document.append(second)
+    bad = ET.tostring(invalid_document,encoding='utf-8',xml_declaration=True)
     assert bad != valid
     (OUT/'valid.xml').write_bytes(valid); (OUT/'invalid.xml').write_bytes(bad)
     source = page('/admin/imports')
@@ -215,6 +219,10 @@ try:
                   usage='Describe professional experience.',examples='I build reliable services with Java.')
     post('/admin/content/revisions/'+revision,fields,source=edit)
     edited = page(edit_path); assert 'A2 live editorial phrase' in edited
+    before_image = state()
+    post('/admin/media/images',{'role':'COVER_IMAGE'},source=edited,
+         file=('invalid.png','image/png',b'not a PNG'),expected=400)
+    assert state() == before_image, 'Invalid image upload mutated state'
     image = png(); (OUT/'cover.png').write_bytes(image)
     cover, _ = post('/admin/media/images',{'role':'COVER_IMAGE'},source=edited,file=('cover.png','image/png',image),expected=200)
     asset = json.loads(cover); report['image_asset_id'] = asset['id']
