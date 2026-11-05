@@ -25,6 +25,7 @@ class ContentXmlImportServiceIntegrationTest {
     @Autowired private ContentXmlImportService importer;
     @Autowired private ContentRevisionRepository revisions;
     @Autowired private TransactionTemplate transactions;
+    @Autowired private io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringService authoring;
 
     private byte[] exampleWithoutUnresolvedPracticeTest() throws Exception {
         String xml = new String(new ClassPathResource(
@@ -154,6 +155,76 @@ class ContentXmlImportServiceIntegrationTest {
             assertThat(left.alreadyPresent() + right.alreadyPresent()).isEqualTo(1);
             assertThat(revisions.findIdByExactIdentity(code, "phrase", 1)).isPresent();
         }
+    }
+
+    @Test
+    void changedPayloadWithSameContentIdentityIsRejectedWithoutModification() throws Exception {
+        String base = new String(new ClassPathResource("imports/voxprep-content-template-v1.xml")
+                .getContentAsByteArray(), StandardCharsets.UTF_8);
+        String code = "CONFLICT_" + UUID.randomUUID().toString().replace("-", "");
+        String xml = onlyEntry(base, "PHRASE_INTERVIEW_INTRO_01")
+                .replace("PHRASE_INTERVIEW_INTRO_01", code);
+        byte[] original = xml.getBytes(StandardCharsets.UTF_8);
+        importer.importDrafts(original);
+        var id = revisions.findIdByExactIdentity(code, "phrase", 1).orElseThrow();
+        var originalDigest = revisions.findById(id).orElseThrow().getChecksum();
+
+        String changed = xml.replace("Introduce your technical background.",
+                "Introduce your different background.");
+        assertThatThrownBy(() -> importer.importDrafts(changed.getBytes(StandardCharsets.UTF_8)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Row conflict");
+        assertThat(revisions.findById(id).orElseThrow().getChecksum()).isEqualTo(originalDigest);
+    }
+
+    @Test
+    void immutableRevisionCannotBeReimportedEvenWithIdenticalPayload() throws Exception {
+        String base = new String(new ClassPathResource("imports/voxprep-content-template-v1.xml")
+                .getContentAsByteArray(), StandardCharsets.UTF_8);
+        String code = "IMMUTABLE_" + UUID.randomUUID().toString().replace("-", "");
+        byte[] xml = onlyEntry(base, "PHRASE_INTERVIEW_INTRO_01")
+                .replace("PHRASE_INTERVIEW_INTRO_01", code).getBytes(StandardCharsets.UTF_8);
+        importer.importDrafts(xml);
+        var id = revisions.findIdByExactIdentity(code, "phrase", 1).orElseThrow();
+        authoring.markReadyForAudio(id);
+        assertThatThrownBy(() -> importer.preflight(xml))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("immutable");
+        assertThatThrownBy(() -> importer.importDrafts(xml))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("immutable");
+        assertThat(revisions.findById(id).orElseThrow().getLifecycle())
+                .isEqualTo(ContentLifecycleStatus.READY_FOR_AUDIO);
+    }
+
+    @Test
+    void practiceTestReferencesRealApprovedQuestionAndCreatesOnlyDraft() throws Exception {
+        String base = new String(new ClassPathResource("imports/voxprep-content-template-v1.xml")
+                .getContentAsByteArray(), StandardCharsets.UTF_8);
+        String questionCode = "APPROVED_Q_" + UUID.randomUUID().toString().replace("-", "");
+        byte[] question = onlyEntry(base, "QUESTION_COUPLING_01")
+                .replace("QUESTION_COUPLING_01", questionCode).getBytes(StandardCharsets.UTF_8);
+        importer.importDrafts(question);
+        var questionId = revisions.findIdByExactIdentity(questionCode, "question", 1).orElseThrow();
+        authoring.markReadyForAudio(questionId);
+        authoring.submitForReview(questionId);
+        authoring.approve(questionId, java.time.Instant.now());
+
+        String testCode = "TEST_REF_" + UUID.randomUUID().toString().replace("-", "");
+        String xml = onlyEntry(base, "PRACTICE_ARCH_01")
+                .replace("PRACTICE_ARCH_01", testCode)
+                .replace("00000000-0000-0000-0000-000000000001", questionId.toString());
+        var plan = importer.preflight(xml.getBytes(StandardCharsets.UTF_8));
+        assertThat(plan.toCreate()).isEqualTo(1);
+        importer.importDrafts(xml.getBytes(StandardCharsets.UTF_8));
+        var testId = revisions.findIdByExactIdentity(testCode, "practice_test", 1).orElseThrow();
+        assertThat(revisions.findById(testId).orElseThrow().getLifecycle())
+                .isEqualTo(ContentLifecycleStatus.DRAFT);
+        transactions.executeWithoutResult(status -> {
+            var revision = (io.github.alimbetov.voxprep.backend.content.persistence.PracticeTestContentRevisionEntity)
+                    revisions.findById(testId).orElseThrow();
+            assertThat(revision.getQuestionRevisionIds()).containsExactly(questionId);
+        });
     }
 
     @Test
