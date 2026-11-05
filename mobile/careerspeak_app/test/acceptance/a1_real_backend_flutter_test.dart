@@ -425,10 +425,7 @@ void main() {
               ? 'Could you introduce yourself professionally?'
               : 'Could you introduce yourself?',
         );
-        expect(
-          offlineFree.revision,
-          _r5ControlDir.isNotEmpty ? 2 : 1,
-        );
+        expect(offlineFree.revision, _r5ControlDir.isNotEmpty ? 2 : 1);
         final reused = (await manager.ensureLocal(image)).getOrThrow();
         expect(reused.reused, isTrue);
         if (_r5ControlDir.isNotEmpty) {
