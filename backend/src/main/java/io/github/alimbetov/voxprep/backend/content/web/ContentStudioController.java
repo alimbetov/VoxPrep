@@ -24,15 +24,4 @@ public class ContentStudioController {
         return "redirect:/admin/content";
     }
 
-    @GetMapping("/imports")
-    public String imports(Model model) {
-        return section(model, "imports", "Imports", "Import tooling will be added without bypassing application services.");
-    }
-
-    private static String section(Model model, String activeSection, String title, String description) {
-        model.addAttribute("activeSection", activeSection);
-        model.addAttribute("sectionTitle", title);
-        model.addAttribute("sectionDescription", description);
-        return "admin/section";
-    }
 }
