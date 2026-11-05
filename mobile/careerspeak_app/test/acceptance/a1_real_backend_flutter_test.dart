@@ -6,6 +6,7 @@ import 'package:careerspeak_app/application/content_sync/content_sync_planner.da
 import 'package:careerspeak_app/application/content_sync/sync_models.dart';
 import 'package:careerspeak_app/application/content_delivery/content_payload.dart';
 import 'package:careerspeak_app/application/content_delivery/typed_content_body.dart';
+import 'package:careerspeak_app/application/content_delivery/universal_catalogue_graph.dart';
 import 'package:careerspeak_app/application/ports/content_payload_gateway.dart';
 import 'package:careerspeak_app/application/ports/api_client.dart';
 import 'package:careerspeak_app/application/ports/content_manifest_gateway.dart';
@@ -137,7 +138,7 @@ void main() {
         ).readCurrent()).getOrThrow();
         expect(current, isNotNull);
         expect(current!.contentVersion, root.contentVersion);
-        expect(current.graph.collections, hasLength(2));
+        _expectExactMembership(current.graph, freeRevision: 1);
         final contentPage = (await DriftContentRepository(
           database,
         ).watchContent(const ContentQuery()).first).getOrThrow();
@@ -379,6 +380,7 @@ void main() {
             database,
           ).readCurrent()).getOrThrow();
           expect(newCurrent!.contentVersion, nextRoot.contentVersion);
+          _expectExactMembership(newCurrent.graph, freeRevision: 2);
           expectedCurrentVersion = nextRoot.contentVersion;
           final updatedPage = (await DriftContentRepository(
             database,
@@ -459,7 +461,10 @@ void main() {
           database,
         ).readCurrent()).getOrThrow();
         expect(reopened!.contentVersion, expectedCurrentVersion);
-        expect(reopened.graph.collections, hasLength(2));
+        _expectExactMembership(
+          reopened.graph,
+          freeRevision: _r5ControlDir.isNotEmpty ? 2 : 1,
+        );
         final offlinePage = (await DriftContentRepository(
           database,
         ).watchContent(const ContentQuery()).first).getOrThrow();
@@ -509,6 +514,35 @@ void main() {
     },
     skip: !_runRealBackend,
   );
+}
+
+void _expectExactMembership(
+  UniversalCatalogueGraph graph, {
+  required int freeRevision,
+}) {
+  expect(graph.collections, hasLength(2));
+  final free = graph.collections.singleWhere(
+    (collection) => collection.code == 'A1_FREE',
+  );
+  final full = graph.collections.singleWhere(
+    (collection) => collection.code == 'A1_FULL',
+  );
+  expect(free.members, hasLength(2));
+  expect(
+    free.members.map((member) => member.identityKey).toSet(),
+    hasLength(2),
+  );
+  final phrase = free.members.singleWhere(
+    (member) => member.contentRef?.contentCode == _freeCode,
+  );
+  expect(phrase.contentRef!.revision, freeRevision);
+  final practiceTest = free.members.singleWhere(
+    (member) => member.practiceTestRef?.practiceTestCode == _testCode,
+  );
+  expect(practiceTest.practiceTestRef!.revision, 1);
+  expect(full.members, hasLength(1));
+  expect(full.members.single.contentRef!.contentCode, _fullCode);
+  expect(full.members.single.contentRef!.revision, 1);
 }
 
 final class _CorruptOnceContentPayloadGateway implements ContentPayloadGateway {
