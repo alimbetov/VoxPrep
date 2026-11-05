@@ -263,6 +263,18 @@ void main() {
           final nextRoot = (nextFetch as RootManifestChanged).manifest;
           expect(nextRoot.contentVersion, root.contentVersion + 1);
           expect(nextRoot.checksum, isNot(root.checksum));
+          await File('$_r5ControlDir/http-root-n2.json').writeAsString(
+            const JsonEncoder.withIndent('  ').convert(<String, Object?>{
+              'source': 'production HTTP root manifest',
+              'contentVersion': nextRoot.contentVersion,
+              'checksum': nextRoot.checksum,
+              'packs': nextRoot.packs.map((pack) => <String, Object?>{
+                'code': pack.identity.code,
+                'revision': pack.revision,
+                'checksum': pack.checksum,
+              }).toList(),
+            }),
+          );
           // Inject one real payload fetch failure after N+1 becomes available.
           // The atomic CURRENT switch must not happen until all bytes are ready.
           final interrupted = ContentSyncCoordinator(
