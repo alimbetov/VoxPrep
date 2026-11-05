@@ -62,7 +62,48 @@ mock content generator does not bypass platform bootstrap dependencies.
 For a browser-only demo without SQLite, a dedicated mock bootstrap path
 must be qualified separately.
 
-To populate real DEV PostgreSQL in the future, use authenticated
-Content Studio authoring + publication APIs and idempotent upserts with
-DEV-only safeguards, not blind inserts into `app` tables. Nothing in this
-generator writes to a running backend.
+## Opt-in real DEV PostgreSQL seed (NEW)
+
+The generator still writes only local files; now the Backend also includes a
+**DEV-only**, explicit opt-in Spring `ApplicationRunner` that reads the exact
+generated fixture and creates real **DRAFT** revisions via
+`ContentAuthoringService.createInitialRevision`.
+
+From repository root, generate the three synchronized artifacts first:
+
+```powershell
+python tools/generate_demo_catalogue.py
+python tools/generate_demo_catalogue.py --check
+```
+
+The third generated artifact is
+`backend/src/main/resources/dev-fixtures/demo_catalogue_seed.json`.
+After starting the normal DEV PostgreSQL/RustFS stack and initializing
+development secrets, run Backend from the `backend` directory:
+
+```powershell
+$env:VOXPREP_DEV_DEMO_SEED_ENABLED = "true"
+mvn spring-boot:run "-Dspring-boot.run.profiles=dev"
+```
+
+Backend configuration `voxprep.dev.demo-seed-enabled` must be true; the
+Spring component is constrained to `@Profile("dev")` and **does not register
+at all** in TEST, staging, or production. It only inserts revisions absent
+by exact `contentCode + type + revision=1` and leaves existing revisions
+unchanged. Repeated startup does not replace authored work. No publication,
+review, TTS jobs, transactions, or purchasing rights are fabricated.
+
+Open `/admin/content` to view seeded drafts. Publishing content to Flutter
+still requires building the real catalogue hierarchy, review, approvals and
+CURRENT release; simply seeing drafts in Content Studio is **not** evidence
+of end-to-end publication.
+
+For a clean local launch without seeding:
+
+```powershell
+Remove-Item Env:VOXPREP_DEV_DEMO_SEED_ENABLED -ErrorAction SilentlyContinue
+```
+
+The DEV runner is an incremental authoring aid, not the full XML/JSON import
+workflow with preview and validation; that workflow remains a separate
+acceptance item.
