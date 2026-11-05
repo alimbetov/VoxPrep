@@ -85,10 +85,10 @@ class ContentXmlImportMvcIntegrationTest {
     void fullAuthenticatedFlowCreatesOneDraftThenReplaysWithoutDuplicates() throws Exception {
         String template = new String(new ClassPathResource("imports/voxprep-content-template-v1.xml")
                 .getContentAsByteArray(), java.nio.charset.StandardCharsets.UTF_8);
-        int start = template.indexOf("  <content code=\\"PHRASE_INTERVIEW_INTRO_01\\"");
+        int start = template.indexOf("  <content code=\"PHRASE_INTERVIEW_INTRO_01\"");
         int end = template.indexOf("</content>", start) + "</content>".length();
         String code = "HTTP_XML_" + java.util.UUID.randomUUID().toString().replace("-", "");
-        String xml = "<voxprep schemaVersion=\\"1\\">"
+        String xml = "<voxprep schemaVersion=\"1\">"
                 + template.substring(start, end).replace("PHRASE_INTERVIEW_INTRO_01", code)
                 + "</voxprep>";
         var payload = new MockMultipartFile("file", "draft.xml", "application/xml",
