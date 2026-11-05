@@ -4,6 +4,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
+import io.github.alimbetov.voxprep.backend.content.persistence.TopicContentRevisionEntity;
+import io.github.alimbetov.voxprep.backend.content.persistence.PhraseContentRevisionEntity;
+import java.util.UUID;
 import io.github.alimbetov.voxprep.backend.content.domain.ContentLifecycleStatus;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
@@ -52,6 +55,47 @@ class ContentXmlImportServiceIntegrationTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Unresolved approved Question");
         assertThat(revisions.count()).isEqualTo(before);
+    }
+
+    private static String onlyEntry(String template, String code) {
+        int start = template.indexOf("  <content code=\"" + code + "\"");
+        int end = template.indexOf("</content>", start) + "</content>".length();
+        if (start < 0 || end < "</content>".length()) throw new IllegalArgumentException("Missing fixture " + code);
+        return "<voxprep schemaVersion=\"1\">\n" + template.substring(start, end) + "\n</voxprep>";
+    }
+
+    @Test
+    void importedTopicPersistsPipesAndMultilineSectionExactly() throws Exception {
+        String base = new String(new ClassPathResource("imports/voxprep-content-template-v1.xml")
+                .getContentAsByteArray(), StandardCharsets.UTF_8);
+        String code = "TOPIC_PIPE_" + UUID.randomUUID().toString().replace("-", "");
+        String xml = onlyEntry(base, "TOPIC_REST_01").replace("TOPIC_REST_01", code)
+                .replace("<heading>HTTP</heading>", "<heading>HTTP | REST</heading>")
+                .replace("<text>Resources have stable URIs.</text>",
+                        "<text>First | line\nSecond line</text>");
+        var result = importer.importDrafts(xml.getBytes(StandardCharsets.UTF_8));
+        assertThat(result.created()).isEqualTo(1);
+        var id = revisions.findIdByExactIdentity(code, "topic", 1).orElseThrow();
+        var revision = (TopicContentRevisionEntity) revisions.findById(id).orElseThrow();
+        assertThat(revision.getSections()).hasSize(1);
+        assertThat(revision.getSections().getFirst().getHeading()).isEqualTo("HTTP | REST");
+        assertThat(revision.getSections().getFirst().getText()).isEqualTo("First | line\nSecond line");
+    }
+
+    @Test
+    void importedPhraseKeepsOneMultilineExampleWithPipe() throws Exception {
+        String base = new String(new ClassPathResource("imports/voxprep-content-template-v1.xml")
+                .getContentAsByteArray(), StandardCharsets.UTF_8);
+        String code = "PHRASE_LINES_" + UUID.randomUUID().toString().replace("-", "");
+        String xml = onlyEntry(base, "PHRASE_INTERVIEW_INTRO_01")
+                .replace("PHRASE_INTERVIEW_INTRO_01", code)
+                .replace("<example>I specialize in designing scalable APIs.</example>",
+                        "<example>First | line\nSecond line</example>");
+        var result = importer.importDrafts(xml.getBytes(StandardCharsets.UTF_8));
+        assertThat(result.created()).isEqualTo(1);
+        var id = revisions.findIdByExactIdentity(code, "phrase", 1).orElseThrow();
+        var revision = (PhraseContentRevisionEntity) revisions.findById(id).orElseThrow();
+        assertThat(revision.getExamples()).containsExactly("First | line\nSecond line");
     }
 
     @Test
