@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 FLUTTER = ROOT / "mobile/careerspeak_app/lib/data/mock/generated_demo_content.dart"
 BACKEND = ROOT / "backend/src/test/resources/fixtures/demo_catalogue_seed.json"
+DEV_SEED = ROOT / "backend/src/main/resources/dev-fixtures/demo_catalogue_seed.json"
 
 BASE = [
     ("JAVA_DI_001", "interview", "Dependency Injection", "Java Backend", "B2"),
@@ -99,6 +100,7 @@ def main():
     outputs = {
         FLUTTER: flutter_source(data),
         BACKEND: json.dumps(data, ensure_ascii=False, separators=(",", ":")) + "\n",
+        DEV_SEED: json.dumps(data, ensure_ascii=False, separators=(",", ":")) + "\n",
     }
     if args.check:
         stale = [str(p.relative_to(ROOT)) for p, expected in outputs.items()
