@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/fragments/shell :: layout('Import content', 'imports', ~{::main})}">
+<main>
+    <h1 class="h3 mb-2">Import JSON / XML</h1>
+    <p class="text-secondary">
+        Preview and validate structured learning content before writing it.
+        Import creates DRAFT revision 1 only. Review, media/TTS and publication
+        remain separate mandatory steps.
+    </p>
+    <div th:if="${importError}" class="alert alert-danger" role="alert"
+         th:text="${importError}"></div>
+
+    <div class="card studio-card mb-4"><div class="card-body">
+        <h2 class="h5">Step 1 — Validate and preview</h2>
+        <form th:action="@{/admin/imports/preview}" method="post"
+              enctype="multipart/form-data">
+            <label class="form-label" for="preview-file">JSON/XML file (max 256 KB, 100 entries)</label>
+            <input class="form-control mb-3" type="file" id="preview-file"
+                   name="file" accept=".json,.xml" required>
+            <button class="btn btn-outline-dark" type="submit">Preview / Validate</button>
+        </form>
+    </div></div>
+
+    <div th:if="${preview != null}" class="card studio-card mb-4"><div class="card-body">
+        <h2 class="h5">Validation passed</h2>
+        <p th:text="|Checked ${preview.rows().size()} items; ${preview.newCount()} new drafts.|"></p>
+        <div class="table-responsive"><table class="table table-sm">
+            <thead><tr><th>Code</th><th>Type</th><th>Title</th><th>Status</th></tr></thead>
+            <tbody>
+                <tr th:each="item : ${preview.rows()}">
+                    <td th:text="${item.code()}"></td>
+                    <td th:text="${item.contentType()}"></td>
+                    <td th:text="${item.title()}"></td>
+                    <td th:text="${item.alreadyExists()} ? 'Exists — skip' : 'New draft'"></td>
+                </tr>
+            </tbody>
+        </table></div>
+        <p class="small text-secondary">
+            Step 2 — Select the same file again to import.
+            The server reparses and validates the entire file; prior preview
+            does not authorize a different payload.
+        </p>
+        <form th:action="@{/admin/imports/import}" method="post"
+              enctype="multipart/form-data">
+            <label class="form-label" for="import-file">Confirm source file</label>
+            <input class="form-control mb-3" type="file" id="import-file"
+                   name="file" accept=".json,.xml" required>
+            <button class="btn btn-dark" type="submit">Import as drafts</button>
+        </form>
+    </div></div>
+    <p class="text-secondary small">
+        The JSON and XML schemas require full typed bodies. No empty demo
+        body is synthesized; invalid fields or revision conflicts fail closed.
+        Existing exact revision-1 records are left unchanged.
+    </p>
+</main>
+</html>
