@@ -76,6 +76,28 @@ jobs:
             -Dvoxprep.a1.flutter.dir=${{ github.workspace }}/mobile/careerspeak_app \
             test
 
+      - name: Capture R1 PostgreSQL publication evidence
+        run: |
+          mkdir -p backend/target/r1-evidence
+          docker compose --env-file infra/env/test.env.example -f infra/compose/compose.test.yml \
+            exec -T postgres psql -X -v ON_ERROR_STOP=1 \
+            -U voxprep_bootstrap -d voxprep_test \
+            < infra/acceptance/r1-publication-evidence.sql \
+            > backend/target/r1-evidence/postgres-publication-snapshot.txt
+          test -s backend/target/r1-evidence/postgres-publication-snapshot.txt
+          grep -q 'evidence_publication_current' backend/target/r1-evidence/postgres-publication-snapshot.txt
+          grep -q 'evidence_release_history' backend/target/r1-evidence/postgres-publication-snapshot.txt
+          grep -q 'evidence_approved_exact_content_refs' backend/target/r1-evidence/postgres-publication-snapshot.txt
+          grep -q 'evidence_immutable_wire_snapshots' backend/target/r1-evidence/postgres-publication-snapshot.txt
+
+      - name: Upload R1 real PostgreSQL and Flutter evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: r1-real-publication-evidence-${{ github.sha }}
+          path: backend/target/r1-evidence/
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Report infrastructure state on failure
         if: failure()
         run: |
