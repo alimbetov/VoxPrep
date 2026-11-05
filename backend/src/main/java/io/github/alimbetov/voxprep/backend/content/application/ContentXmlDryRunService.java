@@ -185,6 +185,7 @@ public final class ContentXmlDryRunService {
                         }
                     }
                 }
+                validateStrictBody(type, body, label, problems);
                 previews.add(new ContentPreview(code, type,
                         one(entry, "title") == null ? "" : one(entry, "title").getTextContent()));
             }
@@ -192,6 +193,67 @@ public final class ContentXmlDryRunService {
         } catch (Exception exception) {
             // Never expose parser file paths, uploaded XML or implementation internals.
             return new ValidationReport(false, List.of("Malformed XML or XSD validation failed. Check the v1 template and schema."), List.of());
+        }
+    }
+
+    /**
+     * XSD v1 intentionally accepts seven type-specific body shapes; this
+     * structural pass rejects unexpected attributes, nested/mixed elements,
+     * duplicates and unsafe delimiter-to-domain ambiguities before persistence.
+     */
+    private static void validateStrictBody(
+            String type, Element body, String label, List<String> problems) {
+        var counts = new java.util.HashMap<String, Integer>();
+        for (Element element : children(body)) {
+            var tag = element.getTagName();
+            counts.merge(tag, 1, Integer::sum);
+            if ("section".equals(tag) && "topic".equals(type)) {
+                checkAttributes(element, Set.of(), label, problems);
+                if (children(element).size() != 2
+                        || one(element, "heading") == null || one(element, "text") == null) {
+                    issue(problems, label + "section must have exactly heading and text");
+                }
+                for (Element nested : children(element)) {
+                    if (!Set.of("heading", "text").contains(nested.getTagName())
+                            || !children(nested).isEmpty() || nested.getTextContent().isBlank()) {
+                        issue(problems, label + "invalid section field");
+                    }
+                    checkAttributes(nested, Set.of(), label, problems);
+                }
+            } else if ("option".equals(tag) && "question".equals(type)) {
+                checkAttributes(element, Set.of("key", "correct"), label, problems);
+                if (!children(element).isEmpty()) issue(problems, label + "nested option markup is forbidden");
+            } else if ("segment".equals(tag) && "shadowing".equals(type)) {
+                checkAttributes(element, Set.of("startMs", "endMs"), label, problems);
+                if (!children(element).isEmpty()) issue(problems, label + "nested segment markup is forbidden");
+            } else {
+                checkAttributes(element, Set.of(), label, problems);
+                if (!children(element).isEmpty()) issue(problems, label + "unexpected nested body element");
+            }
+        }
+        Set<String> repeatable = switch (type) {
+            case "phrase", "vocabulary" -> Set.of("example");
+            case "interview" -> Set.of("keyPoint");
+            case "topic" -> Set.of("section");
+            case "shadowing" -> Set.of("segment");
+            case "question" -> Set.of("option");
+            case "practice_test" -> Set.of("questionRevisionId");
+            default -> Set.of();
+        };
+        counts.forEach((tag, total) -> {
+            if (total > 1 && !repeatable.contains(tag)) {
+                issue(problems, label + "duplicate field " + tag);
+            }
+        });
+        checkAttributes(body, Set.of(), label, problems);
+    }
+
+    private static void checkAttributes(
+            Element element, Set<String> allowed, String label, List<String> problems) {
+        var attrs = element.getAttributes();
+        for (int i = 0; i < attrs.getLength(); i++) {
+            var name = attrs.item(i).getNodeName();
+            if (!allowed.contains(name)) issue(problems, label + "unsupported attribute " + name);
         }
     }
 
