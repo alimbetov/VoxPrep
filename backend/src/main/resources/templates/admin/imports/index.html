@@ -15,6 +15,7 @@
         <h2 class="h5">Step 1 — Validate and preview</h2>
         <form th:action="@{/admin/imports/preview}" method="post"
               enctype="multipart/form-data">
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
             <label class="form-label" for="preview-file">JSON/XML file (max 256 KB, 100 entries)</label>
             <input class="form-control mb-3" type="file" id="preview-file"
                    name="file" accept=".json,.xml" required>
@@ -43,6 +44,7 @@
         </p>
         <form th:action="@{/admin/imports/import}" method="post"
               enctype="multipart/form-data">
+            <input type="hidden" th:if="${_csrf != null}" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
             <label class="form-label" for="import-file">Confirm source file</label>
             <input class="form-control mb-3" type="file" id="import-file"
                    name="file" accept=".json,.xml" required>
