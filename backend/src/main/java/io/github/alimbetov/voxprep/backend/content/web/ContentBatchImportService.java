@@ -149,8 +149,17 @@ public class ContentBatchImportService {
             }
             case "practice_test" -> {
                 form.setInstructions(require(body, "instructions"));
-                form.setPassingScorePercent(integer(body, "passingScorePercent"));
-                form.setQuestionRevisionIds(lines(body.get("questionRevisionIds"), "questionRevisionIds"));
+                int score = integer(body, "passingScorePercent");
+                if (score > 100) throw new IllegalArgumentException("Passing score must be 1..100");
+                form.setPassingScorePercent(score);
+                String ids = lines(body.get("questionRevisionIds"), "questionRevisionIds");
+                var unique = new HashSet<java.util.UUID>();
+                for (var id : ids.split("\\n")) {
+                    if (!unique.add(java.util.UUID.fromString(id))) {
+                        throw new IllegalArgumentException("Duplicate question revision ID");
+                    }
+                }
+                form.setQuestionRevisionIds(ids);
             }
             default -> throw new IllegalArgumentException("Unsupported content body type");
         }
@@ -226,6 +235,8 @@ public class ContentBatchImportService {
             throw new IllegalArgumentException("Question options must contain at least two entries");
         }
         var rows = new ArrayList<String>();
+        var keys = new HashSet<String>();
+        boolean hasCorrect = false;
         for (var value : values) {
             if (!(value instanceof Map<?, ?> option)
                     || !(option.get("correct") instanceof Boolean correct)) {
@@ -233,12 +244,19 @@ public class ContentBatchImportService {
             }
             var key = require(option, "key");
             var text = require(option, "text");
-            if (key.contains("|") || text.contains("|") || text.contains("\n")) {
+            if (!keys.add(key)) {
+                throw new IllegalArgumentException("Duplicate question option key");
+            }
+            if (key.contains("|") || text.contains("|") || text.contains("\\n")) {
                 throw new IllegalArgumentException("Unsafe question option separator");
             }
+            hasCorrect |= correct;
             rows.add(key + "|" + correct + "|" + text);
         }
-        return String.join("\n", rows);
+        if (!hasCorrect) {
+            throw new IllegalArgumentException("At least one question answer must be correct");
+        }
+        return String.join("\\n", rows);
     }
 
     private static List<?> readXml(byte[] bytes) {
