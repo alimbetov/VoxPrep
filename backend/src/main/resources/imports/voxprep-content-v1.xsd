@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified">
+  <xs:element name="voxprep">
+    <xs:complexType><xs:sequence>
+      <xs:element name="content" minOccurs="1" maxOccurs="100">
+        <xs:complexType><xs:sequence>
+          <xs:element name="title" type="xs:string"/>
+          <xs:element name="subtitle" type="xs:string"/>
+          <xs:element name="description" type="xs:string"/>
+          <xs:element name="categoryCode" type="xs:string"/>
+          <xs:element name="levelCode" type="xs:string"/>
+          <xs:element name="minutes" type="xs:positiveInteger"/>
+          <xs:element name="availability">
+            <xs:simpleType><xs:restriction base="xs:string">
+              <xs:enumeration value="ACTIVE"/><xs:enumeration value="INACTIVE"/>
+            </xs:restriction></xs:simpleType>
+          </xs:element>
+          <xs:element name="skill" type="xs:string" minOccurs="1" maxOccurs="20"/>
+          <xs:element name="body">
+            <xs:complexType><xs:sequence>
+              <xs:any namespace="##local" processContents="skip" minOccurs="1" maxOccurs="100"/>
+            </xs:sequence></xs:complexType>
+          </xs:element>
+        </xs:sequence>
+        <xs:attribute name="code" type="xs:string" use="required"/>
+        <xs:attribute name="type" use="required">
+          <xs:simpleType><xs:restriction base="xs:string">
+            <xs:enumeration value="phrase"/><xs:enumeration value="vocabulary"/>
+            <xs:enumeration value="interview"/><xs:enumeration value="topic"/>
+            <xs:enumeration value="shadowing"/><xs:enumeration value="question"/>
+            <xs:enumeration value="practice_test"/>
+          </xs:restriction></xs:simpleType>
+        </xs:attribute>
+        </xs:complexType>
+      </xs:element>
+    </xs:sequence>
+    <xs:attribute name="schemaVersion" use="required" fixed="1" type="xs:string"/>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
