@@ -82,6 +82,47 @@ class ContentXmlImportMvcIntegrationTest {
     }
 
     @Test
+    void fullAuthenticatedFlowCreatesOneDraftThenReplaysWithoutDuplicates() throws Exception {
+        String template = new String(new ClassPathResource("imports/voxprep-content-template-v1.xml")
+                .getContentAsByteArray(), java.nio.charset.StandardCharsets.UTF_8);
+        int start = template.indexOf("  <content code=\\"PHRASE_INTERVIEW_INTRO_01\\"");
+        int end = template.indexOf("</content>", start) + "</content>".length();
+        String code = "HTTP_XML_" + java.util.UUID.randomUUID().toString().replace("-", "");
+        String xml = "<voxprep schemaVersion=\\"1\\">"
+                + template.substring(start, end).replace("PHRASE_INTERVIEW_INTRO_01", code)
+                + "</voxprep>";
+        var payload = new MockMultipartFile("file", "draft.xml", "application/xml",
+                xml.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        var session = new MockHttpSession();
+        long before = repository.count();
+
+        mvc.perform(multipart("/admin/imports/validate").file(payload)
+                        .session(session).with(user("editor").roles("ADMIN")).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Database preflight")))
+                .andExpect(content().string(containsString("Import as DRAFT")));
+        assertThat(repository.count()).isEqualTo(before);
+
+        mvc.perform(multipart("/admin/imports/import-drafts").file(payload)
+                        .session(session).with(user("editor").roles("ADMIN")).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Import committed")));
+        assertThat(repository.count()).isEqualTo(before + 1);
+        assertThat(repository.findIdByExactIdentity(code, "phrase", 1)).isPresent();
+
+        mvc.perform(multipart("/admin/imports/import-drafts").file(payload)
+                        .session(session).with(user("editor").roles("ADMIN")).with(csrf()))
+                .andExpect(content().string(containsString("Validation expired")));
+        mvc.perform(multipart("/admin/imports/validate").file(payload)
+                        .session(session).with(user("editor").roles("ADMIN")).with(csrf()))
+                .andExpect(content().string(containsString("Import as DRAFT")));
+        mvc.perform(multipart("/admin/imports/import-drafts").file(payload)
+                        .session(session).with(user("editor").roles("ADMIN")).with(csrf()))
+                .andExpect(content().string(containsString("Import committed")));
+        assertThat(repository.count()).isEqualTo(before + 1);
+    }
+
+    @Test
     void validationOnlyCannotCreateDraftsAndRequiresCsrf() throws Exception {
         byte[] xml = new ClassPathResource("imports/voxprep-content-template-v1.xml")
                 .getContentAsByteArray();
