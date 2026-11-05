@@ -256,7 +256,7 @@ class ContentXmlImportServiceIntegrationTest {
                     <description>Batch test</description><categoryCode>INTERVIEW</categoryCode>
                     <levelCode>B2</levelCode><minutes>2</minutes><availability>ACTIVE</availability>
                     <skill>SPEAKING</skill>
-                    <body><phrase>I work with Java.</phrase><usage>Interview answer.</usage></body>
+                    <body><phrase>I work with Java.</phrase><usage>Interview answer.</usage><example>Production APIs.</example></body>
                   </content>
                     """.formatted(prefix, index));
         }
