@@ -51,7 +51,7 @@ class ContentXmlImportMvcIntegrationTest {
     void importRequiresSameValidatedFileAndFreshSession() throws Exception {
         byte[] xml = new String(new ClassPathResource("imports/voxprep-content-template-v1.xml")
                 .getContentAsByteArray(), java.nio.charset.StandardCharsets.UTF_8)
-                .replaceAll("(?s)\\s*<content code=\\"PRACTICE_ARCH_01\\".*?</content>", "")
+                .replaceAll("(?s)\\s*<content code=\"PRACTICE_ARCH_01\".*?</content>", "")
                 .getBytes(java.nio.charset.StandardCharsets.UTF_8);
         var session = new MockHttpSession();
         var upload = new MockMultipartFile("file", "example.xml", "application/xml", xml);
