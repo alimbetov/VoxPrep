@@ -66,8 +66,16 @@ public final class ContentXmlImportMvcController {
             try {
                 var bytes = file.getBytes();
                 result = validation.validate(bytes);
-                if (result.valid()) session.setAttribute(VALIDATED_XML,
-                        new ValidatedXml(sha256(bytes), Instant.now()));
+                if (result.valid()) {
+                    try {
+                        var plan = importer.preflight(bytes);
+                        model.addAttribute("preflight", plan);
+                        session.setAttribute(VALIDATED_XML,
+                                new ValidatedXml(sha256(bytes), Instant.now()));
+                    } catch (IllegalArgumentException | IllegalStateException conflict) {
+                        model.addAttribute("preflightError", "Database preflight rejected: " + safeReason(conflict));
+                    }
+                }
             } catch (IOException exception) {
                 result = new ValidationReport(false,
                         java.util.List.of("Uploaded XML could not be read."),
