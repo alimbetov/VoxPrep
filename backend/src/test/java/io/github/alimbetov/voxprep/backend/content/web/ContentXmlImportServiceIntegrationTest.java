@@ -228,6 +228,52 @@ class ContentXmlImportServiceIntegrationTest {
     }
 
     @Test
+    void formattingOnlyChangeReplaysExistingDraftWithoutNewRevision() throws Exception {
+        String base = new String(new ClassPathResource("imports/voxprep-content-template-v1.xml")
+                .getContentAsByteArray(), StandardCharsets.UTF_8);
+        String code = "FORMAT_REPLAY_" + UUID.randomUUID().toString().replace("-", "");
+        String xml = onlyEntry(base, "PHRASE_INTERVIEW_INTRO_01")
+                .replace("PHRASE_INTERVIEW_INTRO_01", code);
+        var first = importer.importDrafts(xml.getBytes(StandardCharsets.UTF_8));
+        assertThat(first.created()).isEqualTo(1);
+
+        String formatted = xml.replace("<body>", "<body>\n    ")
+                .replace("</body>", "\n  </body>");
+        var replay = importer.importDrafts(formatted.getBytes(StandardCharsets.UTF_8));
+        assertThat(replay.created()).isZero();
+        assertThat(replay.alreadyPresent()).isEqualTo(1);
+        assertThat(revisions.findIdByExactIdentity(code, "phrase", 1)).isPresent();
+    }
+
+    @Test
+    void oneHundredDraftBatchCommitsAndIdenticalReplaySkipsAll() {
+        String prefix = "BATCH_" + UUID.randomUUID().toString().replace("-", "");
+        var xml = new StringBuilder("<voxprep schemaVersion=\"1\">");
+        for (int index = 0; index < 100; index++) {
+            xml.append("""
+                  <content code="%s_%03d" type="phrase">
+                    <title>Interview practice</title><subtitle>English</subtitle>
+                    <description>Batch test</description><categoryCode>INTERVIEW</categoryCode>
+                    <levelCode>B2</levelCode><minutes>2</minutes><availability>ACTIVE</availability>
+                    <skill>SPEAKING</skill>
+                    <body><phrase>I work with Java.</phrase><usage>Interview answer.</usage></body>
+                  </content>
+                    """.formatted(prefix, index));
+        }
+        xml.append("</voxprep>");
+        byte[] file = xml.toString().getBytes(StandardCharsets.UTF_8);
+        long before = revisions.count();
+        var plan = importer.preflight(file);
+        assertThat(plan.toCreate()).isEqualTo(100);
+        assertThat(importer.importDrafts(file).created()).isEqualTo(100);
+        assertThat(revisions.count()).isEqualTo(before + 100);
+        var replay = importer.importDrafts(file);
+        assertThat(replay.created()).isZero();
+        assertThat(replay.alreadyPresent()).isEqualTo(100);
+        assertThat(revisions.count()).isEqualTo(before + 100);
+    }
+
+    @Test
     void invalidXmlCannotCausePartialWrites() throws Exception {
         byte[] xml = exampleWithoutUnresolvedPracticeTest();
         String invalid = new String(xml, StandardCharsets.UTF_8)
