@@ -30,12 +30,13 @@
                 if (!bound.ok || new URL(bound.url).pathname !== '/admin/content/revisions/' + trigger.dataset.mediaRevision + '/edit') {
                     throw new Error('Image could not be linked. Check your session and try again.');
                 }
-                let selected = trigger.parentElement.querySelector('[data-selected-role="' + trigger.dataset.mediaRole + '"]');
+                const section = trigger.closest('[data-image-section]') || trigger.parentElement;
+                let selected = section.querySelector('[data-selected-role="' + trigger.dataset.mediaRole + '"]');
                 if (!selected) {
                     selected = document.createElement('span');
                     selected.dataset.selectedRole = trigger.dataset.mediaRole;
                     selected.setAttribute('role', 'status');
-                    trigger.parentElement.append(selected);
+                    (section.querySelector('[data-image-previews]') || section).append(selected);
                 }
                 const preview = document.createElement('img');
                 preview.src = asset.previewUrl; preview.alt = 'Selected image';
