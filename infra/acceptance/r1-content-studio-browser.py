@@ -42,9 +42,10 @@ with sync_playwright() as playwright:
     if stage == "draft":
         assert "DRAFT" in page.locator("body").inner_text(), "Draft MVC status missing"
         page.screenshot(path=str(output / "01-content-draft.png"), full_page=True)
-    elif stage == "published":
+    elif stage == "approved":
         assert "APPROVED" in page.locator("body").inner_text(), "Approved MVC status missing"
         page.screenshot(path=str(output / "02-content-approved.png"), full_page=True)
+    elif stage == "current":
         page.goto(f"{base}/admin/publication", wait_until="domcontentloaded")
         assert "Current learner release" in page.locator("body").inner_text(), "CURRENT missing"
         page.screenshot(path=str(output / "03-publication-current.png"), full_page=True)
