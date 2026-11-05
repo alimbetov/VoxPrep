@@ -13,12 +13,14 @@ public final class CatalogueMvcForms {
 
     private CatalogueMvcForms() {}
 
+    private static final String CODE_MESSAGE = "Use uppercase Latin letters (A-Z), digits, dots, underscores or hyphens. Start with a letter or digit; no spaces.";
+
     private static final String AVAILABILITY_PATTERN = "ACTIVE|INACTIVE";
 
     public static final class VerticalForm {
         @NotNull @Min(0) private Long expectedVersion = 0L;
-        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP) private String code;
-        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP) private String sectionCode;
+        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP, message = CODE_MESSAGE) private String code;
+        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP, message = CODE_MESSAGE) private String sectionCode;
         @NotBlank @Size(max = CatalogueConstraints.TITLE_MAX_LENGTH) private String title;
         @NotBlank @Size(max = CatalogueConstraints.DESCRIPTION_MAX_LENGTH) private String description;
         @NotBlank @Size(max = CatalogueConstraints.EXTERNAL_ID_MAX_LENGTH) private String iconAssetId;
@@ -45,7 +47,7 @@ public final class CatalogueMvcForms {
 
     public static final class GoalForm {
         @NotNull @Min(0) private Long expectedVersion = 0L;
-        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP) private String code;
+        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP, message = CODE_MESSAGE) private String code;
         @NotNull private UUID verticalId;
         @NotBlank @Size(max = CatalogueConstraints.TITLE_MAX_LENGTH) private String title;
         @NotBlank @Size(max = CatalogueConstraints.DESCRIPTION_MAX_LENGTH) private String description;
@@ -70,12 +72,12 @@ public final class CatalogueMvcForms {
 
     public static final class TrackForm {
         @NotNull @Min(0) private Long expectedVersion = 0L;
-        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP) private String code;
+        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP, message = CODE_MESSAGE) private String code;
         @NotNull private UUID goalId;
         @NotBlank @Size(max = CatalogueConstraints.TITLE_MAX_LENGTH) private String title;
         @NotBlank @Size(max = CatalogueConstraints.DESCRIPTION_MAX_LENGTH) private String description;
-        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP) private String levelCode;
-        @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = "^$|" + CatalogueCode.REGEXP) private String careerTrackCode;
+        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP, message = CODE_MESSAGE) private String levelCode;
+        @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = "^$|" + CatalogueCode.REGEXP, message = CODE_MESSAGE) private String careerTrackCode;
         @NotNull @Min(0) private Integer sortOrder = 0;
         @NotBlank @Pattern(regexp = AVAILABILITY_PATTERN) private String availability = "ACTIVE";
 
@@ -101,7 +103,7 @@ public final class CatalogueMvcForms {
 
     public static final class CollectionForm {
         @NotNull @Min(0) private Long expectedVersion = 0L;
-        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP) private String code;
+        @NotBlank @Size(max = CatalogueCode.MAX_LENGTH) @Pattern(regexp = CatalogueCode.REGEXP, message = CODE_MESSAGE) private String code;
         @NotNull private UUID trackId;
         @NotBlank @Size(max = CatalogueConstraints.TITLE_MAX_LENGTH) private String title;
         @NotBlank @Size(max = CatalogueConstraints.DESCRIPTION_MAX_LENGTH) private String description;
