@@ -7,6 +7,9 @@ import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRe
 import io.github.alimbetov.voxprep.backend.content.persistence.TopicContentRevisionEntity;
 import io.github.alimbetov.voxprep.backend.content.persistence.PhraseContentRevisionEntity;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import io.github.alimbetov.voxprep.backend.content.domain.ContentLifecycleStatus;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
@@ -96,6 +99,55 @@ class ContentXmlImportServiceIntegrationTest {
         var id = revisions.findIdByExactIdentity(code, "phrase", 1).orElseThrow();
         var revision = (PhraseContentRevisionEntity) revisions.findById(id).orElseThrow();
         assertThat(revision.getExamples()).containsExactly("First | line\nSecond line");
+    }
+
+    @Test
+    void laterDomainFailureRollsBackPreviouslyInsertedDraft() throws Exception {
+        String base = new String(new ClassPathResource("imports/voxprep-content-template-v1.xml")
+                .getContentAsByteArray(), StandardCharsets.UTF_8);
+        String firstCode = "ROLLBACK_P_" + UUID.randomUUID().toString().replace("-", "");
+        String secondCode = "ROLLBACK_V_" + UUID.randomUUID().toString().replace("-", "");
+        String phrase = onlyEntry(base, "PHRASE_INTERVIEW_INTRO_01")
+                .replace("PHRASE_INTERVIEW_INTRO_01", firstCode)
+                .replace("<voxprep schemaVersion=\"1\">", "").replace("</voxprep>", "");
+        String vocab = onlyEntry(base, "VOCAB_RESILIENCE_01")
+                .replace("VOCAB_RESILIENCE_01", secondCode)
+                .replace("<voxprep schemaVersion=\"1\">", "").replace("</voxprep>", "")
+                .replace("<partOfSpeech>noun</partOfSpeech>",
+                        "<partOfSpeech>" + "x".repeat(200) + "</partOfSpeech>");
+        String xml = "<voxprep schemaVersion=\"1\">" + phrase + vocab + "</voxprep>";
+        long before = revisions.count();
+        assertThatThrownBy(() -> importer.importDrafts(xml.getBytes(StandardCharsets.UTF_8)))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThat(revisions.findIdByExactIdentity(firstCode, "phrase", 1)).isEmpty();
+        assertThat(revisions.findIdByExactIdentity(secondCode, "vocabulary", 1)).isEmpty();
+        assertThat(revisions.count()).isEqualTo(before);
+    }
+
+    @Test
+    void simultaneousIdenticalImportsCreateExactlyOneDraft() throws Exception {
+        String base = new String(new ClassPathResource("imports/voxprep-content-template-v1.xml")
+                .getContentAsByteArray(), StandardCharsets.UTF_8);
+        String code = "CONCURRENT_P_" + UUID.randomUUID().toString().replace("-", "");
+        byte[] xml = onlyEntry(base, "PHRASE_INTERVIEW_INTRO_01")
+                .replace("PHRASE_INTERVIEW_INTRO_01", code).getBytes(StandardCharsets.UTF_8);
+        var start = new CountDownLatch(1);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var first = executor.submit(() -> {
+                start.await();
+                return importer.importDrafts(xml);
+            });
+            var second = executor.submit(() -> {
+                start.await();
+                return importer.importDrafts(xml);
+            });
+            start.countDown();
+            var left = first.get(30, TimeUnit.SECONDS);
+            var right = second.get(30, TimeUnit.SECONDS);
+            assertThat(left.created() + right.created()).isEqualTo(1);
+            assertThat(left.alreadyPresent() + right.alreadyPresent()).isEqualTo(1);
+            assertThat(revisions.findIdByExactIdentity(code, "phrase", 1)).isPresent();
+        }
     }
 
     @Test
