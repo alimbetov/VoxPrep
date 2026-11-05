@@ -4,24 +4,16 @@ import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringS
 import io.github.alimbetov.voxprep.backend.content.application.ContentDraftUpdate;
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
 import io.github.alimbetov.voxprep.backend.sharedkernel.BusinessCode;
-import java.io.ByteArrayInputStream;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilderFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Real, schema-validated JSON/XML Content Studio import. No direct SQL and no
+ * JSON-only Content Studio import. XML is handled by ContentXmlImportService. No direct SQL and no
  * auto-approval. All bodies use the exact production MVC body mapper.
  */
 @Service
@@ -79,10 +71,8 @@ public class ContentBatchImportService {
             } catch (Exception invalid) {
                 throw new IllegalArgumentException("Invalid JSON import schema", invalid);
             }
-        } else if (filename.toLowerCase(java.util.Locale.ROOT).endsWith(".xml")) {
-            rows = readXml(content);
         } else {
-            throw new IllegalArgumentException("Only .json or .xml imports are supported");
+            throw new IllegalArgumentException("Only .json imports are supported; XML uses the versioned XSD importer");
         }
 
         var validated = new ArrayList<Validated>();
@@ -259,105 +249,4 @@ public class ContentBatchImportService {
         return String.join("\n", rows);
     }
 
-    private static List<?> readXml(byte[] bytes) {
-        try {
-            var factory = DocumentBuilderFactory.newInstance();
-            factory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
-            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
-            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
-            factory.setXIncludeAware(false);
-            factory.setExpandEntityReferences(false);
-            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
-            factory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
-            var document = factory.newDocumentBuilder().parse(new ByteArrayInputStream(bytes));
-            var root = document.getDocumentElement();
-            if (!"voxprepImport".equals(root.getTagName()) || !"1".equals(root.getAttribute("schemaVersion"))) {
-                throw new IllegalArgumentException("Expected voxprepImport schemaVersion=1");
-            }
-            var entries = children(root, "item");
-            rows(1, entries);
-            var result = new ArrayList<Map<String, Object>>();
-            for (var item : entries) {
-                var row = new HashMap<String, Object>();
-                row.put("contentCode", item.getAttribute("contentCode"));
-                row.put("bodyType", item.getAttribute("bodyType"));
-                for (var field : List.of("title", "subtitle", "description", "categoryCode",
-                        "levelCode", "minutes", "availability")) {
-                    row.put(field, "minutes".equals(field)
-                            ? Integer.valueOf(requiredChild(item, field))
-                            : requiredChild(item, field));
-                }
-                row.put("skillCodes", texts(requiredElement(item, "skillCodes"), "value"));
-                var body = requiredElement(item, "body");
-                var bodyFields = new HashMap<String, Object>();
-                for (var field : List.of("term", "definition", "partOfSpeech", "prompt",
-                        "modelAnswer", "phrase", "usage", "transcript", "questionText",
-                        "explanation", "instructions")) {
-                    var element = optionalElement(body, field);
-                    if (element != null) bodyFields.put(field, element.getTextContent().trim());
-                }
-                var percent = optionalElement(body, "passingScorePercent");
-                if (percent != null) {
-                    bodyFields.put("passingScorePercent", Integer.valueOf(percent.getTextContent().trim()));
-                }
-                for (var field : List.of("examples", "keyPoints", "questionRevisionIds")) {
-                    var element = optionalElement(body, field);
-                    if (element != null) bodyFields.put(field, texts(element, "value"));
-                }
-                for (var field : List.of("sections", "segments", "options")) {
-                    var element = optionalElement(body, field);
-                    if (element == null) continue;
-                    var mappings = new ArrayList<Map<String, Object>>();
-                    for (var entry : children(element, "item")) {
-                        var values = new HashMap<String, Object>();
-                        for (var attr : List.of("heading", "text", "startMs", "endMs", "key", "correct")) {
-                            var child = optionalElement(entry, attr);
-                            if (child != null) {
-                                var text = child.getTextContent().trim();
-                                values.put(attr, "correct".equals(attr) ? Boolean.valueOf(text) : text);
-                            }
-                        }
-                        mappings.add(values);
-                    }
-                    bodyFields.put(field, mappings);
-                }
-                row.put("body", bodyFields);
-                result.add(row);
-            }
-            return result;
-        } catch (Exception invalid) {
-            throw new IllegalArgumentException("Invalid or unsafe XML import", invalid);
-        }
-    }
-
-    private static List<Element> children(Element parent, String name) {
-        var result = new ArrayList<Element>();
-        for (Node n = parent.getFirstChild(); n != null; n = n.getNextSibling()) {
-            if (n instanceof Element element && name.equals(element.getTagName())) {
-                result.add(element);
-            }
-        }
-        return result;
-    }
-
-    private static Element optionalElement(Element parent, String name) {
-        var elements = children(parent, name);
-        return elements.isEmpty() ? null : elements.getFirst();
-    }
-
-    private static Element requiredElement(Element parent, String name) {
-        var result = optionalElement(parent, name);
-        if (result == null) throw new IllegalArgumentException("Required XML tag: " + name);
-        return result;
-    }
-
-    private static String requiredChild(Element parent, String name) {
-        return requiredElement(parent, name).getTextContent().trim();
-    }
-
-    private static List<String> texts(Element parent, String name) {
-        return children(parent, name).stream()
-                .map(e -> e.getTextContent().trim()).toList();
-    }
 }

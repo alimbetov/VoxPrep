@@ -52,27 +52,27 @@ class ContentImportMvcIntegrationTest {
                 """.formatted(code).getBytes(StandardCharsets.UTF_8);
         var session = new MockHttpSession();
 
-        mvc.perform(get("/admin/imports").with(user("admin").roles("ADMIN")))
+        mvc.perform(get("/admin/imports/json").with(user("admin").roles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Validate and preview")));
 
         var file = new MockMultipartFile("file", "demo.json", "application/json", bytes);
 
-        mvc.perform(multipart("/admin/imports/import").file(file)
+        mvc.perform(multipart("/admin/imports/json/import").file(file)
                         .session(session).with(user("admin").roles("ADMIN")).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Preview this exact file")));
 
         assertThat(revisions.findIdByExactIdentity(code, "phrase", 1)).isEmpty();
 
-        mvc.perform(multipart("/admin/imports/preview").file(file)
+        mvc.perform(multipart("/admin/imports/json/preview").file(file)
                         .session(session).with(user("admin").roles("ADMIN")).with(csrf()))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Validation passed")));
 
         assertThat(revisions.findIdByExactIdentity(code, "phrase", 1)).isEmpty();
 
-        mvc.perform(multipart("/admin/imports/import").file(file)
+        mvc.perform(multipart("/admin/imports/json/import").file(file)
                         .session(session).with(user("admin").roles("ADMIN")).with(csrf()))
                 .andExpect(status().is3xxRedirection());
 
@@ -85,7 +85,7 @@ class ContentImportMvcIntegrationTest {
     void unauthorizedImportCannotWrite() throws Exception {
         var file = new MockMultipartFile("file", "demo.json",
                 "application/json", "{}".getBytes(StandardCharsets.UTF_8));
-        mvc.perform(multipart("/admin/imports/import").file(file)
+        mvc.perform(multipart("/admin/imports/json/import").file(file)
                         .with(user("learner").roles("USER")).with(csrf()))
                 .andExpect(status().isForbidden());
     }

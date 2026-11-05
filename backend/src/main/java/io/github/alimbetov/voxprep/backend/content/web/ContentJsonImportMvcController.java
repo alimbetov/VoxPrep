@@ -20,18 +20,18 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  */
 @AdminContentStudioMvc
 @Controller
-@RequestMapping("/admin/imports")
-public class ContentImportMvcController {
+@RequestMapping("/admin/imports/json")
+public class ContentJsonImportMvcController {
     private final ContentBatchImportService importer;
 
-    public ContentImportMvcController(ContentBatchImportService importer) {
+    public ContentJsonImportMvcController(ContentBatchImportService importer) {
         this.importer = importer;
     }
 
     @GetMapping
     public String index(Model model) {
         model.addAttribute("activeSection", "imports");
-        return "admin/imports/index";
+        return "admin/imports/json";
     }
 
     @PostMapping("/preview")
@@ -47,7 +47,7 @@ public class ContentImportMvcController {
             session.removeAttribute("voxprep.import.preview");
             model.addAttribute("importError", "Import validation failed: " + invalid.getMessage());
         }
-        return "admin/imports/index";
+        return "admin/imports/json";
     }
 
     @PostMapping("/import")
@@ -68,7 +68,7 @@ public class ContentImportMvcController {
         } catch (IllegalArgumentException | java.io.IOException invalid) {
             model.addAttribute("activeSection", "imports");
             model.addAttribute("importError", "Import rejected: " + invalid.getMessage());
-            return "admin/imports/index";
+            return "admin/imports/json";
         }
     }
 

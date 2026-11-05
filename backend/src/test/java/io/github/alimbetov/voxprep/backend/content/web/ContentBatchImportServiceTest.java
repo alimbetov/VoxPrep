@@ -43,26 +43,12 @@ class ContentBatchImportServiceTest {
     }
 
     @Test
-    void xmlPreviewAndImportUseSameTypedContentContract() {
-        var xml = """
-                <voxprepImport schemaVersion="1">
-                  <item contentCode="IMPORT_PHRASE_XML" bodyType="phrase">
-                    <title>Hello</title><subtitle>Greetings</subtitle>
-                    <description>Greeting exercise</description>
-                    <categoryCode>COMMUNICATION</categoryCode><levelCode>B1</levelCode>
-                    <minutes>3</minutes><availability>ACTIVE</availability>
-                    <skillCodes><value>SPEAKING</value></skillCodes>
-                    <body>
-                      <phrase>Hello</phrase><usage>Greeting context</usage>
-                      <examples><value>Hello, how are you?</value></examples>
-                    </body>
-                  </item>
-                </voxprepImport>
-                """.getBytes(StandardCharsets.UTF_8);
-        assertThat(importer.preview("content.xml", xml).newCount()).isEqualTo(1);
-        assertThat(importer.importDrafts("content.xml", xml)).isEqualTo(1);
-        verify(authoring).createInitialRevision(any(BusinessCode.class),
-                any(ContentDraftUpdate.class));
+    void xmlIsDelegatedToTheXsdBackedImporter() {
+        assertThatThrownBy(() -> importer.preview("content.xml",
+                "<voxprepImport/>".getBytes(StandardCharsets.UTF_8)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("XSD importer");
+        verifyNoInteractions(authoring);
     }
 
     @Test
