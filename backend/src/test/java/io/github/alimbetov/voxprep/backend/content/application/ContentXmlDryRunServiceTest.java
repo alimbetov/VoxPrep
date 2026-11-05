@@ -15,7 +15,7 @@ class ContentXmlDryRunServiceTest {
                 .getContentAsByteArray();
         var report = validator.validate(xml);
         assertThat(report.valid()).as(report.issues().toString()).isTrue();
-        assertThat(report.preview()).hasSize(1);
+        assertThat(report.preview()).hasSize(7);
         assertThat(report.preview().getFirst().code()).isEqualTo("PHRASE_INTERVIEW_INTRO_01");
     }
 
