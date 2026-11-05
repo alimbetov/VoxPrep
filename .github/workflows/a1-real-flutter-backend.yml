@@ -54,6 +54,11 @@ jobs:
           fi
           flutter analyze --no-pub
 
+      - name: Install headless Chromium for real Content Studio screenshots
+        run: |
+          python3 -m pip install --disable-pip-version-check playwright==1.56.0
+          python3 -m playwright install chromium
+
       - name: Prepare isolated infrastructure secrets
         run: ./infra/scripts/init-secrets.sh test
 
@@ -73,6 +78,7 @@ jobs:
             -Dtest=A1RealBackendFlutterAcceptanceTest,R5MediaLibraryLiveHttpAcceptanceTest \
             -Dvoxprep.r5.enabled=true \
             -Dvoxprep.a1.enabled=true \
+            -Dvoxprep.a1.browser.script=${{ github.workspace }}/infra/acceptance/r1-content-studio-browser.py \
             -Dvoxprep.a1.flutter.dir=${{ github.workspace }}/mobile/careerspeak_app \
             test
 
