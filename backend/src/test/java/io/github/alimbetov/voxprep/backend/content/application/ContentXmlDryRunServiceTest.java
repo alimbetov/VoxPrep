@@ -41,6 +41,38 @@ class ContentXmlDryRunServiceTest {
     }
 
     @Test
+    void rejectsUnexpectedNestedMarkupAndDuplicateSingletonBodyFields() throws Exception {
+        var sample = new String(new ClassPathResource("imports/voxprep-content-template-v1.xml")
+                .getContentAsByteArray(), StandardCharsets.UTF_8);
+        var nested = sample.replace("<heading>HTTP</heading>",
+                "<heading>HTTP<arbitrary>injection</arbitrary></heading>");
+        var nestedResult = validator.validate(nested.getBytes(StandardCharsets.UTF_8));
+        assertThat(nestedResult.valid()).isFalse();
+        assertThat(nestedResult.issues()).anyMatch(x -> x.contains("invalid section field"));
+
+        var duplicate = sample.replace("<phrase>I specialize in Java backend development.</phrase>",
+                "<phrase>I specialize in Java backend development.</phrase>"
+                        + "<phrase>Unexpected duplicate</phrase>");
+        var result = validator.validate(duplicate.getBytes(StandardCharsets.UTF_8));
+        assertThat(result.valid()).isFalse();
+        assertThat(result.issues()).anyMatch(x -> x.contains("duplicate field phrase"));
+    }
+
+    @Test
+    void rejectsUnexpectedOptionAttributesAndUnknownBodyElement() throws Exception {
+        var sample = new String(new ClassPathResource("imports/voxprep-content-template-v1.xml")
+                .getContentAsByteArray(), StandardCharsets.UTF_8);
+        var tampered = sample.replace("correct=\"true\"", "correct=\"true\" executable=\"anything\"");
+        var result = validator.validate(tampered.getBytes(StandardCharsets.UTF_8));
+        assertThat(result.valid()).isFalse();
+        assertThat(result.issues()).anyMatch(x -> x.contains("unsupported attribute executable"));
+
+        var unknown = sample.replace("<usage>Introduce your technical background.</usage>",
+                "<usage>Introduce your technical background.</usage><unexpected>Extra</unexpected>");
+        assertThat(validator.validate(unknown.getBytes(StandardCharsets.UTF_8)).valid()).isFalse();
+    }
+
+    @Test
     void enforcesByteBoundAndRejectsDuplicateCodes() throws Exception {
         assertThat(validator.validate(new byte[ContentXmlDryRunService.MAX_BYTES + 1]).valid()).isFalse();
         var original = new ClassPathResource("imports/voxprep-content-template-v1.xml")
