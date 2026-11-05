@@ -89,6 +89,26 @@ class ContentXmlBoundaryTest {
     }
 
     @Test
+    void rejectsDomainRequiredBodyListsBeforeDatabaseImport() throws Exception {
+        String absentExample = phrase("MISSING_EXAMPLE")
+                .replace("<example>Spring Boot</example>", "");
+        var phraseReport = service.validate(("<voxprep schemaVersion=\"1\">"
+                + absentExample + "</voxprep>").getBytes(StandardCharsets.UTF_8));
+        assertThat(phraseReport.valid()).isFalse();
+        assertThat(phraseReport.issues()).anyMatch(s -> s.contains("at least one example"));
+
+        String template = new String(new ClassPathResource("imports/voxprep-content-template-v1.xml")
+                .getContentAsByteArray(), StandardCharsets.UTF_8);
+        String noKeyPoints = template.replace("<keyPoint>Experience</keyPoint>", "")
+                .replace("<keyPoint>Technologies</keyPoint>", "")
+                .replace("<keyPoint>Technical background</keyPoint>", "")
+                .replace("<keyPoint>Production experience</keyPoint>", "");
+        var interviewReport = service.validate(noKeyPoints.getBytes(StandardCharsets.UTF_8));
+        assertThat(interviewReport.valid()).isFalse();
+        assertThat(interviewReport.issues()).anyMatch(s -> s.contains("at least one keyPoint"));
+    }
+
+    @Test
     void downloadableExampleRemainsValidAlongsideBoundaryFixtures() throws Exception {
         byte[] template = new ClassPathResource("imports/voxprep-content-template-v1.xml")
                 .getContentAsByteArray();
