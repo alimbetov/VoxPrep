@@ -32,7 +32,7 @@
     <div th:if="${validation != null}" class="card studio-card mb-4"><div class="card-body p-4">
         <h2 class="h5">3. Validation result</h2>
         <div th:if="${validation.valid}" class="alert alert-success" role="status">
-            XML structure and basic content rules passed. No import was performed.
+            XML structure and basic content rules passed. No import was performed. Database preflight is also required before import.
         </div>
         <div th:unless="${validation.valid}" class="alert alert-danger" role="alert">
             XML validation failed; nothing was imported.
@@ -52,7 +52,13 @@
             </table></div>
         </div>
     </div></div>
-    <div th:if="${validation != null and validation.valid}" class="card studio-card mb-4">
+    <div th:if="${preflightError != null}" class="alert alert-danger" role="alert" th:text="${preflightError}">Database preflight failed.</div>
+    <div th:if="${preflight != null}" class="alert alert-info" role="status">
+      Database preflight: <strong th:text="${preflight.toCreate}">0</strong> new DRAFTs,
+      <strong th:text="${preflight.alreadyPresent}">0</strong> unchanged existing DRAFTs.
+      This is a snapshot; import checks again under locks.
+    </div>
+    <div th:if="${preflight != null}" class="card studio-card mb-4">
         <div class="card-body p-4">
             <h2 class="h5">4. Import validated XML as DRAFT</h2>
             <p class="text-secondary small">Choose the <strong>same XML file again</strong>. The backend compares its SHA-256 with your validated file (expires after 10 minutes), reruns validation, checks revision conflicts and approved Question references, then creates all new DRAFT revisions atomically. No approval or publication occurs.</p>
