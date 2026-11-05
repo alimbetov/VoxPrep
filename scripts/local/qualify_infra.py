@@ -24,6 +24,8 @@ def run(command, data=None, expected=0):
     result = subprocess.run(command, input=data, text=True, capture_output=True, timeout=180, cwd=ROOT)
     record = {'command': command, 'timestamp': dt.datetime.now(dt.timezone.utc).isoformat(),
               'exit_code': result.returncode, 'stdout': result.stdout, 'stderr': result.stderr}
+    if data is not None:
+        record['stdin'] = data
     report['checks'].append(record)
     if result.returncode != expected:
         raise RuntimeError(f'Unexpected exit {result.returncode}: {command[0]} (see evidence)')
@@ -103,6 +105,8 @@ try:
         owners = sql('migrator', "SELECT DISTINCT tableowner FROM pg_tables WHERE schemaname IN ('app','liquibase');")
         assert 'voxprep_backend' not in owners
         report['table_owners'] = owners
+        sql('backend', 'BEGIN; ALTER TABLE app.content_revision ADD COLUMN local_smoke_forbidden int; ROLLBACK;', denied=True)
+        report['backend_sessions'] = sql('migrator', "SELECT usename || ':' || count(*) FROM pg_stat_activity WHERE datname = current_database() GROUP BY usename ORDER BY usename;")
         sql('backend', 'BEGIN; SELECT count(*) FROM liquibase.databasechangelog; ROLLBACK;', denied=True)
         sql('backend', 'BEGIN; ALTER TABLE liquibase.databasechangelog ADD COLUMN forbidden int; ROLLBACK;', denied=True)
         report['migration_boundary'] = 'PASS'
