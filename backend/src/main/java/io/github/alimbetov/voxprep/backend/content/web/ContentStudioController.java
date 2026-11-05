@@ -21,11 +21,6 @@ public class ContentStudioController {
         return section(model, "localization", "Localization", "Localization authoring will be wired in MVC-R4.");
     }
 
-    @GetMapping("/imports")
-    public String imports(Model model) {
-        return section(model, "imports", "Imports", "Import tooling will be added without bypassing application services.");
-    }
-
     private static String section(Model model, String activeSection, String title, String description) {
         model.addAttribute("activeSection", activeSection);
         model.addAttribute("sectionTitle", title);
