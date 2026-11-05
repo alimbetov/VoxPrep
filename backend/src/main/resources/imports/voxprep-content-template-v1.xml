@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- VoxPrep Content Studio XML v1. Download schema at /admin/imports/schema.xsd.
+     Validation is dry-run only. No database writes or automatic publication. -->
+<voxprep schemaVersion="1">
+  <content code="PHRASE_INTERVIEW_INTRO_01" type="phrase">
+    <title>Introducing your experience</title>
+    <subtitle>Interview speaking</subtitle>
+    <description>Common phrase for job interviews</description>
+    <categoryCode>INTERVIEW</categoryCode>
+    <levelCode>B2</levelCode>
+    <minutes>2</minutes>
+    <availability>ACTIVE</availability>
+    <skill>SPEAKING</skill>
+    <body>
+      <phrase>I specialize in Java backend development.</phrase>
+      <usage>Introduce your technical background.</usage>
+      <example>I specialize in designing scalable APIs.</example>
+    </body>
+  </content>
+  <!-- Question UUID above is a syntax-only placeholder; replace with an actual APPROVED revision before import. -->
+  <content code="VOCAB_RESILIENCE_01" type="vocabulary">
+    <title>Resilience</title>
+    <subtitle>Java Backend Interview</subtitle>
+    <description>Example draft for XML validation</description>
+    <categoryCode>INTERVIEW</categoryCode>
+    <levelCode>B2</levelCode>
+    <minutes>3</minutes>
+    <availability>ACTIVE</availability>
+    <skill>SPEAKING</skill>
+    <body><term>Resilience</term><definition>Ability to recover from failure.</definition><partOfSpeech>noun</partOfSpeech><example>Resilient infrastructure matters.</example></body>
+  </content>
+  <content code="INTERVIEW_BACKGROUND_01" type="interview">
+    <title>Backend interview</title>
+    <subtitle>Java Backend Interview</subtitle>
+    <description>Example draft for XML validation</description>
+    <categoryCode>INTERVIEW</categoryCode>
+    <levelCode>B2</levelCode>
+    <minutes>3</minutes>
+    <availability>ACTIVE</availability>
+    <skill>SPEAKING</skill>
+    <body><prompt>Tell me about your experience.</prompt><modelAnswer>I develop Java and Spring Boot systems.</modelAnswer><keyPoint>Experience</keyPoint><keyPoint>Technologies</keyPoint></body>
+  </content>
+  <content code="TOPIC_REST_01" type="topic">
+    <title>REST fundamentals</title>
+    <subtitle>Java Backend Interview</subtitle>
+    <description>Example draft for XML validation</description>
+    <categoryCode>INTERVIEW</categoryCode>
+    <levelCode>B2</levelCode>
+    <minutes>3</minutes>
+    <availability>ACTIVE</availability>
+    <skill>SPEAKING</skill>
+    <body><section><heading>HTTP</heading><text>Resources have stable URIs.</text></section></body>
+  </content>
+  <content code="SHADOWING_HELLO_01" type="shadowing">
+    <title>Pronunciation exercise</title>
+    <subtitle>Java Backend Interview</subtitle>
+    <description>Example draft for XML validation</description>
+    <categoryCode>INTERVIEW</categoryCode>
+    <levelCode>B2</levelCode>
+    <minutes>3</minutes>
+    <availability>ACTIVE</availability>
+    <skill>SPEAKING</skill>
+    <body><transcript>I work with Java.</transcript><segment startMs="0" endMs="1200">I work with Java.</segment></body>
+  </content>
+  <content code="QUESTION_COUPLING_01" type="question">
+    <title>Architecture quiz</title>
+    <subtitle>Java Backend Interview</subtitle>
+    <description>Example draft for XML validation</description>
+    <categoryCode>INTERVIEW</categoryCode>
+    <levelCode>B2</levelCode>
+    <minutes>3</minutes>
+    <availability>ACTIVE</availability>
+    <skill>SPEAKING</skill>
+    <body><questionText>Which design is loosely coupled?</questionText><explanation>Constructor injection helps.</explanation><option key="A" correct="true">Dependency injection</option><option key="B" correct="false">Hard-coded dependencies</option></body>
+  </content>
+  <content code="PRACTICE_ARCH_01" type="practice_test">
+    <title>Architecture practice test</title>
+    <subtitle>Java Backend Interview</subtitle>
+    <description>Example draft for XML validation</description>
+    <categoryCode>INTERVIEW</categoryCode>
+    <levelCode>B2</levelCode>
+    <minutes>3</minutes>
+    <availability>ACTIVE</availability>
+    <skill>SPEAKING</skill>
+    <body><instructions>Choose one correct answer.</instructions><passingScorePercent>70</passingScorePercent><questionRevisionId>00000000-0000-0000-0000-000000000001</questionRevisionId></body>
+  </content>
+</voxprep>

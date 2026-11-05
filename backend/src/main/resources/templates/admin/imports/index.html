@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/fragments/shell :: layout('XML import validation', 'imports', ~{::main})}">
+<main>
+    <h1 class="h3">XML content import — validation</h1>
+    <p class="text-secondary">Download a versioned example and validate your XML before any future import. This screen is read-only: no content is created or published.</p>
+
+    <div class="card studio-card mb-4"><div class="card-body p-4">
+        <h2 class="h5">1. Download format</h2>
+        <div class="d-flex flex-wrap gap-2 mb-2">
+            <a class="btn btn-outline-primary" th:href="@{/admin/imports/template.xml}">
+                Download XML template
+            </a>
+            <a class="btn btn-outline-secondary" th:href="@{/admin/imports/schema.xsd}">
+                Download XSD v1
+            </a>
+        </div>
+        <p class="small text-secondary mb-0">Supported types: phrase, vocabulary, interview, topic, shadowing, question, practice_test. Schema version 1; up to 100 entries and 1 MiB per file.</p>
+    </div></div>
+
+    <div class="card studio-card mb-4"><div class="card-body p-4">
+        <h2 class="h5">2. Validate XML (dry-run)</h2>
+        <form method="post" enctype="multipart/form-data" th:action="@{/admin/imports/validate}">
+            <label class="form-label" for="xmlFile">Content XML file</label>
+            <input class="form-control mb-3" id="xmlFile" name="file" type="file"
+                   accept=".xml,application/xml,text/xml" required>
+            <button class="btn btn-primary" type="submit">Validate XML</button>
+        </form>
+        <p class="small text-secondary mt-3 mb-0">XML external entities/DTD are prohibited. No writes to PostgreSQL, RustFS or publication state occur here.</p>
+    </div></div>
+
+    <div th:if="${validation != null}" class="card studio-card mb-4"><div class="card-body p-4">
+        <h2 class="h5">3. Validation result</h2>
+        <div th:if="${validation.valid}" class="alert alert-success" role="status">
+            XML structure and basic content rules passed. No import was performed. Database preflight is also required before import.
+        </div>
+        <div th:unless="${validation.valid}" class="alert alert-danger" role="alert">
+            XML validation failed; nothing was imported.
+        </div>
+        <ul class="mb-3" th:if="${!#lists.isEmpty(validation.issues)}">
+            <li th:each="issue : ${validation.issues}" th:text="${issue}">Validation issue</li>
+        </ul>
+        <div th:if="${!#lists.isEmpty(validation.preview)}">
+            <h3 class="h6">Parsed content preview</h3>
+            <div class="table-responsive"><table class="table table-sm">
+                <thead><tr><th>Code</th><th>Type</th><th>Title</th></tr></thead>
+                <tbody><tr th:each="item : ${validation.preview}">
+                    <td th:text="${item.code}">CODE</td>
+                    <td th:text="${item.type}">phrase</td>
+                    <td th:text="${item.title}">Title</td>
+                </tr></tbody>
+            </table></div>
+        </div>
+    </div></div>
+    <div th:if="${preflightError != null}" class="alert alert-danger" role="alert" th:text="${preflightError}">Database preflight failed.</div>
+    <div th:if="${preflight != null}" class="alert alert-info" role="status">
+      Database preflight: <strong th:text="${preflight.toCreate}">0</strong> new DRAFTs,
+      <strong th:text="${preflight.alreadyPresent}">0</strong> unchanged existing DRAFTs.
+      This is a snapshot; import checks again under locks.
+    </div>
+    <div th:if="${preflight != null}" class="card studio-card mb-4">
+        <div class="card-body p-4">
+            <h2 class="h5">4. Import validated XML as DRAFT</h2>
+            <p class="text-secondary small">Choose the <strong>same XML file again</strong>. The backend compares its SHA-256 with your validated file (expires after 10 minutes), reruns validation, checks revision conflicts and approved Question references, then creates all new DRAFT revisions atomically. No approval or publication occurs.</p>
+            <form method="post" enctype="multipart/form-data" th:action="@{/admin/imports/import-drafts}">
+                <label for="validatedImportFile" class="form-label">Previously validated XML</label>
+                <input id="validatedImportFile" name="file" type="file" class="form-control mb-3"
+                       accept=".xml,application/xml,text/xml" required>
+                <button class="btn btn-warning" type="submit">Import as DRAFT</button>
+            </form>
+        </div>
+    </div>
+    <div th:if="${importError != null}" class="alert alert-danger" role="alert" th:text="${importError}">Import rejected.</div>
+    <div th:if="${importReport != null}" class="alert alert-success" role="status">
+        Import committed. New DRAFTs: <strong th:text="${importReport.created}">0</strong>.
+        Unchanged existing DRAFTs: <strong th:text="${importReport.alreadyPresent}">0</strong>.
+        Total records: <strong th:text="${importReport.total}">0</strong>.
+        All imported revisions still require editorial review and approval.
+    </div>
+    <p class="small text-secondary">Practice Test entries require already APPROVED/PUBLISHED Question revision UUIDs in PostgreSQL. Replace the sample placeholder before importing, or remove the Practice Test example. Invalid references reject the entire batch.</p>
+</main>
+</html>

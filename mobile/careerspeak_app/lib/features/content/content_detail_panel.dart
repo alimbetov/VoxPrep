@@ -5,6 +5,7 @@ import '../../app/audio_playback_providers.dart';
 import '../../app/learner_state_providers.dart';
 import '../../application/content_delivery/content_audio_policy.dart';
 import '../../application/result/result.dart';
+import '../../application/content_delivery/typed_content_body.dart';
 import '../../application/services/audio_playback_controller.dart';
 import '../../application/services/role_audio_clip_controller.dart'
     as role_audio;
@@ -12,12 +13,23 @@ import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
 import '../../domain/content_marker_state.dart';
 import '../shared/content_marker_chips.dart';
+import 'typed_content_body_card.dart';
 
 class ContentDetailPanel extends ConsumerWidget {
-  const ContentDetailPanel({required this.item, this.localizedHint, super.key});
+  const ContentDetailPanel({
+    required this.item,
+    this.localizedHint,
+    this.typedBody,
+    this.typedBodyLoading = false,
+    this.typedBodyError = false,
+    super.key,
+  });
 
   final ContentItem item;
   final String? localizedHint;
+  final TypedContentBody? typedBody;
+  final bool typedBodyLoading;
+  final bool typedBodyError;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -151,26 +163,38 @@ class ContentDetailPanel extends ConsumerWidget {
         const SizedBox(height: 8),
         Text(item.description, style: Theme.of(context).textTheme.bodyLarge),
         const SizedBox(height: 24),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Learning content',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  item.type == ContentType.interview
-                      ? 'Interview audio has independent question and sample-answer roles. Role clips use one active session and do not share a persisted resume position.'
-                      : 'Audio playback uses the verified local asset pipeline. Completion of audio marks the item as listened; learning completion remains a separate learner action.',
-                ),
-              ],
+        if (typedBody != null)
+          TypedContentBodyCard(body: typedBody!)
+        else if (typedBodyLoading)
+          const Center(child: CircularProgressIndicator())
+        else if (typedBodyError)
+          const Card(
+            child: Padding(
+              padding: EdgeInsets.all(20),
+              child: Text('Learning content could not be verified offline.'),
+            ),
+          )
+        else
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Learning content',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    item.type == ContentType.interview
+                        ? 'Interview audio has independent question and sample-answer roles. Role clips use one active session and do not share a persisted resume position.'
+                        : 'Audio playback uses the verified local asset pipeline. Completion of audio marks the item as listened; learning completion remains a separate learner action.',
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
       ],
     );
   }
