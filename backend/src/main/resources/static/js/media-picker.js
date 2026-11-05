@@ -30,7 +30,18 @@
                 if (!bound.ok || new URL(bound.url).pathname !== '/admin/content/revisions/' + trigger.dataset.mediaRevision + '/edit') {
                     throw new Error('Image could not be linked. Check your session and try again.');
                 }
-                window.location.reload();
+                let selected = trigger.parentElement.querySelector('[data-selected-role="' + trigger.dataset.mediaRole + '"]');
+                if (!selected) {
+                    selected = document.createElement('span');
+                    selected.dataset.selectedRole = trigger.dataset.mediaRole;
+                    selected.setAttribute('role', 'status');
+                    trigger.parentElement.append(selected);
+                }
+                const preview = document.createElement('img');
+                preview.src = asset.previewUrl; preview.alt = 'Selected image';
+                preview.style.cssText = 'width:64px;height:64px;object-fit:contain;margin-right:8px';
+                selected.replaceChildren(preview, document.createTextNode('Image linked to draft.'));
+                dialog.close();
             }
         } catch (error) { status.textContent = error.message; }
     }
