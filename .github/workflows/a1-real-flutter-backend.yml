@@ -19,7 +19,7 @@ permissions:
 jobs:
   a1-real-flutter-backend:
     name: a1-real-flutter-backend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 35
     steps:
       - name: Checkout exact revision
@@ -54,6 +54,11 @@ jobs:
           fi
           flutter analyze --no-pub
 
+      - name: Install headless Chromium for real Content Studio screenshots
+        run: |
+          python3 -m pip install --disable-pip-version-check playwright==1.56.0
+          python3 -m playwright install chromium
+
       - name: Prepare isolated infrastructure secrets
         run: ./infra/scripts/init-secrets.sh test
 
@@ -73,8 +78,39 @@ jobs:
             -Dtest=A1RealBackendFlutterAcceptanceTest,R5MediaLibraryLiveHttpAcceptanceTest \
             -Dvoxprep.r5.enabled=true \
             -Dvoxprep.a1.enabled=true \
+            -Dvoxprep.a1.browser.script=${{ github.workspace }}/infra/acceptance/r1-content-studio-browser.py \
             -Dvoxprep.a1.flutter.dir=${{ github.workspace }}/mobile/careerspeak_app \
             test
+
+      - name: Capture R1 PostgreSQL publication evidence
+        run: |
+          mkdir -p backend/target/r1-evidence
+          docker compose --env-file infra/env/test.env.example -f infra/compose/compose.test.yml \
+            exec -T postgres psql -X -v ON_ERROR_STOP=1 \
+            -U voxprep_bootstrap -d voxprep_test \
+            < infra/acceptance/r1-publication-evidence.sql \
+            > backend/target/r1-evidence/postgres-publication-snapshot.txt
+          test -s backend/target/r1-evidence/postgres-publication-snapshot.txt
+          grep -q 'evidence_publication_current' backend/target/r1-evidence/postgres-publication-snapshot.txt
+          grep -q 'evidence_release_history' backend/target/r1-evidence/postgres-publication-snapshot.txt
+          grep -q 'evidence_approved_exact_content_refs' backend/target/r1-evidence/postgres-publication-snapshot.txt
+          grep -q 'evidence_immutable_wire_snapshots' backend/target/r1-evidence/postgres-publication-snapshot.txt
+
+      - name: Verify correlated R1 publication and browser evidence
+        run: |
+          python3 infra/acceptance/r1-verify-evidence.py backend/target/r1-evidence
+          for screenshot in 01-content-draft.png 02-content-approved.png 03-publication-current.png; do
+            test -s "backend/target/r1-evidence/$screenshot"
+          done
+          test -s backend/target/r1-evidence/r1-verified.json
+
+      - name: Upload R1 real PostgreSQL and Flutter evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: r1-real-publication-evidence-${{ github.event.pull_request.head.sha || github.sha }}
+          path: backend/target/r1-evidence/
+          if-no-files-found: error
+          retention-days: 30
 
       - name: Report infrastructure state on failure
         if: failure()

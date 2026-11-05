@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:careerspeak_app/application/assessment/assessment_revision_loader.dart';
@@ -262,6 +263,48 @@ void main() {
           final nextRoot = (nextFetch as RootManifestChanged).manifest;
           expect(nextRoot.contentVersion, root.contentVersion + 1);
           expect(nextRoot.checksum, isNot(root.checksum));
+          // Resolve the exact N+1 content through real HTTP. A canonical
+          // content payload digest is not the same as a root manifest digest.
+          final n2PackRef = nextRoot.packs.singleWhere(
+            (pack) => pack.identity.code == 'A1_FREE',
+          );
+          final n2PackManifest = (await manifestGateway.fetchPackManifest(
+            n2PackRef,
+          )).getOrThrow();
+          final n2FreeRef = n2PackManifest.contents.singleWhere(
+            (content) => content.identity.code == _freeCode,
+          );
+          final n2HttpContent =
+              (await HttpContentPayloadGateway(apiClient: api).fetch(
+                ContentPayloadRef(
+                  identity: n2FreeRef.identity,
+                  revision: n2FreeRef.revision,
+                  checksum: n2FreeRef.checksum,
+                ),
+              )).getOrThrow();
+          expect(n2HttpContent.ref.revision, 2);
+          expect(n2HttpContent.ref.checksum, n2FreeRef.checksum);
+          await File('$_r5ControlDir/http-root-n2.json').writeAsString(
+            const JsonEncoder.withIndent('  ').convert(<String, Object?>{
+              'source': 'production HTTP root manifest',
+              'contentVersion': nextRoot.contentVersion,
+              'checksum': nextRoot.checksum,
+              'contentPayload': <String, Object?>{
+                'code': n2HttpContent.ref.identity.code,
+                'revision': n2HttpContent.ref.revision,
+                'checksum': n2HttpContent.ref.checksum,
+              },
+              'packs': nextRoot.packs
+                  .map(
+                    (pack) => <String, Object?>{
+                      'code': pack.identity.code,
+                      'revision': pack.revision,
+                      'checksum': pack.checksum,
+                    },
+                  )
+                  .toList(),
+            }),
+          );
           // Inject one real payload fetch failure after N+1 becomes available.
           // The atomic CURRENT switch must not happen until all bytes are ready.
           final interrupted = ContentSyncCoordinator(
@@ -502,6 +545,39 @@ void main() {
           await File(reused.localPath).readAsBytes(),
           mediaProbe.bodyBytes,
         );
+
+        if (_r5ControlDir.isNotEmpty) {
+          // Machine-readable evidence from actual HTTP manifest and reopened
+          // on-disk Drift state. No access tokens or raw private assets.
+          final offlineCollection = reopened.graph.collections.singleWhere(
+            (collection) => collection.code == 'A1_FREE',
+          );
+          final evidence = <String, Object?>{
+            'source': 'A1 real PostgreSQL + authenticated HTTP + Drift',
+            'rootN': <String, Object?>{
+              'contentVersion': root.contentVersion,
+              'checksum': root.checksum,
+            },
+            'offlineCurrent': <String, Object?>{
+              'contentVersion': reopened.contentVersion,
+              'contentCode': offlineFree.code,
+              'contentType': offlineFree.type.name,
+              'revision': offlineFree.revision,
+              'phrase': (offlineBody as PhraseBody).phrase,
+              'freeCollectionMembers': offlineCollection.members
+                  .map((member) => member.identityKey)
+                  .toList(),
+            },
+            'failureInjection': <String, Object?>{
+              'missingPayloadRejected': true,
+              'checksumMismatchRejected': true,
+              'preservedN': true,
+            },
+          };
+          await File(
+            '$_r5ControlDir/flutter-drift-evidence.json',
+          ).writeAsString(const JsonEncoder.withIndent('  ').convert(evidence));
+        }
 
         // The marker is emitted only after a genuine live-backend exchange.
         // ignore: avoid_print
