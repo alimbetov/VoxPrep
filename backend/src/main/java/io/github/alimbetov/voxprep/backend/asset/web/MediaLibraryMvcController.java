@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -26,6 +27,13 @@ public class MediaLibraryMvcController {
 
     public MediaLibraryMvcController(MediaLibraryService library) {
         this.library = library;
+    }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    @ResponseBody
+    public ResponseEntity<java.util.Map<String, String>> invalidImage(IllegalArgumentException exception) {
+        return ResponseEntity.badRequest().body(java.util.Map.of("message",
+                "Select a valid library image or upload a PNG, JPEG or WebP within the size limit."));
     }
 
     @GetMapping("/images")
