@@ -3,6 +3,12 @@ package io.github.alimbetov.voxprep.backend.content.web;
 import io.github.alimbetov.voxprep.backend.content.application.ContentXmlDryRunService;
 import io.github.alimbetov.voxprep.backend.content.application.ContentXmlDryRunService.ValidationReport;
 import java.io.IOException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
+import java.time.Duration;
+import java.util.HexFormat;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpHeaders;
@@ -21,9 +27,13 @@ import org.springframework.web.multipart.MultipartFile;
 @RequestMapping("/admin/imports")
 public final class ContentXmlImportMvcController {
     private final ContentXmlDryRunService validation;
+    private final ContentXmlImportService importer;
+    private static final String VALIDATED_XML = "voxprepValidatedXml";
 
-    public ContentXmlImportMvcController(ContentXmlDryRunService validation) {
+    public ContentXmlImportMvcController(ContentXmlDryRunService validation,
+            ContentXmlImportService importer) {
         this.validation = validation;
+        this.importer = importer;
     }
 
     @GetMapping
@@ -44,8 +54,9 @@ public final class ContentXmlImportMvcController {
     }
 
     @PostMapping(path = "/validate", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public String validate(@RequestParam("file") MultipartFile file, Model model) {
+    public String validate(@RequestParam("file") MultipartFile file, Model model, HttpSession session) {
         model.addAttribute("activeSection", "imports");
+        session.removeAttribute(VALIDATED_XML);
         ValidationReport result;
         if (file == null || file.isEmpty() || file.getSize() > ContentXmlDryRunService.MAX_BYTES) {
             result = new ValidationReport(false,
@@ -53,7 +64,10 @@ public final class ContentXmlImportMvcController {
                     java.util.List.of());
         } else {
             try {
-                result = validation.validate(file.getBytes());
+                var bytes = file.getBytes();
+                result = validation.validate(bytes);
+                if (result.valid()) session.setAttribute(VALIDATED_XML,
+                        new ValidatedXml(sha256(bytes), Instant.now()));
             } catch (IOException exception) {
                 result = new ValidationReport(false,
                         java.util.List.of("Uploaded XML could not be read."),
@@ -63,6 +77,51 @@ public final class ContentXmlImportMvcController {
         model.addAttribute("validation", result);
         return "admin/imports/index";
     }
+
+    @PostMapping(path = "/import-drafts", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public String importDrafts(@RequestParam("file") MultipartFile file,
+            Model model, HttpSession session) {
+        model.addAttribute("activeSection", "imports");
+        var evidence = session.getAttribute(VALIDATED_XML);
+        if (!(evidence instanceof ValidatedXml validated)
+                || Duration.between(validated.createdAt(), Instant.now()).compareTo(Duration.ofMinutes(10)) > 0) {
+            model.addAttribute("importError", "Validation expired. Validate the XML again.");
+            return "admin/imports/index";
+        }
+        try {
+            if (file.isEmpty() || file.getSize() > ContentXmlDryRunService.MAX_BYTES) {
+                throw new IllegalArgumentException("Select the previously validated XML file (maximum 1 MiB).");
+            }
+            byte[] bytes = file.getBytes();
+            if (!MessageDigest.isEqual(validated.checksum().getBytes(java.nio.charset.StandardCharsets.US_ASCII),
+                    sha256(bytes).getBytes(java.nio.charset.StandardCharsets.US_ASCII))) {
+                throw new IllegalArgumentException("XML changed since validation. Run Validate XML again.");
+            }
+            var report = importer.importDrafts(bytes);
+            model.addAttribute("importReport", report);
+            session.removeAttribute(VALIDATED_XML);
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            model.addAttribute("importError", "Import rejected: " + safeReason(exception));
+        } catch (IOException exception) {
+            model.addAttribute("importError", "XML file could not be read.");
+        }
+        return "admin/imports/index";
+    }
+
+    private static String safeReason(Exception exception) {
+        var message = exception.getMessage();
+        return message != null && message.length() <= 180 ? message : "Invalid or conflicting content";
+    }
+
+    private static String sha256(byte[] bytes) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 unavailable", exception);
+        }
+    }
+
+    private record ValidatedXml(String checksum, Instant createdAt) {}
 
     private static ResponseEntity<byte[]> download(String resource, String filename) throws IOException {
         var bytes = new ClassPathResource(resource).getContentAsByteArray();
