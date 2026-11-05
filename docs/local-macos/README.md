@@ -6,7 +6,9 @@
 **Starting main SHA:** `9ae3d7e646e3e39d0886765bfa6a60d77dde0529` (2026-11-05).  
 **State:** A0 host/source audit recorded in [ENVIRONMENT_AUDIT.md](ENVIRONMENT_AUDIT.md)
 and [DEPENDENCIES.md](DEPENDENCIES.md); reproducible inventory: `scripts/local/audit.sh`.
-A1–A5 remain **not implemented / not accepted**. No integration smoke tests are claimed to have run.
+A1 infrastructure and post-migration permission gates **PASS** on the SHA recorded
+in [ACCEPTANCE_REPORT.md](ACCEPTANCE_REPORT.md). Backend startup/readiness pass;
+A2 Content Studio and A3–A5 are not accepted. Full-stack acceptance remains pending.
 
 ## Repository baseline inspected
 
