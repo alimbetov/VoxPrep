@@ -154,7 +154,7 @@ public class ContentBatchImportService {
                 form.setPassingScorePercent(score);
                 String ids = lines(body.get("questionRevisionIds"), "questionRevisionIds");
                 var unique = new HashSet<java.util.UUID>();
-                for (var id : ids.split("\\n")) {
+                for (var id : ids.split("\n")) {
                     if (!unique.add(java.util.UUID.fromString(id))) {
                         throw new IllegalArgumentException("Duplicate question revision ID");
                     }
@@ -247,7 +247,7 @@ public class ContentBatchImportService {
             if (!keys.add(key)) {
                 throw new IllegalArgumentException("Duplicate question option key");
             }
-            if (key.contains("|") || text.contains("|") || text.contains("\\n")) {
+            if (key.contains("|") || text.contains("|") || text.contains("\n")) {
                 throw new IllegalArgumentException("Unsafe question option separator");
             }
             hasCorrect |= correct;
@@ -256,7 +256,7 @@ public class ContentBatchImportService {
         if (!hasCorrect) {
             throw new IllegalArgumentException("At least one question answer must be correct");
         }
-        return String.join("\\n", rows);
+        return String.join("\n", rows);
     }
 
     private static List<?> readXml(byte[] bytes) {
