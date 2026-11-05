@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- VoxPrep Content Studio XML v1. Download schema at /admin/imports/schema.xsd.
+     Validation is dry-run only. No database writes or automatic publication. -->
+<voxprep schemaVersion="1">
+  <content code="PHRASE_INTERVIEW_INTRO_01" type="phrase">
+    <title>Introducing your experience</title>
+    <subtitle>Interview speaking</subtitle>
+    <description>Common phrase for job interviews</description>
+    <categoryCode>INTERVIEW</categoryCode>
+    <levelCode>B2</levelCode>
+    <minutes>2</minutes>
+    <availability>ACTIVE</availability>
+    <skill>SPEAKING</skill>
+    <body>
+      <phrase>I specialize in Java backend development.</phrase>
+      <usage>Introduce your technical background.</usage>
+      <example>I specialize in designing scalable APIs.</example>
+    </body>
+  </content>
+</voxprep>
