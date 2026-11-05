@@ -5,6 +5,7 @@ import 'package:careerspeak_app/application/content_sync/content_sync_coordinato
 import 'package:careerspeak_app/application/content_sync/content_sync_planner.dart';
 import 'package:careerspeak_app/application/content_sync/sync_models.dart';
 import 'package:careerspeak_app/application/content_delivery/content_payload.dart';
+import 'package:careerspeak_app/application/content_delivery/typed_content_body.dart';
 import 'package:careerspeak_app/application/ports/content_payload_gateway.dart';
 import 'package:careerspeak_app/application/ports/api_client.dart';
 import 'package:careerspeak_app/application/ports/content_manifest_gateway.dart';
@@ -21,6 +22,7 @@ import 'package:careerspeak_app/data/local/drift_content_repository.dart';
 import 'package:careerspeak_app/data/local/drift_publication_snapshot_stager.dart';
 import 'package:careerspeak_app/data/local/drift_sync_journal.dart';
 import 'package:careerspeak_app/data/local/drift_sync_plan_executor.dart';
+import 'package:careerspeak_app/data/local/drift_typed_content_reader.dart';
 import 'package:careerspeak_app/data/local/drift_universal_catalogue_repository.dart';
 import 'package:careerspeak_app/data/local/file_system_asset_store.dart';
 import 'package:careerspeak_app/data/remote/http_api_client.dart';
@@ -211,6 +213,21 @@ void main() {
         );
         expect(downloaded.reused, isFalse);
 
+        // Read the exact published typed body through the production Drift
+        // reader. This must be available without any mock fixture.
+        final freeAtN = contentPage.items.singleWhere(
+          (item) => item.code == _freeCode,
+        );
+        expect(freeAtN.revision, 1);
+        final phraseAtN = await DriftTypedContentReader(
+          database,
+        ).getForVisible(freeAtN);
+        expect(phraseAtN, isA<PhraseBody>());
+        expect(
+          (phraseAtN! as PhraseBody).phrase,
+          'Could you introduce yourself?',
+        );
+
         var expectedCurrentVersion = root.contentVersion;
         if (_r5ControlDir.isNotEmpty) {
           // An explicit learner marker keyed by stable content identity must survive
@@ -277,11 +294,17 @@ void main() {
           final oldPage = (await DriftContentRepository(
             database,
           ).watchContent(const ContentQuery()).first).getOrThrow();
+          final unchangedAtN = oldPage.items.singleWhere(
+            (item) => item.code == _freeCode,
+          );
+          expect(unchangedAtN.revision, 1);
+          final preservedBody = await DriftTypedContentReader(
+            database,
+          ).getForVisible(unchangedAtN);
+          expect(preservedBody, isA<PhraseBody>());
           expect(
-            oldPage.items
-                .singleWhere((item) => item.code == _freeCode)
-                .revision,
-            1,
+            (preservedBody! as PhraseBody).phrase,
+            'Could you introduce yourself?',
           );
           expect(
             (await database.select(database.favorites).get()).any(
@@ -313,6 +336,14 @@ void main() {
           );
           expect(updated.revision, 2);
           expect(updated.title, 'Interview introduction v2');
+          final typedAtNPlusOne = await DriftTypedContentReader(
+            database,
+          ).getForVisible(updated);
+          expect(typedAtNPlusOne, isA<PhraseBody>());
+          expect(
+            (typedAtNPlusOne! as PhraseBody).phrase,
+            'Could you introduce yourself professionally?',
+          );
           final favoritesAfterSync = await database
               .select(database.favorites)
               .get();
@@ -381,6 +412,23 @@ void main() {
           database,
         ).watchContent(const ContentQuery()).first).getOrThrow();
         expect(offlinePage.items.any((item) => item.code == _freeCode), isTrue);
+        final offlineFree = offlinePage.items.singleWhere(
+          (item) => item.code == _freeCode,
+        );
+        final offlineBody = await DriftTypedContentReader(
+          database,
+        ).getForVisible(offlineFree);
+        expect(offlineBody, isA<PhraseBody>());
+        expect(
+          (offlineBody! as PhraseBody).phrase,
+          _r5ControlDir.isNotEmpty
+              ? 'Could you introduce yourself professionally?'
+              : 'Could you introduce yourself?',
+        );
+        expect(
+          offlineFree.revision,
+          _r5ControlDir.isNotEmpty ? 2 : 1,
+        );
         final reused = (await manager.ensureLocal(image)).getOrThrow();
         expect(reused.reused, isTrue);
         if (_r5ControlDir.isNotEmpty) {
