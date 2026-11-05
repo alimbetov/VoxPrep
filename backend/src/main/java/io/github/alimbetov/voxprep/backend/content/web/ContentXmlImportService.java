@@ -27,12 +27,12 @@ import org.w3c.dom.Node;
 @Service
 public class ContentXmlImportService {
     private final ContentXmlDryRunService validation;
-    private final ContentMvcMapper mapper;
+    private final ContentXmlTypedMapper mapper;
     private final ContentAuthoringService authoring;
     private final ContentRevisionRepository revisions;
     private final JdbcTemplate jdbc;
 
-    public ContentXmlImportService(ContentXmlDryRunService validation, ContentMvcMapper mapper,
+    public ContentXmlImportService(ContentXmlDryRunService validation, ContentXmlTypedMapper mapper,
             ContentAuthoringService authoring, ContentRevisionRepository revisions, JdbcTemplate jdbc) {
         this.validation = Objects.requireNonNull(validation);
         this.mapper = Objects.requireNonNull(mapper);
@@ -123,9 +123,8 @@ public class ContentXmlImportService {
             var document = factory.newDocumentBuilder().parse(new ByteArrayInputStream(xml));
             var items = new ArrayList<PlannedDraft>();
             for (Element element : children(document.getDocumentElement())) {
-                var form = toForm(element);
                 items.add(new PlannedDraft(
-                        element.getAttribute("code"), element.getAttribute("type"), mapper.toCommand(form)));
+                        element.getAttribute("code"), element.getAttribute("type"), mapper.toCommand(element)));
             }
             return List.copyOf(items);
         } catch (IllegalArgumentException exception) {
@@ -133,91 +132,6 @@ public class ContentXmlImportService {
         } catch (Exception exception) {
             throw new IllegalArgumentException("XML cannot be converted to content drafts.", exception);
         }
-    }
-
-    private static ContentMvcForms.DraftForm toForm(Element element) {
-        var form = new ContentMvcForms.DraftForm();
-        form.setExpectedVersion(0L);
-        form.setBodyType(element.getAttribute("type"));
-        form.setTitle(value(element, "title"));
-        form.setSubtitle(value(element, "subtitle"));
-        form.setDescription(value(element, "description"));
-        form.setCategoryCode(value(element, "categoryCode"));
-        form.setLevelCode(value(element, "levelCode"));
-        form.setMinutes(Integer.parseInt(value(element, "minutes")));
-        form.setAvailability(value(element, "availability"));
-        form.setSkillCodes(joinChildren(element, "skill"));
-        Element body = child(element, "body");
-        if (body == null) throw new IllegalArgumentException("Content body is required");
-        switch (form.getBodyType()) {
-            case "phrase" -> {
-                form.setPhrase(value(body, "phrase"));
-                form.setUsage(value(body, "usage"));
-                form.setExamples(joinChildren(body, "example"));
-            }
-            case "vocabulary" -> {
-                form.setTerm(value(body, "term"));
-                form.setDefinition(value(body, "definition"));
-                form.setPartOfSpeech(value(body, "partOfSpeech"));
-                form.setExamples(joinChildren(body, "example"));
-            }
-            case "interview" -> {
-                form.setPrompt(value(body, "prompt"));
-                form.setModelAnswer(value(body, "modelAnswer"));
-                form.setKeyPoints(joinChildren(body, "keyPoint"));
-            }
-            case "topic" -> {
-                var sections = new ArrayList<String>();
-                for (Element section : children(body)) {
-                    sections.add(value(section, "heading") + "|" + value(section, "text"));
-                }
-                form.setSections(String.join("\n", sections));
-            }
-            case "shadowing" -> {
-                form.setTranscript(value(body, "transcript"));
-                var segments = new ArrayList<String>();
-                for (Element segment : children(body)) {
-                    segments.add(segment.getAttribute("startMs") + "|"
-                            + segment.getAttribute("endMs") + "|" + segment.getTextContent());
-                }
-                form.setSegments(String.join("\n", segments));
-            }
-            case "question" -> {
-                form.setQuestionText(value(body, "questionText"));
-                form.setExplanation(value(body, "explanation"));
-                var options = new ArrayList<String>();
-                for (Element option : children(body)) {
-                    if ("option".equals(option.getTagName())) {
-                        options.add(option.getAttribute("key") + "|"
-                                + option.getAttribute("correct") + "|" + option.getTextContent());
-                    }
-                }
-                form.setOptions(String.join("\n", options));
-            }
-            case "practice_test" -> {
-                form.setInstructions(value(body, "instructions"));
-                form.setPassingScorePercent(Integer.parseInt(value(body, "passingScorePercent")));
-                form.setQuestionRevisionIds(joinChildren(body, "questionRevisionId"));
-            }
-            default -> throw new IllegalArgumentException("Unsupported content type");
-        }
-        return form;
-    }
-
-    private static String value(Element parent, String name) {
-        var match = child(parent, name);
-        return match == null ? null : match.getTextContent().strip();
-    }
-
-    private static String joinChildren(Element parent, String name) {
-        return children(parent).stream().filter(element -> name.equals(element.getTagName()))
-                .map(element -> element.getTextContent().strip())
-                .reduce((left, right) -> left + "\n" + right).orElse("");
-    }
-
-    private static Element child(Element parent, String name) {
-        for (Element value : children(parent)) if (name.equals(value.getTagName())) return value;
-        return null;
     }
 
     private static List<Element> children(Element parent) {
