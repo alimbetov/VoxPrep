@@ -25,10 +25,7 @@ void main() {
 
     await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
-    expect(
-      find.text('Simulate FULL — not a real purchase'),
-      findsOneWidget,
-    );
+    expect(find.text('Simulate FULL — not a real purchase'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

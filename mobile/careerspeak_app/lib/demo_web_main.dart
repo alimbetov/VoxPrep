@@ -132,8 +132,10 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        Text('Welcome to VoxPrep',
-            style: Theme.of(context).textTheme.headlineMedium),
+        Text(
+          'Welcome to VoxPrep',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
         const SizedBox(height: 8),
         const Text(
           'This is a separate DEV mock preview, not the production '
@@ -141,7 +143,7 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
         ),
         const SizedBox(height: 16),
         Text(
-          generatedDemoContentItems.length.toString() + ' demo lessons',
+          '${generatedDemoContentItems.length} demo lessons',
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
@@ -165,8 +167,10 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        Text('Learning catalogue',
-            style: Theme.of(context).textTheme.headlineMedium),
+        Text(
+          'Learning catalogue',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
         const SizedBox(height: 16),
         TextField(
           decoration: const InputDecoration(
@@ -177,8 +181,7 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
         ),
         const SizedBox(height: 16),
         ...found.map(contentTile),
-        if (found.isEmpty)
-          const Text('No matching demo learning materials.'),
+        if (found.isEmpty) const Text('No matching demo learning materials.'),
       ],
     );
   }
@@ -189,8 +192,7 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
       child: ListTile(
         title: Text(item.title),
         subtitle: Text(
-          item.category + ' · ' + item.level + ' · ' +
-              item.minutes.toString() + ' min',
+          '${item.category} · ${item.level} · ${item.minutes} min',
         ),
         trailing: Text(isFree(item) ? 'FREE' : 'FULL'),
         onTap: () => openLesson(item),
@@ -267,8 +269,10 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
         return ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            Text('Practice tests',
-                style: Theme.of(context).textTheme.headlineMedium),
+            Text(
+              'Practice tests',
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
             const SizedBox(height: 16),
             for (final item in snapshot.data!)
               Card(
@@ -277,16 +281,15 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
                   subtitle: Text(item.subtitle),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () async {
-                    final result = await const MockTestRepository()
-                        .getByCode(item.code);
+                    final result = await const MockTestRepository().getByCode(
+                      item.code,
+                    );
                     if (!context.mounted) return;
                     final exam = result.getOrThrow();
                     if (exam == null) return;
                     await Navigator.push<void>(
                       context,
-                      MaterialPageRoute(
-                        builder: (_) => _DemoExam(exam: exam),
-                      ),
+                      MaterialPageRoute(builder: (_) => _DemoExam(exam: exam)),
                     );
                   },
                 ),
@@ -299,18 +302,18 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
 
   Widget review(BuildContext context) {
     final items = generatedDemoContentItems.where(
-      (item) =>
-          completed.contains(item.code) || favorites.contains(item.code),
+      (item) => completed.contains(item.code) || favorites.contains(item.code),
     );
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        Text('Local demo progress',
-            style: Theme.of(context).textTheme.headlineMedium),
+        Text(
+          'Local demo progress',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
         const SizedBox(height: 12),
         Text(
-          favorites.length.toString() + ' favorites · ' +
-              completed.length.toString() + ' completed',
+          '${favorites.length} favorites · ${completed.length} completed',
         ),
         const SizedBox(height: 16),
         ...items.map(contentTile),
@@ -324,8 +327,10 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
-        Text('Demo settings',
-            style: Theme.of(context).textTheme.headlineMedium),
+        Text(
+          'Demo settings',
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
         SwitchListTile(
           title: const Text('Dark theme'),
           value: dark,
@@ -373,9 +378,7 @@ class _DemoExamState extends State<_DemoExam> {
         children: [
           if (finished) ...[
             Text(
-              'Result: ' +
-                  calculatePracticeTestScore(widget.exam, answers).toString() +
-                  ' / ' + questions.length.toString(),
+              'Result: ${calculatePracticeTestScore(widget.exam, answers)} / ${questions.length}',
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 16),
@@ -388,8 +391,7 @@ class _DemoExamState extends State<_DemoExam> {
               ),
           ] else ...[
             Text(
-              'Question ' + (index + 1).toString() +
-                  ' / ' + questions.length.toString(),
+              'Question ${index + 1} / ${questions.length}',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 16),
@@ -416,9 +418,7 @@ class _DemoExamState extends State<_DemoExam> {
                         index++;
                       }
                     }),
-              child: Text(
-                index == questions.length - 1 ? 'Submit' : 'Next',
-              ),
+              child: Text(index == questions.length - 1 ? 'Submit' : 'Next'),
             ),
           ],
         ],

@@ -12,7 +12,7 @@ Primary PR: #50. This document distinguishes **implementation**,
 | US-P0-02 | As developer, I want repeatable PostgreSQL seed | Explicit DEV flag creates real revision 1 drafts via ContentAuthoringService; rerun never overwrites author edits; not available in prod | `DemoCatalogueSeedRunner`, tests; integration DB/Content Studio acceptance pending |
 | US-P1-01 | As author, I want one catalogue source | Same codes, types, revisions, access levels and membership in generated fixture, Backend published CURRENT and Flutter Drift after sync | NOT ACCEPTED: generated backend JSON and Flutter mock catalogue are not the publication source of truth |
 | US-P1-02 | As admin, I want working Localization navigation | Admin Localization entry opens real revisions and editing forms, not placeholder | Redirect to `/admin/content` committed; reviewer still navigates via per-revision localization |
-| US-P1-03 | As admin, I want typed XML/JSON import | Preview validates schema and typed bodies, import is transactional/idempotent, documents remain DRAFT, bad payload rolls back | Implemented in `/admin/imports` with same-session file SHA-256 preview and test coverage; exact-SHA CI and manual browser acceptance pending |
+| US-P1-03 | As admin, I want typed XML/JSON import | Preview validates schema and typed bodies, import is transactional/idempotent, documents remain DRAFT, bad payload rolls back | XML: canonical XSD/preflight at `/admin/imports`; JSON: independent preview + SHA-256 confirmation at `/admin/imports/json`. Exact-SHA CI and manual browser acceptance pending |
 | US-P1-04 | As developer, I want Chrome demo without infrastructure | Explicit `demo_web_main.dart` debug entrypoint runs generated Home/Learn/Tests/Review/Settings without Drift or HTTP | Isolated DEV Web Preview implemented and widget tested; real Chrome launch/manual visual acceptance pending; production Flutter remains separate |
 | US-P1-05 | As admin, I want browser end-to-end acceptance | Browser create → image → translation → TTS → review → approve → publish CURRENT → real Flutter HTTP → Drift → offline | NOT ACCEPTED: partial A1 automatic tests exist; full real browser path unverified |
 
@@ -49,7 +49,7 @@ synthetic test alone cannot justify DONE.
 ## Typed Content Studio Import
 
 The previous `/admin/imports` landing placeholder has been replaced by a
-real JSON/XML validator and Draft creator. See
+canonical XML XSD validator/importer and a separate JSON Draft importer under `/admin/imports/json`. See
 [`ADMIN_CONTENT_IMPORT_V1.md`](ADMIN_CONTENT_IMPORT_V1.md) for schema,
 constraints and user workflow. This is not interchangeable with the DEV
 seed generator and does not perform publication on behalf of an admin.

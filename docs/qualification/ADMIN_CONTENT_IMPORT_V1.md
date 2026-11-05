@@ -1,12 +1,12 @@
-# VoxPrep Content Studio — JSON/XML typed import v1
+# VoxPrep Content Studio — JSON Draft import v1 (R6–R8 XML remains canonical)
 
 Scope: administrator-only **new DRAFT revision 1** import. It is separate
 from DEV test fixtures and from publication. Requires an authenticated ADMIN,
-CSRF and a valid upload (max 256 KiB, 100 records).
+CSRF and a valid JSON upload (max 256 KiB, 100 records). The separate XML importer accepts up to 1 MiB and validates against the versioned XSD.
 
 ## User workflow
 
-1. Open `/admin/imports`, choose a JSON or XML document.
+1. For JSON: open `/admin/imports/json` and choose a `.json` document. For XML: use `/admin/imports`, download the template/XSD and validate there.
 2. **Preview / Validate**: parse with the normal typed-content mapper and
    check current exact identities without persisting. Every entry is shown
    with code, type, title and `New draft` or `Exists — skip`.
@@ -66,31 +66,14 @@ placeholders. Structured JSON examples:
 The above block illustrates **individual body objects**, not an import
 document. All records need the common metadata fields in the full example.
 
-## XML example (complete typed PHRASE)
+## XML import is managed by R6–R8
 
-```xml
-<voxprepImport schemaVersion="1">
-  <item contentCode="GREETING_SAMPLE_002" bodyType="phrase">
-    <title>Asking for clarification</title>
-    <subtitle>Professional communication</subtitle>
-    <description>Polite questions in a meeting</description>
-    <categoryCode>COMMUNICATION</categoryCode>
-    <levelCode>B1</levelCode>
-    <minutes>4</minutes>
-    <availability>ACTIVE</availability>
-    <skillCodes><value>SPEAKING</value></skillCodes>
-    <body>
-      <phrase>Could you clarify that?</phrase>
-      <usage>Ask for more detail before answering.</usage>
-      <examples><value>Could you clarify the requirement?</value></examples>
-    </body>
-  </item>
-</voxprepImport>
-```
-
-In XML, arrays use `<value>` for strings and `<item>` with matching
-child elements for structured sections, segments and options. XML DTD,
-external entities and XInclude are rejected.
+The versioned XML template and schema are available from
+`/admin/imports/template.xml` and `/admin/imports/schema.xsd`.
+The XML importer runs XSD validation and PostgreSQL preflight, uses sorted
+transaction advisory locks and refuses conflicting immutable revisions.
+The legacy `voxprepImport` XML structure from PR #50 has been removed;
+do **not** use the JSON draft import endpoint for XML.
 
 ## Not part of this slice
 
