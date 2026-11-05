@@ -17,8 +17,11 @@ public class ContentStudioController {
     }
 
     @GetMapping("/localization")
-    public String localization(Model model) {
-        return section(model, "localization", "Localization", "Localization authoring will be wired in MVC-R4.");
+    public String localization() {
+        // Localizations are edited in the context of a concrete content revision.
+        // Route the administrator to real content authoring instead of a
+        // misleading MVC-R1 placeholder.
+        return "redirect:/admin/content";
     }
 
     @GetMapping("/imports")
