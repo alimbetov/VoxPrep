@@ -9,7 +9,6 @@ import io.github.alimbetov.voxprep.backend.content.persistence.QuestionContentRe
 import io.github.alimbetov.voxprep.backend.sharedkernel.BusinessCode;
 import java.io.ByteArrayInputStream;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -18,6 +17,7 @@ import java.util.UUID;
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.ConnectionCallback;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.w3c.dom.Element;
@@ -54,8 +54,14 @@ public class ContentXmlImportService {
         // Sorted lock order prevents deadlocks when batches overlap in different orders.
         var identities = plan.stream().map(p -> p.type() + ":" + p.code()).sorted().toList();
         for (String identity : identities) {
-            jdbc.queryForObject("SELECT pg_advisory_xact_lock(hashtextextended(?, 0))",
-                    Long.class, "voxprep:xml-import:" + identity);
+            jdbc.execute((ConnectionCallback<Void>) connection -> {
+                try (var statement = connection.prepareStatement(
+                        "SELECT pg_advisory_xact_lock(hashtextextended(?, 0))")) {
+                    statement.setString(1, "voxprep:xml-import:" + identity);
+                    statement.execute();
+                }
+                return null;
+            });
         }
 
         int existing = 0;
