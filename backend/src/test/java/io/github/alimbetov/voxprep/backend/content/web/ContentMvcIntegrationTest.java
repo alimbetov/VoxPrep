@@ -54,6 +54,16 @@ class ContentMvcIntegrationTest {
     }
 
     @Test
+    void localizationNavigationOpensRealContentStudioInsteadOfPlaceholder() throws Exception {
+        mockMvc.perform(get("/admin/localization")
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isFound())
+                .andExpect(header().string(HttpHeaders.LOCATION, "/admin/content"));
+        mockMvc.perform(get("/admin/localization"))
+                .andExpect(status().is3xxRedirection());
+    }
+
+    @Test
     void initialRevisionFormExposesStructuredEditorsWithoutChangingWireContracts() throws Exception {
         mockMvc.perform(get("/admin/content/revisions/new")
                         .with(user("admin").roles("ADMIN")))

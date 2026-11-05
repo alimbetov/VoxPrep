@@ -2,8 +2,9 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/fragments/shell :: layout('XML import validation', 'imports', ~{::main})}">
 <main>
+    <p><a class="btn btn-outline-secondary" th:href="@{/admin/imports/json}">Import JSON as DRAFT</a></p>
     <h1 class="h3">XML content import — validation</h1>
-    <p class="text-secondary">Download a versioned example and validate your XML before any future import. This screen is read-only: no content is created or published.</p>
+    <p class="text-secondary">Download a versioned example, validate the XML and perform PostgreSQL preflight. Explicit confirmation can create DRAFT revisions; nothing is approved or published automatically.</p>
 
     <div class="card studio-card mb-4"><div class="card-body p-4">
         <h2 class="h5">1. Download format</h2>
