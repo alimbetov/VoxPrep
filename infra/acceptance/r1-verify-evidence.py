@@ -73,10 +73,14 @@ require(flutter["failureInjection"] == {
     "checksumMismatchRejected": True,
     "preservedN": True,
 }, "Fault injection invariants were not recorded")
-require(any(row["content_code"] == "A1_FREE_PHRASE"
-            and int(row["revision_number"]) == 2
+require(http["contentPayload"]["code"] == "A1_FREE_PHRASE"
+        and http["contentPayload"]["revision"] == 2,
+        "HTTP content payload identity/revision mismatch")
+require(any(row["content_code"] == http["contentPayload"]["code"]
+            and int(row["revision_number"]) == http["contentPayload"]["revision"]
+            and row["checksum_sha256"] == http["contentPayload"]["checksum"]
             and int(row["content_version"]) == n2_version for row in refs),
-        "PostgreSQL lacks the exact N+1 free phrase revision")
+        "PostgreSQL exact revision SHA does not match HTTP content payload SHA")
 require(len(flutter["offlineCurrent"]["freeCollectionMembers"]) ==
         len(set(flutter["offlineCurrent"]["freeCollectionMembers"])),
         "Offline Drift contains duplicate collection members")
@@ -93,6 +97,7 @@ report = {
     "nPlusOneVersion": n2_version,
     "candidateRefSha256": live["root_sha256"],
     "httpWireRootSha256": root_wire[0]["checksum_sha256"],
+    "httpContentPayloadSha256": http["contentPayload"]["checksum"],
     "currentReleaseId": live["current_release_id"],
     "databaseRevisionRefCount": len(refs),
     "immutableWireDocumentCount": len(wire),
