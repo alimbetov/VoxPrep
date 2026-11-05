@@ -1,6 +1,6 @@
 # MVC-R8 XML template and dry-run validator (first slice)
 
-Status: XML validation and transactional DRAFT import implemented in Draft PR #49; exact-SHA CI and browser acceptance pending. No approval, RustFS write, publication or catalogue change is performed.
+Status: hardened XML parsing and transaction-safe DRAFT import in Draft PR #49; exact-SHA CI/browser qualification pending. No approval, RustFS write, publication or catalogue change is performed.
 
 ## ADMIN MVC endpoints
 
@@ -36,6 +36,16 @@ Status: XML validation and transactional DRAFT import implemented in Draft PR #4
 - Preflight checks existing revision-1 identity/checksum, collisions, and Practice Test references to approved/published Question revisions; no partial commits. Identical existing DRAFTs are skipped; conflicting or immutable revisions cause a full rollback.
 - Per-code PostgreSQL advisory transaction locks are acquired in sorted order for concurrent import batches.
 - Category/level/skill codes are validated by existing code syntax rules; no separate catalogue lookup service exists for these metadata codes. Validation of their existence is **not** claimed.
+
+## R8-FIX-1 through FIX-3 hardening slice
+
+- XML parsing now produces seven **typed `ContentDraftUpdate` body variants directly** through `ContentXmlTypedMapper`; it no longer goes through `ContentMvcForms.DraftForm` or pipe/newline-encoded fields.
+- Typed values preserve literal `|`, embedded newlines, ordered `section`/`option`/`segment` arrays and exact milliseconds. New semantic SHA-256 is a length-prefixed, structural digest of elements/attributes and leaf values; XML indentation and comments do not influence it.
+- The v1 XSD now enumerates supported leaf elements, nested `section`, `option` and `segment` structures and validates numeric attributes. Java validation remains authoritative for content-type-specific rules, duplicates and nested semantics; **v1 XSD is not a full per-content-type schema**.
+- The Validate step now also invokes **read-only PostgreSQL preflight** before enabling Import as DRAFT. It checks current revision-1 checksum/state, conflicts, and existing approved Question references. Import reruns preflight under sorted PostgreSQL advisory locks to close the validation-to-write race.
+- Tests cover preservation of punctuation/multiline sections/examples/options/segments, semantic checksums, malformed nesting and attributes, late-failure rollback and concurrent identical import serialization.
+- **Compatibility warning:** structural semantic checksums differ from the previous MVC-form-derived checksums. An existing DRAFT created by the old XML importer may conflict on replay and require explicit migration/reconciliation. Do not silently overwrite it.
+- **Pending gates:** exact-SHA CI, browser import acceptance, import ledger/audit, rich line/column diagnostics, precise per-type XSD v2 and DRAFT export/round-trip. Do not claim production ACCEPTED until these are qualified.
 
 ## DRAFT import acceptance (implemented, pending CI)
 
