@@ -263,11 +263,36 @@ void main() {
           final nextRoot = (nextFetch as RootManifestChanged).manifest;
           expect(nextRoot.contentVersion, root.contentVersion + 1);
           expect(nextRoot.checksum, isNot(root.checksum));
+          // Resolve the exact N+1 content through real HTTP. A canonical
+          // content payload digest is not the same as a root manifest digest.
+          final n2PackRef = nextRoot.packs.singleWhere(
+            (pack) => pack.identity.code == 'A1_FREE',
+          );
+          final n2PackManifest = (await manifestGateway.fetchPackManifest(
+            n2PackRef,
+          )).getOrThrow();
+          final n2FreeRef = n2PackManifest.contents.singleWhere(
+            (content) => content.identity.code == _freeCode,
+          );
+          final n2HttpContent = (await HttpContentPayloadGateway(
+            apiClient: api,
+          ).fetch(ContentPayloadRef(
+            identity: n2FreeRef.identity,
+            revision: n2FreeRef.revision,
+            checksum: n2FreeRef.checksum,
+          ))).getOrThrow();
+          expect(n2HttpContent.ref.revision, 2);
+          expect(n2HttpContent.ref.checksum, n2FreeRef.checksum);
           await File('$_r5ControlDir/http-root-n2.json').writeAsString(
             const JsonEncoder.withIndent('  ').convert(<String, Object?>{
               'source': 'production HTTP root manifest',
               'contentVersion': nextRoot.contentVersion,
               'checksum': nextRoot.checksum,
+              'contentPayload': <String, Object?>{
+                'code': n2HttpContent.ref.identity.code,
+                'revision': n2HttpContent.ref.revision,
+                'checksum': n2HttpContent.ref.checksum,
+              },
               'packs': nextRoot.packs
                   .map(
                     (pack) => <String, Object?>{
