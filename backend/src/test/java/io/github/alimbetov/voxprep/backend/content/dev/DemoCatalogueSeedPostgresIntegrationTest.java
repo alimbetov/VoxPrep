@@ -3,6 +3,7 @@ package io.github.alimbetov.voxprep.backend.content.dev;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
+import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringService;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -11,21 +12,34 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Runs the real DEV opt-in ApplicationRunner against the PostgreSQL supplied
+ * Runs the real DEV seeding implementation against the PostgreSQL supplied
  * by B1, then replays it without replacing any first revision.
  */
 @SpringBootTest
-@ActiveProfiles({"test", "dev"})
-@TestPropertySource(properties = "voxprep.dev.demo-seed-enabled=true")
+@ActiveProfiles("test")
+@Import(DemoCatalogueSeedPostgresIntegrationTest.SeedTestConfiguration.class)
 class DemoCatalogueSeedPostgresIntegrationTest {
     @Autowired private DemoCatalogueSeedRunner runner;
     @Autowired private ContentRevisionRepository revisions;
     @Autowired private ObjectMapper json;
+
+    @TestConfiguration
+    static class SeedTestConfiguration {
+        @Bean
+        DemoCatalogueSeedRunner qualifiedDevSeedRunner(
+                ContentAuthoringService authoring,
+                ContentRevisionRepository revisions, ObjectMapper json) {
+            return new DemoCatalogueSeedRunner(authoring, revisions, json,
+                    new ClassPathResource("dev-fixtures/demo_catalogue_seed.json"));
+        }
+    }
 
     @Test
     void devBootCreatesRealDraftRevisionsAndReplayKeepsIdentities() throws Exception {
