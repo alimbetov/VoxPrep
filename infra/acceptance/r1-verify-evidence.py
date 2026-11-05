@@ -49,8 +49,14 @@ live = current[0]
 n2_version = int(http["contentVersion"])
 require(int(live["content_version"]) == n2_version,
         "PostgreSQL CURRENT does not match HTTP N+1")
-require(live["root_sha256"] == http["checksum"],
-        "PostgreSQL release root hash does not match HTTP root")
+# publication_release.root_sha256 is the legacy candidate-ref digest.
+# The learner HTTP root uses the immutable ROOT wire document checksum.
+root_wire = [row for row in wire
+             if row["document_kind"] == "ROOT"
+             and int(row["content_version"]) == n2_version]
+require(len(root_wire) == 1, "Exactly one frozen ROOT wire document is required")
+require(root_wire[0]["checksum_sha256"] == http["checksum"],
+        "PostgreSQL immutable ROOT wire checksum does not match HTTP root")
 require(flutter["offlineCurrent"]["contentVersion"] == n2_version,
         "Offline Drift CURRENT does not match PostgreSQL CURRENT")
 require(flutter["offlineCurrent"]["contentCode"] == "A1_FREE_PHRASE",
@@ -85,7 +91,8 @@ report = {
     "source": "live PostgreSQL + published HTTP root + reopened Flutter Drift",
     "nVersion": flutter["rootN"]["contentVersion"],
     "nPlusOneVersion": n2_version,
-    "rootSha256": live["root_sha256"],
+    "candidateRefSha256": live["root_sha256"],
+    "httpWireRootSha256": root_wire[0]["checksum_sha256"],
     "currentReleaseId": live["current_release_id"],
     "databaseRevisionRefCount": len(refs),
     "immutableWireDocumentCount": len(wire),
@@ -95,4 +102,4 @@ report = {
     json.dumps(report, sort_keys=True, indent=2) + "\n",
     encoding="utf-8",
 )
-print("R1_EVIDENCE_VERIFIED", n2_version, live["root_sha256"])
+print("R1_EVIDENCE_VERIFIED", n2_version, root_wire[0]["checksum_sha256"])
