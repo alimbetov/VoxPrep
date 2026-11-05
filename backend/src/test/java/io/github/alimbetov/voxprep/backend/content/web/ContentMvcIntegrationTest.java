@@ -72,10 +72,11 @@ class ContentMvcIntegrationTest {
         // Persist the draft and its typed child rows before changing lifecycle;
         // PostgreSQL makes typed payload immutable once the revision is approved.
         var approved = repository.saveAndFlush(vocabulary());
-        approved.markReadyForAudio();
-        approved.markReadyForReview();
-        approved.approve(Instant.now());
-        repository.saveAndFlush(approved);
+        // Persist each lifecycle transition through the authoring service.
+        // PostgreSQL explicitly rejects a direct DRAFT -> APPROVED update.
+        authoring.markReadyForAudio(approved.getId());
+        authoring.submitForReview(approved.getId());
+        authoring.approve(approved.getId(), Instant.now());
         var draft = repository.saveAndFlush(vocabulary());
 
         var candidates = adminQuery.approvedCandidates("Vocabulary title", 0);
@@ -86,10 +87,11 @@ class ContentMvcIntegrationTest {
     @Test
     void practiceTestPickerListsOnlyApprovedQuestionsAndRequiresAdmin() throws Exception {
         var approved = repository.saveAndFlush(question());
-        approved.markReadyForAudio();
-        approved.markReadyForReview();
-        approved.approve(Instant.now());
-        repository.saveAndFlush(approved);
+        // Persist each lifecycle transition through the authoring service.
+        // PostgreSQL explicitly rejects a direct DRAFT -> APPROVED update.
+        authoring.markReadyForAudio(approved.getId());
+        authoring.submitForReview(approved.getId());
+        authoring.approve(approved.getId(), Instant.now());
         var draft = repository.saveAndFlush(question());
 
         mockMvc.perform(get("/admin/content/questions/approved")
