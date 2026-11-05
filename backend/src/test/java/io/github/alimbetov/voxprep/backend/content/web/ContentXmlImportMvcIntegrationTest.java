@@ -123,6 +123,34 @@ class ContentXmlImportMvcIntegrationTest {
     }
 
     @Test
+    void learnerCannotValidateOrImportAndOversizedFileNeverOpensConfirmation() throws Exception {
+        byte[] valid = new ClassPathResource("imports/voxprep-content-template-v1.xml")
+                .getContentAsByteArray();
+        var payload = new MockMultipartFile("file", "content.xml", "application/xml", valid);
+        long before = repository.count();
+        mvc.perform(multipart("/admin/imports/validate").file(payload)
+                        .with(user("learner").roles("USER")).with(csrf()))
+                .andExpect(status().isForbidden());
+        mvc.perform(multipart("/admin/imports/import-drafts").file(payload)
+                        .with(user("learner").roles("USER")).with(csrf()))
+                .andExpect(status().isForbidden());
+
+        var oversized = new MockMultipartFile("file", "large.xml", "application/xml",
+                new byte[io.github.alimbetov.voxprep.backend.content.application
+                        .ContentXmlDryRunService.MAX_BYTES + 1]);
+        var session = new MockHttpSession();
+        mvc.perform(multipart("/admin/imports/validate").file(oversized)
+                        .session(session).with(user("editor").roles("ADMIN")).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Select an XML file")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString("Import as DRAFT"))));
+        mvc.perform(multipart("/admin/imports/import-drafts").file(payload)
+                        .session(session).with(user("editor").roles("ADMIN")).with(csrf()))
+                .andExpect(content().string(containsString("Validation expired")));
+        assertThat(repository.count()).isEqualTo(before);
+    }
+
+    @Test
     void validationOnlyCannotCreateDraftsAndRequiresCsrf() throws Exception {
         byte[] xml = new ClassPathResource("imports/voxprep-content-template-v1.xml")
                 .getContentAsByteArray();
