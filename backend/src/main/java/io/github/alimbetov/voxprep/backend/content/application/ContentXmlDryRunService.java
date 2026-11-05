@@ -195,6 +195,14 @@ public final class ContentXmlDryRunService {
                         }
                     }
                 }
+                if (Set.of("phrase", "vocabulary").contains(type)
+                        && children(body).stream().noneMatch(child -> "example".equals(child.getTagName()))) {
+                    issue(problems, label + "at least one example is required");
+                }
+                if ("interview".equals(type)
+                        && children(body).stream().noneMatch(child -> "keyPoint".equals(child.getTagName()))) {
+                    issue(problems, label + "at least one keyPoint is required");
+                }
                 if ("vocabulary".equals(type)) {
                     var partOfSpeech = one(body, "partOfSpeech");
                     if (partOfSpeech != null && partOfSpeech.getTextContent().length() > 128) {
