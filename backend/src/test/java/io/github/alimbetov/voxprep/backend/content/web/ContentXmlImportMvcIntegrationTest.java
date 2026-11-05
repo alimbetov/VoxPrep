@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -44,6 +45,38 @@ class ContentXmlImportMvcIntegrationTest {
                 .andExpect(content().string(containsString("xs:schema")));
         mvc.perform(get("/admin/imports/template.xml").with(user("learner").roles("USER")))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void importRequiresSameValidatedFileAndFreshSession() throws Exception {
+        byte[] xml = new ClassPathResource("imports/voxprep-content-template-v1.xml")
+                .getContentAsByteArray();
+        var session = new MockHttpSession();
+        var upload = new MockMultipartFile("file", "example.xml", "application/xml", xml);
+        long before = repository.count();
+
+        mvc.perform(multipart("/admin/imports/import-drafts").file(upload)
+                        .session(session).with(user("editor").roles("ADMIN")).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Validation expired")));
+
+        mvc.perform(multipart("/admin/imports/validate").file(upload)
+                        .session(session).with(user("editor").roles("ADMIN")).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Import as DRAFT")));
+
+        var changed = new MockMultipartFile("file", "changed.xml", "application/xml",
+                new String(xml, java.nio.charset.StandardCharsets.UTF_8)
+                        .replace("Resilience", "Changed").getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        mvc.perform(multipart("/admin/imports/import-drafts").file(changed)
+                        .session(session).with(user("editor").roles("ADMIN")).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("XML changed since validation")));
+
+        mvc.perform(multipart("/admin/imports/import-drafts").file(upload)
+                        .session(session).with(user("editor").roles("ADMIN")))
+                .andExpect(status().isForbidden());
+        assertThat(repository.count()).isEqualTo(before);
     }
 
     @Test
