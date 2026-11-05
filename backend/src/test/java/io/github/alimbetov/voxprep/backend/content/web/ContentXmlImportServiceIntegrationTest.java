@@ -17,12 +17,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @ActiveProfiles("test")
 @SpringBootTest
 class ContentXmlImportServiceIntegrationTest {
     @Autowired private ContentXmlImportService importer;
     @Autowired private ContentRevisionRepository revisions;
+    @Autowired private TransactionTemplate transactions;
 
     private byte[] exampleWithoutUnresolvedPracticeTest() throws Exception {
         String xml = new String(new ClassPathResource(
@@ -79,10 +81,12 @@ class ContentXmlImportServiceIntegrationTest {
         var result = importer.importDrafts(xml.getBytes(StandardCharsets.UTF_8));
         assertThat(result.created()).isEqualTo(1);
         var id = revisions.findIdByExactIdentity(code, "topic", 1).orElseThrow();
-        var revision = (TopicContentRevisionEntity) revisions.findById(id).orElseThrow();
-        assertThat(revision.getSections()).hasSize(1);
-        assertThat(revision.getSections().getFirst().getHeading()).isEqualTo("HTTP | REST");
-        assertThat(revision.getSections().getFirst().getText()).isEqualTo("First | line\nSecond line");
+        transactions.executeWithoutResult(status -> {
+            var revision = (TopicContentRevisionEntity) revisions.findById(id).orElseThrow();
+            assertThat(revision.getSections()).hasSize(1);
+            assertThat(revision.getSections().getFirst().getHeading()).isEqualTo("HTTP | REST");
+            assertThat(revision.getSections().getFirst().getText()).isEqualTo("First | line\nSecond line");
+        });
     }
 
     @Test
@@ -97,8 +101,10 @@ class ContentXmlImportServiceIntegrationTest {
         var result = importer.importDrafts(xml.getBytes(StandardCharsets.UTF_8));
         assertThat(result.created()).isEqualTo(1);
         var id = revisions.findIdByExactIdentity(code, "phrase", 1).orElseThrow();
-        var revision = (PhraseContentRevisionEntity) revisions.findById(id).orElseThrow();
-        assertThat(revision.getExamples()).containsExactly("First | line\nSecond line");
+        transactions.executeWithoutResult(status -> {
+            var revision = (PhraseContentRevisionEntity) revisions.findById(id).orElseThrow();
+            assertThat(revision.getExamples()).containsExactly("First | line\nSecond line");
+        });
     }
 
     @Test
