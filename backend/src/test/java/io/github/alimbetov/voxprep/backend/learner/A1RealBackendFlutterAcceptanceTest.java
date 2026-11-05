@@ -190,6 +190,18 @@ class A1RealBackendFlutterAcceptanceTest {
         assertThat(output.toString()).contains("A1_REAL_BACKEND_ACCEPTED");
         assertThat(java.nio.file.Files.exists(r5Signals.resolve("n2-ready")))
                 .as("R5 N+1 publication must complete").isTrue();
+
+        // Preserve real Flutter/HTTP evidence outside the temporary handshake
+        // folder so CI can publish an auditable artifact bundle.
+        var evidenceDir = java.nio.file.Path.of("target", "r1-evidence");
+        java.nio.file.Files.createDirectories(evidenceDir);
+        for (String fileName : List.of("flutter-drift-evidence.json", "http-root-n2.json")) {
+            var source = r5Signals.resolve(fileName);
+            assertThat(java.nio.file.Files.exists(source))
+                    .as("required R1 evidence must be present: %s", fileName).isTrue();
+            java.nio.file.Files.copy(source, evidenceDir.resolve(fileName),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 
     private record PublicationHttpFixture(UUID revisionId, UUID assetId, UUID candidateId,
