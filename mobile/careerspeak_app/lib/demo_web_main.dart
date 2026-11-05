@@ -312,9 +312,7 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
           style: Theme.of(context).textTheme.headlineMedium,
         ),
         const SizedBox(height: 12),
-        Text(
-          '${favorites.length} favorites · ${completed.length} completed',
-        ),
+        Text('${favorites.length} favorites · ${completed.length} completed'),
         const SizedBox(height: 16),
         ...items.map(contentTile),
         if (items.isEmpty)
