@@ -313,6 +313,60 @@ void main() {
             isTrue,
           );
 
+          // A syntactically valid but incorrect payload checksum must also
+          // fail closed. This injects a tampered response *after* the real
+          // backend request and decoder, without weakening HTTP validation.
+          final corrupted = ContentSyncCoordinator(
+            journal: DriftSyncJournal(database),
+            manifestGateway: manifestGateway,
+            planner: const ContentSyncPlanner(),
+            executor: DriftSyncPlanExecutor(
+              database,
+              manifestGateway,
+              _CorruptOnceContentPayloadGateway(
+                HttpContentPayloadGateway(apiClient: api),
+              ),
+            ),
+            snapshotStager: DriftPublicationSnapshotStager(
+              database,
+              assessmentLoader,
+              HttpCataloguePayloadGateway(apiClient: api),
+              manifestGateway: manifestGateway,
+            ),
+          );
+          final corruptedResult = await corrupted.synchronize(
+            runId: 'r1-n2-injected-checksum-mismatch',
+            trigger: SyncTrigger.manual,
+            translationLocale: 'en',
+          );
+          expect(corruptedResult, isA<FailureResult<ContentSyncOutcome>>());
+          expect(
+            (corruptedResult as FailureResult<ContentSyncOutcome>)
+                .failure
+                .code,
+            'CONTENT_PAYLOAD_MISMATCH',
+          );
+          final stillNAfterCorruption =
+              (await DriftUniversalCatalogueRepository(
+                database,
+              ).readCurrent()).getOrThrow();
+          expect(stillNAfterCorruption!.contentVersion, root.contentVersion);
+          final stillNPage = (await DriftContentRepository(
+            database,
+          ).watchContent(const ContentQuery()).first).getOrThrow();
+          final stillNContent = stillNPage.items.singleWhere(
+            (item) => item.code == _freeCode,
+          );
+          expect(stillNContent.revision, 1);
+          final stillNBody = await DriftTypedContentReader(
+            database,
+          ).getForVisible(stillNContent);
+          expect(stillNBody, isA<PhraseBody>());
+          expect(
+            (stillNBody! as PhraseBody).phrase,
+            'Could you introduce yourself?',
+          );
+
           // Retry with the production gateway and a fresh run ID.
           final nextSync = await coordinator.synchronize(
             runId: 'r5-real-publication-n-plus-one',
@@ -457,6 +511,47 @@ void main() {
     },
     skip: !_runRealBackend,
   );
+}
+
+final class _CorruptOnceContentPayloadGateway
+    implements ContentPayloadGateway {
+  _CorruptOnceContentPayloadGateway(this._delegate);
+
+  final ContentPayloadGateway _delegate;
+  bool _corrupted = false;
+
+  @override
+  Future<Result<ContentPayload>> fetch(ContentPayloadRef target) async {
+    final fetched = await _delegate.fetch(target);
+    if (_corrupted || fetched is! Success<ContentPayload>) {
+      return fetched;
+    }
+    _corrupted = true;
+    final valid = fetched.value;
+    // Return a well-formed digest that cannot match the exact requested ref.
+    final mismatchedDigest = target.checksum ==
+            'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+        ? 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+        : 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+    return Success<ContentPayload>(ContentPayload(
+      ref: ContentPayloadRef(
+        identity: valid.ref.identity,
+        revision: valid.ref.revision,
+        checksum: mismatchedDigest,
+      ),
+      title: valid.title,
+      subtitle: valid.subtitle,
+      description: valid.description,
+      categoryCode: valid.categoryCode,
+      category: valid.category,
+      levelCode: valid.levelCode,
+      level: valid.level,
+      minutes: valid.minutes,
+      hasAudio: valid.hasAudio,
+      skillCodes: valid.skillCodes,
+      body: valid.body,
+    ));
+  }
 }
 
 final class _FailOnceContentPayloadGateway implements ContentPayloadGateway {
