@@ -1,7 +1,6 @@
 # MVC-R8 XML template and dry-run validator (first slice)
 
-Status: code implemented in Draft PR #49; exact-SHA CI and browser verification required.
-**This is not a bulk import implementation.** It does not write to PostgreSQL, RustFS, publication or any catalogue. No content lifecycle is bypassed.
+Status: XML validation and transactional DRAFT import implemented in Draft PR #49; exact-SHA CI and browser acceptance pending. No approval, RustFS write, publication or catalogue change is performed.
 
 ## ADMIN MVC endpoints
 
@@ -9,6 +8,7 @@ Status: code implemented in Draft PR #49; exact-SHA CI and browser verification 
 - `GET /admin/imports/template.xml`: versioned example XML, Content-Disposition attachment
 - `GET /admin/imports/schema.xsd`: versioned XSD, Content-Disposition attachment
 - `POST /admin/imports/validate`: multipart field `file`, CSRF required, read-only dry-run
+- `POST /admin/imports/import-drafts`: multipart field `file`, CSRF required; available only after successful dry-run of byte-identical XML within 10 minutes; all-or-nothing PostgreSQL DRAFT creation
 
 ## XML format
 
@@ -23,7 +23,7 @@ Status: code implemented in Draft PR #49; exact-SHA CI and browser verification 
   - `question`: `questionText`, optional `explanation`, repeated `<option key="A" correct="true">text</option>`
   - `practice_test`: `instructions`, `passingScorePercent`, repeated `questionRevisionId` (UUID)
 - This v1 XSD covers the metadata structure and supported types; application semantic validation adds per-type requirements, option uniqueness/correctness, timestamp order, and UUID checks.
-- A successful result means the file passes this initial XML validation, **not** that referenced Question revisions exist in the database or that a DRAFT can already be created.
+- A successful dry-run means the file passes initial XML validation, **not** that referenced Question revisions exist in the database; database reference validation occurs during import preflight. The included Practice Test example has an intentionally unresolved placeholder UUID and therefore must be removed or corrected before importing.
 
 ## Safety limits
 
@@ -32,6 +32,25 @@ Status: code implemented in Draft PR #49; exact-SHA CI and browser verification 
 - Server-side XML is never echoed raw into the page; Thymeleaf escapes rendered values.
 - Only ADMIN routes; multipart POST requires CSRF.
 - No external XML network access and no execution of user-supplied instructions.
+- Re-upload must match the SHA-256 from the current HTTP session; expired or changed files are rejected.
+- Preflight checks existing revision-1 identity/checksum, collisions, and Practice Test references to approved/published Question revisions; no partial commits. Identical existing DRAFTs are skipped; conflicting or immutable revisions cause a full rollback.
+- Per-code PostgreSQL advisory transaction locks are acquired in sorted order for concurrent import batches.
+- Category/level/skill codes are validated by existing code syntax rules; no separate catalogue lookup service exists for these metadata codes. Validation of their existence is **not** claimed.
+
+## DRAFT import acceptance (implemented, pending CI)
+
+1. Validate XML and choose the same file again for DRAFT import. The validation marker is scoped to the admin HTTP session, SHA-256 and a 10-minute expiry.
+2. The backend reruns XML validation and converts all seven content-body representations through the existing MVC mapper.
+3. The authoring service creates revision-1 DRAFTs transactionally. Duplicate identical DRAFTs are not re-created; conflicting existing records abort the batch.
+4. Practice Test question references must already exist as APPROVED or PUBLISHED Question revisions. XML template placeholder will fail this preflight intentionally.
+5. The import cannot transition to READY_FOR_AUDIO, APPROVED or PUBLISHED.
+
+## Remaining hardening
+
+- Verify exact-SHA B1 + complete CI, then use a real admin browser to test XML download/validate/import.
+- Extend structured XSD with strict per-body schema, nested cardinality and error line/column.
+- Add a persisted import ledger/report for cross-session idempotency audit, and operator-friendly reason codes.
+- Consider JSON/CSV only after XML atomic acceptance is demonstrated.
 
 ## Acceptance and next step
 
