@@ -38,7 +38,7 @@ def request(path, fields=None, bearer=None, expected=200):
     try: response=http.open(req,timeout=120)
     except urllib.error.HTTPError as error: response=error
     body=response.read()
-    report['operations'].append({'path':path,'method':req.method,'status':response.code,'expected':expected})
+    report['operations'].append({'path':path,'method':req.get_method(),'status':response.code,'expected':expected})
     assert response.code==expected, (path,response.code,body[:300])
     return body,response.headers
 def page(path): return request(path)[0].decode()
