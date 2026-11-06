@@ -4,6 +4,7 @@ import io.github.alimbetov.voxprep.backend.content.domain.ContentLifecycleStatus
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
 import io.github.alimbetov.voxprep.backend.tts.domain.ContentAudioPolicy;
 import io.github.alimbetov.voxprep.backend.tts.domain.ContentAudioRole;
+import io.github.alimbetov.voxprep.backend.tts.domain.TtsEngine;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceModelRepository;
 import java.util.Objects;
 import java.util.UUID;
@@ -16,14 +17,19 @@ public class TtsReviewCommandService {
     private final ContentRevisionRepository revisions;
     private final TtsVoiceModelRepository models;
     private final TtsJobPreparationService preparation;
+    private final KokoroJobPreparationService kokoroPreparation;
+    private final WorkerDeliveryProperties delivery;
     private final ContentAudioPolicy policy;
 
     public TtsReviewCommandService(ContentRevisionRepository revisions,
             TtsVoiceModelRepository models, TtsJobPreparationService preparation,
+            KokoroJobPreparationService kokoroPreparation, WorkerDeliveryProperties delivery,
             ContentAudioPolicy policy) {
         this.revisions = Objects.requireNonNull(revisions);
         this.models = Objects.requireNonNull(models);
         this.preparation = Objects.requireNonNull(preparation);
+        this.kokoroPreparation = Objects.requireNonNull(kokoroPreparation);
+        this.delivery = Objects.requireNonNull(delivery);
         this.policy = Objects.requireNonNull(policy);
     }
 
@@ -47,6 +53,13 @@ public class TtsReviewCommandService {
             throw new IllegalStateException("Voice model is not available for new jobs");
         }
         // Locale is determined by the approved voice, never by arbitrary untrusted browser input.
+        if (model.getEngine() == TtsEngine.KOKORO) {
+            if (!delivery.isKokoroEnabled()) {
+                throw new IllegalStateException("Kokoro worker V2 is disabled");
+            }
+            return kokoroPreparation.prepare(
+                    revisionId, role, model.getVoice().getLanguage(), model.getCode());
+        }
         return preparation.prepare(revisionId, role, model.getVoice().getLanguage(), model.getCode());
     }
 }
