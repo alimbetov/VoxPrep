@@ -13,6 +13,11 @@ public class WorkerDeliveryProperties {
     @NotBlank
     private String apiKey;
 
+    /** Optional separate identity; absent by default, so Kokoro remains unavailable. */
+    private String kokoroApiKey = "";
+
+    private boolean kokoroEnabled = false;
+
     @NotNull
     private Duration urlTtl = Duration.ofMinutes(5);
 
@@ -25,6 +30,22 @@ public class WorkerDeliveryProperties {
 
     public void setApiKey(String apiKey) {
         this.apiKey = apiKey;
+    }
+
+    public String getKokoroApiKey() {
+        return kokoroApiKey;
+    }
+
+    public void setKokoroApiKey(String kokoroApiKey) {
+        this.kokoroApiKey = kokoroApiKey == null ? "" : kokoroApiKey;
+    }
+
+    public boolean isKokoroEnabled() {
+        return kokoroEnabled;
+    }
+
+    public void setKokoroEnabled(boolean kokoroEnabled) {
+        this.kokoroEnabled = kokoroEnabled;
     }
 
     public Duration getUrlTtl() {
