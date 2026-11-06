@@ -1,0 +1,32 @@
+# Independent Kokoro-82M Worker (K2 — in development)
+
+This service is deliberately separate from the production Piper `worker/`.
+The specification is `docs/architecture/KOKORO_WORKER_V1_1_SPEC.md`.
+
+**Not production-ready.** Backend V2 currently responds 503 to Kokoro claim,
+and lacks engine-scoped V2 heartbeat/fail/output. The backend pre-provisioning
+example currently stages `onnx/model_quantized.onnx` and `voices/af_heart.bin`.
+The selected kokoro-onnx adapter expects `voices.bin` (aggregate), so a
+runtime-compatible, pinned and commercially reviewed model bundle must be
+qualified before real inference can work. Do not rename voice files to mask
+a format mismatch.
+
+The Worker does **not** fall back to Piper V1 endpoints. If V2 is unavailable,
+it fails closed rather than submitting Kokoro audio under Piper identity.
+
+Planned flow:
+```
+Backend pre-provisioning → PostgreSQL/RustFS STAGED bundle
+→ V2 claim (KOKORO, currently disabled)
+→ authenticated manifest/artifacts → SHA-256 cache
+→ Kokoro ONNX → WAV → FFmpeg/ffprobe MP3
+→ V2 output finalize (not yet implemented on Backend)
+```
+
+Configuration: `BASE_URL`, `KOKORO_WORKER_TOKEN`, `WORKER_ID`,
+`MODEL_CACHE_DIR`, `TEMP_DIR`, `POLL_SECONDS`,
+`HEARTBEAT_SECONDS`, `HTTP_TIMEOUT_SECONDS`,
+`MAX_ARTIFACT_BYTES`. Never commit tokens.
+
+Tests: `python -m pytest worker-kokoro/tests` after installing development
+dependencies. Tests are not proof of real Kokoro inference.
