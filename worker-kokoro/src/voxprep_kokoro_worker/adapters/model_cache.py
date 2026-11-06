@@ -54,6 +54,13 @@ def validate_manifest(data: dict, job: ClaimedJob) -> list[dict]:
             UUID(a["assetId"])
         except (KeyError, ValueError, TypeError) as e:
             raise BackendProtocolError("Missing artifact ID") from e
+    # The claim freezes a particular voice asset. Reject a valid manifest if
+    # its selected voice no longer matches that immutable job snapshot.
+    if job.voice_artifact_sha256:
+        voice_path = f"voices/{job.voice_code}.bin"
+        matching = [a for a in entries if a["path"] == voice_path and a["role"] == "VOICE"]
+        if len(matching) != 1 or matching[0]["sha256"] != job.voice_artifact_sha256:
+            raise BackendProtocolError("Claim/voice artifact SHA mismatch")
     if canonical_hash("KOKORO", data.get("sourceRevision", ""), entries) != data["manifestSha256"]:
         raise BackendProtocolError("Bundle canonical hash mismatch")
     return entries
