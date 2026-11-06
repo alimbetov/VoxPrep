@@ -22,6 +22,7 @@ class ClaimedJob:
     manifest_sha256: str
     voice_code: str
     speed: float = 1.0
+    bundle_model_code: str = ""
 
 @dataclass(frozen=True, slots=True)
 class AudioArtifact:
