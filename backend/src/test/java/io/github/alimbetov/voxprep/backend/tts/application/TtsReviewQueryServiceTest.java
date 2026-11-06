@@ -13,6 +13,13 @@ import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetStatus;
 import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetEntity;
 import io.github.alimbetov.voxprep.backend.tts.domain.ContentAudioPolicy;
 import io.github.alimbetov.voxprep.backend.tts.domain.TtsJobStatus;
+import io.github.alimbetov.voxprep.backend.tts.domain.TtsEngine;
+import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceEntity;
+import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceModelEntity;
+import java.util.List;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import static org.mockito.ArgumentMatchers.any;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsJobEntity;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsJobRepository;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceModelRepository;
@@ -28,6 +35,44 @@ class TtsReviewQueryServiceTest {
 
     private final UUID revisionId = UUID.randomUUID();
     private final UUID jobId = UUID.randomUUID();
+
+    @Test
+    void editorOffersOnlyPiperWhileKokoroPreparationIsDisabled() {
+        var catalogue = mock(TtsVoiceModelRepository.class);
+        var piper = mock(TtsVoiceModelEntity.class);
+        var kokoro = mock(TtsVoiceModelEntity.class);
+        var voice = mock(TtsVoiceEntity.class);
+        when(voice.getDisplayName()).thenReturn("English Voice");
+        when(voice.getLanguage()).thenReturn("en-US");
+        when(piper.selectableForNewJobs()).thenReturn(true);
+        when(piper.getEngine()).thenReturn(TtsEngine.PIPER);
+        when(piper.getCode()).thenReturn("en_US.lessac.medium");
+        when(piper.getVoice()).thenReturn(voice);
+        when(kokoro.selectableForNewJobs()).thenReturn(true);
+        when(kokoro.getEngine()).thenReturn(TtsEngine.KOKORO);
+        when(catalogue.findAll(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(piper, kokoro)));
+
+        var service = new TtsReviewQueryService(jobs, media, catalogue, new ContentAudioPolicy());
+        assertThat(service.availableModels())
+                .extracting(TtsReviewQueryService.ModelView::engine)
+                .containsExactly("PIPER");
+        assertThat(service.availableModels())
+                .extracting(TtsReviewQueryService.ModelView::code)
+                .containsExactly("en_US.lessac.medium");
+    }
+
+    @Test
+    void editorHidesKokoroEvenIfItWasMarkedActiveInCatalogue() {
+        var catalogue = mock(TtsVoiceModelRepository.class);
+        var kokoro = mock(TtsVoiceModelEntity.class);
+        when(kokoro.selectableForNewJobs()).thenReturn(true);
+        when(kokoro.getEngine()).thenReturn(TtsEngine.KOKORO);
+        when(catalogue.findAll(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(kokoro)));
+        var service = new TtsReviewQueryService(jobs, media, catalogue, new ContentAudioPolicy());
+        assertThat(service.availableModels()).isEmpty();
+    }
 
     @Test
     void anotherRevisionCannotPreviewTheSameJob() {
