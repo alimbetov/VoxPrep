@@ -53,15 +53,21 @@ class FfmpegPostprocessor:
         del job
         if not input_wav.is_file() or input_wav.stat().st_size <= 44:
             raise PostprocessError("Empty WAV input")
-        subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(input_wav),
+        try:
+            subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(input_wav),
             "-vn", "-ac", "1", "-ar", "24000", "-codec:a", "libmp3lame",
             "-b:a", "64k", str(output_mp3)], check=True, timeout=120, capture_output=True)
-        result = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0",
+        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+            raise PostprocessError("FFmpeg conversion failed") from exc
+        try:
+            result = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0",
             "-show_entries", "stream=codec_name,sample_rate,channels,bit_rate:format=duration",
             "-of", "json", str(output_mp3)], check=True, capture_output=True, timeout=20)
-        data = json.loads(result.stdout)
-        stream = data["streams"][0]
-        duration = float(data["format"]["duration"])
+            data = json.loads(result.stdout)
+            stream = data["streams"][0]
+            duration = float(data["format"]["duration"])
+        except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired, ValueError, KeyError, IndexError, TypeError) as exc:
+            raise AudioQcError("Invalid MP3 metadata") from exc
         if (stream["codec_name"] != "mp3" or int(stream["sample_rate"]) != 24000
             or int(stream["channels"]) != 1 or not 60000 <= int(stream["bit_rate"]) <= 68000
             or duration <= 0):
