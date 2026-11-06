@@ -64,3 +64,5 @@ databaseChangeLog:
       file: db/changelog/k1-kokoro-bundle-provisioning.sql
   - include:
       file: db/changelog/k1-kokoro-model-binding.sql
+  - include:
+      file: db/changelog/k1-kokoro-job-snapshot.sql
