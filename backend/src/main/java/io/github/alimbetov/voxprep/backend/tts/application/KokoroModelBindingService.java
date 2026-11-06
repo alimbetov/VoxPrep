@@ -65,6 +65,31 @@ public class KokoroModelBindingService {
                    AND v.language = ?
                    AND b.id = ? AND b.status = 'STAGED'
                    AND ba.artifact_role = 'VOICE'
+                   AND (
+                       SELECT count(*)
+                         FROM app.tts_kokoro_bundle_artifact item
+                         JOIN app.file_asset asset ON asset.id = item.file_asset_id
+                        WHERE item.bundle_id = b.id
+                          AND asset.status = 'READY'
+                          AND asset.sha256 = item.sha256
+                          AND asset.size_bytes = item.size_bytes
+                   ) = 4
+                   AND (
+                       SELECT count(*)
+                         FROM app.tts_kokoro_bundle_artifact item
+                        WHERE item.bundle_id = b.id
+                          AND (
+                              (item.logical_path = 'onnx/model_quantized.onnx'
+                                  AND item.artifact_role = 'MODEL')
+                              OR (item.logical_path IN (
+                                  'voices/af_heart.bin', 'voices/am_michael.bin',
+                                  'voices/bf_emma.bin') AND item.artifact_role = 'VOICE')
+                          )
+                   ) = 4
+                   AND (
+                       SELECT count(*) FROM app.tts_kokoro_bundle_artifact item
+                       WHERE item.bundle_id = b.id
+                   ) = 4
                 """, voiceCode, artifact, phonemizerVersion, speed, artifact,
                 voiceModelId, locale, bundleId);
         if (inserted != 1) {
