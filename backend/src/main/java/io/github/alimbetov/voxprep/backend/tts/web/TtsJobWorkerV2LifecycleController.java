@@ -136,7 +136,7 @@ public class TtsJobWorkerV2LifecycleController {
                     jobId, workerId, fileId, leaseToken, fingerprint, voiceModelId,
                     audioProfile, sha256, sizeBytes, durationMs,
                     file.getContentType(), file.getBytes());
-            return switch (output.finalizeOutput(upload)) {
+            return switch (output.finalizeOutputForEngine(upload, engine, manifestSha256)) {
                 case CREATED -> ResponseEntity.status(HttpStatus.CREATED).build();
                 case ALREADY_FINALIZED -> ResponseEntity.ok().build();
                 case LEASE_LOST, REPLAY_MISMATCH ->
