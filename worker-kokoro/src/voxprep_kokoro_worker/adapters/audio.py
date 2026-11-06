@@ -7,6 +7,7 @@ from pathlib import Path
 from voxprep_kokoro_worker.domain.job import ClaimedJob, AudioArtifact
 from voxprep_kokoro_worker.domain.errors import AudioQcError, ModelLoadError, SynthesisError, PostprocessError
 from voxprep_kokoro_worker.adapters.voice_bundle import ensure_voices_archive, SUPPORTED_VOICES
+from voxprep_kokoro_worker.adapters.text_chunks import split_text
 
 PROFILE = "mp3-mono-24k-64k-v1"
 
@@ -25,28 +26,42 @@ class KokoroSynthesizer:
         voices_path = ensure_voices_archive(model_dir)
         if not 0.5 <= job.speed <= 2:
             raise SynthesisError("Unsupported Kokoro speed")
-        if not 1 <= len(job.normalized_tts_text) <= 500:
-            raise SynthesisError("Kokoro utterance requires chunking or is empty")
+        chunks = split_text(job.normalized_tts_text)
         try:
             from kokoro_onnx import Kokoro
-            engine = Kokoro(str(model_path), str(voices_path))
-            samples, sample_rate = engine.create(
-                job.normalized_tts_text, voice=job.voice_code,
-                speed=job.speed, lang="en-us" if job.language == "en-US" else "en-gb"
-            )
             import numpy as np
-            pcm = np.asarray(samples, dtype=np.float32)
-            if (pcm.ndim != 1 or pcm.size == 0
-                or not np.isfinite(pcm).all()
-                or sample_rate <= 0 or pcm.size > int(sample_rate) * 120):
-                raise SynthesisError("Empty, nonfinite or oversized Kokoro PCM")
-            pcm = np.clip(pcm, -1.0, 1.0)
+
+            engine = Kokoro(str(model_path), str(voices_path))
             output_wav.parent.mkdir(parents=True, exist_ok=True)
+            sample_rate_expected = None
+            total_frames = 0
             with wave.open(str(output_wav), "wb") as wav:
                 wav.setnchannels(1)
                 wav.setsampwidth(2)
-                wav.setframerate(int(sample_rate))
-                wav.writeframes((pcm * 32767).astype("<i2").tobytes())
+                for chunk in chunks:
+                    samples, sample_rate = engine.create(
+                        chunk, voice=job.voice_code, speed=job.speed,
+                        lang="en-us" if job.language == "en-US" else "en-gb"
+                    )
+                    pcm = np.asarray(samples, dtype=np.float32)
+                    if (pcm.ndim != 1 or pcm.size == 0
+                        or not np.isfinite(pcm).all()
+                        or not isinstance(sample_rate, (int, np.integer))
+                        or not 8000 <= sample_rate <= 48000
+                        or pcm.size > int(sample_rate) * 120):
+                        raise SynthesisError("Invalid or oversized Kokoro PCM chunk")
+                    if sample_rate_expected is None:
+                        sample_rate_expected = int(sample_rate)
+                        wav.setframerate(sample_rate_expected)
+                    elif sample_rate_expected != int(sample_rate):
+                        raise SynthesisError("Inconsistent Kokoro sample rates")
+                    total_frames += pcm.size
+                    if total_frames > sample_rate_expected * 1200:
+                        raise SynthesisError("Kokoro job exceeds 20-minute audio limit")
+                    # Stream PCM per chunk to the WAV file. Do not concatenate
+                    # all samples into one large in-memory array.
+                    pcm = np.clip(pcm, -1.0, 1.0)
+                    wav.writeframes((pcm * 32767).astype("<i2").tobytes())
             return output_wav
         except SynthesisError:
             raise
@@ -77,7 +92,12 @@ class FfmpegPostprocessor:
             or int(stream["channels"]) != 1 or not 60000 <= int(stream["bit_rate"]) <= 68000
             or duration <= 0):
             raise AudioQcError("MP3 profile mismatch")
-        content = output_mp3.read_bytes()
+        digest = hashlib.sha256()
+        size = 0
+        with output_mp3.open("rb") as stream:
+            for block in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(block)
+                size += len(block)
         return AudioArtifact(output_mp3, "audio/mpeg", PROFILE,
-                             hashlib.sha256(content).hexdigest(), len(content),
+                             digest.hexdigest(), size,
                              max(1, round(duration * 1000)))
