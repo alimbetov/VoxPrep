@@ -255,24 +255,22 @@ class TtsJobLeaseIntegrationTest {
             var voice = voiceRepository.saveAndFlush(new TtsVoiceEntity(
                     "voice-lease-" + suffix, "US English Lessac", "en-US", "US", "FEMALE", "NEUTRAL", true));
             var assets = TtsTestAssets.createModelAssets(assetRepository, "lease-" + suffix, 'a', 'b');
-            var model = modelRepository.saveAndFlush(new TtsVoiceModelEntity(
-                    "model-lease-" + suffix,
-                    voice,
-                    engine,
-                    "1.3.0",
-                    "en_US-lessac-medium-v1",
-                    assets.modelAssetId(),
-                    assets.configAssetId(),
-                    String.valueOf('a').repeat(64),
-                    String.valueOf('b').repeat(64),
-                    SOURCE_PROVIDER,
-                    SOURCE_REPOSITORY,
-                    SOURCE_REVISION,
-                    TtsVoiceModelStatus.ACTIVE,
-                    "MIT",
-                    "https://example.invalid/license",
-                    true,
-                    Instant.parse("2026-11-02T18:00:00Z")));
+            var candidate = engine == TtsEngine.KOKORO
+                    ? TtsVoiceModelEntity.forKokoro(
+                        "model-lease-" + suffix, voice, "kokoro-onnx-0.6.1",
+                        "kokoro-82m-v1", "onnx-community/Kokoro-82M-v1.0-ONNX",
+                        SOURCE_REVISION, TtsVoiceModelStatus.ACTIVE,
+                        "Apache-2.0", "https://example.invalid/license", true,
+                        Instant.parse("2026-11-02T18:00:00Z"))
+                    : new TtsVoiceModelEntity(
+                        "model-lease-" + suffix, voice, engine,
+                        "1.3.0", "en_US-lessac-medium-v1",
+                        assets.modelAssetId(), assets.configAssetId(),
+                        String.valueOf('a').repeat(64), String.valueOf('b').repeat(64),
+                        SOURCE_PROVIDER, SOURCE_REPOSITORY, SOURCE_REVISION,
+                        TtsVoiceModelStatus.ACTIVE, "MIT", "https://example.invalid/license",
+                        true, Instant.parse("2026-11-02T18:00:00Z"));
+            var model = modelRepository.saveAndFlush(candidate);
             return java.util.stream.IntStream.range(0, count)
                     .mapToObj(index -> jobRepository.saveAndFlush(new TtsJobEntity(
                             model,
