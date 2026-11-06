@@ -66,3 +66,5 @@ databaseChangeLog:
       file: db/changelog/k1-kokoro-model-binding.sql
   - include:
       file: db/changelog/k1-kokoro-job-snapshot.sql
+  - include:
+      file: db/changelog/k1-kokoro-model-asset-shape.sql
