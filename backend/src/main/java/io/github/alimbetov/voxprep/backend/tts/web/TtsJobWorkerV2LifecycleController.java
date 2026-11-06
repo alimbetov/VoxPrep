@@ -115,16 +115,21 @@ public class TtsJobWorkerV2LifecycleController {
         Integer allowed = jdbc.queryForObject("""
                 SELECT count(*) FROM app.tts_job j
                   JOIN app.tts_voice_model vm ON vm.id = j.voice_model_id
+                  LEFT JOIN app.tts_kokoro_job_snapshot snapshot
+                    ON snapshot.job_id = j.id
                  WHERE j.id = ? AND j.voice_model_id = ? AND vm.engine = ?
                    AND j.file_id = ? AND j.fingerprint = ?
-                """, Integer.class, jobId, voiceModelId, engine.name(), fileId, fingerprint);
+                   AND (
+                     vm.engine = 'PIPER'
+                     OR (snapshot.voice_model_id = j.voice_model_id
+                       AND snapshot.fingerprint = j.fingerprint
+                       AND snapshot.manifest_sha256 = ?
+                       AND snapshot.fingerprint_version = 'tts-fingerprint-v2')
+                   )
+                """, Integer.class, jobId, voiceModelId, engine.name(), fileId, fingerprint,
+                manifestSha256);
         if (allowed == null || allowed != 1) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
-        }
-        // Kokoro is unreachable until a pinned manifest snapshot can be
-        // compared atomically to the claimed job.
-        if (engine == TtsEngine.KOKORO) {
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
         }
         try {
             var upload = new TtsOutputFinalizationService.OutputUpload(
@@ -143,10 +148,8 @@ public class TtsJobWorkerV2LifecycleController {
     }
 
     private boolean isEnabled(TtsEngine engine) {
-        // The configuration flag alone is insufficient to activate Kokoro:
-        // immutable job manifest/fingerprint and replay fencing are not wired yet.
-        // Match the disabled Kokoro claim contract, even if the flag is set.
-        return engine == TtsEngine.PIPER;
+        return engine == TtsEngine.PIPER
+                || (engine == TtsEngine.KOKORO && config.isKokoroEnabled());
     }
 
     private static boolean validWorker(String value) {
