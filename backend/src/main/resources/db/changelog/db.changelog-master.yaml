@@ -58,3 +58,5 @@ databaseChangeLog:
       file: db/changelog/api-r3-assessment-delivery-config.sql
   - include:
       file: db/changelog/b8-p1-lifetime-entitlements.sql
+  - include:
+      file: db/changelog/k1-kokoro-engine-expand.sql
