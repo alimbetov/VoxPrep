@@ -25,7 +25,9 @@ Future<void> main() async {
   if (!kDebugMode) throw StateError('Demo requires a debug build');
   final container = ProviderContainer(
     overrides: [
-      localeConfigurationGatewayProvider.overrideWithValue(DemoLocaleConfigurationGateway()),
+      localeConfigurationGatewayProvider.overrideWithValue(
+        DemoLocaleConfigurationGateway(),
+      ),
       appConfigurationProvider.overrideWithValue(
         AppConfiguration.fromBuildValues(
           releaseMode: false,
