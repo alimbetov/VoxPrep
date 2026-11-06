@@ -78,3 +78,18 @@ A model label such as `Kokoro-82M-v1.0` is not a fully reproducible bundle. Befo
 ## K1 addendum: Backend pre-download for Kokoro
 
 An explicit opt-in `KokoroBundleProvisioningBootstrap` prefetches a pinned ONNX+voice bundle from Hugging Face using existing `TtsModelArtifactSource`, validates exact hash/byte count, ingests READY assets into RustFS with `FileAssetIngestService`, and commits an append-only STAGED bundle manifest in PostgreSQL. The V2 read-only bundle API serves these files to a separately authenticated Kokoro identity; direct Worker→Hugging Face is unnecessary. The startup flag defaults OFF. See `KOKORO_BACKEND_PREPROVISIONING.md` for verified source revision, external config, and still-unverified exact byte sizes. Staging != voice activation.
+
+
+## MVC-K01–MVC-K07: Content Studio engine visibility slice
+
+The Content Studio TTS panel now exposes the engine identity for existing jobs and selectable voice models. It shows an engine selector with PIPER available and a **disabled** KOKORO option accompanied by an explicit readiness explanation. The approved voice list is currently filtered to ACTIVE and PIPER, matching the `TtsJobPreparationService` fail-closed guard; no unsupported Kokoro job is offered merely because a database row says ACTIVE.
+
+The form still submits the existing `voiceModelCode` contract. The engine selector is informative while only Piper can be selected, and it must never be trusted as an authorization input. Once Kokoro V2 lifecycle and real inference are qualified, make the engine selector functional: filter voice options by engine, require server-side validation, and add browser E2E coverage for both engines.
+
+- [x] MVC-K01: `ModelView` carries engine; `JobView` displays engine.
+- [x] MVC-K02: Engine selector present with explicit unavailable Kokoro option.
+- [x] MVC-K03 (safe preliminary): Backend offers only ACTIVE Piper models until Kokoro acceptance; test that ACTIVE Kokoro is hidden.
+- [ ] MVC-K04: Link approved Kokoro bundle to shared `tts_voice_model`.
+- [ ] MVC-K05: Enable Kokoro preparation only after V2 lifecycle qualification.
+- [ ] MVC-K06: Engine and model visible in TTS history; worker availability/health status still outstanding.
+- [ ] MVC-K07: Real browser acceptance on Piper and Kokoro.
