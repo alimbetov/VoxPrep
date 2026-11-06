@@ -25,6 +25,8 @@ class KokoroSynthesizer:
         voices_path = ensure_voices_archive(model_dir)
         if not 0.5 <= job.speed <= 2:
             raise SynthesisError("Unsupported Kokoro speed")
+        if not 1 <= len(job.normalized_tts_text) <= 500:
+            raise SynthesisError("Kokoro utterance requires chunking or is empty")
         try:
             from kokoro_onnx import Kokoro
             engine = Kokoro(str(model_path), str(voices_path))
@@ -34,8 +36,10 @@ class KokoroSynthesizer:
             )
             import numpy as np
             pcm = np.asarray(samples, dtype=np.float32)
-            if pcm.ndim != 1 or pcm.size == 0 or sample_rate <= 0:
-                raise SynthesisError("Empty/invalid Kokoro PCM")
+            if (pcm.ndim != 1 or pcm.size == 0
+                or not np.isfinite(pcm).all()
+                or sample_rate <= 0 or pcm.size > int(sample_rate) * 120):
+                raise SynthesisError("Empty, nonfinite or oversized Kokoro PCM")
             pcm = np.clip(pcm, -1.0, 1.0)
             output_wav.parent.mkdir(parents=True, exist_ok=True)
             with wave.open(str(output_wav), "wb") as wav:
