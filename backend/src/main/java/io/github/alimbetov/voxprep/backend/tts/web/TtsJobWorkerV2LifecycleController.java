@@ -143,8 +143,10 @@ public class TtsJobWorkerV2LifecycleController {
     }
 
     private boolean isEnabled(TtsEngine engine) {
-        return engine == TtsEngine.PIPER
-                || (engine == TtsEngine.KOKORO && config.isKokoroEnabled());
+        // The configuration flag alone is insufficient to activate Kokoro:
+        // immutable job manifest/fingerprint and replay fencing are not wired yet.
+        // Match the disabled Kokoro claim contract, even if the flag is set.
+        return engine == TtsEngine.PIPER;
     }
 
     private static boolean validWorker(String value) {
