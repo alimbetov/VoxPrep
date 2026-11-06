@@ -177,6 +177,84 @@ public class TtsJobLeaseService {
                 .stream().findFirst();
     }
 
+    /**
+     * Claims ONLY complete KOKORO jobs whose pinned model snapshot is present.
+     * Engine, job fingerprint and approved voice-model identity are checked
+     * inside the same atomic PostgreSQL lock/update.
+     */
+    @Transactional
+    public Optional<KokoroWorkerTtsJobClaim> claimNextKokoroForWorker(
+            String workerId, Duration leaseDuration) {
+        String leaseOwner = required(workerId, "workerId", 128);
+        UUID token = UUID.randomUUID();
+        Instant expires = Instant.now().plus(positiveDuration(leaseDuration));
+        return jdbcTemplate.query("""
+                WITH candidate AS (
+                    SELECT j.id
+                      FROM app.tts_job j
+                      JOIN app.tts_voice_model vm ON vm.id = j.voice_model_id
+                      JOIN app.tts_kokoro_job_snapshot s
+                        ON s.job_id = j.id AND s.voice_model_id = vm.id
+                           AND s.fingerprint = j.fingerprint
+                      JOIN app.tts_kokoro_bundle b ON b.id = s.bundle_id
+                           AND b.manifest_sha256 = s.manifest_sha256
+                     WHERE j.file_id IS NOT NULL
+                       AND vm.engine = 'KOKORO'
+                       AND vm.status = 'ACTIVE'
+                       AND vm.commercial_use_reviewed = TRUE
+                       AND b.status = 'STAGED'
+                       AND (j.status = 'PENDING'
+                          OR (j.status IN ('CLAIMED', 'PROCESSING')
+                              AND j.lease_until < CURRENT_TIMESTAMP))
+                     ORDER BY j.created_at, j.id
+                     FOR UPDATE OF j SKIP LOCKED LIMIT 1
+                ), claimed AS (
+                    UPDATE app.tts_job j
+                       SET status = 'CLAIMED', lease_owner = ?,
+                           lease_token = ?, lease_until = ?,
+                           claimed_at = COALESCE(j.claimed_at, CURRENT_TIMESTAMP),
+                           attempt_count = j.attempt_count + 1,
+                           version = j.version + 1, updated_at = CURRENT_TIMESTAMP
+                      FROM candidate WHERE j.id = candidate.id
+                    RETURNING j.id, j.file_id, j.content_revision_id,
+                              j.audio_role, j.normalized_tts_text, j.language,
+                              j.voice_model_id, j.fingerprint,
+                              j.lease_token, j.lease_until
+                )
+                SELECT c.*, vm.code AS voice_model_code,
+                       b.model_code AS bundle_model_code,
+                       s.bundle_id, s.manifest_sha256, s.voice_code,
+                       s.voice_artifact_sha256, s.phonemizer_version,
+                       s.engine_version, s.speed
+                  FROM claimed c
+                  JOIN app.tts_voice_model vm ON vm.id = c.voice_model_id
+                  JOIN app.tts_kokoro_job_snapshot s ON s.job_id = c.id
+                  JOIN app.tts_kokoro_bundle b ON b.id = s.bundle_id
+                """, (rs, row) -> new KokoroWorkerTtsJobClaim(
+                        new WorkerTtsJobClaim(
+                                rs.getObject("id", UUID.class),
+                                rs.getObject("file_id", UUID.class),
+                                rs.getObject("content_revision_id", UUID.class),
+                                rs.getString("audio_role"),
+                                rs.getString("normalized_tts_text"),
+                                rs.getString("language"),
+                                rs.getObject("voice_model_id", UUID.class),
+                                rs.getString("voice_model_code"),
+                                null, null,
+                                rs.getString("fingerprint"),
+                                rs.getObject("lease_token", UUID.class),
+                                rs.getTimestamp("lease_until").toInstant()),
+                        rs.getObject("bundle_id", UUID.class),
+                        rs.getString("bundle_model_code"),
+                        rs.getString("manifest_sha256"),
+                        rs.getString("voice_code"),
+                        rs.getString("voice_artifact_sha256"),
+                        rs.getString("phonemizer_version"),
+                        rs.getString("engine_version"),
+                        rs.getBigDecimal("speed")),
+                leaseOwner, token, Timestamp.from(expires)).stream().findFirst();
+    }
+
     @Transactional
     public Optional<TtsJobLeaseState> heartbeat(UUID jobId, String workerId, UUID leaseToken, Duration leaseDuration) {
         Objects.requireNonNull(jobId, "jobId");
