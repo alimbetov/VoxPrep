@@ -59,6 +59,7 @@ class TtsJobLeaseIntegrationTest {
             jdbcTemplate.update("delete from app.tts_job");
             jdbcTemplate.update("delete from app.tts_voice_model");
             jdbcTemplate.update("delete from app.tts_voice");
+            jdbcTemplate.update("delete from app.content_revision where content_code like 'lease-claim-%'");
             // Only remove this suite's assets. Other integration tests leave READY
             // media bindings referencing their own FileAsset rows.
             jdbcTemplate.update("""
@@ -111,8 +112,8 @@ class TtsJobLeaseIntegrationTest {
 
     @Test
     void engineScopedClaimOnlyReceivesMatchingJobs() {
-        UUID kokoro = createPendingJobs("scoped-kokoro", 1, TtsEngine.KOKORO).getFirst();
-        UUID piper = createPendingJobs("scoped-piper", 1, TtsEngine.PIPER).getFirst();
+        UUID kokoro = createPendingWorkerJobs("scoped-kokoro", TtsEngine.KOKORO);
+        UUID piper = createPendingWorkerJobs("scoped-piper", TtsEngine.PIPER);
         var piperClaim = leaseService.claimNextForEngine(
                 "piper-v2", TtsEngine.PIPER, Duration.ofMinutes(5)).orElseThrow();
         var kokoroClaim = leaseService.claimNextForEngine(
@@ -124,7 +125,7 @@ class TtsJobLeaseIntegrationTest {
 
     @Test
     void concurrentEngineScopedClaimsCannotClaimSameJob() throws Exception {
-        UUID jobId = createPendingJobs("same-engine", 1, TtsEngine.PIPER).getFirst();
+        UUID jobId = createPendingWorkerJobs("same-engine", TtsEngine.PIPER);
         try (var executor = Executors.newFixedThreadPool(2)) {
             var ready = new CountDownLatch(2);
             var start = new CountDownLatch(1);
@@ -187,6 +188,27 @@ class TtsJobLeaseIntegrationTest {
             throw new IllegalStateException("claim start signal timed out");
         }
         return leaseService.claimNext(workerId, Duration.ofMinutes(5)).orElseThrow();
+    }
+
+    private UUID createPendingWorkerJobs(String suffix, TtsEngine engine) {
+        UUID jobId = createPendingJobs(suffix, 1, engine).getFirst();
+        UUID revisionId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO app.content_revision (
+                    id, version, created_at, updated_at, content_code, content_type, revision_number,
+                    lifecycle, checksum_sha256, title, subtitle, description, category_code, level_code,
+                    minutes, availability)
+                VALUES (?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, 'phrase', 1, 'DRAFT', ?,
+                        'Title', 'Subtitle', 'Description', 'GENERAL', 'B1', 1, 'ACTIVE')
+                """, revisionId, "lease-claim-" + suffix, "9".repeat(64));
+        jdbcTemplate.update("""
+                UPDATE app.tts_job
+                   SET file_id = ?, content_revision_id = ?, audio_role = 'pronunciation',
+                       normalized_tts_text = 'Test utterance', language = 'en-US',
+                       fingerprint = ?
+                 WHERE id = ?
+                """, UUID.randomUUID(), revisionId, "a".repeat(64), jobId);
+        return jobId;
     }
 
     private List<UUID> createPendingJobs(String suffix, int count) {
