@@ -1,6 +1,7 @@
 package io.github.alimbetov.voxprep.backend.tts.application;
 
 import io.github.alimbetov.voxprep.backend.asset.application.ObjectStoragePort;
+import io.github.alimbetov.voxprep.backend.tts.domain.TtsEngine;
 import io.github.alimbetov.voxprep.backend.infrastructure.storage.RustFsProperties;
 import java.security.MessageDigest;
 import java.util.HexFormat;
@@ -32,6 +33,38 @@ public class TtsOutputFinalizationService {
         this.objectStorage = objectStorage;
         this.storageProperties = storageProperties;
         this.transactionTemplate = transactionTemplate;
+    }
+
+    /**
+     * Worker-facing engine-fenced output entry point. Engine and Kokoro
+     * manifest identity must match the persisted immutable job snapshot
+     * BEFORE any RustFS write or READY replay is considered.
+     *
+     * Existing direct finalizeOutput is retained for internal test fixtures;
+     * both V1 and V2 worker controllers use this fenced entry point.
+     */
+    public FinalizationResult finalizeOutputForEngine(
+            OutputUpload upload, TtsEngine expectedEngine, String manifestSha256) {
+        Objects.requireNonNull(upload, "upload");
+        Objects.requireNonNull(expectedEngine, "expectedEngine");
+        Integer compatible = jdbcTemplate.queryForObject("""
+                SELECT count(*) FROM app.tts_job j
+                JOIN app.tts_voice_model vm ON vm.id = j.voice_model_id
+                LEFT JOIN app.tts_kokoro_job_snapshot s ON s.job_id = j.id
+                 WHERE j.id = ? AND j.file_id = ? AND j.voice_model_id = ?
+                   AND j.fingerprint = ? AND vm.engine = ?
+                   AND (vm.engine = 'PIPER'
+                        OR (s.voice_model_id = j.voice_model_id
+                           AND s.fingerprint = j.fingerprint
+                           AND s.manifest_sha256 = ?
+                           AND s.fingerprint_version = 'tts-fingerprint-v2'))
+                """, Integer.class, upload.jobId(), upload.fileId(),
+                upload.voiceModelId(), upload.fingerprint(),
+                expectedEngine.name(), manifestSha256);
+        if (compatible == null || compatible != 1) {
+            return FinalizationResult.REPLAY_MISMATCH;
+        }
+        return finalizeOutput(upload);
     }
 
     public FinalizationResult finalizeOutput(OutputUpload upload) {
