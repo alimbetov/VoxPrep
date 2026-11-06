@@ -33,3 +33,25 @@ RESET ROLE;
 --rollback DROP TABLE app.tts_kokoro_bundle_artifact;
 --rollback DROP TABLE app.tts_kokoro_bundle;
 --rollback RESET ROLE;
+
+--changeset voxprep:k1-kokoro-0003-immutable-staged-bundle-trigger splitStatements:false
+SET ROLE voxprep_owner;
+CREATE FUNCTION app.tts_kokoro_staged_immutable()
+RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    RAISE EXCEPTION 'Kokoro staged bundle and artifacts are append-only'
+        USING ERRCODE = '23514';
+END;
+$$;
+CREATE TRIGGER trg_tts_kokoro_bundle_immutable
+BEFORE UPDATE OR DELETE ON app.tts_kokoro_bundle
+FOR EACH ROW EXECUTE FUNCTION app.tts_kokoro_staged_immutable();
+CREATE TRIGGER trg_tts_kokoro_bundle_artifact_immutable
+BEFORE UPDATE OR DELETE ON app.tts_kokoro_bundle_artifact
+FOR EACH ROW EXECUTE FUNCTION app.tts_kokoro_staged_immutable();
+RESET ROLE;
+--rollback SET ROLE voxprep_owner;
+--rollback DROP TRIGGER trg_tts_kokoro_bundle_artifact_immutable ON app.tts_kokoro_bundle_artifact;
+--rollback DROP TRIGGER trg_tts_kokoro_bundle_immutable ON app.tts_kokoro_bundle;
+--rollback DROP FUNCTION app.tts_kokoro_staged_immutable();
+--rollback RESET ROLE;
