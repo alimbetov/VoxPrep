@@ -175,15 +175,17 @@
                     </div>
                     <div class="col-12 col-lg-3">
                         <label class="form-label" for="ttsEngine">TTS engine</label>
-                        <select class="form-select" id="ttsEngine" aria-describedby="ttsEngineHint">
+                        <select class="form-select" id="ttsEngine" name="ttsEngine" aria-describedby="ttsEngineHint">
                             <option value="PIPER">Piper TTS</option>
-                            <option value="KOKORO" disabled>Kokoro-82M — not available yet</option>
+                            <option value="KOKORO" th:disabled="${ttsKokoroEnabled != true}">Kokoro-82M — English voices</option>
                         </select>
-                        <div id="ttsEngineHint" class="form-text">Kokoro requires Backend V2 and Worker acceptance.</div>
+                        <div id="ttsEngineHint" class="form-text" th:if="${ttsKokoroEnabled != true}">
+                            Kokoro is disabled until Backend V2 and real Worker acceptance.
+                        </div>
                         <div class="form-text">
                             Planned Kokoro voices: af_heart (US narrator),
                             am_michael (US dialogues), bf_emma (British practice).
-                            These voices are not available for generation yet.
+                            Generation requires a pinned approved bundle and an enabled V2 Worker.
                         </div>
                     </div>
                     <div class="col-12 col-lg-5">
@@ -279,4 +281,23 @@
         </div>
     </div>
 </main>
+<script>
+(function () {
+    const engine = document.getElementById('ttsEngine');
+    const voice = document.getElementById('ttsVoiceModelCode');
+    if (!engine || !voice) return;
+    const available = Array.from(voice.options).filter(option => option.value);
+    const update = () => {
+        available.forEach(option => {
+            option.hidden = option.dataset.engine !== engine.value;
+            option.disabled = option.dataset.engine !== engine.value;
+        });
+        if (voice.selectedOptions.length && voice.selectedOptions[0].disabled) {
+            voice.value = '';
+        }
+    };
+    engine.addEventListener('change', update);
+    update();
+})();
+</script>
 </html>
