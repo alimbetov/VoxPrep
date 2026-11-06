@@ -59,7 +59,6 @@ class TtsJobLeaseIntegrationTest {
             jdbcTemplate.update("delete from app.tts_job");
             jdbcTemplate.update("delete from app.tts_voice_model");
             jdbcTemplate.update("delete from app.tts_voice");
-            jdbcTemplate.update("delete from app.content_revision where content_code like 'lease-claim-%'");
             // Only remove this suite's assets. Other integration tests leave READY
             // media bindings referencing their own FileAsset rows.
             jdbcTemplate.update("""
@@ -200,7 +199,7 @@ class TtsJobLeaseIntegrationTest {
                     minutes, availability)
                 VALUES (?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, 'phrase', 1, 'DRAFT', ?,
                         'Title', 'Subtitle', 'Description', 'GENERAL', 'B1', 1, 'ACTIVE')
-                """, revisionId, "lease-claim-" + suffix, "9".repeat(64));
+                """, revisionId, "lease-claim-" + suffix + "-" + revisionId, "9".repeat(64));
         jdbcTemplate.update("""
                 UPDATE app.tts_job
                    SET file_id = ?, content_revision_id = ?, audio_role = 'pronunciation',
