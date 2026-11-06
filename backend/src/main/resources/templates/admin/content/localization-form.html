@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org"
+<html lang="ru" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/fragments/shell :: layout('Localization editor', 'content', ~{::main})}">
 <main>
     <div class="d-flex justify-content-between align-items-start mb-4">
@@ -10,8 +10,9 @@
             <p th:if="${localization != null}" class="text-secondary"
                th:text="${localization.locale + ' · revision ' + localization.localizationRevisionNumber + ' · ' + localization.lifecycle}">State</p>
         </div>
-        <a class="btn btn-outline-secondary" th:href="@{/admin/content/revisions/{id}/localizations(id=${contentRevision.id})}">Back to localizations</a>
+        <a class="btn btn-outline-secondary" th:href="@{/admin/content/revisions/{id}/localizations(id=${contentRevision.id})}">К списку переводов</a>
     </div>
+    <div class="alert alert-info" role="note"><strong>Как заполнить перевод:</strong> укажите язык, переведите название и описание, затем основной текст. При необходимости добавьте подсказку и объяснение для ученика. Сохраните черновик, проверьте качество и только затем одобрите перевод. Одобрение перевода не означает публикацию каталога.</div>
     <div th:if="${flashSuccess}" class="alert alert-success" th:text="${flashSuccess}"></div>
     <form method="post" th:object="${form}"
           th:action="${localization == null} ? @{/admin/content/revisions/{id}/localizations(id=${contentRevision.id})} : @{/admin/content/localizations/{id}(id=${localization.id})}">
@@ -22,53 +23,53 @@
         <div class="card studio-card mb-4"><div class="card-body p-4">
             <div class="row g-3">
                 <div class="col-md-4">
-                    <label class="form-label" for="locale">BCP-47 locale</label>
+                    <label class="form-label" for="locale">Код языка (BCP-47)</label>
                     <input class="form-control" id="locale" th:field="*{locale}" placeholder="kk-KZ"
-                           th:readonly="${localization != null}">
+                           th:readonly="${localization != null}"><div class="form-text">Код языка и страны: ru-RU, kk-KZ, en-US. После создания код фиксируется.</div>
                     <div class="text-danger small" th:errors="*{locale}"></div>
                 </div>
-                <div class="col-12"><label class="form-label" for="localizedTitle">Localized title</label>
+                <div class="col-12"><label class="form-label" for="localizedTitle">Название на выбранном языке</label>
                     <input class="form-control" id="localizedTitle" th:field="*{title}"
-                           th:readonly="${localization != null and localization.lifecycle.name() != 'DRAFT'}">
+                           th:readonly="${localization != null and localization.lifecycle.name() != 'DRAFT'}"><div class="form-text">Название, которое увидит ученик на выбранном языке.</div>
                     <div class="text-danger small" th:errors="*{title}"></div>
                 </div>
-                <div class="col-12"><label class="form-label">Subtitle</label>
+                <div class="col-12"><label class="form-label">Подзаголовок</label>
                     <input class="form-control" th:field="*{subtitle}"
-                           th:readonly="${localization != null and localization.lifecycle.name() != 'DRAFT'}">
+                           th:readonly="${localization != null and localization.lifecycle.name() != 'DRAFT'}"><div class="form-text">Короткое пояснение к названию на этом языке.</div>
                     <div class="text-danger small" th:errors="*{subtitle}"></div>
                 </div>
-                <div class="col-12"><label class="form-label">Description</label>
+                <div class="col-12"><label class="form-label">Описание</label>
                     <textarea class="form-control" rows="3" th:field="*{description}"
-                              th:readonly="${localization != null and localization.lifecycle.name() != 'DRAFT'}"></textarea>
+                              th:readonly="${localization != null and localization.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Что изучает материал, без изменения учебного смысла.</div>
                     <div class="text-danger small" th:errors="*{description}"></div>
                 </div>
-                <div class="col-12"><label class="form-label">Translation</label>
+                <div class="col-12"><label class="form-label">Перевод учебного текста</label>
                     <textarea class="form-control" rows="6" th:field="*{translation}"
-                              th:readonly="${localization != null and localization.lifecycle.name() != 'DRAFT'}"></textarea>
+                              th:readonly="${localization != null and localization.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Основной перевод содержимого. Сохраняйте смысл исходного урока.</div>
                 </div>
-                <div class="col-12"><label class="form-label">Hint</label>
+                <div class="col-12"><label class="form-label">Подсказка ученику</label>
                     <textarea class="form-control" rows="3" th:field="*{hint}"
-                              th:readonly="${localization != null and localization.lifecycle.name() != 'DRAFT'}"></textarea>
+                              th:readonly="${localization != null and localization.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Не раскрывая правильный ответ, подскажите подход к решению.</div>
                 </div>
-                <div class="col-12"><label class="form-label">Explanation</label>
+                <div class="col-12"><label class="form-label">Объяснение</label>
                     <textarea class="form-control" rows="4" th:field="*{explanation}"
-                              th:readonly="${localization != null and localization.lifecycle.name() != 'DRAFT'}"></textarea>
+                              th:readonly="${localization != null and localization.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Разбор решения или грамматического правила на выбранном языке.</div>
                 </div>
             </div>
         </div></div>
         <div class="d-flex gap-2">
             <button class="btn btn-primary" type="submit"
-                    th:if="${localization == null or localization.lifecycle.name() == 'DRAFT'}">Save localization draft</button>
-            <a class="btn btn-outline-secondary" th:href="@{/admin/content/revisions/{id}/localizations(id=${contentRevision.id})}">Cancel</a>
+                    th:if="${localization == null or localization.lifecycle.name() == 'DRAFT'}">Сохранить черновик перевода</button>
+            <a class="btn btn-outline-secondary" th:href="@{/admin/content/revisions/{id}/localizations(id=${contentRevision.id})}">Отмена</a>
             <span class="text-secondary align-self-center"
-                  th:if="${localization != null and localization.lifecycle.name() != 'DRAFT'}">Approved/review revisions are read-only.</span>
+                  th:if="${localization != null and localization.lifecycle.name() != 'DRAFT'}">Переводы на проверке или после одобрения доступны только для чтения.</span>
         </div>
     </form>
 
     <div th:if="${localization != null}" class="card studio-card mb-4">
         <div class="card-body p-4">
-            <h2 class="h5 mb-3">Localization lifecycle</h2>
-            <p class="text-secondary" th:text="'Current state: ' + ${localization.lifecycle}">Current state</p>
+            <h2 class="h5 mb-3">Этапы согласования перевода</h2>
+            <p class="text-secondary" th:text="'Текущее состояние: ' + ${localization.lifecycle}">Current state</p>
 
             <form th:if="${localization.lifecycle.name() == 'DRAFT'}" method="post"
                   th:action="@{/admin/content/localizations/{id}/review(id=${localization.id})}"
@@ -78,16 +79,16 @@
                     <div th:each="error : ${#fields.globalErrors()}" th:text="${error}">Invalid review</div>
                 </div>
                 <div class="row g-3 mb-3">
-                    <div class="col-md-6"><label class="form-label">Reason</label>
-                        <input class="form-control" th:field="*{reason}">
+                    <div class="col-md-6"><label class="form-label">Причина изменения</label>
+                        <input class="form-control" th:field="*{reason}"><div class="form-text">Зачем перевод передаётся на проверку или одобряется.</div>
                         <div class="text-danger small" th:errors="*{reason}"></div>
                     </div>
-                    <div class="col-md-6"><label class="form-label">Comment</label>
-                        <textarea class="form-control" rows="2" th:field="*{comment}"></textarea>
+                    <div class="col-md-6"><label class="form-label">Комментарий</label>
+                        <textarea class="form-control" rows="2" th:field="*{comment}"></textarea><div class="form-text">Замечания редактора для истории согласования.</div>
                         <div class="text-danger small" th:errors="*{comment}"></div>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-primary">Submit for review</button>
+                <button type="submit" class="btn btn-primary">Передать перевод на проверку</button>
             </form>
 
             <form th:if="${localization.lifecycle.name() == 'READY_FOR_REVIEW'}" method="post"
@@ -98,23 +99,23 @@
                     <div th:each="error : ${#fields.globalErrors()}" th:text="${error}">Invalid approval</div>
                 </div>
                 <div class="row g-3 mb-3">
-                    <div class="col-md-6"><label class="form-label">Reason</label>
-                        <input class="form-control" th:field="*{reason}">
+                    <div class="col-md-6"><label class="form-label">Причина изменения</label>
+                        <input class="form-control" th:field="*{reason}"><div class="form-text">Зачем перевод передаётся на проверку или одобряется.</div>
                         <div class="text-danger small" th:errors="*{reason}"></div>
                     </div>
-                    <div class="col-md-6"><label class="form-label">Comment</label>
-                        <textarea class="form-control" rows="2" th:field="*{comment}"></textarea>
+                    <div class="col-md-6"><label class="form-label">Комментарий</label>
+                        <textarea class="form-control" rows="2" th:field="*{comment}"></textarea><div class="form-text">Замечания редактора для истории согласования.</div>
                         <div class="text-danger small" th:errors="*{comment}"></div>
                     </div>
                 </div>
-                <button type="submit" class="btn btn-success">Approve localization</button>
+                <button type="submit" class="btn btn-success">Одобрить перевод</button>
             </form>
 
             <form th:if="${localization.lifecycle.name() == 'APPROVED'}" method="post"
                   th:action="@{/admin/content/localizations/{id}/next(id=${localization.id})}"
                   th:object="${lifecycleForm}">
                 <input type="hidden" th:field="*{expectedVersion}">
-                <button type="submit" class="btn btn-outline-primary">Create next localization draft</button>
+                <button type="submit" class="btn btn-outline-primary">Создать новую ревизию перевода</button>
             </form>
         </div>
     </div>
