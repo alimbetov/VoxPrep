@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<voxprep schemaVersion="1">
+  <content code="JAVA_RELIABLE_SERVICES_01" type="phrase">
+    <title>Explaining your backend experience</title>
+    <subtitle>Java interview · reliable services</subtitle>
+    <description>Practise a concise introduction to your Java backend experience. Listen to the example, repeat it, then adapt it to your own project.</description>
+    <categoryCode>INTERVIEW</categoryCode>
+    <levelCode>B2</levelCode>
+    <minutes>3</minutes>
+    <availability>ACTIVE</availability>
+    <skill>SPEAKING</skill>
+    <body>
+      <phrase>I build reliable backend services with Java and Spring Boot. I verify recovery paths and monitor production behaviour.</phrase>
+      <usage>Use this phrase when describing your responsibilities in a technical interview. Follow it with one concrete example and a measurable result.</usage>
+      <example>I designed a retry mechanism that recovers safely from temporary failures.</example>
+      <example>I added health checks and alerts to make production issues easier to investigate.</example>
+      <example>In my last project, I reduced request latency by improving database queries.</example>
+    </body>
+  </content>
+</voxprep>
