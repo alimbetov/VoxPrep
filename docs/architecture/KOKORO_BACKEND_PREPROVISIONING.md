@@ -31,9 +31,9 @@ Separate bundle staging tables intentionally avoid misusing existing Piper-only 
 - Model page: https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/tree/1939ad2a8e416c0acfeecc08a694d14ef25f2231
 - Declared model license: Apache-2.0. **Source license metadata alone is not a final legal signoff**.
 
-These are upstream *published metadata*, not checksums of files downloaded on this Mac. The Backend verifies the downloaded bytes on execution. Verify exact remote sizes before enabling; the website rounds them to 92.4 MB and 522 kB.
+These were independently checked by a real GitHub Actions K3 run on SHA `3368e88e2928b5a656c03b6e033bb2b790041e41`: pinned ONNX and three voice files were downloaded and matched SHA-256 and precise size metadata. Real Backend → RustFS provisioning still requires separate acceptance.
 
-## DEV configuration (template — do NOT enable until exact sizes verified)
+## DEV configuration (exact remote bytes verified in K3 CI; real Backend import still outstanding)
 
 Create a **non-secret local** config file, e.g. `config/local/kokoro-provisioning.yml`, loaded by Spring via `spring.config.additional-location` or compatible external configuration. Do not enable in production until approval.
 
@@ -53,29 +53,29 @@ voxprep:
               role: MODEL
               url: https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/onnx/model_quantized.onnx
               sha256: fbae9257e1e05ffc727e951ef9b9c98418e6d79f1c9b6b13bd59f5c9028a1478
-              size-bytes: 0 # REQUIRED: replace with exact trusted size
+              size-bytes: 92361116 # exact SHA-verified K3 real CI metadata
               media-type: application/octet-stream
             - path: voices/af_heart.bin
               role: VOICE
               url: https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/voices/af_heart.bin
               sha256: d583ccff3cdca2f7fae535cb998ac07e9fcb90f09737b9a41fa2734ec44a8f0b
-              size-bytes: 0 # REQUIRED: replace with exact trusted size
+              size-bytes: 522240 # exact SHA-verified K3 real CI metadata
               media-type: application/octet-stream
             - path: voices/am_michael.bin
               role: VOICE
               url: https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/voices/am_michael.bin
               sha256: 1d1f21dd8da39c30705cd4c75d039d265e9bc4a2a93ed09bc9e1b1225eb95ba1
-              size-bytes: 0 # REQUIRED: replace with exact trusted size
+              size-bytes: 522240 # exact SHA-verified K3 real CI metadata
               media-type: application/octet-stream
             - path: voices/bf_emma.bin
               role: VOICE
               url: https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/voices/bf_emma.bin
               sha256: 669fe0647f9dd04fcab92f1439a40eeb4c8b4ab1f82e4996fe3d918ce4a63b73
-              size-bytes: 0 # REQUIRED: replace with exact trusted size
+              size-bytes: 522240 # exact SHA-verified K3 real CI metadata
               media-type: application/octet-stream
 ```
 
-The zero sizes **intentionally fail validation**, preventing accidental installation with rounded/fabricated sizes.
+Exact byte lengths are verified: ONNX `92361116` bytes; each voice `522240` bytes. Keep `enabled: false` until the controlled Backend/RustFS import is scheduled and verified.
 
 To obtain exact size and hashes via official Hugging Face metadata (developer workstation):
 
@@ -143,3 +143,17 @@ Backend checks that the file belongs to the staged bundle, asset is READY, SHA/s
 Source: pinned official Hugging Face `onnx-community/Kokoro-82M-v1.0-ONNX` file cards. The published file sizes are rounded; configure exact byte sizes only after trusted metadata retrieval.
 
 **Runtime compatibility blocker:** these three `voices/<code>.bin` files are per-voice style arrays. The chosen Python `kokoro-onnx` library expects an aggregated `voices.bin` (NumPy NPZ archive containing named voice arrays) from its model release. No on-the-fly repackaging or cross-repository mixing is authorized until compatibility tests prove the resulting bundle. For K3, use one verified upstream model+aggregate voice release or implement and qualify a decoder for this ONNX-community export. Do not enable Kokoro based only on this documentation.
+
+## Real K3 inference evidence (2026-11-06)
+
+GitHub Actions run [42175794324](https://github.com/alimbetov/VoxPrep/actions/runs/42175794324), job [127753831404](https://github.com/alimbetov/VoxPrep/actions/runs/42175794324/job/127753831404), source SHA `3368e88e2928b5a656c03b6e033bb2b790041e41`, **SUCCESS**.
+
+All four file hashes matched pinned values above; exact byte lengths: ONNX `92361116`, each voice `522240`. Actual `kokoro-onnx` ONNX inference succeeded with the locally generated three-voice NPZ, followed by WAV and ffmpeg/ffprobe MP3:
+
+| Voice | Locale | MP3 duration (ms) | MP3 SHA-256 |
+|---|---|---:|---|
+| `af_heart` | en-US | 2581 | `3ee436f32d2f3a7e516ff76e14c92b1b8331b746f37f8c75c5ebb1780d2689a8` |
+| `am_michael` | en-US | 2432 | `64ca7b1e38713e746727656e669a9bcff453f318212e23fc05d88ed057ab927b` |
+| `bf_emma` | en-GB | 2731 | `6fae8305ee53279b957e4f8130305d2ce5fdf59c59a7593abf0e0f878c6daa85` |
+
+GitHub artifact `kokoro-k3-real-evidence` (artifact ID `13483028214`) contains WAV/MP3 and machine-readable reports. These prove **real audio production**, not acoustic quality assessment by a listener, and not yet Backend→RustFS READY→Content Studio preview.
