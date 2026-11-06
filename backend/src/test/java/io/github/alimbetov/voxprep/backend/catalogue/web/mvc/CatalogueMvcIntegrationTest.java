@@ -194,7 +194,7 @@ class CatalogueMvcIntegrationTest {
         mockMvc.perform(post("/admin/catalogue/verticals")
                         .with(user("admin").roles("ADMIN")).with(csrf())
                         .param("expectedVersion", "0")
-                        .param("code", "lower-case")
+                        .param("code", "invalid code")
                         .param("sectionCode", "CAREER")
                         .param("title", "Invalid code")
                         .param("description", "Must stay in form validation")

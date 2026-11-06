@@ -12,7 +12,6 @@
         </div>
         <a class="btn btn-outline-secondary" th:href="@{/admin/content/revisions/{id}/localizations(id=${contentRevision.id})}">Back to localizations</a>
     </div>
-    <div th:if="${flashSuccess}" class="alert alert-success" th:text="${flashSuccess}"></div>
     <form method="post" th:object="${form}"
           th:action="${localization == null} ? @{/admin/content/revisions/{id}/localizations(id=${contentRevision.id})} : @{/admin/content/localizations/{id}(id=${localization.id})}">
         <input type="hidden" th:field="*{expectedVersion}">
