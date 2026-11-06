@@ -1,5 +1,7 @@
 from __future__ import annotations
 import hashlib
+import fcntl
+from contextlib import contextmanager
 import re
 import shutil
 import tempfile
@@ -72,6 +74,23 @@ def file_hash(path: Path) -> str:
             h.update(chunk)
     return h.hexdigest()
 
+@contextmanager
+def _manifest_lock(root: Path, digest: str):
+    """Cross-process advisory lock; stable lock files are never deleted.
+
+    Prevents concurrent downloads/rename on a shared cache directory.
+    A killed holder releases the OS lock automatically.
+    """
+    root.mkdir(parents=True, exist_ok=True)
+    lock_path = root / (".lock-" + digest)
+    with lock_path.open("a+b") as handle:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+
+
 class KokoroModelCache:
     def __init__(self, root: Path, source: ModelSourcePort, max_artifact_bytes: int = 256*1024*1024):
         self.root = root
@@ -83,24 +102,32 @@ class KokoroModelCache:
         data = self.source.fetch_manifest(bundle_code)
         artifacts = validate_manifest(data, job)
         directory = self.root / job.manifest_sha256
-        if directory.is_dir() and all(
-            (directory / entry["path"]).is_file()
-            and (directory / entry["path"]).stat().st_size == entry["sizeBytes"]
-            and file_hash(directory / entry["path"]) == entry["sha256"]
-            for entry in artifacts
-        ):
+        # All reads/repairs/downloads share the same cross-process lock.
+        # This also prevents readers from observing a partially replaced cache.
+        with _manifest_lock(self.root, job.manifest_sha256):
+            if directory.is_symlink():
+                raise ModelCacheInstallError("Symlinked model cache entry is not allowed")
+            if directory.is_dir() and all(
+                (directory / entry["path"]).is_file()
+                and not (directory / entry["path"]).is_symlink()
+                and (directory / entry["path"]).stat().st_size == entry["sizeBytes"]
+                and file_hash(directory / entry["path"]) == entry["sha256"]
+                for entry in artifacts
+            ):
+                return directory
+            with tempfile.TemporaryDirectory(prefix=".kokoro-", dir=self.root) as staging:
+                work = Path(staging)
+                for entry in artifacts:
+                    target = work / entry["path"]
+                    self.source.download_artifact(
+                        model_code=bundle_code, asset_id=entry["assetId"],
+                        destination=target,
+                        max_bytes=min(self.max_artifact_bytes, entry["sizeBytes"]))
+                    if (not target.is_file() or target.is_symlink()
+                            or target.stat().st_size != entry["sizeBytes"]
+                            or file_hash(target) != entry["sha256"]):
+                        raise ModelChecksumError("Kokoro artifact hash/size mismatch")
+                if directory.exists():
+                    shutil.rmtree(directory)
+                work.rename(directory)
             return directory
-        self.root.mkdir(parents=True, exist_ok=True)
-        with tempfile.TemporaryDirectory(prefix=".kokoro-", dir=self.root) as staging:
-            work = Path(staging)
-            for entry in artifacts:
-                target = work / entry["path"]
-                self.source.download_artifact(model_code=bundle_code,
-                    asset_id=entry["assetId"], destination=target,
-                    max_bytes=min(self.max_artifact_bytes, entry["sizeBytes"]))
-                if target.stat().st_size != entry["sizeBytes"] or file_hash(target) != entry["sha256"]:
-                    raise ModelChecksumError("Kokoro artifact hash/size mismatch")
-            if directory.exists():
-                shutil.rmtree(directory)
-            work.rename(directory)
-        return directory
