@@ -102,7 +102,10 @@ void main() {
         sections: [
           TopicSection(
             heading: 'Long lesson',
-            text: List<String>.filled(160, 'A detailed learning paragraph.').join(' '),
+            text: List<String>.filled(
+              160,
+              'A detailed learning paragraph.',
+            ).join(' '),
           ),
           TopicSection(heading: 'Last section', text: 'End of lesson'),
         ],
@@ -133,5 +136,4 @@ void main() {
     expect(tester.getSize(scrolling).height, lessThan(420));
     expect(find.text('Good morning'), findsOneWidget);
   });
-
 }
