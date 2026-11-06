@@ -1,9 +1,19 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org"
+<html lang="ru" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/fragments/shell :: layout('Create content', 'content', ~{::main})}">
 <main>
-    <h1 class="h3">Create first content revision</h1>
-    <p class="text-secondary">New content starts in DRAFT revision 1. The editor and publication lifecycle validate it before release.</p>
+    <h1 class="h3">Создание нового материала</h1>
+    <p class="text-secondary">Новый материал создаётся как DRAFT (черновик). Проверка, озвучивание, одобрение и публикация выполняются отдельно.</p>
+    <div class="alert alert-info" role="note">
+        <strong>С чего начать:</strong> выберите тип материала → заполните карточку → внесите учебное содержимое → создайте черновик.
+        Тип определяет доступные поля. После сохранения откроется редактор с переводами, изображениями, озвучиванием и этапами согласования.
+        <details class="mt-2"><summary>Какой тип материала выбрать?</summary>
+            <p class="mt-2 mb-1"><strong>Phrase</strong> — отдельная фраза и примеры; <strong>Vocabulary</strong> — слово и значение;
+            <strong>Interview</strong> — вопрос собеседования и образец ответа; <strong>Topic</strong> — урок из разделов;
+            <strong>Shadowing</strong> — повторение речи по тексту; <strong>Question</strong> — вопрос с вариантами;
+            <strong>Practice test</strong> — набор ранее созданных вопросов.</p>
+        </details>
+    </div>
     <form method="post" th:action="@{/admin/content/revisions}" th:object="${form}">
         <input type="hidden" th:field="*{expectedVersion}">
         <div th:if="${#fields.hasErrors('*')}" class="alert alert-danger">
@@ -11,49 +21,49 @@
         </div>
         <div class="card studio-card mb-4"><div class="card-body">
             <div class="row g-3">
-                <div class="col-md-6"><label class="form-label">Content code</label><input name="contentCode" class="form-control" required maxlength="128" pattern="[A-Za-z0-9][A-Za-z0-9._-]*" placeholder="INTERVIEW_INTRO_01"></div>
-                <div class="col-md-6"><label class="form-label">Content type</label><select class="form-select" th:field="*{bodyType}">
-                    <option value="phrase">Phrase</option><option value="vocabulary">Vocabulary</option>
+                <div class="col-md-6"><label class="form-label">Уникальный код материала</label><input name="contentCode" class="form-control" required maxlength="128" pattern="[A-Za-z0-9][A-Za-z0-9._-]*" placeholder="INTERVIEW_INTRO_01"><div class="form-text">Постоянный технический идентификатор: латинские буквы, цифры, точка, подчёркивание и дефис. Например INTERVIEW_INTRO_01.</div></div>
+                <div class="col-md-6"><label class="form-label">Тип учебного материала</label><select class="form-select" th:field="*{bodyType}">
+                    <option value="phrase">Фраза</option><option value="vocabulary">Vocabulary</option>
                     <option value="interview">Interview</option><option value="topic">Topic</option>
                     <option value="shadowing">Shadowing</option><option value="question">Question</option>
                     <option value="practice_test">Practice test</option>
                 </select></div>
-                <div class="col-12"><label class="form-label">Title</label><input th:field="*{title}" class="form-control" required maxlength="512"></div>
-                <div class="col-12"><label class="form-label">Subtitle</label><input th:field="*{subtitle}" class="form-control" required maxlength="512"></div>
-                <div class="col-12"><label class="form-label">Description</label><textarea th:field="*{description}" class="form-control" required maxlength="4000"></textarea></div>
-                <div class="col-md-4"><label class="form-label">Category</label><input th:field="*{categoryCode}" class="form-control" required></div>
-                <div class="col-md-4"><label class="form-label">Level</label><input th:field="*{levelCode}" class="form-control" required></div>
-                <div class="col-md-2"><label class="form-label">Minutes</label><input th:field="*{minutes}" type="number" min="1" class="form-control" required></div>
-                <div class="col-md-2"><label class="form-label">Availability</label><select th:field="*{availability}" class="form-select"><option value="ACTIVE">ACTIVE</option><option value="INACTIVE">INACTIVE</option></select></div>
-                <div class="col-12"><label class="form-label">Skills (one code per line)</label><textarea th:field="*{skillCodes}" class="form-control"></textarea></div>
+                <div class="col-12"><label class="form-label">Название</label><input th:field="*{title}" class="form-control" required maxlength="512"><div class="form-text">Название, которое увидит ученик.</div></div>
+                <div class="col-12"><label class="form-label">Подзаголовок</label><input th:field="*{subtitle}" class="form-control" required maxlength="512"><div class="form-text">Короткая формулировка темы.</div></div>
+                <div class="col-12"><label class="form-label">Описание</label><textarea th:field="*{description}" class="form-control" required maxlength="4000"></textarea><div class="form-text">Чему научится ученик и что он сделает.</div></div>
+                <div class="col-md-4"><label class="form-label">Категория</label><input th:field="*{categoryCode}" class="form-control" required><div class="form-text">Код уже существующей категории в каталоге.</div></div>
+                <div class="col-md-4"><label class="form-label">Уровень</label><input th:field="*{levelCode}" class="form-control" required><div class="form-text">Уровень сложности: например A1, B1, B2.</div></div>
+                <div class="col-md-2"><label class="form-label">Минуты</label><input th:field="*{minutes}" type="number" min="1" class="form-control" required><div class="form-text">Примерное время изучения в минутах.</div></div>
+                <div class="col-md-2"><label class="form-label">Доступность</label><select th:field="*{availability}" class="form-select"><option value="ACTIVE">ACTIVE</option><option value="INACTIVE">INACTIVE</option></select><div class="form-text">ACTIVE — доступный материал; INACTIVE — неактивный.</div></div>
+                <div class="col-12"><label class="form-label">Навыки (по одному коду на строку)</label><textarea th:field="*{skillCodes}" class="form-control"></textarea><div class="form-text">Используйте коды существующих навыков, по одному на строку.</div></div>
             </div>
         </div></div>
         <div class="card studio-card mb-4"><div class="card-body">
-            <h2 class="h5">Content body</h2>
-            <p class="text-secondary small">Only fields for the selected content type are displayed. Changes are saved as DRAFT revision 1.</p>
+            <h2 class="h5">Содержимое урока</h2>
+            <p class="text-secondary small">Показаны только поля выбранного типа. После создания материал останется черновиком.</p>
             <div class="row g-3">
-                <div class="col-md-6" data-content-types="phrase"><label class="form-label">Phrase</label><input th:field="*{phrase}" class="form-control"></div>
-                <div class="col-md-6" data-content-types="phrase"><label class="form-label">Usage</label><input th:field="*{usage}" class="form-control"></div>
-                <div class="col-12" data-content-types="phrase,vocabulary"><label class="form-label">Examples (one per line)</label><textarea data-structured="examples" th:field="*{examples}" class="form-control"></textarea></div>
-                <div class="col-md-4" data-content-types="vocabulary"><label class="form-label">Term</label><input th:field="*{term}" class="form-control"></div>
-                <div class="col-md-4" data-content-types="vocabulary"><label class="form-label">Definition</label><input th:field="*{definition}" class="form-control"></div>
-                <div class="col-md-4" data-content-types="vocabulary"><label class="form-label">Part of speech</label><input th:field="*{partOfSpeech}" class="form-control"></div>
-                <div class="col-12" data-content-types="interview"><label class="form-label">Prompt</label><textarea th:field="*{prompt}" class="form-control"></textarea></div>
-                <div class="col-12" data-content-types="interview"><label class="form-label">Model answer</label><textarea th:field="*{modelAnswer}" class="form-control"></textarea></div>
-                <div class="col-12" data-content-types="interview"><label class="form-label">Key points (one per line)</label><textarea data-structured="keyPoints" th:field="*{keyPoints}" class="form-control"></textarea></div>
-                <div class="col-12" data-content-types="topic"><label class="form-label">Topic sections (heading|text per line)</label><textarea data-structured="sections" th:field="*{sections}" class="form-control"></textarea></div>
-                <div class="col-12" data-content-types="shadowing"><label class="form-label">Transcript</label><textarea th:field="*{transcript}" class="form-control"></textarea></div>
-                <div class="col-12" data-content-types="shadowing"><label class="form-label">Segments (startMs|endMs|text)</label><textarea data-structured="segments" th:field="*{segments}" class="form-control"></textarea></div>
-                <div class="col-12" data-content-types="question"><label class="form-label">Question text</label><textarea th:field="*{questionText}" class="form-control"></textarea></div>
-                <div class="col-12" data-content-types="question"><label class="form-label">Explanation</label><textarea th:field="*{explanation}" class="form-control"></textarea></div>
-                <div class="col-12" data-content-types="question"><label class="form-label">Options (key|true|text per line)</label><textarea data-structured="options" th:field="*{options}" class="form-control"></textarea></div>
-                <div class="col-12" data-content-types="practice_test"><label class="form-label">Practice test instructions</label><textarea th:field="*{instructions}" class="form-control"></textarea></div>
-                <div class="col-md-4" data-content-types="practice_test"><label class="form-label">Passing score percent</label><input type="number" min="0" max="100" th:field="*{passingScorePercent}" class="form-control"></div>
-                <div class="col-12" data-content-types="practice_test"><label class="form-label">Question revision IDs (one UUID per line)</label><textarea data-question-picker="true" th:field="*{questionRevisionIds}" class="form-control"></textarea></div>
+                <div class="col-md-6" data-content-types="phrase"><label class="form-label">Фраза</label><input th:field="*{phrase}" class="form-control"><div class="form-text">Фраза для произношения и изучения.</div></div>
+                <div class="col-md-6" data-content-types="phrase"><label class="form-label">Применение</label><input th:field="*{usage}" class="form-control"><div class="form-text">В каких ситуациях её используют.</div></div>
+                <div class="col-12" data-content-types="phrase,vocabulary"><label class="form-label">Примеры (по одному на строку)</label><textarea data-structured="examples" th:field="*{examples}" class="form-control"></textarea><div class="form-text">Каждый пример в отдельной строке.</div></div>
+                <div class="col-md-4" data-content-types="vocabulary"><label class="form-label">Слово / термин</label><input th:field="*{term}" class="form-control"><div class="form-text">Изучаемое слово.</div></div>
+                <div class="col-md-4" data-content-types="vocabulary"><label class="form-label">Определение</label><input th:field="*{definition}" class="form-control"><div class="form-text">Значение слова.</div></div>
+                <div class="col-md-4" data-content-types="vocabulary"><label class="form-label">Часть речи</label><input th:field="*{partOfSpeech}" class="form-control"><div class="form-text">Часть речи: noun, verb, adjective и т. п.</div></div>
+                <div class="col-12" data-content-types="interview"><label class="form-label">Вопрос интервью</label><textarea th:field="*{prompt}" class="form-control"></textarea><div class="form-text">Вопрос, который задают ученику.</div></div>
+                <div class="col-12" data-content-types="interview"><label class="form-label">Пример ответа</label><textarea th:field="*{modelAnswer}" class="form-control"></textarea><div class="form-text">Образец ответа.</div></div>
+                <div class="col-12" data-content-types="interview"><label class="form-label">Ключевые тезисы</label><textarea data-structured="keyPoints" th:field="*{keyPoints}" class="form-control"></textarea><div class="form-text">Один тезис на строку.</div></div>
+                <div class="col-12" data-content-types="topic"><label class="form-label">Разделы темы (заголовок|текст)</label><textarea data-structured="sections" th:field="*{sections}" class="form-control"></textarea><div class="form-text">Одна секция на строку, формат: Заголовок|Текст.</div></div>
+                <div class="col-12" data-content-types="shadowing"><label class="form-label">Текст упражнения</label><textarea th:field="*{transcript}" class="form-control"></textarea><div class="form-text">Полный текст упражнения Shadowing.</div></div>
+                <div class="col-12" data-content-types="shadowing"><label class="form-label">Сегменты (начало|конец|текст)</label><textarea data-structured="segments" th:field="*{segments}" class="form-control"></textarea><div class="form-text">Временные метки — миллисекунды, формат: 0|1200|Hello.</div></div>
+                <div class="col-12" data-content-types="question"><label class="form-label">Текст вопроса</label><textarea th:field="*{questionText}" class="form-control"></textarea><div class="form-text">Сформулируйте один понятный вопрос.</div></div>
+                <div class="col-12" data-content-types="question"><label class="form-label">Объяснение ответа</label><textarea th:field="*{explanation}" class="form-control"></textarea><div class="form-text">Объясните правильный ответ.</div></div>
+                <div class="col-12" data-content-types="question"><label class="form-label">Варианты (ключ|true/false|текст)</label><textarea data-structured="options" th:field="*{options}" class="form-control"></textarea><div class="form-text">Один вариант на строку. Пример: A|true|Correct или B|false|Wrong.</div></div>
+                <div class="col-12" data-content-types="practice_test"><label class="form-label">Инструкция к тесту</label><textarea th:field="*{instructions}" class="form-control"></textarea><div class="form-text">Правила прохождения теста для ученика.</div></div>
+                <div class="col-md-4" data-content-types="practice_test"><label class="form-label">Проходной балл, %</label><input type="number" min="0" max="100" th:field="*{passingScorePercent}" class="form-control"><div class="form-text">Минимальный процент правильных ответов.</div></div>
+                <div class="col-12" data-content-types="practice_test"><label class="form-label">Ревизии вопросов (один UUID на строку)</label><textarea data-question-picker="true" th:field="*{questionRevisionIds}" class="form-control"></textarea><div class="form-text">Добавьте существующие ревизии вопросов; сначала создайте материалы типа Question.</div></div>
             </div>
         </div></div>
-        <button class="btn btn-primary" type="submit">Create DRAFT revision 1</button>
-        <a class="btn btn-outline-secondary" th:href="@{/admin/content}">Cancel</a>
+        <button class="btn btn-primary" type="submit">Создать черновик DRAFT 1</button>
+        <a class="btn btn-outline-secondary" th:href="@{/admin/content}">Отмена</a>
     </form>
     <script>
         (function () {
