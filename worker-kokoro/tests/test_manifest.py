@@ -131,3 +131,52 @@ def test_symlinked_cache_directory_is_rejected(tmp_path):
 
     with pytest.raises(ModelCacheInstallError, match="Symlinked"):
         KokoroModelCache(tmp_path, Source()).ensure_model(job(m["manifestSha256"]))
+
+
+def test_cache_repair_waits_while_model_in_use(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    import threading
+    import time
+
+    payload = b"verified-onnx"
+    m = manifest(payload)
+    j = job(m["manifestSha256"])
+    entered = threading.Event()
+    release = threading.Event()
+    repair_started = threading.Event()
+
+    class Source:
+        calls = 0
+        def fetch_manifest(self, code):
+            return m
+        def download_artifact(self, *, destination, **kwargs):
+            self.calls += 1
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(payload)
+
+    source = Source()
+    cache = KokoroModelCache(tmp_path, source)
+    path = cache.ensure_model(j)
+    (path / m["artifacts"][0]["path"]).write_bytes(b"corrupt")
+
+    def holder():
+        with cache.hold_model(j) as directory:
+            entered.set()
+            assert (directory / m["artifacts"][0]["path"]).read_bytes() == payload
+            assert release.wait(3)
+
+    def second():
+        assert entered.wait(3)
+        repair_started.set()
+        return cache.ensure_model(j)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        future_holder = pool.submit(holder)
+        future_repair = pool.submit(second)
+        assert entered.wait(3)
+        assert repair_started.wait(3)
+        time.sleep(0.1)
+        assert not future_repair.done()
+        release.set()
+        future_holder.result(timeout=3)
+        assert future_repair.result(timeout=3) == path
