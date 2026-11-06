@@ -1,27 +1,26 @@
-# Independent Kokoro-82M Worker (K2 — in development)
+# Independent Kokoro-82M Worker (K3 inference proven; K4 acceptance pending)
 
 This service is deliberately separate from the production Piper `worker/`.
 The specification is `docs/architecture/KOKORO_WORKER_V1_1_SPEC.md`.
 
-**Not production-ready.** Backend V2 currently responds 503 to Kokoro claim,
-and lacks engine-scoped V2 heartbeat/fail/output. The backend pre-provisioning
-example currently stages `onnx/model_quantized.onnx` and `voices/af_heart.bin`.
-The selected kokoro-onnx adapter expects `voices.bin` (aggregate), so a
-runtime-compatible, pinned and commercially reviewed model bundle must be
-qualified before real inference can work. Do not rename voice files to mask
-a format mismatch.
+**Not production-ready.** K3 real ONNX → WAV → MP3 ran successfully for
+`af_heart`, `am_michael`, `bf_emma` in GitHub Actions run 42175794324
+(SHA `3368e88e2928b5a656c03b6e033bb2b790041e41`). This proves real
+inference, not real Backend → PostgreSQL → RustFS → Content Studio acceptance.
+Backend V2 Kokoro lifecycle and immutable snapshot contracts are implemented
+on this feature branch; Kokoro remains disabled by default pending K4.
 
 The Worker does **not** fall back to Piper V1 endpoints. If V2 is unavailable,
 it fails closed rather than submitting Kokoro audio under Piper identity.
 
-Planned flow:
+Implemented contract (end-to-end DEV acceptance still pending):
 ```
 Backend pre-provisioning → PostgreSQL/RustFS STAGED bundle
-→ V2 claim (KOKORO, currently disabled)
+→ V2 claim (KOKORO; behind explicit feature flag)
 → authenticated manifest/artifacts → SHA-256 cache
 → verified per-voice style vectors → local NPZ → Kokoro ONNX → WAV
 → FFmpeg/ffprobe MP3
-→ V2 output finalize (not yet implemented on Backend)
+→ V2 engine-fenced output finalization (implemented, real E2E pending)
 ```
 
 Configuration: `BASE_URL`, `KOKORO_WORKER_TOKEN`, `WORKER_ID`,
@@ -45,7 +44,7 @@ rejects mismatched pairs, missing or corrupt style files, and oversized PCM.
 Kokoro itself may require a different phonemizer/model export; K3 must prove
 all three voices with real WAV and MP3 before production activation.
 
-## Required real K3 smoke (NOT YET RUN)
+## Reproduce real K3 smoke (passed in CI)
 
 After the Backend has genuinely pre-provisioned a pinned 4-artifact bundle
 (`onnx/model_quantized.onnx`, `voices/af_heart.bin`,
@@ -67,3 +66,15 @@ separately requires real PostgreSQL→Backend→Kokoro Worker→RustFS READY→M
 MP3-preview evidence after V2 lifecycle and immutable fingerprint binding.
 
 Never mark K3/K4 accepted based on mock tests or the existence of this script.
+
+## K4 release gate (not yet accepted)
+
+1. Provision pinned 4-artifact model bundle into real DEV PostgreSQL/RustFS; verify exact SHA-256 and sizes.
+2. Register, review and explicitly activate three Kokoro voice models, retaining Piper isolation.
+3. With isolated Kokoro worker token and feature flag enabled only in DEV, create content through real MVC Content Studio.
+4. Confirm one immutable V2 job per fingerprint, authenticated engine-scoped claim and voice SHA binding.
+5. Run real worker inference, heartbeat, MP3 upload, finalization to RustFS, READY state and browser preview.
+6. Adversarial tests: parallel claims, expired lease, duplicate finalize, corrupt bundle, restart, token rotation and RustFS outage/retry.
+7. Run exact-head-SHA complete CI and human audio/license review. Disable Kokoro again if any check fails.
+
+K3 CI alone does **not** satisfy K4. Do not merge this Draft PR or enable Kokoro in production before K4 evidence.
