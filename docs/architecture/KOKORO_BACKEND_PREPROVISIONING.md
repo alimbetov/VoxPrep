@@ -61,6 +61,18 @@ voxprep:
               sha256: d583ccff3cdca2f7fae535cb998ac07e9fcb90f09737b9a41fa2734ec44a8f0b
               size-bytes: 0 # REQUIRED: replace with exact trusted size
               media-type: application/octet-stream
+            - path: voices/am_michael.bin
+              role: VOICE
+              url: https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/voices/am_michael.bin
+              sha256: 1d1f21dd8da39c30705cd4c75d039d265e9bc4a2a93ed09bc9e1b1225eb95ba1
+              size-bytes: 0 # REQUIRED: replace with exact trusted size
+              media-type: application/octet-stream
+            - path: voices/bf_emma.bin
+              role: VOICE
+              url: https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/1939ad2a8e416c0acfeecc08a694d14ef25f2231/voices/bf_emma.bin
+              sha256: 669fe0647f9dd04fcab92f1439a40eeb4c8b4ab1f82e4996fe3d918ce4a63b73
+              size-bytes: 0 # REQUIRED: replace with exact trusted size
+              media-type: application/octet-stream
 ```
 
 The zero sizes **intentionally fail validation**, preventing accidental installation with rounded/fabricated sizes.
@@ -73,7 +85,7 @@ from huggingface_hub import HfApi
 repo = "onnx-community/Kokoro-82M-v1.0-ONNX"
 rev = "1939ad2a8e416c0acfeecc08a694d14ef25f2231"
 info = HfApi().model_info(repo_id=repo, revision=rev, files_metadata=True)
-wanted = {"onnx/model_quantized.onnx", "voices/af_heart.bin"}
+wanted = {"onnx/model_quantized.onnx", "voices/af_heart.bin", "voices/am_michael.bin", "voices/bf_emma.bin"}
 for file in info.siblings:
     if file.rfilename in wanted:
         print(file.rfilename, "size=", file.size, "lfs=", file.lfs)
@@ -119,3 +131,15 @@ Backend checks that the file belongs to the staged bundle, asset is READY, SHA/s
 5. Test restart, corrupt asset, concurrent bootstrap, replay, rollback and exact SHA CI.
 
 **Never assert a model is downloaded merely because these code/config files were committed.**
+
+## Educational voice pilot (source-pinned, not yet runtime-qualified)
+
+| Voice code | Language | Product intent | SHA256 |
+|---|---|---|---|
+| `af_heart` | en-US | Main narrator / lessons | `d583ccff3cdca2f7fae535cb998ac07e9fcb90f09737b9a41fa2734ec44a8f0b` |
+| `am_michael` | en-US | Second dialogue speaker | `1d1f21dd8da39c30705cd4c75d039d265e9bc4a2a93ed09bc9e1b1225eb95ba1` |
+| `bf_emma` | en-GB | British pronunciation practice | `669fe0647f9dd04fcab92f1439a40eeb4c8b4ab1f82e4996fe3d918ce4a63b73` |
+
+Source: pinned official Hugging Face `onnx-community/Kokoro-82M-v1.0-ONNX` file cards. The published file sizes are rounded; configure exact byte sizes only after trusted metadata retrieval.
+
+**Runtime compatibility blocker:** these three `voices/<code>.bin` files are per-voice style arrays. The chosen Python `kokoro-onnx` library expects an aggregated `voices.bin` (NumPy NPZ archive containing named voice arrays) from its model release. No on-the-fly repackaging or cross-repository mixing is authorized until compatibility tests prove the resulting bundle. For K3, use one verified upstream model+aggregate voice release or implement and qualify a decoder for this ONNX-community export. Do not enable Kokoro based only on this documentation.
