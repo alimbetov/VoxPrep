@@ -46,7 +46,7 @@ A model label such as `Kokoro-82M-v1.0` is not a fully reproducible bundle. Befo
 - [x] Added PostgreSQL fixtures for Piper and Kokoro and engine-scoped claim/concurrent same-engine checks; exact-SHA execution pending. Mixed-engine parallel / expired-lease V2 matrix remains outstanding.
 - [x] Added `/internal/v2/tts/jobs/claim` with engine identity determined from token and atomic engine-scoped SQL; Kokoro returns 503 until delivery/callbacks are qualified.
 - [ ] Initial separate Piper/Kokoro credential lookup added, including shared-secret fail-closed; rotation and principal-bound heartbeat/fail/output/model-artifact authorization still outstanding.
-- [ ] Additive engine constraint expansion added, but manifest persistence/assets not yet implemented.
+- [x] Additive engine constraint expansion; Kokoro staging bundle/artifact tables plus Backend-only prefetch and read-only V2 bundle delivery added. Real pinned DEV import and full model-to-voice linking are still NOT RUN.
 - [ ] Canonical V2 manifest value object and fingerprint function with unit tests added; not yet persisted or used for enqueue; legacy V1 remains unchanged.
 - [x] Kokoro enrollment is explicitly denied at job preparation; V2 Kokoro claim is disabled; configuration flag is default false.
 - [ ] Exact-SHA full Piper integration and Worker regression green.
@@ -73,4 +73,8 @@ A model label such as `Kokoro-82M-v1.0` is not a fully reproducible bundle. Befo
 - `TtsFingerprint.computeV2`: canonical hash for future Kokoro jobs; **not yet called by preparation**.
 - Test classes: `WorkerV2EngineAuthenticationTest`, `TtsArtifactManifestTest`, `TtsFingerprintV2Test`; expanded `TtsJobLeaseIntegrationTest`.
 
-**Open blocker:** do not enable Kokoro via configuration alone. There is no production-ready V2 manifest delivery or identity-bound heartbeat/fail/output protocol, model provisioning remains Piper-shaped, and no real Kokoro inference has run.
+**Open blocker:** do not enable Kokoro jobs. Staging provisioning and read-only V2 bundle delivery have been added, but real DEV import and complete Worker V2 claim/callback authorization, fingerprint persistence, and actual Kokoro inference are NOT ACCEPTED. The existing source/asset APIs buffer artifact bytes; production-size streaming and memory qualification remain open.
+
+## K1 addendum: Backend pre-download for Kokoro
+
+An explicit opt-in `KokoroBundleProvisioningBootstrap` prefetches a pinned ONNX+voice bundle from Hugging Face using existing `TtsModelArtifactSource`, validates exact hash/byte count, ingests READY assets into RustFS with `FileAssetIngestService`, and commits an append-only STAGED bundle manifest in PostgreSQL. The V2 read-only bundle API serves these files to a separately authenticated Kokoro identity; direct Worker→Hugging Face is unnecessary. The startup flag defaults OFF. See `KOKORO_BACKEND_PREPROVISIONING.md` for verified source revision, external config, and still-unverified exact byte sizes. Staging != voice activation.
