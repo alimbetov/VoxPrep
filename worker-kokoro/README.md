@@ -93,3 +93,26 @@ Backend model delivery/ingest streaming**, nor remove the audio file's temporary
 on-disk footprint. Real long-form audio QC, lease expiry and RustFS acceptance
 are still K4 blockers. Sentence detection uses simple punctuation heuristics,
 not linguistic segmentation; pauses across chunks need human listening review.
+
+## K4.3 hardening update (2026-11-06)
+
+- Shared manifest cache installations use a persistent per-digest advisory
+  `flock`, covering validation, download, checksum and atomic directory install.
+  A crashed process releases the OS lock; never delete stable lock files.
+  The current implementation targets macOS/Linux worker hosts.
+- The derived three-voice `voices.bin` is recreated from checked source
+  vectors and atomically replaced, without an unlink window for concurrent readers.
+- Backend Kokoro V2 model delivery uses the production RustFS adapter's
+  `openRead` streaming path, 64-KiB blocks and two verification passes.
+  Corrupt upstream bytes fail the preflight SHA/size verification; corrupted
+  bytes during the second pass cause stream failure and the Worker still
+  validates exact downloaded SHA/size before installation.
+- **Outstanding:** initial upstream Hugging Face fetch and
+  `FileAssetIngestService.IngestCommand` still use `byte[]` and copies.
+  True end-to-end streaming ingestion needs a separate change to the shared
+  storage/ingest boundary, with backwards compatibility tests.
+- **Outstanding:** no real local Backend + PostgreSQL + RustFS + MVC browser
+  acceptance has been executed for this branch. Full lease/claim/replay,
+  token-rotation, long-duration and restart scenarios require K4 evidence.
+
+Production Kokoro feature flag remains OFF; PR remains Draft.
