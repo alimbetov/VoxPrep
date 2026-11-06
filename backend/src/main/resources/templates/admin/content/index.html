@@ -1,28 +1,38 @@
 <!DOCTYPE html>
-<html lang="en" xmlns:th="http://www.thymeleaf.org"
+<html lang="ru" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/fragments/shell :: layout('Content', 'content', ~{::main})}">
 <main>
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <span class="badge text-bg-secondary mb-2">MVC-R3.1</span>
-            <h1 class="h3 mb-1">Content revisions</h1>
-            <p class="text-secondary mb-0">Create the first revision or edit existing drafts through the production authoring service.</p>
+            <h1 class="h3 mb-1">Материалы и их ревизии</h1>
+            <p class="text-secondary mb-0">Здесь находятся учебные материалы. Откройте нужную ревизию, чтобы изменить текст, добавить переводы и изображения, создать аудио или отправить материал на проверку.</p>
         </div>
-        <a class="btn btn-primary" th:href="@{/admin/content/revisions/new}">Create new content</a>
+        <a class="btn btn-primary" th:href="@{/admin/content/revisions/new}">Создать материал</a>
     </div>
 
+    <div class="alert alert-info" role="note">
+        <strong>Как устроен редактор:</strong> материал создаётся как DRAFT → готовится к озвучиванию →
+        проверяется → одобряется. <strong>Одобрение не делает материал доступным во Flutter:</strong>
+        после этого необходима отдельная публикация в CURRENT.
+        <details class="mt-2"><summary>Что означают состояния?</summary>
+            <p class="mt-2 mb-0"><code>DRAFT</code> — черновик; <code>READY_FOR_AUDIO</code> — этап озвучивания;
+            <code>READY_FOR_REVIEW</code> — на проверке; <code>APPROVED</code> — одобрен;
+            <code>PUBLISHED</code> — опубликован; <code>ARCHIVED</code> — архив.</p>
+        </details>
+    </div>
 
     <div class="card studio-card">
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
                 <thead>
                 <tr>
-                    <th>Code</th>
-                    <th>Type</th>
-                    <th>Revision</th>
-                    <th>Lifecycle</th>
-                    <th>Title</th>
-                    <th>Level</th>
+                    <th>Код</th>
+                    <th>Тип</th>
+                    <th>Ревизия</th>
+                    <th>Состояние</th>
+                    <th>Название</th>
+                    <th>Уровень</th>
                     <th></th>
                 </tr>
                 </thead>
@@ -32,15 +42,15 @@
                     <td th:text="${revision.contentType}">VOCABULARY</td>
                     <td th:text="${revision.revisionNumber}">1</td>
                     <td><span class="badge text-bg-light" th:text="${revision.lifecycle}">DRAFT</span></td>
-                    <td th:text="${revision.title}">Title</td>
+                    <td th:text="${revision.title}">Название</td>
                     <td th:text="${revision.levelCode}">B2</td>
                     <td class="text-end">
                         <a class="btn btn-sm btn-outline-primary"
-                           th:href="@{/admin/content/revisions/{id}/edit(id=${revision.id})}">Edit</a>
+                           th:href="@{/admin/content/revisions/{id}/edit(id=${revision.id})}">Открыть</a>
                     </td>
                 </tr>
                 <tr th:if="${revisions.empty}">
-                    <td colspan="7" class="text-center text-secondary py-5">No content revisions found.</td>
+                    <td colspan="7" class="text-center text-secondary py-5">Материалов пока нет. Нажмите «Создать материал», чтобы добавить первый урок.</td>
                 </tr>
                 </tbody>
             </table>
@@ -50,11 +60,11 @@
     <nav class="mt-3" th:if="${revisions.totalPages > 1}" aria-label="Content pages">
         <ul class="pagination mb-0">
             <li class="page-item" th:classappend="${revisions.first} ? 'disabled'">
-                <a class="page-link" th:href="@{/admin/content(page=${revisions.number - 1})}">Previous</a>
+                <a class="page-link" th:href="@{/admin/content(page=${revisions.number - 1})}">Назад</a>
             </li>
             <li class="page-item disabled"><span class="page-link" th:text="${(revisions.number + 1) + ' / ' + revisions.totalPages}">1 / 1</span></li>
             <li class="page-item" th:classappend="${revisions.last} ? 'disabled'">
-                <a class="page-link" th:href="@{/admin/content(page=${revisions.number + 1})}">Next</a>
+                <a class="page-link" th:href="@{/admin/content(page=${revisions.number + 1})}">Вперёд</a>
             </li>
         </ul>
     </nav>
