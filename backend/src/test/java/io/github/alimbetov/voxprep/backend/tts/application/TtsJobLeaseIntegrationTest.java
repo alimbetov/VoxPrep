@@ -110,6 +110,46 @@ class TtsJobLeaseIntegrationTest {
     }
 
     @Test
+    void engineScopedClaimOnlyReceivesMatchingJobs() {
+        UUID kokoro = createPendingJobs("scoped-kokoro", 1, TtsEngine.KOKORO).getFirst();
+        UUID piper = createPendingJobs("scoped-piper", 1, TtsEngine.PIPER).getFirst();
+        var piperClaim = leaseService.claimNextForEngine(
+                "piper-v2", TtsEngine.PIPER, Duration.ofMinutes(5)).orElseThrow();
+        var kokoroClaim = leaseService.claimNextForEngine(
+                "kokoro-v2", TtsEngine.KOKORO, Duration.ofMinutes(5)).orElseThrow();
+        assertThat(piperClaim.jobId()).isEqualTo(piper);
+        assertThat(kokoroClaim.jobId()).isEqualTo(kokoro);
+        assertThat(piperClaim.leaseToken()).isNotEqualTo(kokoroClaim.leaseToken());
+    }
+
+    @Test
+    void concurrentEngineScopedClaimsCannotClaimSameJob() throws Exception {
+        UUID jobId = createPendingJobs("same-engine", 1, TtsEngine.PIPER).getFirst();
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var ready = new CountDownLatch(2);
+            var start = new CountDownLatch(1);
+            var first = executor.submit(() -> {
+                ready.countDown();
+                start.await(5, TimeUnit.SECONDS);
+                return leaseService.claimNextForEngine(
+                        "piper-v2-a", TtsEngine.PIPER, Duration.ofMinutes(5));
+            });
+            var second = executor.submit(() -> {
+                ready.countDown();
+                start.await(5, TimeUnit.SECONDS);
+                return leaseService.claimNextForEngine(
+                        "piper-v2-b", TtsEngine.PIPER, Duration.ofMinutes(5));
+            });
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            var one = first.get(5, TimeUnit.SECONDS);
+            var two = second.get(5, TimeUnit.SECONDS);
+            assertThat((one.isPresent() ? 1 : 0) + (two.isPresent() ? 1 : 0)).isEqualTo(1);
+            assertThat(one.or(() -> two).orElseThrow().jobId()).isEqualTo(jobId);
+        }
+    }
+
+    @Test
     void activeLeaseIsNotClaimable() {
         UUID jobId = createPendingJobs("active", 1).getFirst();
         jdbcTemplate.update("""
