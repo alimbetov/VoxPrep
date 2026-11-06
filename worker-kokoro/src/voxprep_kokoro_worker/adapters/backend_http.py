@@ -47,10 +47,10 @@ class KokoroBackend:
             data = r.json()
             if not isinstance(data, dict) or data.get("engine") != "KOKORO":
                 raise BackendProtocolError("Claim is not Kokoro")
-            for key in ("manifestSha256", "fingerprint", "modelSha256", "configSha256"):
+            for key in ("manifestSha256", "fingerprint", "voiceArtifactSha256"):
                 if not _HEX.fullmatch(str(data.get(key, ""))):
                     raise BackendProtocolError("Missing/invalid V2 " + key)
-            for key in ("jobId", "fileId", "contentRevisionId", "voiceModelId", "leaseToken"):
+            for key in ("jobId", "fileId", "contentRevisionId", "voiceModelId", "leaseToken", "bundleId"):
                 UUID(data[key])
             until = datetime.fromisoformat(data["leaseUntil"].replace("Z", "+00:00"))
             if until.tzinfo is None or until.utcoffset() is None:
@@ -60,11 +60,12 @@ class KokoroBackend:
                 content_revision_id=data["contentRevisionId"],
                 audio_role=data["audioRole"], normalized_tts_text=data["normalizedTtsText"],
                 language=data["language"], voice_model_id=data["voiceModelId"],
-                voice_model_code=data["voiceModelCode"], model_sha256=data["modelSha256"],
-                config_sha256=data["configSha256"], fingerprint=data["fingerprint"],
+                voice_model_code=data["voiceModelCode"], model_sha256=data.get("modelSha256") or "",
+                config_sha256=data.get("configSha256") or "", fingerprint=data["fingerprint"],
                 lease_token=data["leaseToken"], lease_until=until,
                 engine="KOKORO", manifest_sha256=data["manifestSha256"],
-                voice_code=data["voiceCode"], speed=float(data.get("speed", 1)))
+                voice_code=data["voiceCode"], speed=float(data.get("speed", 1)),
+                bundle_model_code=data["bundleModelCode"])
         except BackendProtocolError:
             raise
         except (KeyError, TypeError, ValueError, OverflowError) as exc:
