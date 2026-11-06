@@ -60,3 +60,5 @@ databaseChangeLog:
       file: db/changelog/b8-p1-lifetime-entitlements.sql
   - include:
       file: db/changelog/k1-kokoro-engine-expand.sql
+  - include:
+      file: db/changelog/k1-kokoro-bundle-provisioning.sql
