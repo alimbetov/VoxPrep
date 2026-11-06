@@ -65,7 +65,8 @@ class KokoroBackend:
                 lease_token=data["leaseToken"], lease_until=until,
                 engine="KOKORO", manifest_sha256=data["manifestSha256"],
                 voice_code=data["voiceCode"], speed=float(data.get("speed", 1)),
-                bundle_model_code=data["bundleModelCode"])
+                bundle_model_code=data["bundleModelCode"],
+                voice_artifact_sha256=data["voiceArtifactSha256"])
         except BackendProtocolError:
             raise
         except (KeyError, TypeError, ValueError, OverflowError) as exc:
