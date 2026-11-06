@@ -206,7 +206,7 @@ class TtsJobLeaseIntegrationTest {
                        normalized_tts_text = 'Test utterance', language = 'en-US',
                        fingerprint = ?
                  WHERE id = ?
-                """, UUID.randomUUID(), revisionId, "a".repeat(64), jobId);
+                """, UUID.randomUUID(), revisionId, TtsFingerprint.sha256(jobId.toString()), jobId);
         return jobId;
     }
 
