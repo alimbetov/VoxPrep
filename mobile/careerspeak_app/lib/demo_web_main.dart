@@ -249,41 +249,76 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
       );
       return;
     }
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(item.title),
-        content: SingleChildScrollView(child: Text(item.description)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Close'),
-          ),
-          TextButton(
-            onPressed: () {
-              setState(() {
-                if (!favorites.add(item.code)) {
-                  favorites.remove(item.code);
-                }
-              });
-              Navigator.pop(dialogContext);
-            },
-            child: Text(
-              favorites.contains(item.code)
-                  ? 'Remove favorite'
-                  : 'Add favorite',
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (detailContext) => StatefulBuilder(
+          builder: (detailContext, refreshDetail) => Scaffold(
+            appBar: AppBar(title: Text(item.title)),
+            body: ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                Text(
+                  item.title,
+                  style: Theme.of(detailContext).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(item.subtitle),
+                const SizedBox(height: 16),
+                Text('${item.category} · ${item.level} · ${item.minutes} min'),
+                Text('Type: ${item.type.name} · Revision: ${item.revision}'),
+                const SizedBox(height: 24),
+                Text(
+                  'Lesson details',
+                  style: Theme.of(detailContext).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+                SelectableText(item.description),
+                const SizedBox(height: 16),
+                const Text(
+                  'Demo material preview. Full lesson content and audio are not included in this web showcase.',
+                ),
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  icon: Icon(
+                    favorites.contains(item.code)
+                        ? Icons.favorite
+                        : Icons.favorite_border,
+                  ),
+                  label: Text(
+                    favorites.contains(item.code)
+                        ? 'Remove favorite'
+                        : 'Add favorite',
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      if (!favorites.add(item.code)) {
+                        favorites.remove(item.code);
+                      }
+                    });
+                    refreshDetail(() {});
+                  },
+                ),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  icon: const Icon(Icons.check),
+                  label: Text(
+                    completed.contains(item.code) ? 'Completed' : 'Complete',
+                  ),
+                  onPressed: completed.contains(item.code)
+                      ? null
+                      : () {
+                          setState(() => completed.add(item.code));
+                          refreshDetail(() {});
+                        },
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(detailContext),
+                  child: const Text('Close'),
+                ),
+              ],
             ),
           ),
-          FilledButton(
-            onPressed: () {
-              setState(() => completed.add(item.code));
-              Navigator.pop(dialogContext);
-            },
-            child: Text(
-              completed.contains(item.code) ? 'Completed' : 'Complete',
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
