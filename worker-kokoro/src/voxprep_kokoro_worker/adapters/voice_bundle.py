@@ -30,10 +30,9 @@ def ensure_voices_archive(model_dir: Path) -> Path:
     import numpy as np
 
     archive = model_dir / "voices.bin"
-    if archive.is_file():
-        # This is a derived artifact, not a trusted source; do not trust an
-        # arbitrary pre-existing archive. Recreate from source on each run.
-        archive.unlink()
+    # Do not unlink a currently readable archive: another worker process may
+    # be using it. Build a fresh verified derivative and atomically replace it.
+    # os.replace() swaps the directory entry without exposing partial NPZ bytes.
     voices = {}
     for name in SUPPORTED_VOICES:
         path = model_dir / "voices" / f"{name}.bin"
