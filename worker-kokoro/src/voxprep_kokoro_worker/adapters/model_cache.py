@@ -22,7 +22,7 @@ def canonical_hash(engine: str, revision: str, artifacts: list[dict]) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 def validate_manifest(data: dict, job: ClaimedJob) -> list[dict]:
-    if data.get("modelCode") != job.voice_model_code:
+    if data.get("modelCode") != (job.bundle_model_code or job.voice_model_code):
         raise BackendProtocolError("Wrong bundle model code")
     if not _HEX.fullmatch(str(data.get("manifestSha256", ""))):
         raise BackendProtocolError("Invalid bundle hash")
@@ -72,7 +72,8 @@ class KokoroModelCache:
         self.max_artifact_bytes = max_artifact_bytes
 
     def ensure_model(self, job: ClaimedJob) -> Path:
-        data = self.source.fetch_manifest(job.voice_model_code)
+        bundle_code = job.bundle_model_code or job.voice_model_code
+        data = self.source.fetch_manifest(bundle_code)
         artifacts = validate_manifest(data, job)
         directory = self.root / job.manifest_sha256
         if directory.is_dir() and all(
@@ -87,7 +88,7 @@ class KokoroModelCache:
             work = Path(staging)
             for entry in artifacts:
                 target = work / entry["path"]
-                self.source.download_artifact(model_code=job.voice_model_code,
+                self.source.download_artifact(model_code=bundle_code,
                     asset_id=entry["assetId"], destination=target,
                     max_bytes=min(self.max_artifact_bytes, entry["sizeBytes"]))
                 if target.stat().st_size != entry["sizeBytes"] or file_hash(target) != entry["sha256"]:
