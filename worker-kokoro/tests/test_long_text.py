@@ -94,3 +94,35 @@ def test_inconsistent_sample_rate_fails_closed(tmp_path, monkeypatch):
             job=make_job("A long sentence. " * 50),
             model_dir=tmp_path, output_wav=tmp_path / "out.wav"
         )
+
+
+def test_lease_loss_between_chunks_aborts_inference(tmp_path, monkeypatch):
+    from voxprep_kokoro_worker.domain.errors import LeaseLostError
+    model = tmp_path / "onnx" / "model_quantized.onnx"
+    model.parent.mkdir(parents=True)
+    model.write_bytes(b"fake")
+    monkeypatch.setattr(
+        "voxprep_kokoro_worker.adapters.audio.ensure_voices_archive",
+        lambda root: root / "voices.bin",
+    )
+    calls = []
+    class FakeKokoro:
+        def __init__(self, *args):
+            pass
+        def create(self, text, **kwargs):
+            calls.append(text)
+            return np.full(2400, 0.1, dtype=np.float32), 24000
+    monkeypatch.setitem(sys.modules, "kokoro_onnx", types.SimpleNamespace(Kokoro=FakeKokoro))
+    checks = []
+    def check():
+        checks.append(True)
+        if len(checks) == 3:
+            raise LeaseLostError("simulated lost lease")
+    with pytest.raises(LeaseLostError):
+        KokoroSynthesizer().synthesize(
+            job=make_job("This is a long sentence. " * 60),
+            model_dir=tmp_path,
+            output_wav=tmp_path / "out.wav",
+            check_lease=check,
+        )
+    assert len(calls) == 1
