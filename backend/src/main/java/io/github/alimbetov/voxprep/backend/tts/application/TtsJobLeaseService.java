@@ -1,6 +1,7 @@
 package io.github.alimbetov.voxprep.backend.tts.application;
 
 import io.github.alimbetov.voxprep.backend.tts.domain.TtsJobStatus;
+import io.github.alimbetov.voxprep.backend.tts.domain.TtsEngine;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
@@ -42,6 +43,36 @@ public class TtsJobLeaseService {
                   JOIN app.tts_voice_model vm ON vm.id = j.voice_model_id
                  WHERE j.file_id IS NOT NULL
                    AND vm.engine = 'PIPER'
+                   AND (j.status = 'PENDING'
+                        OR (j.status IN ('CLAIMED', 'PROCESSING')
+                            AND j.lease_until < CURRENT_TIMESTAMP))
+                 ORDER BY j.created_at, j.id
+                 FOR UPDATE OF j SKIP LOCKED LIMIT 1
+            ), claimed AS (
+                UPDATE app.tts_job AS job
+                   SET status = 'CLAIMED', lease_owner = ?, lease_token = ?, lease_until = ?,
+                       claimed_at = COALESCE(job.claimed_at, CURRENT_TIMESTAMP),
+                       attempt_count = job.attempt_count + 1, version = job.version + 1,
+                       updated_at = CURRENT_TIMESTAMP
+                  FROM candidate WHERE job.id = candidate.id
+                RETURNING job.id, job.file_id, job.content_revision_id, job.audio_role,
+                          job.normalized_tts_text, job.language, job.voice_model_id,
+                          job.fingerprint, job.lease_token, job.lease_until
+            )
+            SELECT c.id, c.file_id, c.content_revision_id, c.audio_role,
+                   c.normalized_tts_text, c.language, c.voice_model_id,
+                   vm.code AS voice_model_code, vm.model_sha256, vm.config_sha256,
+                   c.fingerprint, c.lease_token, c.lease_until
+              FROM claimed c
+              JOIN app.tts_voice_model vm ON vm.id = c.voice_model_id
+            """;
+
+    private static final String ENGINE_SCOPED_CLAIM_SQL = """
+            WITH candidate AS (
+                SELECT j.id FROM app.tts_job j
+                  JOIN app.tts_voice_model vm ON vm.id = j.voice_model_id
+                 WHERE j.file_id IS NOT NULL
+                   AND vm.engine = ?
                    AND (j.status = 'PENDING'
                         OR (j.status IN ('CLAIMED', 'PROCESSING')
                             AND j.lease_until < CURRENT_TIMESTAMP))
@@ -112,6 +143,38 @@ public class TtsJobLeaseService {
                         rs.getObject("lease_token", UUID.class),
                         rs.getTimestamp("lease_until").toInstant()),
                 leaseOwner, leaseToken, Timestamp.from(leaseUntil)).stream().findFirst();
+    }
+
+    /**
+     * Engine-scoped atomic claim for authenticated V2 workers. The caller MUST
+     * derive the engine from a verified credential, not from request JSON.
+     */
+    @Transactional
+    public Optional<WorkerTtsJobClaim> claimNextForEngine(
+            String workerId, TtsEngine engine, Duration leaseDuration) {
+        String leaseOwner = required(workerId, "workerId", 128);
+        Objects.requireNonNull(engine, "engine");
+        Duration duration = positiveDuration(leaseDuration);
+        UUID leaseToken = UUID.randomUUID();
+        Instant leaseUntil = Instant.now().plus(duration);
+        return jdbcTemplate.query(
+                ENGINE_SCOPED_CLAIM_SQL,
+                (rs, rowNum) -> new WorkerTtsJobClaim(
+                        rs.getObject("id", UUID.class),
+                        rs.getObject("file_id", UUID.class),
+                        rs.getObject("content_revision_id", UUID.class),
+                        rs.getString("audio_role"),
+                        rs.getString("normalized_tts_text"),
+                        rs.getString("language"),
+                        rs.getObject("voice_model_id", UUID.class),
+                        rs.getString("voice_model_code"),
+                        rs.getString("model_sha256"),
+                        rs.getString("config_sha256"),
+                        rs.getString("fingerprint"),
+                        rs.getObject("lease_token", UUID.class),
+                        rs.getTimestamp("lease_until").toInstant()),
+                engine.name(), leaseOwner, leaseToken, Timestamp.from(leaseUntil))
+                .stream().findFirst();
     }
 
     @Transactional
