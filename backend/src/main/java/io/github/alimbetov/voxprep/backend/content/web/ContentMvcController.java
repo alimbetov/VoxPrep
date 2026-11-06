@@ -232,6 +232,7 @@ public class ContentMvcController {
         model.addAttribute("ttsJobs", ttsReview.latest(revision.id()));
         if (revision.lifecycle() == ContentLifecycleStatus.READY_FOR_AUDIO) {
             model.addAttribute("ttsModels", ttsReview.availableModels());
+            model.addAttribute("ttsKokoroEnabled", ttsReview.kokoroEnabled());
             model.addAttribute("ttsRoles", ttsReview.rolesFor(revision.contentType()));
         }
         model.addAttribute("availabilityValues", AvailabilityStatus.values());
