@@ -6,22 +6,23 @@ import wave
 from pathlib import Path
 from voxprep_kokoro_worker.domain.job import ClaimedJob, AudioArtifact
 from voxprep_kokoro_worker.domain.errors import AudioQcError, ModelLoadError, SynthesisError, PostprocessError
+from voxprep_kokoro_worker.adapters.voice_bundle import ensure_voices_archive, SUPPORTED_VOICES
 
 PROFILE = "mp3-mono-24k-64k-v1"
 
 class KokoroSynthesizer:
-    """Real ONNX inference adapter; requires a compatible bundled voices.bin.
+    """ONNX inference adapter with local three-voice NPZ conversion.
 
-    The current Backend staging example has a per-voice af_heart.bin, not the
-    required aggregate voices.bin. Incompatible bundles must fail closed.
+    Input ONNX and voice style vectors are verified by model cache first.
+    Graph/runtime compatibility must be demonstrated with real audio before K3.
     """
     def synthesize(self, *, job: ClaimedJob, model_dir: Path, output_wav: Path) -> Path:
         model_path = model_dir / "onnx" / "model_quantized.onnx"
-        voices_path = model_dir / "voices.bin"
-        if not model_path.is_file() or not voices_path.is_file():
-            raise ModelLoadError("Kokoro runtime requires pinned ONNX and compatible voices.bin")
-        if job.language not in ("en-US", "en-GB"):
-            raise SynthesisError("Unsupported Kokoro language")
+        if not model_path.is_file() or model_path.is_symlink():
+            raise ModelLoadError("Kokoro ONNX model is missing")
+        if SUPPORTED_VOICES.get(job.voice_code) != job.language:
+            raise SynthesisError("Unsupported voice/locale pair")
+        voices_path = ensure_voices_archive(model_dir)
         if not 0.5 <= job.speed <= 2:
             raise SynthesisError("Unsupported Kokoro speed")
         try:
