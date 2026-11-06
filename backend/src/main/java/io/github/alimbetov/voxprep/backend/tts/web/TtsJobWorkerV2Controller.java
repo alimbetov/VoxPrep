@@ -5,7 +5,6 @@ import io.github.alimbetov.voxprep.backend.tts.application.WorkerApiKeyVerifier;
 import io.github.alimbetov.voxprep.backend.tts.application.WorkerDeliveryProperties;
 import io.github.alimbetov.voxprep.backend.tts.application.WorkerTtsJobClaim;
 import io.github.alimbetov.voxprep.backend.tts.domain.TtsEngine;
-import java.util.Objects;
 import java.util.UUID;
 import java.time.Instant;
 import org.springframework.http.HttpHeaders;
@@ -48,6 +47,12 @@ public class TtsJobWorkerV2Controller {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
         TtsEngine engine = principal.orElseThrow();
+        if (request == null || request.workerId() == null
+                || request.workerId().isBlank()
+                || !request.workerId().equals(request.workerId().strip())
+                || request.workerId().length() > 128) {
+            return ResponseEntity.badRequest().build();
+        }
         if (request.supportedEngine() != null && request.supportedEngine() != engine) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
@@ -61,14 +66,7 @@ public class TtsJobWorkerV2Controller {
                 .orElseGet(() -> ResponseEntity.noContent().build());
     }
 
-    public record ClaimRequestV2(String workerId, TtsEngine supportedEngine) {
-        public ClaimRequestV2 {
-            Objects.requireNonNull(workerId, "workerId");
-            if (workerId.isBlank() || !workerId.equals(workerId.strip()) || workerId.length() > 128) {
-                throw new IllegalArgumentException("Invalid workerId");
-            }
-        }
-    }
+    public record ClaimRequestV2(String workerId, TtsEngine supportedEngine) { }
 
     public record ClaimV2(
             TtsEngine engine,
