@@ -4,6 +4,23 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import org.mockito.ArgumentMatchers;
+import io.github.alimbetov.voxprep.backend.asset.persistence.FileAssetEntity;
+import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetKind;
+import io.github.alimbetov.voxprep.backend.asset.domain.FileAssetStatus;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.HexFormat;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.function.Supplier;
+import org.springframework.transaction.TransactionStatus;
 
 import io.github.alimbetov.voxprep.backend.asset.application.FileAssetIngestService;
 import io.github.alimbetov.voxprep.backend.asset.application.ObjectStoragePort;
@@ -44,6 +61,40 @@ class KokoroBundleProvisioningTest {
                 + bundle.getSourceRevision() + "/onnx/model_quantized.onnx");
         bundle.setArtifacts(List.of(item));
         return bundle;
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void verifiedBytesAreIngestedAndBundleIsCommittedOnlyAfterAssetsReady() throws Exception {
+        byte[] bytes = "kokoro-test-onnx".getBytes(StandardCharsets.UTF_8);
+        var bundle = fixture();
+        bundle.getArtifacts().getFirst().setSizeBytes(bytes.length);
+        bundle.getArtifacts().getFirst().setSha256(
+                HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes)));
+        var asset = mock(FileAssetEntity.class);
+        UUID assetId = UUID.randomUUID();
+        when(asset.getId()).thenReturn(assetId);
+        when(asset.getKind()).thenReturn(FileAssetKind.TTS_MODEL);
+        when(asset.getStatus()).thenReturn(FileAssetStatus.READY);
+        when(asset.getSizeBytes()).thenReturn((long) bytes.length);
+        when(asset.getSha256()).thenReturn(bundle.getArtifacts().getFirst().getSha256());
+        when(storage.defaultBucket()).thenReturn("voxprep-assets");
+        when(jdbc.queryForList(anyString(), eq(bundle.getModelCode()))).thenReturn(List.of());
+        when(assets.findByBucketAndObjectKey(anyString(), anyString())).thenReturn(Optional.empty());
+        when(source.fetch(any())).thenReturn(bytes);
+        when(ingest.ingest(any())).thenReturn(asset);
+        org.mockito.Mockito.doAnswer(inv -> ((Supplier<?>) inv.getArgument(1)).get())
+                .when(lock).withLock(anyString(), any());
+        when(transaction.execute(any())).thenAnswer(inv -> {
+            var callback = (org.springframework.transaction.support.TransactionCallback<UUID>) inv.getArgument(0);
+            return callback.doInTransaction(mock(TransactionStatus.class));
+        });
+
+        UUID staged = service().provision(bundle);
+        assertThat(staged).isNotNull();
+        verify(source).fetch(any());
+        verify(ingest).ingest(any());
+        verify(jdbc, org.mockito.Mockito.times(2)).update(anyString(), any(Object[].class));
     }
 
     @Test
