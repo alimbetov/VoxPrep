@@ -62,18 +62,20 @@ class JobProcessor:
 
         try:
             with heartbeat if heartbeat is not None else nullcontext():
-                model_dir = self._model_cache.ensure_model(job)
+                # Retain a cross-process model lock during ONNX inference,
+                # including all text chunks. Concurrent cache repair cannot
+                # remove model files while this task is reading them.
+                with self._model_cache.hold_model(job) as model_dir:
+                    if heartbeat is not None:
+                        heartbeat.assert_owned()
+                    wav_path = self._synthesizer.synthesize(
+                        job=job,
+                        model_dir=model_dir,
+                        output_wav=source_wav,
+                        check_lease=heartbeat.assert_owned if heartbeat is not None else None,
+                    )
                 if heartbeat is not None:
                     heartbeat.assert_owned()
-
-                wav_path = self._synthesizer.synthesize(
-                    job=job,
-                    model_dir=model_dir,
-                    output_wav=source_wav,
-                )
-                if heartbeat is not None:
-                    heartbeat.assert_owned()
-
                 artifact = self._postprocessor.postprocess(
                     job=job,
                     input_wav=wav_path,
