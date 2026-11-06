@@ -3,14 +3,27 @@ import 'package:flutter/material.dart';
 import '../../application/content_delivery/typed_content_body.dart';
 
 /// Displays the actual published typed fields. No simulated speaking controls.
-class TypedContentBodyCard extends StatelessWidget {
+class TypedContentBodyCard extends StatefulWidget {
   const TypedContentBodyCard({required this.body, super.key});
 
   final TypedContentBody body;
 
   @override
+  State<TypedContentBodyCard> createState() => _TypedContentBodyCardState();
+}
+
+class _TypedContentBodyCardState extends State<TypedContentBodyCard> {
+  final ScrollController _textController = ScrollController();
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final fields = switch (body) {
+    final fields = switch (widget.body) {
       VocabularyBody(
         :final term,
         :final definition,
@@ -66,7 +79,25 @@ class TypedContentBodyCard extends StatelessWidget {
               style: Theme.of(context).textTheme.titleMedium,
             ),
             const SizedBox(height: 16),
-            ...fields,
+            // A long transcript/lesson scrolls inside a bounded reading
+            // viewport instead of pushing the playback controls far below it.
+            // Short content retains its natural height.
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 420),
+              child: Scrollbar(
+                controller: _textController,
+                thumbVisibility: true,
+                child: SingleChildScrollView(
+                  key: const Key('learning-content-scroll'),
+                  controller: _textController,
+                  primary: false,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: fields,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
