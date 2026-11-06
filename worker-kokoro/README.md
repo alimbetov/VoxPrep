@@ -78,3 +78,18 @@ Never mark K3/K4 accepted based on mock tests or the existence of this script.
 7. Run exact-head-SHA complete CI and human audio/license review. Disable Kokoro again if any check fails.
 
 K3 CI alone does **not** satisfy K4. Do not merge this Draft PR or enable Kokoro in production before K4 evidence.
+
+## Long-text synthesis (K4.1 implementation)
+
+The worker splits up to 12,000 characters into bounded chunks of up to 400
+characters, preferring sentence endings and otherwise splitting at whitespace.
+It refuses unbreakable tokens above the limit or more than 128 chunks. ONNX
+creates PCM for one chunk at a time, with validated mono sample-rate consistency,
+and appends each chunk to one WAV (at most 20 minutes of output). FFmpeg then
+produces one MP3; SHA-256 is calculated in 1 MiB streamed blocks.
+
+This avoids concatenating all PCM samples in RAM, but **does not yet make the
+Backend model delivery/ingest streaming**, nor remove the audio file's temporary
+on-disk footprint. Real long-form audio QC, lease expiry and RustFS acceptance
+are still K4 blockers. Sentence detection uses simple punctuation heuristics,
+not linguistic segmentation; pauses across chunks need human listening review.
