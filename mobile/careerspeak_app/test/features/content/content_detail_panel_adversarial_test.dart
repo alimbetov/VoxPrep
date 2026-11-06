@@ -22,7 +22,6 @@ const _hash =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 void main() {
-
   testWidgets('audio controls follow lesson text in reading order', (
     tester,
   ) async {
@@ -33,7 +32,8 @@ void main() {
       assetCatalog: const _RoleCatalog(<String>{}),
     );
     final list = tester.widget<ListView>(find.byType(ListView).first);
-    final children = (list.childrenDelegate as SliverChildListDelegate).children;
+    final children =
+        (list.childrenDelegate as SliverChildListDelegate).children;
     final descriptionIndex = children.indexWhere(
       (widget) => widget is Text && widget.data == _topicWithAudio.description,
     );
