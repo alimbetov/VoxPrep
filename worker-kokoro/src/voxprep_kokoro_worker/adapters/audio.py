@@ -3,9 +3,10 @@ import hashlib
 import json
 import subprocess
 import wave
+from typing import Callable
 from pathlib import Path
 from voxprep_kokoro_worker.domain.job import ClaimedJob, AudioArtifact
-from voxprep_kokoro_worker.domain.errors import AudioQcError, ModelLoadError, SynthesisError, PostprocessError
+from voxprep_kokoro_worker.domain.errors import AudioQcError, ModelLoadError, SynthesisError, PostprocessError, LeaseLostError
 from voxprep_kokoro_worker.adapters.voice_bundle import ensure_voices_archive, SUPPORTED_VOICES
 from voxprep_kokoro_worker.adapters.text_chunks import split_text
 
@@ -17,7 +18,8 @@ class KokoroSynthesizer:
     Input ONNX and voice style vectors are verified by model cache first.
     Graph/runtime compatibility must be demonstrated with real audio before K3.
     """
-    def synthesize(self, *, job: ClaimedJob, model_dir: Path, output_wav: Path) -> Path:
+    def synthesize(self, *, job: ClaimedJob, model_dir: Path, output_wav: Path,
+                   check_lease: Callable[[], None] | None = None) -> Path:
         model_path = model_dir / "onnx" / "model_quantized.onnx"
         if not model_path.is_file() or model_path.is_symlink():
             raise ModelLoadError("Kokoro ONNX model is missing")
@@ -39,6 +41,8 @@ class KokoroSynthesizer:
                 wav.setnchannels(1)
                 wav.setsampwidth(2)
                 for chunk in chunks:
+                    if check_lease is not None:
+                        check_lease()
                     samples, sample_rate = engine.create(
                         chunk, voice=job.voice_code, speed=job.speed,
                         lang="en-us" if job.language == "en-US" else "en-gb"
@@ -62,8 +66,10 @@ class KokoroSynthesizer:
                     # all samples into one large in-memory array.
                     pcm = np.clip(pcm, -1.0, 1.0)
                     wav.writeframes((pcm * 32767).astype("<i2").tobytes())
+                    if check_lease is not None:
+                        check_lease()
             return output_wav
-        except SynthesisError:
+        except (SynthesisError, LeaseLostError):
             raise
         except Exception as exc:
             raise SynthesisError("Kokoro ONNX inference failed") from exc
