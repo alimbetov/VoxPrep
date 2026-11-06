@@ -1,0 +1,93 @@
+name: Kokoro K3 Real ONNX Inference
+
+# Run once for this workflow's introduction and manually on demand.
+# Avoid an expensive model download for every unrelated pull-request push.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/kokoro-k3-real-inference.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  real-kokoro-three-voices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install real Kokoro ONNX runtime and tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg espeak-ng libsndfile1
+          python -m pip install ./worker-kokoro "huggingface_hub==0.36.0"
+      - name: Fetch pinned real ONNX and three voice weights, verify bytes
+        env:
+          HF_HUB_DISABLE_TELEMETRY: "1"
+        run: |
+          python - <<'PY'
+          from huggingface_hub import hf_hub_download, HfApi
+          from pathlib import Path
+          import hashlib, shutil, json
+
+          repo = "onnx-community/Kokoro-82M-v1.0-ONNX"
+          revision = "1939ad2a8e416c0acfeecc08a694d14ef25f2231"
+          expected = {
+            "onnx/model_quantized.onnx": "fbae9257e1e05ffc727e951ef9b9c98418e6d79f1c9b6b13bd59f5c9028a1478",
+            "voices/af_heart.bin": "d583ccff3cdca2f7fae535cb998ac07e9fcb90f09737b9a41fa2734ec44a8f0b",
+            "voices/am_michael.bin": "1d1f21dd8da39c30705cd4c75d039d265e9bc4a2a93ed09bc9e1b1225eb95ba1",
+            "voices/bf_emma.bin": "669fe0647f9dd04fcab92f1439a40eeb4c8b4ab1f82e4996fe3d918ce4a63b73",
+          }
+          remote = HfApi().model_info(repo_id=repo, revision=revision, files_metadata=True)
+          items = {item.rfilename: item for item in remote.siblings}
+          base = Path("worker-kokoro/k3-model")
+          report = []
+          for name, checksum in expected.items():
+            item = items.get(name)
+            if item is None or item.size is None or item.size <= 0:
+              raise SystemExit("Missing pinned artifact metadata: " + name)
+            if item.size > 256 * 1024 * 1024:
+              raise SystemExit("Oversized source artifact: " + name)
+            downloaded = Path(hf_hub_download(repo_id=repo, filename=name, revision=revision))
+            source = downloaded.open("rb")
+            digest = hashlib.sha256()
+            size = 0
+            destination = base / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            with source, destination.open("wb") as out:
+              while chunk := source.read(1024*1024):
+                digest.update(chunk)
+                size += len(chunk)
+                if size > 256 * 1024 * 1024:
+                  raise SystemExit("Oversized file while downloading: " + name)
+                out.write(chunk)
+            if digest.hexdigest() != checksum or size != item.size:
+              raise SystemExit("Pinned integrity mismatch for: " + name)
+            report.append({"path":name, "sha256":digest.hexdigest(), "sizeBytes":size})
+          Path("worker-kokoro/k3-download-evidence.json").write_text(
+              json.dumps({"repository":repo,"revision":revision,"artifacts":report},indent=2))
+          print(json.dumps(report,indent=2))
+          PY
+      - name: Real synthesis and MP3 QC for af_heart, am_michael, bf_emma
+        env:
+          PYTHONPATH: worker-kokoro/src
+        run: |
+          python -m voxprep_kokoro_worker.real_model_smoke \
+            --model-dir worker-kokoro/k3-model \
+            --output-dir worker-kokoro/k3-evidence
+      - name: Upload real K3 evidence (even when inference fails)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kokoro-k3-real-evidence
+          path: |
+            worker-kokoro/k3-download-evidence.json
+            worker-kokoro/k3-evidence/*.json
+            worker-kokoro/k3-evidence/*.mp3
+            worker-kokoro/k3-evidence/*.wav
+          if-no-files-found: warn
+          retention-days: 7
