@@ -19,7 +19,8 @@ Planned flow:
 Backend pre-provisioning → PostgreSQL/RustFS STAGED bundle
 → V2 claim (KOKORO, currently disabled)
 → authenticated manifest/artifacts → SHA-256 cache
-→ Kokoro ONNX → WAV → FFmpeg/ffprobe MP3
+→ verified per-voice style vectors → local NPZ → Kokoro ONNX → WAV
+→ FFmpeg/ffprobe MP3
 → V2 output finalize (not yet implemented on Backend)
 ```
 
@@ -30,3 +31,16 @@ Configuration: `BASE_URL`, `KOKORO_WORKER_TOKEN`, `WORKER_ID`,
 
 Tests: `python -m pytest worker-kokoro/tests` after installing development
 dependencies. Tests are not proof of real Kokoro inference.
+
+## Pilot voice map
+
+| voiceCode | language | role |
+|---|---|---|
+| `af_heart` | `en-US` | narrated lessons |
+| `am_michael` | `en-US` | second dialogue speaker |
+| `bf_emma` | `en-GB` | British pronunciation |
+
+Do not allow arbitrary `voiceCode` or locale from a worker claim. Inference
+rejects mismatched pairs, missing or corrupt style files, and oversized PCM.
+Kokoro itself may require a different phonemizer/model export; K3 must prove
+all three voices with real WAV and MP3 before production activation.
