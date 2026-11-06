@@ -33,3 +33,16 @@ def test_v2_wrong_token_fails_closed():
     with pytest.raises(BackendAuthenticationError):
         adapter.claim("test")
     adapter.close()
+
+
+def test_claim_rejects_missing_voice_artifact_hash():
+    def handler(req):
+        return httpx.Response(200, json={"engine": "KOKORO",
+            "manifestSha256": "a"*64, "fingerprint": "b"*64})
+    adapter = KokoroBackend("http://localhost:8080", "kokoro-only",
+        transport=httpx.MockTransport(handler))
+    try:
+        with pytest.raises(BackendProtocolError, match="voiceArtifactSha256"):
+            adapter.claim("test")
+    finally:
+        adapter.close()
