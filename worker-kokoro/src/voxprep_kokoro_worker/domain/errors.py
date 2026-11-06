@@ -42,7 +42,7 @@ class ModelLoadError(WorkerError):
 
 
 class SynthesisError(WorkerError):
-    code = "PIPER_SYNTHESIS_FAILED"
+    code = "KOKORO_SYNTHESIS_FAILED"
 
 
 class PostprocessError(WorkerError):
