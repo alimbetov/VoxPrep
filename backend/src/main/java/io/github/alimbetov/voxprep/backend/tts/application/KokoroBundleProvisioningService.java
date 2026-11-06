@@ -140,7 +140,7 @@ public class KokoroBundleProvisioningService {
             }
             String objectKey = "tts/models/kokoro/" + code + "/"
                     + manifest.sha256() + "/" + artifact.path();
-            FileAssetEntity storedAsset = assets.findByBucketAndObjectKey(storage.defaultBucket(), objectKey())
+            FileAssetEntity storedAsset = assets.findByBucketAndObjectKey(storage.defaultBucket(), objectKey)
                     .orElse(null);
             if (storedAsset == null) {
                 storedAsset = ingest.ingest(new FileAssetIngestService.IngestCommand(
