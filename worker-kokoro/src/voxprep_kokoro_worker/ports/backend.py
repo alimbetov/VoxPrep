@@ -1,5 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
+from contextlib import AbstractContextManager
 from typing import Protocol
 from voxprep_kokoro_worker.domain.job import ClaimedJob, AudioArtifact
 
@@ -15,3 +16,4 @@ class ModelSourcePort(Protocol):
 
 class ModelCachePort(Protocol):
     def ensure_model(self, job: ClaimedJob) -> Path: ...
+    def hold_model(self, job: ClaimedJob) -> AbstractContextManager[Path]: ...
