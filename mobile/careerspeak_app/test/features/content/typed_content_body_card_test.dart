@@ -93,4 +93,45 @@ void main() {
     expect(find.text('00:00.000–00:01.200  Welcome'), findsOneWidget);
     expect(find.byIcon(Icons.mic), findsNothing);
   });
+  testWidgets('long learning text scrolls vertically inside bounded card', (
+    tester,
+  ) async {
+    await render(
+      tester,
+      TopicBody(
+        sections: [
+          TopicSection(
+            heading: 'Long lesson',
+            text: List<String>.filled(160, 'A detailed learning paragraph.').join(' '),
+          ),
+          TopicSection(heading: 'Last section', text: 'End of lesson'),
+        ],
+      ),
+    );
+
+    final scrolling = find.byKey(const Key('learning-content-scroll'));
+    expect(scrolling, findsOneWidget);
+    final scrollable = tester.widget<SingleChildScrollView>(scrolling);
+    expect(scrollable.scrollDirection, Axis.vertical);
+    expect(tester.getSize(scrolling).height, lessThanOrEqualTo(420));
+    final controller = scrollable.controller!;
+    expect(controller.position.maxScrollExtent, greaterThan(0));
+    controller.jumpTo(controller.position.maxScrollExtent);
+    await tester.pump();
+    expect(controller.offset, greaterThan(0));
+    expect(find.text('End of lesson'), findsOneWidget);
+  });
+
+  testWidgets('short text is not forced to the maximum scroll height', (
+    tester,
+  ) async {
+    await render(
+      tester,
+      PhraseBody(phrase: 'Good morning', usage: 'Greeting', examples: []),
+    );
+    final scrolling = find.byKey(const Key('learning-content-scroll'));
+    expect(tester.getSize(scrolling).height, lessThan(420));
+    expect(find.text('Good morning'), findsOneWidget);
+  });
+
 }
