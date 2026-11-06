@@ -68,13 +68,20 @@ final class DemoCredentialStore implements InstallationCredentialStore {
   }
 }
 
-final class DemoLocaleConfigurationGateway implements LocaleConfigurationGateway {
+final class DemoLocaleConfigurationGateway
+    implements LocaleConfigurationGateway {
   @override
-  Future<Result<CountryLocaleConfiguration>> fetchForCountry(String countryCode) async => Success(
-    CountryLocaleConfiguration(countryCode: countryCode, defaultLocale: 'en', locales: [
-      SupportedLocaleOption(code: 'en', label: 'English'),
-      SupportedLocaleOption(code: 'ru', label: 'Русский'),
-      SupportedLocaleOption(code: 'kk', label: 'Қазақша'),
-    ]),
+  Future<Result<CountryLocaleConfiguration>> fetchForCountry(
+    String countryCode,
+  ) async => Success(
+    CountryLocaleConfiguration(
+      countryCode: countryCode,
+      defaultLocale: 'en',
+      locales: [
+        SupportedLocaleOption(code: 'en', label: 'English'),
+        SupportedLocaleOption(code: 'ru', label: 'Русский'),
+        SupportedLocaleOption(code: 'kk', label: 'Қазақша'),
+      ],
+    ),
   );
 }
