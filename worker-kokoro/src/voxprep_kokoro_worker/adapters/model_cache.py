@@ -97,15 +97,28 @@ class KokoroModelCache:
         self.source = source
         self.max_artifact_bytes = max_artifact_bytes
 
+    @contextmanager
+    def hold_model(self, job: ClaimedJob):
+        """Keep the validated model immutable until inference is complete.
+
+        Repairs/replacements of this manifest wait for all holders. The OS
+        releases the lock if a worker is killed during synthesis.
+        """
+        with _manifest_lock(self.root, job.manifest_sha256):
+            yield self._ensure_model_locked(job)
+
     def ensure_model(self, job: ClaimedJob) -> Path:
+        # Compatibility for cache-only consumers. Production inference must
+        # use hold_model() to protect the returned directory from replacement.
+        with self.hold_model(job) as directory:
+            return directory
+
+    def _ensure_model_locked(self, job: ClaimedJob) -> Path:
         bundle_code = job.bundle_model_code or job.voice_model_code
         data = self.source.fetch_manifest(bundle_code)
         artifacts = validate_manifest(data, job)
         directory = self.root / job.manifest_sha256
-        # All reads/repairs/downloads share the same cross-process lock.
-        # This also prevents readers from observing a partially replaced cache.
-        with _manifest_lock(self.root, job.manifest_sha256):
-            if directory.is_symlink():
+        if directory.is_symlink():
                 raise ModelCacheInstallError("Symlinked model cache entry is not allowed")
             if directory.is_dir() and all(
                 (directory / entry["path"]).is_file()
