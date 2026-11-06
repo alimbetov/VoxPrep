@@ -25,13 +25,18 @@ public class TtsReviewQueryService {
     private final LearnerMediaService media;
     private final TtsVoiceModelRepository voiceModels;
     private final ContentAudioPolicy audioPolicy;
+    private final WorkerDeliveryProperties workerProperties;
+    private final KokoroModelBindingService kokoroBindings;
 
     public TtsReviewQueryService(TtsJobRepository jobs, LearnerMediaService media,
-            TtsVoiceModelRepository voiceModels, ContentAudioPolicy audioPolicy) {
+            TtsVoiceModelRepository voiceModels, ContentAudioPolicy audioPolicy,
+            WorkerDeliveryProperties workerProperties, KokoroModelBindingService kokoroBindings) {
         this.jobs = Objects.requireNonNull(jobs);
         this.media = Objects.requireNonNull(media);
         this.voiceModels = Objects.requireNonNull(voiceModels);
         this.audioPolicy = Objects.requireNonNull(audioPolicy);
+        this.workerProperties = Objects.requireNonNull(workerProperties);
+        this.kokoroBindings = Objects.requireNonNull(kokoroBindings);
     }
 
     @Transactional(readOnly = true)
@@ -49,9 +54,16 @@ public class TtsReviewQueryService {
     public List<ModelView> availableModels() {
         return voiceModels.findAll(PageRequest.of(0, 100, Sort.by("code")))
                 .stream().filter(model -> model.selectableForNewJobs()
-                        && model.getEngine() == TtsEngine.PIPER)
+                        && (model.getEngine() == TtsEngine.PIPER
+                            || (model.getEngine() == TtsEngine.KOKORO
+                                && workerProperties.isKokoroEnabled()
+                                && kokoroBindings.find(model.getId()).isPresent())))
                 .map(model -> new ModelView(model.getCode(), model.getVoice().getDisplayName(),
                         model.getVoice().getLanguage(), model.getEngine().name())).toList();
+    }
+
+    public boolean kokoroEnabled() {
+        return workerProperties.isKokoroEnabled();
     }
 
     public List<RoleView> rolesFor(ContentType type) {
