@@ -4,6 +4,8 @@ import io.github.alimbetov.voxprep.backend.tts.application.TtsJobLeaseService;
 import io.github.alimbetov.voxprep.backend.tts.application.WorkerApiKeyVerifier;
 import io.github.alimbetov.voxprep.backend.tts.application.WorkerDeliveryProperties;
 import io.github.alimbetov.voxprep.backend.tts.application.WorkerTtsJobClaim;
+import io.github.alimbetov.voxprep.backend.tts.application.KokoroWorkerTtsJobClaim;
+import java.math.BigDecimal;
 import io.github.alimbetov.voxprep.backend.tts.domain.TtsEngine;
 import java.util.UUID;
 import java.time.Instant;
@@ -58,8 +60,13 @@ public class TtsJobWorkerV2Controller {
         }
         // KOKORO must remain disabled until artifact manifests, immutable V2
         // fingerprints, callbacks, and deployment credentials are qualified.
-        if (engine != TtsEngine.PIPER) {
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+        if (engine == TtsEngine.KOKORO) {
+            if (!properties.isKokoroEnabled()) {
+                return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).build();
+            }
+            return leases.claimNextKokoroForWorker(request.workerId(), properties.getLeaseDuration())
+                    .map(claim -> ResponseEntity.ok(ClaimV2.fromKokoro(claim)))
+                    .orElseGet(() -> ResponseEntity.noContent().build());
         }
         return leases.claimNextForEngine(request.workerId(), engine, properties.getLeaseDuration())
                 .map(claim -> ResponseEntity.ok(ClaimV2.from(engine, claim)))
@@ -74,12 +81,28 @@ public class TtsJobWorkerV2Controller {
             String audioRole, String normalizedTtsText, String language,
             UUID voiceModelId, String voiceModelCode,
             String modelSha256, String configSha256, String fingerprint,
-            UUID leaseToken, Instant leaseUntil) {
+            UUID leaseToken, Instant leaseUntil,
+            UUID bundleId, String bundleModelCode, String manifestSha256,
+            String voiceCode, String voiceArtifactSha256,
+            String phonemizerVersion, String engineVersion, BigDecimal speed) {
         static ClaimV2 from(TtsEngine engine, WorkerTtsJobClaim c) {
             return new ClaimV2(engine, c.jobId(), c.fileId(), c.contentRevisionId(),
                     c.audioRole(), c.normalizedTtsText(), c.language(),
                     c.voiceModelId(), c.voiceModelCode(), c.modelSha256(),
-                    c.configSha256(), c.fingerprint(), c.leaseToken(), c.leaseUntil());
+                    c.configSha256(), c.fingerprint(), c.leaseToken(), c.leaseUntil(),
+                    null, null, null, null, null, null, null, null);
+        }
+
+        static ClaimV2 fromKokoro(KokoroWorkerTtsJobClaim claim) {
+            WorkerTtsJobClaim c = claim.job();
+            return new ClaimV2(
+                    TtsEngine.KOKORO, c.jobId(), c.fileId(), c.contentRevisionId(),
+                    c.audioRole(), c.normalizedTtsText(), c.language(),
+                    c.voiceModelId(), c.voiceModelCode(), null, null,
+                    c.fingerprint(), c.leaseToken(), c.leaseUntil(),
+                    claim.bundleId(), claim.bundleModelCode(), claim.manifestSha256(),
+                    claim.voiceCode(), claim.voiceArtifactSha256(),
+                    claim.phonemizerVersion(), claim.engineVersion(), claim.speed());
         }
     }
 }
