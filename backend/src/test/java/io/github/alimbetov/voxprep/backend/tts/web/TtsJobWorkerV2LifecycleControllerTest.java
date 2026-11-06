@@ -57,13 +57,15 @@ class TtsJobWorkerV2LifecycleControllerTest {
     }
 
     @Test
-    void togglingKokoroFlagCannotBypassIncompleteV2Protocol() {
+    void enablingKokoroUsesAuthenticatedEngineAndRejectsMissingLease() {
         config.setKokoroEnabled(true);
         var req = new TtsJobWorkerV2LifecycleController.LeaseRequest(
                 "kokoro-1", UUID.randomUUID());
-        assertThat(controller().heartbeat(UUID.randomUUID(), "Bearer kokoro-test-secret", req)
-                .getStatusCode().value()).isEqualTo(503);
-        verify(leases, never()).heartbeatForEngine(any(), any(), any(), any(), any());
+        UUID jobId = UUID.randomUUID();
+        assertThat(controller().heartbeat(jobId, "Bearer kokoro-test-secret", req)
+                .getStatusCode().value()).isEqualTo(409);
+        verify(leases).heartbeatForEngine(
+                jobId, "kokoro-1", req.leaseToken(), TtsEngine.KOKORO, config.getLeaseDuration());
     }
 
     @Test
