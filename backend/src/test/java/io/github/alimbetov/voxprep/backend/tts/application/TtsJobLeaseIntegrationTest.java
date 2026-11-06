@@ -150,6 +150,42 @@ class TtsJobLeaseIntegrationTest {
     }
 
     @Test
+    void v2HeartbeatRejectsForeignEngineAndAcceptsOwnedLease() {
+        UUID job = createPendingWorkerJobs("heartbeat-kokoro", TtsEngine.KOKORO);
+        var claim = leaseService.claimNextForEngine(
+                "kokoro-owner", TtsEngine.KOKORO, Duration.ofMinutes(5)).orElseThrow();
+        assertThat(claim.jobId()).isEqualTo(job);
+        assertThat(leaseService.heartbeatForEngine(
+                job, "kokoro-owner", claim.leaseToken(),
+                TtsEngine.PIPER, Duration.ofMinutes(5))).isEmpty();
+        assertThat(leaseService.heartbeatForEngine(
+                job, "kokoro-owner", UUID.randomUUID(),
+                TtsEngine.KOKORO, Duration.ofMinutes(5))).isEmpty();
+        assertThat(leaseService.heartbeatForEngine(
+                job, "kokoro-owner", claim.leaseToken(),
+                TtsEngine.KOKORO, Duration.ofMinutes(5))).isPresent();
+    }
+
+    @Test
+    void v2FailRejectsForeignEngineAndWrongToken() {
+        UUID job = createPendingWorkerJobs("fail-kokoro", TtsEngine.KOKORO);
+        var claim = leaseService.claimNextForEngine(
+                "kokoro-owner", TtsEngine.KOKORO, Duration.ofMinutes(5)).orElseThrow();
+        assertThat(leaseService.failWorkerForEngine(
+                job, claim.fileId(), "kokoro-owner", claim.leaseToken(),
+                TtsEngine.PIPER, "TEST", "wrong engine")).isFalse();
+        assertThat(leaseService.failWorkerForEngine(
+                job, claim.fileId(), "kokoro-owner", UUID.randomUUID(),
+                TtsEngine.KOKORO, "TEST", "wrong lease")).isFalse();
+        assertThat(leaseService.failWorkerForEngine(
+                job, claim.fileId(), "kokoro-owner", claim.leaseToken(),
+                TtsEngine.KOKORO, "TEST", "correct engine")).isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM app.tts_job WHERE id = ?", String.class, job))
+                .isEqualTo("FAILED");
+    }
+
+    @Test
     void activeLeaseIsNotClaimable() {
         UUID jobId = createPendingJobs("active", 1).getFirst();
         jdbcTemplate.update("""
