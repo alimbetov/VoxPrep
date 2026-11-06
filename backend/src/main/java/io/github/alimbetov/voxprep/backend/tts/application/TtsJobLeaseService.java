@@ -17,11 +17,14 @@ public class TtsJobLeaseService {
 
     private static final String CLAIM_SQL = """
             WITH candidate AS (
-                SELECT id FROM app.tts_job
-                 WHERE status = 'PENDING'
-                    OR (status IN ('CLAIMED', 'PROCESSING') AND lease_until < CURRENT_TIMESTAMP)
-                 ORDER BY created_at, id
-                 FOR UPDATE SKIP LOCKED LIMIT 1
+                SELECT j.id FROM app.tts_job j
+                  JOIN app.tts_voice_model vm ON vm.id = j.voice_model_id
+                 WHERE vm.engine = 'PIPER'
+                   AND (j.status = 'PENDING'
+                        OR (j.status IN ('CLAIMED', 'PROCESSING')
+                            AND j.lease_until < CURRENT_TIMESTAMP))
+                 ORDER BY j.created_at, j.id
+                 FOR UPDATE OF j SKIP LOCKED LIMIT 1
             )
             UPDATE app.tts_job AS job
                SET status = 'CLAIMED', lease_owner = ?, lease_token = ?, lease_until = ?,
