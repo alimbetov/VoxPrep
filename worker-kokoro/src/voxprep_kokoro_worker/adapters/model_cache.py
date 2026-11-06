@@ -119,28 +119,28 @@ class KokoroModelCache:
         artifacts = validate_manifest(data, job)
         directory = self.root / job.manifest_sha256
         if directory.is_symlink():
-                raise ModelCacheInstallError("Symlinked model cache entry is not allowed")
-            if directory.is_dir() and all(
-                (directory / entry["path"]).is_file()
-                and not (directory / entry["path"]).is_symlink()
-                and (directory / entry["path"]).stat().st_size == entry["sizeBytes"]
-                and file_hash(directory / entry["path"]) == entry["sha256"]
-                for entry in artifacts
-            ):
-                return directory
-            with tempfile.TemporaryDirectory(prefix=".kokoro-", dir=self.root) as staging:
-                work = Path(staging)
-                for entry in artifacts:
-                    target = work / entry["path"]
-                    self.source.download_artifact(
-                        model_code=bundle_code, asset_id=entry["assetId"],
-                        destination=target,
-                        max_bytes=min(self.max_artifact_bytes, entry["sizeBytes"]))
-                    if (not target.is_file() or target.is_symlink()
-                            or target.stat().st_size != entry["sizeBytes"]
-                            or file_hash(target) != entry["sha256"]):
-                        raise ModelChecksumError("Kokoro artifact hash/size mismatch")
-                if directory.exists():
-                    shutil.rmtree(directory)
-                work.rename(directory)
+            raise ModelCacheInstallError("Symlinked model cache entry is not allowed")
+        if directory.is_dir() and all(
+            (directory / entry["path"]).is_file()
+            and not (directory / entry["path"]).is_symlink()
+            and (directory / entry["path"]).stat().st_size == entry["sizeBytes"]
+            and file_hash(directory / entry["path"]) == entry["sha256"]
+            for entry in artifacts
+        ):
             return directory
+        with tempfile.TemporaryDirectory(prefix=".kokoro-", dir=self.root) as staging:
+            work = Path(staging)
+            for entry in artifacts:
+                target = work / entry["path"]
+                self.source.download_artifact(
+                    model_code=bundle_code, asset_id=entry["assetId"],
+                    destination=target,
+                    max_bytes=min(self.max_artifact_bytes, entry["sizeBytes"]))
+                if (not target.is_file() or target.is_symlink()
+                        or target.stat().st_size != entry["sizeBytes"]
+                        or file_hash(target) != entry["sha256"]):
+                    raise ModelChecksumError("Kokoro artifact hash/size mismatch")
+            if directory.exists():
+                shutil.rmtree(directory)
+            work.rename(directory)
+        return directory
