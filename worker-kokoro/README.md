@@ -44,3 +44,26 @@ Do not allow arbitrary `voiceCode` or locale from a worker claim. Inference
 rejects mismatched pairs, missing or corrupt style files, and oversized PCM.
 Kokoro itself may require a different phonemizer/model export; K3 must prove
 all three voices with real WAV and MP3 before production activation.
+
+## Required real K3 smoke (NOT YET RUN)
+
+After the Backend has genuinely pre-provisioned a pinned 4-artifact bundle
+(`onnx/model_quantized.onnx`, `voices/af_heart.bin`,
+`voices/am_michael.bin`, `voices/bf_emma.bin`) and the Kokoro cache
+has independently verified every SHA-256, run inside the Kokoro runtime image
+or a native Python 3.12 installation:
+
+```bash
+python -m voxprep_kokoro_worker.real_model_smoke \
+  --model-dir /var/lib/voxprep/kokoro/models/<manifestSha256> \
+  --output-dir /tmp/voxprep-kokoro/k3-evidence
+```
+
+The command performs genuine ONNX inference and FFmpeg MP3 generation for
+all three voices (and writes `k3-real-inference-report.json`). It must
+exit zero and all three WAV/MP3 outputs must be audible and pass acoustic QC.
+This does **not** simulate successful Backend claim/finalization: that
+separately requires real PostgreSQL→Backend→Kokoro Worker→RustFS READY→MVC
+MP3-preview evidence after V2 lifecycle and immutable fingerprint binding.
+
+Never mark K3/K4 accepted based on mock tests or the existence of this script.
