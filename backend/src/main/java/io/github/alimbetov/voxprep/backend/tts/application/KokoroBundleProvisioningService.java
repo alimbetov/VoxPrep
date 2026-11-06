@@ -112,11 +112,18 @@ public class KokoroBundleProvisioningService {
                 throw new IllegalStateException("Existing Kokoro bundle has a different immutable revision");
             }
             UUID bundleId = (UUID) row.get("id");
-            Integer count = jdbc.queryForObject(
-                    "SELECT count(*) FROM app.tts_kokoro_bundle_artifact WHERE bundle_id = ?",
-                    Integer.class, bundleId);
+            Integer count = jdbc.queryForObject("""
+                    SELECT count(*)
+                      FROM app.tts_kokoro_bundle_artifact ba
+                      JOIN app.file_asset fa ON fa.id = ba.file_asset_id
+                     WHERE ba.bundle_id = ?
+                       AND fa.kind = 'TTS_MODEL'
+                       AND fa.status = 'READY'
+                       AND fa.sha256 = ba.sha256
+                       AND fa.size_bytes = ba.size_bytes
+                    """, Integer.class, bundleId);
             if (count == null || count != manifest.artifacts().size()) {
-                throw new IllegalStateException("Incomplete staged Kokoro bundle");
+                throw new IllegalStateException("Incomplete or damaged staged Kokoro bundle");
             }
             return bundleId;
         }
