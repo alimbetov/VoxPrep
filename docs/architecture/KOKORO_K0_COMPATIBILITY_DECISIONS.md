@@ -1,6 +1,6 @@
 # K0 — Architecture & compatibility decisions (VoxPrep Kokoro Worker)
 
-**State:** K0 contract audit recorded; **model bundle NOT PINNED**, implementation **NOT ACCEPTED**.  
+**State:** K0 contract audit recorded; K1 partial implementation landed, **model bundle NOT PINNED**, implementation **NOT ACCEPTED**.  
 **Repository:** `alimbetov/VoxPrep`; companion spec `KOKORO_WORKER_V1_1_SPEC.md`.  
 **Review basis:** existing code on `main` and independent Piper Worker in `worker/`.
 
@@ -43,12 +43,12 @@ A model label such as `Kokoro-82M-v1.0` is not a fully reproducible bundle. Befo
 ## K1 acceptance checklist (not yet all completed)
 
 - [x] SQL candidates for both legacy claim methods require Piper before row lock; source-level regression guard added.
-- [ ] Real PostgreSQL test creates Piper and Kokoro models and proves cross-engine isolation under parallel claims, including expired leases.
-- [ ] Versioned V2 claim and response DTO with actual authenticated engine ownership.
-- [ ] Rotatable separate secrets and cross-worker authz of claim, heartbeat, fail, output and artifacts.
-- [ ] Schema expand migration with manifest assets and engine constraints.
-- [ ] Immutable V2 fingerprint contract with canonical test vectors and legacy V1 fixtures.
-- [ ] Feature flag disables Kokoro enqueue by default.
+- [x] Added PostgreSQL fixtures for Piper and Kokoro and engine-scoped claim/concurrent same-engine checks; exact-SHA execution pending. Mixed-engine parallel / expired-lease V2 matrix remains outstanding.
+- [x] Added `/internal/v2/tts/jobs/claim` with engine identity determined from token and atomic engine-scoped SQL; Kokoro returns 503 until delivery/callbacks are qualified.
+- [ ] Initial separate Piper/Kokoro credential lookup added, including shared-secret fail-closed; rotation and principal-bound heartbeat/fail/output/model-artifact authorization still outstanding.
+- [ ] Additive engine constraint expansion added, but manifest persistence/assets not yet implemented.
+- [ ] Canonical V2 manifest value object and fingerprint function with unit tests added; not yet persisted or used for enqueue; legacy V1 remains unchanged.
+- [x] Kokoro enrollment is explicitly denied at job preparation; V2 Kokoro claim is disabled; configuration flag is default false.
 - [ ] Exact-SHA full Piper integration and Worker regression green.
 - [ ] Deployment rollback drill and evidence.
 
@@ -63,3 +63,14 @@ A model label such as `Kokoro-82M-v1.0` is not a fully reproducible bundle. Befo
 - KOK-21: disable and rollback while Piper still processes jobs.
 
 **Acceptance decision:** K0 **IN PROGRESS**, K1 **IN PROGRESS**. Kokoro generation and deployment remain disabled. This is a safe incremental boundary, not a declaration that the second Worker is ready.
+
+## Incremental K1 source changes (not yet qualified)
+
+- `WorkerApiKeyVerifier.authenticatedEngine`: separate credentials; V1 still Piper-only; V2 claims derive engine from token, not request body.
+- `TtsJobWorkerV2Controller`: versioned claim endpoint only; Kokoro fails closed (`503`) until complete model manifest and callback auth.
+- `TtsJobLeaseService.claimNextForEngine`: engine filter in atomic PostgreSQL candidate selection.
+- `TtsArtifactManifest`: canonical immutable model artifact descriptor; **not yet persisted or served**.
+- `TtsFingerprint.computeV2`: canonical hash for future Kokoro jobs; **not yet called by preparation**.
+- Test classes: `WorkerV2EngineAuthenticationTest`, `TtsArtifactManifestTest`, `TtsFingerprintV2Test`; expanded `TtsJobLeaseIntegrationTest`.
+
+**Open blocker:** do not enable Kokoro via configuration alone. There is no production-ready V2 manifest delivery or identity-bound heartbeat/fail/output protocol, model provisioning remains Piper-shaped, and no real Kokoro inference has run.
