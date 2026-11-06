@@ -93,3 +93,33 @@ The form still submits the existing `voiceModelCode` contract. The engine select
 - [ ] MVC-K05: Enable Kokoro preparation only after V2 lifecycle qualification.
 - [ ] MVC-K06: Engine and model visible in TTS history; worker availability/health status still outstanding.
 - [ ] MVC-K07: Real browser acceptance on Piper and Kokoro.
+
+## K1 continuation — immutable Kokoro model binding and job snapshot (partial)
+
+Added Liquibase migrations `k1-kokoro-model-binding.sql` and
+`k1-kokoro-job-snapshot.sql` as **additive Kokoro-only schema**.
+Existing Piper rows, fingerprints, models and `worker/` are unchanged.
+
+- `app.tts_kokoro_model_binding`: immutable, engine-checked mapping from
+  shared `tts_voice_model` into a pinned `tts_kokoro_bundle`, with
+  approved `af_heart`, `am_michael`, or `bf_emma`, exact voice artifact,
+  frozen phonemizer version, speed. `KokoroModelBindingService` requires a
+  legally reviewed and approved voice model and the four READY assets
+  (quantized ONNX + three named voice style vectors).
+- `app.tts_kokoro_job_snapshot`: append-only job-level bundle/manifest,
+  voice code/hash, runtime and phonemizer versions, speed and V2 fingerprint.
+  PostgreSQL rejects inserts that conflict with the job's voice model,
+  fingerprint, bundle, selected voice, or runtime version.
+- `KokoroJobSnapshotService` provides a typed append-only snapshot write/read
+  primitive for the future transactional Kokoro preparation path.
+- Unit tests cover mismatched voices, unapproved/incomplete binding, and
+  cross-model or malformed snapshot denial.
+
+**Not yet wired:** `TtsJobPreparationService` still intentionally rejects
+KOKORO; no ACTIVE voice model records are automatically created. Claim V2
+continues to return 503 for KOKORO. Before enabling, compute and persist V2
+fingerprint **in the same transaction as the job snapshot**, return
+`manifestSha256`, `voiceCode`, `speed`, and the exact pinned bundle code
+from claim, then qualify principal-bound finalization/replay under PostgreSQL.
+
+**No actual model import or Kokoro ONNX real inference is claimed.**
