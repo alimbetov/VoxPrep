@@ -90,6 +90,26 @@ class TtsJobLeaseIntegrationTest {
     }
 
     @Test
+    void legacyGenericClaimNeverStealsKokoroJob() {
+        UUID kokoroJob = createPendingJobs("kokoro-only", 1, TtsEngine.KOKORO).getFirst();
+        assertThat(leaseService.claimNext("legacy-piper", Duration.ofMinutes(5))).isEmpty();
+        assertThat(jdbcTemplate.queryForObject(
+                "select status from app.tts_job where id = ?", String.class, kokoroJob))
+                .isEqualTo("PENDING");
+    }
+
+    @Test
+    void legacyGenericClaimSkipsEarlierKokoroAndClaimsPiper() {
+        UUID kokoroJob = createPendingJobs("kokoro-first", 1, TtsEngine.KOKORO).getFirst();
+        UUID piperJob = createPendingJobs("piper-second", 1, TtsEngine.PIPER).getFirst();
+        var claimed = leaseService.claimNext("legacy-piper", Duration.ofMinutes(5)).orElseThrow();
+        assertThat(claimed.jobId()).isEqualTo(piperJob);
+        assertThat(jdbcTemplate.queryForObject(
+                "select status from app.tts_job where id = ?", String.class, kokoroJob))
+                .isEqualTo("PENDING");
+    }
+
+    @Test
     void activeLeaseIsNotClaimable() {
         UUID jobId = createPendingJobs("active", 1).getFirst();
         jdbcTemplate.update("""
@@ -130,6 +150,10 @@ class TtsJobLeaseIntegrationTest {
     }
 
     private List<UUID> createPendingJobs(String suffix, int count) {
+        return createPendingJobs(suffix, count, TtsEngine.PIPER);
+    }
+
+    private List<UUID> createPendingJobs(String suffix, int count, TtsEngine engine) {
         return transactionTemplate.execute(status -> {
             var voice = voiceRepository.saveAndFlush(new TtsVoiceEntity(
                     "voice-lease-" + suffix, "US English Lessac", "en-US", "US", "FEMALE", "NEUTRAL", true));
@@ -137,7 +161,7 @@ class TtsJobLeaseIntegrationTest {
             var model = modelRepository.saveAndFlush(new TtsVoiceModelEntity(
                     "model-lease-" + suffix,
                     voice,
-                    TtsEngine.PIPER,
+                    engine,
                     "1.3.0",
                     "en_US-lessac-medium-v1",
                     assets.modelAssetId(),
