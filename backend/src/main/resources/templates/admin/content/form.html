@@ -75,9 +75,9 @@
                     </div>
                     <div class="col-md-2">
                         <label class="form-label" for="availability">Доступность</label>
-                        <select class="form-select" id="availability" th:field="*{availability}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"><div class="form-text">ACTIVE — доступен, INACTIVE — скрыт из активного набора при публикации.</div>
+                        <select class="form-select" id="availability" th:field="*{availability}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}">
                             <option th:each="status : ${availabilityValues}" th:value="${status}" th:text="${status}"></option>
-                        </select>
+                        </select><div class="form-text">ACTIVE — доступен, INACTIVE — скрыт из активного набора при публикации.</div>
                         <div class="text-danger small" th:errors="*{availability}"></div>
                     </div>
                     <div class="col-12">
