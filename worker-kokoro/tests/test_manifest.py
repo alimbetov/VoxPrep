@@ -68,3 +68,21 @@ def test_wrong_download_hash_not_installed(tmp_path):
     with pytest.raises(ModelChecksumError):
         KokoroModelCache(tmp_path, BadSource()).ensure_model(job(m["manifestSha256"]))
     assert not (tmp_path / m["manifestSha256"]).exists()
+
+
+def test_claim_voice_sha_is_fenced_to_manifest():
+    from dataclasses import replace
+    voice = b"voice-vectors"
+    m = manifest()
+    entry = {"path": "voices/af_heart.bin", "role": "VOICE",
+             "sha256": hashlib.sha256(voice).hexdigest(),
+             "sizeBytes": len(voice), "mediaType": "application/octet-stream",
+             "assetId": str(uuid4())}
+    m["artifacts"].append(entry)
+    m["manifestSha256"] = canonical_hash("KOKORO", m["sourceRevision"], m["artifacts"])
+    base = job(m["manifestSha256"])
+    assert validate_manifest(m, replace(base, voice_artifact_sha256=entry["sha256"]))
+    with pytest.raises(BackendProtocolError, match="voice artifact"):
+        validate_manifest(m, replace(base, voice_artifact_sha256="0" * 64))
+    with pytest.raises(BackendProtocolError, match="voice artifact"):
+        validate_manifest(m, replace(base, voice_code="am_michael", voice_artifact_sha256=entry["sha256"]))
