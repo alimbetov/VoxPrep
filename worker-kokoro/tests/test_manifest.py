@@ -86,3 +86,48 @@ def test_claim_voice_sha_is_fenced_to_manifest():
         validate_manifest(m, replace(base, voice_artifact_sha256="0" * 64))
     with pytest.raises(BackendProtocolError, match="voice artifact"):
         validate_manifest(m, replace(base, voice_code="am_michael", voice_artifact_sha256=entry["sha256"]))
+
+
+def test_concurrent_cache_install_downloads_only_once(tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    import threading
+    import time
+    payload = b"verified-onnx"
+    m = manifest(payload)
+    j = job(m["manifestSha256"])
+
+    class Source:
+        calls = 0
+        mutex = threading.Lock()
+
+        def fetch_manifest(self, code):
+            return m
+
+        def download_artifact(self, *, destination, **kwargs):
+            with self.mutex:
+                self.calls += 1
+            time.sleep(0.025)
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes(payload)
+
+    source = Source()
+    cache = KokoroModelCache(tmp_path, source)
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        paths = list(pool.map(cache.ensure_model, [j] * 8))
+    assert len(set(paths)) == 1
+    assert source.calls == 1
+
+
+def test_symlinked_cache_directory_is_rejected(tmp_path):
+    from voxprep_kokoro_worker.domain.errors import ModelCacheInstallError
+    m = manifest()
+    target = tmp_path / "other"
+    target.mkdir()
+    (tmp_path / m["manifestSha256"]).symlink_to(target, target_is_directory=True)
+
+    class Source:
+        def fetch_manifest(self, code):
+            return m
+
+    with pytest.raises(ModelCacheInstallError, match="Symlinked"):
+        KokoroModelCache(tmp_path, Source()).ensure_model(job(m["manifestSha256"]))
