@@ -6,6 +6,7 @@ import io.github.alimbetov.voxprep.backend.tts.application.TtsOutputFinalization
 import io.github.alimbetov.voxprep.backend.tts.application.WorkerApiKeyVerifier;
 import io.github.alimbetov.voxprep.backend.tts.application.WorkerDeliveryProperties;
 import io.github.alimbetov.voxprep.backend.tts.application.WorkerTtsJobClaim;
+import io.github.alimbetov.voxprep.backend.tts.domain.TtsEngine;
 import java.io.IOException;
 import java.util.UUID;
 import org.springframework.http.HttpHeaders;
@@ -57,7 +58,8 @@ public class TtsJobWorkerController {
             @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorization,
             @RequestBody LeaseRequest request) {
         if (!tokenVerifier.authorized(authorization)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        return leaseService.heartbeat(jobId, request.workerId(), request.leaseToken(), properties.getLeaseDuration())
+        return leaseService.heartbeatForEngine(jobId, request.workerId(), request.leaseToken(),
+                        TtsEngine.PIPER, properties.getLeaseDuration())
                 .map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.status(HttpStatus.CONFLICT).build());
     }
 
@@ -67,8 +69,8 @@ public class TtsJobWorkerController {
             @RequestHeader(name = HttpHeaders.AUTHORIZATION, required = false) String authorization,
             @RequestBody FailRequest request) {
         if (!tokenVerifier.authorized(authorization)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        boolean failed = leaseService.failWorker(jobId, request.fileId(), request.workerId(), request.leaseToken(),
-                request.errorCode(), request.errorMessage());
+        boolean failed = leaseService.failWorkerForEngine(jobId, request.fileId(), request.workerId(),
+                request.leaseToken(), TtsEngine.PIPER, request.errorCode(), request.errorMessage());
         return failed ? ResponseEntity.noContent().build() : ResponseEntity.status(HttpStatus.CONFLICT).build();
     }
 
@@ -88,9 +90,10 @@ public class TtsJobWorkerController {
             @RequestPart("file") MultipartFile file) {
         if (!tokenVerifier.authorized(authorization)) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         try {
-            var result = outputService.finalizeOutput(new TtsOutputFinalizationService.OutputUpload(
+            var result = outputService.finalizeOutputForEngine(new TtsOutputFinalizationService.OutputUpload(
                     jobId, workerId, fileId, leaseToken, fingerprint, voiceModelId, audioProfile,
-                    sha256, sizeBytes, durationMs, file.getContentType(), file.getBytes()));
+                    sha256, sizeBytes, durationMs, file.getContentType(), file.getBytes()),
+                    TtsEngine.PIPER, null);
             return switch (result) {
                 case CREATED -> ResponseEntity.status(HttpStatus.CREATED).build();
                 case ALREADY_FINALIZED -> ResponseEntity.ok().build();
