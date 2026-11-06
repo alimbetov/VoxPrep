@@ -34,7 +34,7 @@
                 <div class="col-md-4"><label class="form-label">Категория</label><input th:field="*{categoryCode}" class="form-control" required><div class="form-text">Код уже существующей категории в каталоге.</div></div>
                 <div class="col-md-4"><label class="form-label">Уровень</label><input th:field="*{levelCode}" class="form-control" required><div class="form-text">Уровень сложности: например A1, B1, B2.</div></div>
                 <div class="col-md-2"><label class="form-label">Минуты</label><input th:field="*{minutes}" type="number" min="1" class="form-control" required><div class="form-text">Примерное время изучения в минутах.</div></div>
-                <div class="col-md-2"><label class="form-label">Доступность</label><select th:field="*{availability}" class="form-select"><div class="form-text">ACTIVE — доступный материал; INACTIVE — неактивный.</div><option value="ACTIVE">ACTIVE</option><option value="INACTIVE">INACTIVE</option></select></div>
+                <div class="col-md-2"><label class="form-label">Доступность</label><select th:field="*{availability}" class="form-select"><option value="ACTIVE">ACTIVE</option><option value="INACTIVE">INACTIVE</option></select><div class="form-text">ACTIVE — доступный материал; INACTIVE — неактивный.</div></div>
                 <div class="col-12"><label class="form-label">Навыки (по одному коду на строку)</label><textarea th:field="*{skillCodes}" class="form-control"></textarea><div class="form-text">Используйте коды существующих навыков, по одному на строку.</div></div>
             </div>
         </div></div>
