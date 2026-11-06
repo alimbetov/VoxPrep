@@ -199,6 +199,73 @@ public class TtsJobLeaseService {
                 Timestamp.from(leaseUntil), jobId, leaseOwner, leaseToken).stream().findFirst();
     }
 
+    /**
+     * V2 heartbeat checks the authenticated engine in the UPDATE predicate.
+     * Legacy Piper heartbeat contract remains unchanged.
+     */
+    @Transactional
+    public Optional<TtsJobLeaseState> heartbeatForEngine(
+            UUID jobId, String workerId, UUID leaseToken,
+            TtsEngine engine, Duration leaseDuration) {
+        Objects.requireNonNull(jobId, "jobId");
+        String owner = required(workerId, "workerId", 128);
+        Objects.requireNonNull(leaseToken, "leaseToken");
+        Objects.requireNonNull(engine, "engine");
+        Instant until = Instant.now().plus(positiveDuration(leaseDuration));
+        return jdbcTemplate.query("""
+                UPDATE app.tts_job AS j
+                   SET status = 'PROCESSING', lease_until = ?, version = j.version + 1,
+                       updated_at = CURRENT_TIMESTAMP
+                 WHERE j.id = ? AND j.lease_owner = ? AND j.lease_token = ?
+                   AND j.status IN ('CLAIMED', 'PROCESSING')
+                   AND j.lease_until >= CURRENT_TIMESTAMP
+                   AND EXISTS (
+                       SELECT 1 FROM app.tts_voice_model vm
+                       WHERE vm.id = j.voice_model_id AND vm.engine = ?
+                   )
+                RETURNING j.id, j.status, j.lease_owner, j.lease_token,
+                          j.lease_until, j.attempt_count
+                """,
+                (rs, rowNum) -> new TtsJobLeaseState(
+                        rs.getObject("id", UUID.class),
+                        TtsJobStatus.valueOf(rs.getString("status")),
+                        rs.getString("lease_owner"),
+                        rs.getObject("lease_token", UUID.class),
+                        rs.getTimestamp("lease_until").toInstant(),
+                        rs.getInt("attempt_count")),
+                Timestamp.from(until), jobId, owner, leaseToken, engine.name()
+        ).stream().findFirst();
+    }
+
+    /** V2 failure transition enforces engine and current lease atomically. */
+    @Transactional
+    public boolean failWorkerForEngine(
+            UUID jobId, UUID fileId, String workerId, UUID leaseToken,
+            TtsEngine engine, String failureCode, String failureMessage) {
+        Objects.requireNonNull(jobId, "jobId");
+        Objects.requireNonNull(fileId, "fileId");
+        String owner = required(workerId, "workerId", 128);
+        Objects.requireNonNull(leaseToken, "leaseToken");
+        Objects.requireNonNull(engine, "engine");
+        String code = required(failureCode, "failureCode", 64);
+        String message = optional(failureMessage, "failureMessage", 2000);
+        return jdbcTemplate.update("""
+                UPDATE app.tts_job AS j
+                   SET status = 'FAILED', lease_owner = NULL, lease_token = NULL,
+                       lease_until = NULL, failure_code = ?, failure_message = ?,
+                       failed_at = CURRENT_TIMESTAMP,
+                       version = j.version + 1, updated_at = CURRENT_TIMESTAMP
+                 WHERE j.id = ? AND j.file_id = ?
+                   AND j.lease_owner = ? AND j.lease_token = ?
+                   AND j.status IN ('CLAIMED', 'PROCESSING')
+                   AND j.lease_until >= CURRENT_TIMESTAMP
+                   AND EXISTS (
+                       SELECT 1 FROM app.tts_voice_model vm
+                       WHERE vm.id = j.voice_model_id AND vm.engine = ?
+                   )
+                """, code, message, jobId, fileId, owner, leaseToken, engine.name()) == 1;
+    }
+
     @Transactional
     public boolean fail(UUID jobId, String workerId, UUID leaseToken, String failureCode, String failureMessage) {
         return failInternal(jobId, null, workerId, leaseToken, failureCode, failureMessage);
