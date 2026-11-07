@@ -32,6 +32,10 @@ class QueueFull(RuntimeError):
     pass
 
 
+class InvalidQueueKey(ValueError):
+    pass
+
+
 class QueueClosed(RuntimeError):
     pass
 
@@ -113,7 +117,7 @@ class DurableQueue:
             not isinstance(key, str) or not 1 <= len(key) <= MAX_IDEMPOTENCY_LENGTH
             or not key.isascii() or not all(c.isalnum() or c in "-_.:" for c in key)
         ):
-            raise ValueError("Invalid Idempotency-Key")
+            raise InvalidQueueKey("Invalid Idempotency-Key")
         digest = _fingerprint(payload)
         with self._transaction():
             if key is not None:
