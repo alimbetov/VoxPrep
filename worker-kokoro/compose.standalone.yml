@@ -1,0 +1,64 @@
+# Standalone Kokoro Worker — opt-in DEV deployment
+#
+# Run from worker-kokoro/:
+#   cp .env.standalone.example .env.standalone
+#   # set a random secret and a pinned manifest (never commit secrets)
+#   docker compose --env-file .env.standalone -f compose.standalone.yml up -d --build
+#
+# This DOES NOT start the VoxPrep V2 poller.
+services:
+  kokoro-standalone:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: ["voxprep-kokoro-standalone"]
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8086:8086"
+    environment:
+      STANDALONE_HOST: "0.0.0.0"
+      STANDALONE_ALLOW_REMOTE: "true"
+      STANDALONE_PORT: "8086"
+      STANDALONE_API_TOKEN: "${STANDALONE_API_TOKEN:?configure_a_secret}"
+      STANDALONE_MANIFEST_PATH: /config/manifest.json
+      STANDALONE_MODEL_DIR: /model-source
+      STANDALONE_HF_REPO: "${STANDALONE_HF_REPO:-}"
+      STANDALONE_MODEL_S3_BUCKET: "${STANDALONE_MODEL_S3_BUCKET:-}"
+      STANDALONE_MODEL_S3_PREFIX: "${STANDALONE_MODEL_S3_PREFIX:-}"
+      STANDALONE_OUTPUT_S3_BUCKET: "${STANDALONE_OUTPUT_S3_BUCKET:-}"
+      STANDALONE_OUTPUT_S3_PREFIX: "${STANDALONE_OUTPUT_S3_PREFIX:-}"
+      STANDALONE_S3_ENDPOINT_URL: "${STANDALONE_S3_ENDPOINT_URL:-}"
+      STANDALONE_S3_REGION: "${STANDALONE_S3_REGION:-}"
+      MODEL_CACHE_DIR: /var/lib/voxprep/kokoro/models
+      TEMP_DIR: /tmp/voxprep-kokoro
+      STANDALONE_OUTPUT_DIR: /var/lib/voxprep/kokoro/output
+      AWS_SHARED_CREDENTIALS_FILE: /run/secrets/aws_credentials
+    volumes:
+      - "./manifest.json:/config/manifest.json:ro"
+      - "./model-source:/model-source:ro"
+      - "${STANDALONE_AWS_CREDENTIALS_FILE:?path_to_private_credentials}:/run/secrets/aws_credentials:ro"
+      - kokoro-cache:/var/lib/voxprep/kokoro/models
+      - kokoro-output:/var/lib/voxprep/kokoro/output
+      - kokoro-tmp:/tmp/voxprep-kokoro
+    read_only: true
+    cap_drop: ["ALL"]
+    security_opt: ["no-new-privileges:true"]
+    pids_limit: 128
+    mem_limit: 3g
+    cpus: 2
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8086/health/live', timeout=3).read()"
+      interval: 30s
+      timeout: 5s
+      start_period: 120s
+      retries: 3
+
+volumes:
+  kokoro-cache:
+  kokoro-output:
+  kokoro-tmp:
