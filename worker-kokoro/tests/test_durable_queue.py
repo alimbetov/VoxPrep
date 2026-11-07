@@ -205,3 +205,52 @@ def test_background_queue_liveness_and_persistent_metrics(tmp_path):
         server.server_close()
         server_thread.join(timeout=5)
         queue.stop()
+
+def test_model_upgrade_cannot_reinterpret_queued_job(tmp_path):
+    settings, service = service_fixture(tmp_path)
+    queue = DurableQueue(settings.output_dir / "queue", service)
+    queued, _ = queue.submit(PAYLOAD, "fixed-content-revision")
+    saved_manifest = service.manifest
+    service.manifest = dict(saved_manifest, manifestSha256="b" * 64)
+    try:
+        assert queue.process_once()
+        status = queue.get(queued["id"])
+        assert status["status"] == "FAILED"
+        assert status["errorCode"] == "MODEL_SNAPSHOT_MISMATCH"
+        assert list(settings.output_dir.glob("*.mp3")) == []
+        with pytest.raises(QueueConflict):
+            queue.submit(PAYLOAD, "fixed-content-revision")
+    finally:
+        service.manifest = saved_manifest
+        queue.stop()
+
+
+def test_legacy_queue_migration_fails_closed_on_missing_bundle_identity(tmp_path):
+    settings, service = service_fixture(tmp_path)
+    root = settings.output_dir / "queue"
+    root.mkdir(parents=True)
+    database = sqlite3.connect(root / "jobs.sqlite3")
+    try:
+        database.execute("""
+            CREATE TABLE jobs (
+              id TEXT PRIMARY KEY, idempotency_key TEXT UNIQUE,
+              fingerprint TEXT NOT NULL, payload TEXT NOT NULL,
+              status TEXT NOT NULL, attempts INTEGER NOT NULL DEFAULT 0,
+              created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL,
+              result TEXT, error_code TEXT
+            )
+        """)
+        from uuid import uuid4
+        ident = str(uuid4())
+        database.execute(
+            "INSERT INTO jobs(id,fingerprint,payload,status,created_at,updated_at) VALUES(?,?,?,?,?,?)",
+            (ident, "a" * 64, json.dumps(PAYLOAD), "QUEUED", 1, 1))
+        database.commit()
+    finally:
+        database.close()
+    queue = DurableQueue(root, service)
+    try:
+        assert queue.process_once()
+        assert queue.get(ident)["errorCode"] == "MODEL_SNAPSHOT_MISMATCH"
+    finally:
+        queue.stop()
