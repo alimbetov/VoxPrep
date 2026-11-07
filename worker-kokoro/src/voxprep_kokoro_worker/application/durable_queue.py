@@ -40,9 +40,9 @@ class QueueClosed(RuntimeError):
     pass
 
 
-def _fingerprint(payload: dict) -> str:
+def _fingerprint(payload: dict, manifest_sha256: str) -> str:
     return hashlib.sha256(
-        json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
+        json.dumps([manifest_sha256, payload], sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode()
     ).hexdigest()
 
 
@@ -78,6 +78,7 @@ class DurableQueue:
                 id TEXT PRIMARY KEY,
                 idempotency_key TEXT UNIQUE,
                 fingerprint TEXT NOT NULL,
+                manifest_sha256 TEXT NOT NULL DEFAULT '',
                 payload TEXT NOT NULL,
                 status TEXT NOT NULL CHECK (status IN
                     ('QUEUED','RUNNING','SUCCEEDED','FAILED','CANCELLED')),
@@ -87,6 +88,16 @@ class DurableQueue:
                 result TEXT,
                 error_code TEXT
             )""")
+            # Migration for early D2 databases. Legacy queued records have
+            # unknown model identity and will fail closed rather than running
+            # against an upgraded model bundle.
+            columns = {
+                row[1] for row in self._db.execute("PRAGMA table_info(jobs)").fetchall()
+            }
+            if "manifest_sha256" not in columns:
+                self._db.execute(
+                    "ALTER TABLE jobs ADD COLUMN manifest_sha256 TEXT NOT NULL DEFAULT ''"
+                )
             # Interrupted RUNNING jobs are replayed using the same UUID.
             # Do not permanently retry after MAX_RETRIES attempts.
             with self._transaction():
@@ -118,7 +129,8 @@ class DurableQueue:
             or not key.isascii() or not all(c.isalnum() or c in "-_.:" for c in key)
         ):
             raise InvalidQueueKey("Invalid Idempotency-Key")
-        digest = _fingerprint(payload)
+        manifest_sha256 = self.service.manifest["manifestSha256"]
+        digest = _fingerprint(payload, manifest_sha256)
         with self._transaction():
             if key is not None:
                 existing = self._db.execute(
@@ -137,9 +149,10 @@ class DurableQueue:
             now = int(time.time())
             job_id = str(uuid4())
             self._db.execute(
-                "INSERT INTO jobs(id,idempotency_key,fingerprint,payload,status,created_at,updated_at) "
-                "VALUES(?,?,?,?,?,?,?)",
-                (job_id, key, digest, json.dumps(payload, ensure_ascii=False, sort_keys=True),
+                "INSERT INTO jobs(id,idempotency_key,fingerprint,manifest_sha256,payload,status,created_at,updated_at) "
+                "VALUES(?,?,?,?,?,?,?,?)",
+                (job_id, key, digest, manifest_sha256,
+                 json.dumps(payload, ensure_ascii=False, sort_keys=True),
                  "QUEUED", now, now))
             result = self._get_locked(job_id)
         self._wakeup.set()
@@ -179,12 +192,17 @@ class DurableQueue:
     def process_once(self) -> bool:
         with self._transaction():
             row = self._db.execute(
-                "SELECT id,payload,attempts FROM jobs WHERE status='QUEUED' "
+                "SELECT id,payload,attempts,manifest_sha256 FROM jobs WHERE status='QUEUED' "
                 "ORDER BY created_at,id LIMIT 1"
             ).fetchone()
             if row is None:
                 return False
-            job_id, encoded, attempts = row
+            job_id, encoded, attempts, manifest_sha256 = row
+            if manifest_sha256 != self.service.manifest["manifestSha256"]:
+                self._db.execute(
+                    "UPDATE jobs SET status='FAILED',error_code='MODEL_SNAPSHOT_MISMATCH',updated_at=? "
+                    "WHERE id=? AND status='QUEUED'", (int(time.time()), job_id))
+                return True
             self._db.execute(
                 "UPDATE jobs SET status='RUNNING',attempts=?,updated_at=? "
                 "WHERE id=? AND status='QUEUED'",
