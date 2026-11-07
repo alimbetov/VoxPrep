@@ -54,12 +54,12 @@ class ContentLocalizationMvcIntegrationTest {
         mvc.perform(get("/admin/content/revisions/{id}/localizations", contentId)
                         .with(user("editor").roles("ADMIN")))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Content localizations")));
+                .andExpect(content().string(containsString("Переводы материала")));
 
         mvc.perform(get("/admin/content/revisions/{id}/localizations/new", contentId)
                         .with(user("editor").roles("ADMIN")))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("BCP-47 locale")))
+                .andExpect(content().string(containsString("Код языка (BCP-47)")))
                 .andExpect(content().string(containsString("name=\"_csrf\"")));
 
         mvc.perform(post("/admin/content/revisions/{id}/localizations", contentId)
@@ -145,7 +145,7 @@ class ContentLocalizationMvcIntegrationTest {
         mvc.perform(get("/admin/content/localizations/{id}/edit", id)
                         .with(user("reviewer").roles("ADMIN")))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Submit for review")));
+                .andExpect(content().string(containsString("Передать перевод на проверку")));
 
         mvc.perform(post("/admin/content/localizations/{id}/review", id)
                         .with(user("reviewer").roles("ADMIN")).with(csrf())
@@ -159,7 +159,7 @@ class ContentLocalizationMvcIntegrationTest {
         mvc.perform(get("/admin/content/localizations/{id}/edit", id)
                         .with(user("approver").roles("ADMIN")))
                 .andExpect(status().isOk())
-                .andExpect(content().string(containsString("Approve localization")));
+                .andExpect(content().string(containsString("Одобрить перевод")));
 
         mvc.perform(post("/admin/content/localizations/{id}/approve", id)
                         .with(user("approver").roles("ADMIN")).with(csrf())
