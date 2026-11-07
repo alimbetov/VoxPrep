@@ -123,6 +123,15 @@ def test_standalone_api_auth_output_recovery_and_corruption_rejection(tmp_path):
             assert client.get("/v1/metrics", headers=headers).json()["completedJobs"] == 1
             assert info["sha256"] == hashlib.sha256(b"safe-mp3-output").hexdigest()
             assert client.get(info["downloadPath"], headers=headers).content == b"safe-mp3-output"
+            # Internal storage failure is a 503, never a misleading 400.
+            original_synthesize = service.synthesize
+            def failed_storage(_):
+                raise ValueError("S3 integrity mismatch")
+            service.synthesize = failed_storage
+            internal_failure = client.post("/v1/tts/jobs", headers=headers, json=body)
+            assert internal_failure.status_code == 503
+            assert "integrity mismatch" not in internal_failure.text
+            service.synthesize = original_synthesize
             # Metadata survives an HTTP process restart.
             restarted = StandaloneService(settings, synthesizer=FakeSynth(), postprocessor=FakePost())
             assert restarted.find(info["id"]) == info
@@ -217,6 +226,9 @@ def test_config_requires_secret_and_explicit_remote_bind(tmp_path):
         StandaloneSettings.from_env(env)
     env["STANDALONE_HOST"] = "127.0.0.1"
     assert StandaloneSettings.from_env(env).host == "127.0.0.1"
+    env["STANDALONE_API_TOKEN"] = "invalid-unicode-token-contains-é-long"
+    with pytest.raises(ValueError, match="STANDALONE_API_TOKEN"):
+        StandaloneSettings.from_env(env)
 
 def test_corrupt_source_fails_readiness_without_partial_install(tmp_path):
     from voxprep_kokoro_worker.domain.errors import ModelChecksumError
