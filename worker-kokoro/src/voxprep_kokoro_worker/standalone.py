@@ -34,6 +34,11 @@ MAX_BODY = 65536
 MAX_OUTPUT_BYTES = 16 * 1024 * 1024
 
 
+class InvalidRequest(ValueError):
+    """Invalid caller-provided synthesis fields, not runtime errors."""
+
+
+
 @dataclass(frozen=True)
 class StandaloneSettings:
     token: str
@@ -56,7 +61,7 @@ class StandaloneSettings:
     def from_env(cls, env=None):
         env = os.environ if env is None else env
         token = env.get("STANDALONE_API_TOKEN", "")
-        if len(token) < 24 or token != token.strip():
+        if len(token) < 24 or token != token.strip() or not token.isascii():
             raise ValueError("STANDALONE_API_TOKEN must be at least 24 non-whitespace characters")
         host = env.get("STANDALONE_HOST", "127.0.0.1")
         if host not in ("127.0.0.1", "::1", "localhost") and not env.get("STANDALONE_ALLOW_REMOTE") == "true":
@@ -152,16 +157,16 @@ class StandaloneService:
 
     def synthesize(self, data: dict) -> dict:
         if not isinstance(data, dict) or set(data) != {"text", "voiceCode", "speed"}:
-            raise ValueError("Require exactly text, voiceCode, speed")
+            raise InvalidRequest("Require exactly text, voiceCode, speed")
         text = data["text"]
         voice = data["voiceCode"]
         speed = data["speed"]
         if not isinstance(text, str) or not text.strip() or len(text) > 12000 or "\x00" in text:
-            raise ValueError("Invalid text length or content")
+            raise InvalidRequest("Invalid text length or content")
         if voice not in SUPPORTED_VOICES:
-            raise ValueError("Unsupported voiceCode")
+            raise InvalidRequest("Unsupported voiceCode")
         if isinstance(speed, bool) or not isinstance(speed, (int, float)) or not math.isfinite(speed) or not 0.5 <= speed <= 2:
-            raise ValueError("Speed must be between 0.5 and 2")
+            raise InvalidRequest("Speed must be between 0.5 and 2")
         if not self.busy.acquire(blocking=False):
             raise RuntimeError("Worker busy")
         try:
@@ -331,7 +336,7 @@ def make_server(settings: StandaloneSettings, service: StandaloneService):
             try:
                 data = json.loads(self.rfile.read(size))
                 result = service.synthesize(data)
-            except (ValueError, TypeError, json.JSONDecodeError):
+            except (json.JSONDecodeError, UnicodeDecodeError, InvalidRequest):
                 return self.respond(400, {"error": "Invalid synthesis request"})
             except RuntimeError as exc:
                 if str(exc) == "Worker busy":
