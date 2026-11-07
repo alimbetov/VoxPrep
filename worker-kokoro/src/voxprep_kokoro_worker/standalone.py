@@ -97,11 +97,6 @@ class StandaloneService:
             path.mkdir(parents=True, exist_ok=True)
             if path.is_symlink():
                 raise ValueError("Symlinked storage directories are forbidden")
-        # Interrupted local jobs never become successful results. Remove
-        # their disposable workspaces on restart; completed MP3s persist.
-        for orphan in settings.temp_dir.glob("standalone-*"):
-            if orphan.is_dir() and not orphan.is_symlink():
-                shutil.rmtree(orphan)
         if settings.output_dir.is_symlink():
             raise ValueError("Symlink output directory is forbidden")
         if settings.manifest_path.stat().st_size > 65536:
