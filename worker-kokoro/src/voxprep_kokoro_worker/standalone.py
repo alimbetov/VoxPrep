@@ -177,8 +177,14 @@ class StandaloneService:
             from uuid import UUID
             if str(UUID(output_id)) != output_id:
                 raise ValueError("Invalid durable job ID")
+            # Reusing an output after an interrupted finalize is safe only
+            # when all immutable synthesis inputs still match.
+            expected = self._job(text=text, voice=voice, speed=speed)
             existing = self.find(output_id)
-            if existing is not None:
+            if (existing is not None
+                and existing.get("manifestSha256") == expected.manifest_sha256
+                and existing.get("fingerprint") == expected.fingerprint
+                and existing.get("voiceCode") == voice):
                 return existing
         if not self.busy.acquire(blocking=False):
             raise RuntimeError("Worker busy")
@@ -209,6 +215,7 @@ class StandaloneService:
                     "id": output_id, "sha256": digest, "sizeBytes": artifact.size_bytes,
                     "durationMs": artifact.duration_ms, "audioProfile": artifact.audio_profile,
                     "voiceCode": voice, "manifestSha256": job.manifest_sha256,
+                    "fingerprint": job.fingerprint,
                     "downloadPath": f"/v1/tts/jobs/{output_id}/audio",
                     "s3Key": self._object_key(output_id) if self.settings.output_s3_bucket else None,
                 }
