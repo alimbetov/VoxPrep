@@ -28,7 +28,7 @@ from voxprep_kokoro_worker.adapters.model_cache import KokoroModelCache
 from voxprep_kokoro_worker.adapters.pinned_sources import PinnedModelSource
 from voxprep_kokoro_worker.adapters.voice_bundle import SUPPORTED_VOICES, ensure_voices_archive
 from voxprep_kokoro_worker.domain.job import ClaimedJob
-from voxprep_kokoro_worker.application.durable_queue import DurableQueue, QueueConflict, QueueFull
+from voxprep_kokoro_worker.application.durable_queue import DurableQueue, QueueConflict, QueueFull, InvalidQueueKey
 
 LOG = logging.getLogger(__name__)
 MAX_BODY = 65536
@@ -381,7 +381,7 @@ def make_server(settings: StandaloneSettings, service: StandaloneService, queue:
                 return self.respond(409, {"error": "Idempotency conflict"})
             except QueueFull:
                 return self.respond(429, {"error": "Queue capacity exceeded"})
-            except (json.JSONDecodeError, UnicodeDecodeError, InvalidRequest, ValueError):
+            except (json.JSONDecodeError, UnicodeDecodeError, InvalidRequest, InvalidQueueKey):
                 return self.respond(400, {"error": "Invalid synthesis request"})
             except RuntimeError as exc:
                 if str(exc) == "Worker busy":
