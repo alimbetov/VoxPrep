@@ -18,9 +18,23 @@ from voxprep_kokoro_worker.manifest_cli import create_manifest
 from voxprep_kokoro_worker.standalone import StandaloneService, StandaloneSettings
 
 
-def run(model_dir: Path, output_dir: Path, revision: str) -> dict:
+def run(model_dir: Path, output_dir: Path, revision: str, *,
+        rustfs_endpoint: str | None = None, rustfs_bucket: str | None = None) -> dict:
     output_dir.mkdir(parents=True, exist_ok=True)
     manifest = create_manifest(model_dir, "kokoro-82m-d2", revision)
+    if bool(rustfs_endpoint) != bool(rustfs_bucket):
+        raise ValueError("RustFS endpoint and bucket must be configured together")
+    prefix = "d2-pinned-models/" + manifest["manifestSha256"]
+    if rustfs_endpoint:
+        import boto3
+        s3 = boto3.client("s3", endpoint_url=rustfs_endpoint, region_name="us-east-1")
+        for entry in manifest["artifacts"]:
+            key = prefix + "/" + entry["path"]
+            s3.upload_file(str(model_dir / entry["path"]), rustfs_bucket, key)
+            info = s3.head_object(Bucket=rustfs_bucket, Key=key)
+            assert info["ContentLength"] == entry["sizeBytes"]
+    else:
+        s3 = None
     with tempfile.TemporaryDirectory(prefix="kokoro-d2-") as temp:
         root = Path(temp)
         config_path = root / "manifest.json"
@@ -29,9 +43,12 @@ def run(model_dir: Path, output_dir: Path, revision: str) -> dict:
             token="d2-smoke-local-only-token-unique-123456", host="127.0.0.1", port=0,
             manifest_path=config_path, cache_dir=root / "cache",
             temp_dir=root / "temp", output_dir=output_dir,
-            local_model_dir=model_dir, hf_repo=None, model_s3_bucket=None,
-            model_s3_prefix="", output_s3_bucket=None, output_s3_prefix="",
-            s3_endpoint_url=None, s3_region=None,
+            local_model_dir=None if s3 else model_dir, hf_repo=None,
+            model_s3_bucket=rustfs_bucket,
+            model_s3_prefix=prefix if s3 else "",
+            output_s3_bucket=rustfs_bucket,
+            output_s3_prefix="d2-real-output/" + manifest["manifestSha256"] if s3 else "",
+            s3_endpoint_url=rustfs_endpoint, s3_region="us-east-1" if s3 else None,
         )
         service = StandaloneService(settings)
         service.startup()
@@ -57,6 +74,15 @@ def run(model_dir: Path, output_dir: Path, revision: str) -> dict:
                 assert observed == info["sha256"] and file.stat().st_size == info["sizeBytes"]
                 assert info["durationMs"] > 0
                 assert service.find(item["id"]) == info
+                if s3:
+                    assert info["s3Key"]
+                    remote = s3.get_object(Bucket=rustfs_bucket, Key=info["s3Key"])
+                    try:
+                        content = remote["Body"].read()
+                    finally:
+                        remote["Body"].close()
+                    assert hashlib.sha256(content).hexdigest() == observed
+                    assert len(content) == info["sizeBytes"]
                 evidence.append({
                     "voiceCode": code, "jobId": item["id"], "sha256": observed,
                     "sizeBytes": file.stat().st_size, "durationMs": info["durationMs"],
@@ -76,7 +102,8 @@ def run(model_dir: Path, output_dir: Path, revision: str) -> dict:
             "engine": "KOKORO", "mode": "STANDALONE_D2_REAL",
             "manifestSha256": manifest["manifestSha256"], "jobs": evidence,
             "accepted": len(evidence) == 3,
-            "limitations": ["Local S3/RustFS output not exercised", "Audio listening review required"],
+            "rustfsVerified": bool(s3),
+            "limitations": ["Audio listening review required"],
         }
         (output_dir / "d2-real-smoke-evidence.json").write_text(
             json.dumps(report, indent=2), encoding="utf-8")
@@ -88,8 +115,13 @@ def main():
     parser.add_argument("--model-dir", required=True, type=Path)
     parser.add_argument("--output-dir", required=True, type=Path)
     parser.add_argument("--revision", required=True)
+    parser.add_argument("--rustfs-endpoint")
+    parser.add_argument("--rustfs-bucket")
     args = parser.parse_args()
-    print(json.dumps(run(args.model_dir, args.output_dir, args.revision), indent=2))
+    print(json.dumps(run(
+        args.model_dir, args.output_dir, args.revision,
+        rustfs_endpoint=args.rustfs_endpoint, rustfs_bucket=args.rustfs_bucket,
+    ), indent=2))
 
 
 if __name__ == "__main__":
