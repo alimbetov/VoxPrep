@@ -1,7 +1,9 @@
 name: Kokoro K3 Real ONNX Inference
 
-# Run once for this workflow's introduction and manually on demand.
-# Avoid an expensive model download for every unrelated pull-request push.
+# D2 exact-SHA qualification trigger: this workflow file change starts real
+# pinned ONNX -> SQLite durable queue -> RustFS model/output acceptance.
+# K2 unit and Standalone Multiarch also watch this file for the same SHA.
+# Avoid expensive model downloads for unrelated source commits.
 on:
   workflow_dispatch:
   push:
