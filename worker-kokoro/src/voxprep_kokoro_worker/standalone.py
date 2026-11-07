@@ -26,7 +26,7 @@ from uuid import uuid4
 from voxprep_kokoro_worker.adapters.audio import FfmpegPostprocessor, KokoroSynthesizer
 from voxprep_kokoro_worker.adapters.model_cache import KokoroModelCache
 from voxprep_kokoro_worker.adapters.pinned_sources import PinnedModelSource
-from voxprep_kokoro_worker.adapters.voice_bundle import SUPPORTED_VOICES
+from voxprep_kokoro_worker.adapters.voice_bundle import SUPPORTED_VOICES, ensure_voices_archive
 from voxprep_kokoro_worker.domain.job import ClaimedJob
 
 LOG = logging.getLogger(__name__)
@@ -146,8 +146,8 @@ class StandaloneService:
         # Validate canonical manifest and pre-install at least the primary
         # model and voice bundle before advertising readiness.
         first = next(iter(SUPPORTED_VOICES))
-        with self.cache.hold_model(self._job(text="Health probe", voice=first, speed=1.0)):
-            pass
+        with self.cache.hold_model(self._job(text="Health probe", voice=first, speed=1.0)) as model_dir:
+            ensure_voices_archive(model_dir)  # validate the three pinned float32 style vectors
         self.ready = True
 
     def synthesize(self, data: dict) -> dict:
@@ -235,13 +235,16 @@ class StandaloneService:
         media = self.settings.output_dir / (output_id + ".mp3")
         if not (meta.is_file() and media.is_file()) or meta.is_symlink() or media.is_symlink():
             return None
-        data = json.loads(meta.read_text(encoding="utf-8"))
-        if data["id"] != output_id or media.stat().st_size != data["sizeBytes"]:
-            return None
-        with media.open("rb") as stream:
-            if hashlib.file_digest(stream, "sha256").hexdigest() != data["sha256"]:
+        try:
+            data = json.loads(meta.read_text(encoding="utf-8"))
+            if data["id"] != output_id or media.stat().st_size != data["sizeBytes"]:
                 return None
-        return data
+            with media.open("rb") as stream:
+                if hashlib.file_digest(stream, "sha256").hexdigest() != data["sha256"]:
+                    return None
+            return data
+        except (OSError, ValueError, KeyError, TypeError):
+            return None
 
 
 def make_server(settings: StandaloneSettings, service: StandaloneService):
