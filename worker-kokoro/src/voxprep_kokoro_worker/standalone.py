@@ -28,6 +28,7 @@ from voxprep_kokoro_worker.adapters.model_cache import KokoroModelCache
 from voxprep_kokoro_worker.adapters.pinned_sources import PinnedModelSource
 from voxprep_kokoro_worker.adapters.voice_bundle import SUPPORTED_VOICES, ensure_voices_archive
 from voxprep_kokoro_worker.domain.job import ClaimedJob
+from voxprep_kokoro_worker.application.durable_queue import DurableQueue, QueueConflict, QueueFull
 
 LOG = logging.getLogger(__name__)
 MAX_BODY = 65536
@@ -155,7 +156,7 @@ class StandaloneService:
             ensure_voices_archive(model_dir)  # validate the three pinned float32 style vectors
         self.ready = True
 
-    def synthesize(self, data: dict) -> dict:
+    def validate_request(self, data: dict) -> dict:
         if not isinstance(data, dict) or set(data) != {"text", "voiceCode", "speed"}:
             raise InvalidRequest("Require exactly text, voiceCode, speed")
         text = data["text"]
@@ -167,10 +168,25 @@ class StandaloneService:
             raise InvalidRequest("Unsupported voiceCode")
         if isinstance(speed, bool) or not isinstance(speed, (int, float)) or not math.isfinite(speed) or not 0.5 <= speed <= 2:
             raise InvalidRequest("Speed must be between 0.5 and 2")
+        return {"text": text.strip(), "voiceCode": voice, "speed": float(speed)}
+
+    def synthesize(self, data: dict, *, output_id: str | None = None) -> dict:
+        data = self.validate_request(data)
+        text, voice, speed = data["text"], data["voiceCode"], data["speed"]
+        if output_id is not None:
+            from uuid import UUID
+            if str(UUID(output_id)) != output_id:
+                raise ValueError("Invalid durable job ID")
+            existing = self.find(output_id)
+            if existing is not None:
+                return existing
         if not self.busy.acquire(blocking=False):
             raise RuntimeError("Worker busy")
         try:
-            job = self._job(text=text.strip(), voice=voice, speed=float(speed))
+            job = self._job(text=text, voice=voice, speed=speed)
+            if output_id is not None:
+                from dataclasses import replace
+                job = replace(job, job_id=output_id)
             work = Path(tempfile.mkdtemp(prefix="standalone-", dir=self.settings.temp_dir))
             try:
                 with self.cache.hold_model(job) as model_dir:
@@ -252,7 +268,7 @@ class StandaloneService:
             return None
 
 
-def make_server(settings: StandaloneSettings, service: StandaloneService):
+def make_server(settings: StandaloneSettings, service: StandaloneService, queue: DurableQueue | None = None):
     class Handler(BaseHTTPRequestHandler):
         server_version = "KokoroStandalone/0.1"
         def setup(self):
@@ -302,9 +318,15 @@ def make_server(settings: StandaloneSettings, service: StandaloneService):
                 })
             parts = path.split("/")
             if len(parts) == 5 and parts[:4] == ["", "v1", "tts", "jobs"]:
-                data = service.find(parts[4])
+                data = queue.get(parts[4]) if queue is not None else service.find(parts[4])
                 return self.respond(200, data) if data else self.respond(404, {"error": "Not found"})
             if len(parts) == 6 and parts[:4] == ["", "v1", "tts", "jobs"] and parts[5] == "audio":
+                if queue is not None:
+                    state = queue.get(parts[4])
+                    if state is None:
+                        return self.respond(404, {"error": "Not found"})
+                    if state["status"] != "SUCCEEDED":
+                        return self.respond(409, {"error": "Audio is not ready"})
                 data = service.find(parts[4])
                 if data is None:
                     return self.respond(404, {"error": "Not found"})
@@ -321,7 +343,20 @@ def make_server(settings: StandaloneSettings, service: StandaloneService):
             self.respond(404, {"error": "Not found"})
 
         def do_POST(self):
-            if urlsplit(self.path).path != "/v1/tts/jobs":
+            path = urlsplit(self.path).path
+            parts = path.split("/")
+            if len(parts) == 6 and parts[:4] == ["", "v1", "tts", "jobs"] and parts[5] == "cancel":
+                if not self.authorized():
+                    return
+                if queue is None:
+                    return self.respond(404, {"error": "Not found"})
+                state = queue.cancel(parts[4])
+                if state is None:
+                    return self.respond(404, {"error": "Not found"})
+                if state["status"] != "CANCELLED":
+                    return self.respond(409, {"error": "Only queued jobs can be cancelled"})
+                return self.respond(200, state)
+            if path != "/v1/tts/jobs":
                 return self.respond(404, {"error": "Not found"})
             if not self.authorized():
                 return
@@ -335,8 +370,18 @@ def make_server(settings: StandaloneSettings, service: StandaloneService):
                 return self.respond(413, {"error": "Invalid request size or media type"})
             try:
                 data = json.loads(self.rfile.read(size))
-                result = service.synthesize(data)
-            except (json.JSONDecodeError, UnicodeDecodeError, InvalidRequest):
+                if queue is None:
+                    result = service.synthesize(data)
+                    status = 201
+                else:
+                    validated = service.validate_request(data)
+                    result, created = queue.submit(validated, self.headers.get("Idempotency-Key"))
+                    status = 202 if created else 200
+            except QueueConflict:
+                return self.respond(409, {"error": "Idempotency conflict"})
+            except QueueFull:
+                return self.respond(429, {"error": "Queue capacity exceeded"})
+            except (json.JSONDecodeError, UnicodeDecodeError, InvalidRequest, ValueError):
                 return self.respond(400, {"error": "Invalid synthesis request"})
             except RuntimeError as exc:
                 if str(exc) == "Worker busy":
@@ -346,7 +391,7 @@ def make_server(settings: StandaloneSettings, service: StandaloneService):
             except Exception:
                 LOG.exception("Standalone job failed")
                 return self.respond(503, {"error": "Synthesis unavailable"})
-            self.respond(201, result)
+            self.respond(status, result)
 
     class Server(ThreadingHTTPServer):
         daemon_threads = False  # finish active inference before server_close
@@ -382,10 +427,12 @@ def main() -> int:
         settings = StandaloneSettings.from_env()
         service = StandaloneService(settings)
         service.startup()
+        queue = DurableQueue(settings.output_dir / "queue", service)
     except Exception:
         LOG.exception("Kokoro standalone initialization failed")
         return 2
-    server = make_server(settings, service)
+    server = make_server(settings, service, queue)
+    queue.start()
     def stop(*_):
         threading.Thread(target=server.shutdown, daemon=True).start()
     signal.signal(signal.SIGINT, stop)
@@ -395,6 +442,7 @@ def main() -> int:
     finally:
         service.ready = False
         server.server_close()
+        queue.stop()
     return 0
 
 
