@@ -1,4 +1,4 @@
-# Kokoro standalone HTTP Worker — D1 isolated mode
+# Kokoro standalone HTTP Worker — D2 durable single-node mode
 
 This implementation is **an additional process mode**. It does not modify the
 existing VoxPrep V2 `voxprep-kokoro-worker` claim/heartbeat/finalization
@@ -7,7 +7,7 @@ and recovery tests are accepted.
 
 ## Architecture
 
-- **Input:** authenticated `POST /v1/tts/jobs`; no VoxPrep Backend dependency.
+- **Input:** authenticated asynchronous `POST /v1/tts/jobs` with optional `Idempotency-Key`; no VoxPrep Backend dependency.
 - **Model:** local operator-reviewed `manifest.json` (immutable 40-hex source
   revision, manifest SHA-256, per-artifact SHA-256, size and UUID identity).
 - **Sources, in order:** local folder, private RustFS/S3 bucket, then an
@@ -17,6 +17,7 @@ and recovery tests are accepted.
   those sources.
 - **Engine:** original Kokoro ONNX/three voice style vectors, long-text chunks,
   WAV and FFmpeg MP3. **No Piper fallback.**
+- **Queue:** durable SQLite WAL (FULL synchronous), one process owner via OS flock, bounded 100 pending jobs, one inference worker, replay of interrupted RUNNING jobs up to three attempts and duplicate-submit protection.
 - **Output:** private persistent local volume; optional direct RustFS/S3
   upload with HEAD size/hash-metadata check. Results remain accessible via
   authenticated metadata/audio GET endpoints across clean restarts.
@@ -117,16 +118,36 @@ curl --fail-with-body -H "Authorization: Bearer $STANDALONE_API_TOKEN" \
   http://127.0.0.1:8086/v1/tts/jobs
 ```
 
-The synthesis call returns **201 only after MP3 is fully generated, verified
-and committed**. Response includes `id`, `sha256`, `sizeBytes`,
+The default daemon now enqueues work durably and returns **202 Accepted**
+after the SQLite transaction commits; it does **not** hold the HTTP request
+open during ONNX inference. Supply a stable client-specific
+`Idempotency-Key` header on every initial POST and retry; repeating the
+same key+payload returns **200** with the same job ID, while changing the
+payload under that key returns **409**. Queue capacity exceeded returns **429**.
+
+Use `GET /v1/tts/jobs/{id}` to poll `QUEUED`, `RUNNING`,
+`SUCCEEDED`, `FAILED`, or `CANCELLED`. The resulting metadata is under
+`result` when `SUCCEEDED`; the MP3 endpoint
+`GET /v1/tts/jobs/{id}/audio` returns **409** until it is ready.
+`POST /v1/tts/jobs/{id}/cancel` only cancels `QUEUED` jobs;
+cancellation of `RUNNING` or terminal jobs returns **409** (except repeated
+cancellation of an already-cancelled job).
+`FAILED` jobs expose a classified `errorCode` without raw error messages.
+
+The legacy `make_server(settings, service)` test adapter can still run in
+synchronous mode for compatibility; **production standalone main() always
+uses the durable queue**.
+
+Previously, the synchronous development API returned **201 only after MP3
+was fully generated, verified and committed**. Response includes `id`, `sha256`, `sizeBytes`,
 `durationMs`, `audioProfile`, `manifestSha256`, `voiceCode`,
 `downloadPath` and optional `s3Key`. Client may subsequently use
 `GET /v1/tts/jobs/{id}` and `GET /v1/tts/jobs/{id}/audio` with the same bearer.
 Both routes require authentication; corrupted local MP3 returns 404 instead of
 being served. All three voice codes are explicit and enforced.
 
-Invalid input -> 400; missing/invalid token -> 401; busy -> 429; model not
-ready or inference/storage unavailable -> 503. Requests are limited to 64 KiB
+Invalid input -> 400; missing/invalid token -> 401; idempotency mismatch -> 409;
+full queue -> 429; model not ready or infrastructure unavailable -> 503. Requests are limited to 64 KiB
 and 12,000 characters, output to 16 MiB, one active ONNX inference and eight
 concurrent HTTP connections. The service never logs request text or secrets.
 
@@ -134,14 +155,21 @@ concurrent HTTP connections. The service never logs request text or secrets.
 
 - Model cache holds a cross-process `flock` throughout synthesis.
 - Completed local outputs remain accessible on restart. Aborted temporary
-  workspaces are cleaned at startup; incomplete jobs **are not retried**.
+  workspaces are cleaned at startup. SQLite RUNNING jobs are re-queued on restart
+  using their original output UUID up to three attempts. If the MP3 had been
+  committed before the crash, the SHA-256-verified result is reused without
+  running ONNX again. Normal runtime errors become FAILED; they are not
+  automatically retried by this D2 release.
 - Source fallback is ordered, but every artifact is checked against the same
   manifest. A source cannot silently substitute another model revision.
 - `/health/live` is unauthenticated (for infrastructure probes).
   `/health/ready`, `/v1/models/active` and `/v1/metrics` require bearer auth.
-- The server synchronously handles synthesis. Long inference may exceed
-  reverse-proxy/client timeouts; **durable asynchronous job queue, idempotency,
-  crash recovery and cancellation must be added before general production**.
+- HTTP is asynchronous and SQLite-durable; the inference thread is bounded to
+  one job. Cancellation is supported for QUEUED jobs, not active ONNX execution.
+  Exactly-once external S3 uploads, multi-node coordination, automatic retry
+  on storage/network failures and retention/garbage collection remain future
+  work. The queue stores submitted text on local disk, so protect the volume,
+  restrict host access and define an appropriate deletion/retention policy.
 - There is no per-tenant quota, no horizontal scheduler or multi-tenant
   authorization. This endpoint is a single-tenant internal service, not a
   public internet API.
@@ -161,8 +189,26 @@ concurrent HTTP connections. The service never logs request text or secrets.
 2. Real ONNX inference and listened-to MP3 for all three voices.
 3. Independent API to S3 integration with real access controls, outage and
    corrupt-object scenarios.
-4. Async durable queue/replay/idempotency, bounded waiting and SIGTERM handling.
+4. Qualify durable queue/replay/idempotency under SIGKILL/power loss, S3 outage,
+   full disk and cleanup/retention policies; verify real multi-process restart.
 5. Exact-SHA worker unit CI, real native ARM64/AMD64 smoke and audio licensing.
 6. VoxPrep V2 K4, Piper regression and cross-project adapter acceptance.
 
 The independent mode remains **experimental** until those gates are met.
+
+## D2 quick check
+
+```bash
+curl --fail-with-body -H "Authorization: Bearer $STANDALONE_API_TOKEN" \
+  -H "Idempotency-Key: lesson-42-narration-rev-3" \
+  -H "Content-Type: application/json" \
+  -d '{"text":"Hello, welcome!","voiceCode":"af_heart","speed":1.0}' \
+  http://127.0.0.1:8086/v1/tts/jobs
+# Returns HTTP 202 with id/status QUEUED.
+# GET /v1/tts/jobs/<UUID> until SUCCEEDED; read result.downloadPath.
+```
+
+The pinned K3 workflow also exercises the D2 real-engine queue using all
+three voices and writes a real MP3/SQLite reopen report. That workflow is
+separate from the much faster mock-based unit tests; evaluate the actual
+workflow result and audio quality before claiming it passed.
