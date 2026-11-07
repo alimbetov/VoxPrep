@@ -101,6 +101,10 @@ def test_standalone_api_auth_output_recovery_and_corruption_rejection(tmp_path):
             assert client.get("/health/ready").status_code == 401
             headers = {"Authorization": "Bearer " + settings.token}
             assert client.get("/health/ready", headers=headers).json()["status"] == "READY"
+            assert client.get("/v1/models/active", headers=headers).json()["voices"] == [
+                "af_heart", "am_michael", "bf_emma"
+            ]
+            assert client.get("/v1/metrics", headers=headers).json()["maxConcurrentInference"] == 1
             body = {"text": "Hello everyone.", "voiceCode": "af_heart", "speed": 1.0}
             assert client.post("/v1/tts/jobs", json=body).status_code == 401
             assert client.post("/v1/tts/jobs", headers=headers, json=body | {"unexpected": 1}).status_code == 400
@@ -112,6 +116,7 @@ def test_standalone_api_auth_output_recovery_and_corruption_rejection(tmp_path):
             response = client.post("/v1/tts/jobs", headers=headers, json=body)
             assert response.status_code == 201
             info = response.json()
+            assert client.get("/v1/metrics", headers=headers).json()["completedJobs"] == 1
             assert info["sha256"] == hashlib.sha256(b"safe-mp3-output").hexdigest()
             assert client.get(info["downloadPath"], headers=headers).content == b"safe-mp3-output"
             # Metadata survives an HTTP process restart.
@@ -208,3 +213,50 @@ def test_config_requires_secret_and_explicit_remote_bind(tmp_path):
         StandaloneSettings.from_env(env)
     env["STANDALONE_HOST"] = "127.0.0.1"
     assert StandaloneSettings.from_env(env).host == "127.0.0.1"
+
+def test_corrupt_source_fails_readiness_without_partial_install(tmp_path):
+    from voxprep_kokoro_worker.domain.errors import ModelChecksumError
+    settings, manifest = fixture(tmp_path)
+    (settings.local_model_dir / "voices/bf_emma.bin").write_bytes(b"corrupt-data")
+    service = StandaloneService(settings, synthesizer=FakeSynth(), postprocessor=FakePost())
+    with pytest.raises(ModelChecksumError):
+        service.startup()
+    assert not service.ready
+    assert not (settings.cache_dir / manifest["manifestSha256"]).exists()
+
+
+def test_restart_cleans_only_aborted_workspace_and_keeps_outputs(tmp_path):
+    settings, _ = fixture(tmp_path)
+    settings.temp_dir.mkdir()
+    orphan = settings.temp_dir / "standalone-interrupted"
+    orphan.mkdir()
+    (orphan / "audio.wav").write_bytes(b"incomplete")
+    settings.output_dir.mkdir()
+    result = settings.output_dir / "completed.mp3"
+    result.write_bytes(b"persistent")
+    StandaloneService(settings, synthesizer=FakeSynth(), postprocessor=FakePost())
+    assert not orphan.exists()
+    assert result.read_bytes() == b"persistent"
+
+
+def test_s3_metadata_mismatch_rejects_output_and_does_not_commit_local(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    import sys
+    settings, _ = fixture(tmp_path)
+
+    class BadS3:
+        def upload_fileobj(self, stream, bucket, key, ExtraArgs):
+            assert stream.read() == b"safe-mp3-output"
+        def head_object(self, *, Bucket, Key):
+            return {"ContentLength": 1, "Metadata": {"sha256": "wrong"}}
+
+    monkeypatch.setitem(sys.modules, "boto3", SimpleNamespace(client=lambda *a, **kw: BadS3()))
+    service = StandaloneService(
+        replace(settings, output_s3_bucket="audio"),
+        synthesizer=FakeSynth(), postprocessor=FakePost())
+    service.startup()
+    with pytest.raises(ValueError, match="verification"):
+        service.synthesize({"text": "Hi", "voiceCode": "af_heart", "speed": 1})
+    assert service.failed == 1
+    assert list(settings.output_dir.glob("*.json")) == []
+    assert list(settings.output_dir.glob("*.mp3")) == []
