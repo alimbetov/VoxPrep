@@ -9,13 +9,17 @@ import argparse
 import hashlib
 import json
 import tempfile
+import threading
+import time
+
+import httpx
 from dataclasses import replace
 from pathlib import Path
 
 from voxprep_kokoro_worker.adapters.voice_bundle import SUPPORTED_VOICES
 from voxprep_kokoro_worker.application.durable_queue import DurableQueue
 from voxprep_kokoro_worker.manifest_cli import create_manifest
-from voxprep_kokoro_worker.standalone import StandaloneService, StandaloneSettings
+from voxprep_kokoro_worker.standalone import StandaloneService, StandaloneSettings, make_server
 
 
 def run(model_dir: Path, output_dir: Path, revision: str, *,
@@ -88,6 +92,55 @@ def run(model_dir: Path, output_dir: Path, revision: str, *,
                     "sizeBytes": file.stat().st_size, "durationMs": info["durationMs"],
                     "manifestSha256": manifest["manifestSha256"],
                 })
+            # Exercise the real HTTP API, not merely a direct call to
+            # process_once(). Async acceptance must survive the client
+            # disconnecting immediately after receiving HTTP 202.
+            server = make_server(settings, service, queue)
+            server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+            server_thread.start()
+            try:
+                queue.start()
+                headers = {
+                    "Authorization": "Bearer " + settings.token,
+                    "Idempotency-Key": "d2-real-http-voice-af-heart",
+                }
+                with httpx.Client(
+                    base_url="http://127.0.0.1:" + str(server.server_address[1]),
+                    timeout=30,
+                ) as client:
+                    submitted = client.post("/v1/tts/jobs", headers=headers, json={
+                        "text": "The asynchronous API is working with a real Kokoro voice.",
+                        "voiceCode": "af_heart", "speed": 1.0,
+                    })
+                    assert submitted.status_code == 202, submitted.text
+                    http_id = submitted.json()["id"]
+                    assert client.post("/v1/tts/jobs", headers=headers, json={
+                        "text": "The asynchronous API is working with a real Kokoro voice.",
+                        "voiceCode": "af_heart", "speed": 1.0,
+                    }).json()["id"] == http_id
+                    deadline = time.monotonic() + 240
+                    while True:
+                        latest = client.get("/v1/tts/jobs/" + http_id, headers=headers).json()
+                        if latest["status"] in ("SUCCEEDED", "FAILED"):
+                            break
+                        assert time.monotonic() < deadline, "Timed out waiting for real HTTP inference"
+                        time.sleep(0.25)
+                    assert latest["status"] == "SUCCEEDED", latest["errorCode"]
+                    downloaded = client.get(
+                        "/v1/tts/jobs/" + http_id + "/audio", headers=headers)
+                    assert downloaded.status_code == 200
+                    assert hashlib.sha256(downloaded.content).hexdigest() == (
+                        latest["result"]["sha256"])
+                    report_http = {
+                        "jobId": http_id,
+                        "status": latest["status"],
+                        "sha256": latest["result"]["sha256"],
+                        "sizeBytes": len(downloaded.content),
+                    }
+            finally:
+                server.shutdown()
+                server.server_close()
+                server_thread.join(timeout=5)
         finally:
             queue.stop()
         # Durable persisted metadata and MP3 reopen without model/inference.
@@ -103,6 +156,8 @@ def run(model_dir: Path, output_dir: Path, revision: str, *,
             "manifestSha256": manifest["manifestSha256"], "jobs": evidence,
             "accepted": len(evidence) == 3,
             "rustfsVerified": bool(s3),
+            "httpAsyncVerified": True,
+            "httpEvidence": report_http,
             "limitations": ["Audio listening review required"],
         }
         (output_dir / "d2-real-smoke-evidence.json").write_text(
