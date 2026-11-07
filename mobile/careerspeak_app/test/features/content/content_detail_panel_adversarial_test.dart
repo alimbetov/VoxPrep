@@ -22,6 +22,28 @@ const _hash =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 void main() {
+  testWidgets('audio controls follow lesson text in reading order', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      item: _topicWithAudio,
+      repository: _FakeLearnerStateRepository(),
+      assetCatalog: const _RoleCatalog(<String>{}),
+    );
+    final list = tester.widget<ListView>(find.byType(ListView).first);
+    final children =
+        (list.childrenDelegate as SliverChildListDelegate).children;
+    final descriptionIndex = children.indexWhere(
+      (widget) => widget is Text && widget.data == _topicWithAudio.description,
+    );
+    final audioIndex = children.indexWhere(
+      (widget) => widget.runtimeType.toString() == '_AudioPlaybackControls',
+    );
+    expect(descriptionIndex, greaterThanOrEqualTo(0));
+    expect(audioIndex, greaterThan(descriptionIndex));
+  });
+
   testWidgets('INTERVIEW shows only QUESTION when sample answer is absent', (
     tester,
   ) async {

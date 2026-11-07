@@ -60,6 +60,7 @@ class ContentStudioFoundationIntegrationTest {
                         .param("username", "admin")
                         .param("password", "777"))
                 .andExpect(status().isFound())
+                .andExpect(header().string(HttpHeaders.LOCATION, "/admin"))
                 .andReturn();
 
         assertThat(login.getRequest().getSession(false)).isInstanceOf(MockHttpSession.class);

@@ -66,7 +66,7 @@ void main() {
       addTearDown(scenario.dispose);
       await scenario.pump(tester);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Play'));
+      await _tapVisible(tester, find.widgetWithText(FilledButton, 'Play'));
       await _waitForCondition(tester, () => scenario.source.openCount == 1);
       await _pumpUntilVisible(tester, find.textContaining('checksum'));
       await _pumpUntilVisible(
@@ -104,7 +104,7 @@ void main() {
       expect(existsAfterEviction, isFalse);
 
       scenario.source.online = false;
-      await tester.tap(find.widgetWithText(FilledButton, 'Replay'));
+      await _tapVisible(tester, find.widgetWithText(FilledButton, 'Replay'));
       await _waitForCondition(tester, () => scenario.source.openCount == 4);
       await _pumpUntilVisible(tester, find.textContaining('offline'));
       await _pumpUntilVisible(
@@ -142,7 +142,7 @@ void main() {
 
     await scenario.expireAndEvict(tester);
     scenario.source.online = false;
-    await tester.tap(find.widgetWithText(FilledButton, 'Replay'));
+    await _tapVisible(tester, find.widgetWithText(FilledButton, 'Replay'));
     await _waitForCondition(tester, () => scenario.source.openCount == 4);
     await _pumpUntilVisible(tester, find.widgetWithText(FilledButton, 'Play'));
     expect(scenario.source.openCount, 4);
@@ -150,7 +150,7 @@ void main() {
     expect(missingOffline, isFalse);
 
     scenario.source.online = true;
-    await tester.tap(find.widgetWithText(FilledButton, 'Play'));
+    await _tapVisible(tester, find.widgetWithText(FilledButton, 'Play'));
     await _waitForCondition(tester, () => scenario.engine.openCount == 2);
     await _pumpUntilVisible(tester, find.widgetWithText(FilledButton, 'Pause'));
 
@@ -162,6 +162,14 @@ void main() {
     expect(find.text('Pause'), findsOneWidget);
     await scenario.unmount(tester);
   });
+}
+
+Future<void> _tapVisible(WidgetTester tester, Finder target) async {
+  // The audio controls follow the lesson body and can be below the fold.
+  // Scroll the actual page into view instead of tapping an off-screen widget.
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
+  await tester.tap(target);
 }
 
 Future<void> _waitForCondition(
@@ -293,7 +301,7 @@ final class _Scenario {
 
   Future<void> play(WidgetTester tester) async {
     final expectedOpenCount = engine.openCount + 1;
-    await tester.tap(find.widgetWithText(FilledButton, 'Play'));
+    await _tapVisible(tester, find.widgetWithText(FilledButton, 'Play'));
     await _waitForCondition(
       tester,
       () => engine.openCount == expectedOpenCount,
@@ -302,7 +310,7 @@ final class _Scenario {
   }
 
   Future<void> stop(WidgetTester tester) async {
-    await tester.tap(find.widgetWithText(OutlinedButton, 'Stop'));
+    await _tapVisible(tester, find.widgetWithText(OutlinedButton, 'Stop'));
     await _pumpUntilVisible(tester, find.widgetWithText(FilledButton, 'Play'));
   }
 

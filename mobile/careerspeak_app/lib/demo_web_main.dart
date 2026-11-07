@@ -32,6 +32,14 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
   bool dark = false;
   bool fakeFull = false;
   String filter = '';
+  final searchController = TextEditingController();
+
+  @override
+  void dispose() {
+    searchController.dispose();
+    super.dispose();
+  }
+
   final Set<String> favorites = {};
   final Set<String> completed = {};
   final Future<List<PracticeTestSummary>> tests = const MockTestRepository()
@@ -147,7 +155,9 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 16),
-        ...generatedDemoContentItems.take(4).map(contentTile),
+        ...generatedDemoContentItems
+            .take(4)
+            .map((item) => contentTile(context, item)),
         const SizedBox(height: 12),
         FilledButton(
           onPressed: () => setState(() => tab = 1),
@@ -173,20 +183,31 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
         ),
         const SizedBox(height: 16),
         TextField(
-          decoration: const InputDecoration(
+          controller: searchController,
+          decoration: InputDecoration(
             labelText: 'Search lessons',
-            prefixIcon: Icon(Icons.search),
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: filter.isEmpty
+                ? null
+                : IconButton(
+                    tooltip: 'Clear search',
+                    icon: const Icon(Icons.clear),
+                    onPressed: () {
+                      searchController.clear();
+                      setState(() => filter = '');
+                    },
+                  ),
           ),
           onChanged: (value) => setState(() => filter = value),
         ),
         const SizedBox(height: 16),
-        ...found.map(contentTile),
+        ...found.map((item) => contentTile(context, item)),
         if (found.isEmpty) const Text('No matching demo learning materials.'),
       ],
     );
   }
 
-  Widget contentTile(ContentItem item) {
+  Widget contentTile(BuildContext context, ContentItem item) {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
@@ -195,16 +216,16 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
           '${item.category} · ${item.level} · ${item.minutes} min',
         ),
         trailing: Text(isFree(item) ? 'FREE' : 'FULL'),
-        onTap: () => openLesson(item),
+        onTap: () => openLesson(context, item),
       ),
     );
   }
 
-  void openLesson(ContentItem item) {
+  void openLesson(BuildContext context, ContentItem item) {
     if (!isFree(item) && !fakeFull) {
       showDialog<void>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (dialogContext) => AlertDialog(
           title: const Text('FULL locked — demo only'),
           content: const Text(
             'You can simulate FULL locally. No purchase, credential or '
@@ -212,13 +233,14 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Cancel'),
             ),
             FilledButton(
               onPressed: () {
                 setState(() => fakeFull = true);
-                Navigator.pop(context);
+                Navigator.pop(dialogContext);
+                openLesson(context, item);
               },
               child: const Text('Simulate FULL'),
             ),
@@ -227,31 +249,76 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
       );
       return;
     }
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(item.title),
-        content: Text(item.description),
-        actions: [
-          TextButton(
-            onPressed: () {
-              setState(() {
-                if (!favorites.add(item.code)) {
-                  favorites.remove(item.code);
-                }
-              });
-              Navigator.pop(context);
-            },
-            child: const Text('Toggle favorite'),
+    Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (detailContext) => StatefulBuilder(
+          builder: (detailContext, refreshDetail) => Scaffold(
+            appBar: AppBar(title: Text(item.title)),
+            body: ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                Text(
+                  item.title,
+                  style: Theme.of(detailContext).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(item.subtitle),
+                const SizedBox(height: 16),
+                Text('${item.category} · ${item.level} · ${item.minutes} min'),
+                Text('Type: ${item.type.name} · Revision: ${item.revision}'),
+                const SizedBox(height: 24),
+                Text(
+                  'Lesson details',
+                  style: Theme.of(detailContext).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 12),
+                SelectableText(item.description),
+                const SizedBox(height: 16),
+                const Text(
+                  'Demo material preview. Full lesson content and audio are not included in this web showcase.',
+                ),
+                const SizedBox(height: 24),
+                OutlinedButton.icon(
+                  icon: Icon(
+                    favorites.contains(item.code)
+                        ? Icons.favorite
+                        : Icons.favorite_border,
+                  ),
+                  label: Text(
+                    favorites.contains(item.code)
+                        ? 'Remove favorite'
+                        : 'Add favorite',
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      if (!favorites.add(item.code)) {
+                        favorites.remove(item.code);
+                      }
+                    });
+                    refreshDetail(() {});
+                  },
+                ),
+                const SizedBox(height: 8),
+                FilledButton.icon(
+                  icon: const Icon(Icons.check),
+                  label: Text(
+                    completed.contains(item.code) ? 'Completed' : 'Complete',
+                  ),
+                  onPressed: completed.contains(item.code)
+                      ? null
+                      : () {
+                          setState(() => completed.add(item.code));
+                          refreshDetail(() {});
+                        },
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(detailContext),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
           ),
-          FilledButton(
-            onPressed: () {
-              setState(() => completed.add(item.code));
-              Navigator.pop(context);
-            },
-            child: const Text('Complete'),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -314,7 +381,7 @@ class _WebDemoState extends State<VoxPrepWebDemoApp> {
         const SizedBox(height: 12),
         Text('${favorites.length} favorites · ${completed.length} completed'),
         const SizedBox(height: 16),
-        ...items.map(contentTile),
+        ...items.map((item) => contentTile(context, item)),
         if (items.isEmpty)
           const Text('Favorite or complete lessons to see them here.'),
       ],
@@ -380,6 +447,18 @@ class _DemoExamState extends State<_DemoExam> {
               style: Theme.of(context).textTheme.headlineMedium,
             ),
             const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () => setState(() {
+                index = 0;
+                finished = false;
+                answers.clear();
+              }),
+              child: const Text('Try again'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Back to tests'),
+            ),
             for (final question in questions)
               Card(
                 child: ListTile(
@@ -406,6 +485,11 @@ class _DemoExamState extends State<_DemoExam> {
                 onTap: () => setState(() => answers[index] = i),
               ),
             const SizedBox(height: 16),
+            if (index > 0)
+              TextButton(
+                onPressed: () => setState(() => index--),
+                child: const Text('Previous'),
+              ),
             FilledButton(
               onPressed: answers[index] == null
                   ? null

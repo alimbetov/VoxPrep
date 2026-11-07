@@ -84,7 +84,7 @@ void main() {
 
       expect(source.openCount, 0);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Play'));
+      await _tapVisible(tester, find.widgetWithText(FilledButton, 'Play'));
       await _waitForCondition(tester, () => engine.openCount == 1);
       await _pumpUntilVisible(
         tester,
@@ -136,7 +136,7 @@ void main() {
       );
       expect(existsAfterCleanup, isFalse);
 
-      await tester.tap(find.widgetWithText(FilledButton, 'Replay'));
+      await _tapVisible(tester, find.widgetWithText(FilledButton, 'Replay'));
       await _waitForCondition(tester, () => engine.openCount == 2);
       await _pumpUntilVisible(
         tester,
@@ -158,6 +158,14 @@ void main() {
       );
     },
   );
+}
+
+Future<void> _tapVisible(WidgetTester tester, Finder target) async {
+  // The audio controls follow the lesson body and can be below the fold.
+  // Scroll the actual page into view instead of tapping an off-screen widget.
+  await tester.ensureVisible(target);
+  await tester.pumpAndSettle();
+  await tester.tap(target);
 }
 
 Future<void> _waitForCondition(

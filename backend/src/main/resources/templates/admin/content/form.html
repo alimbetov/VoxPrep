@@ -22,15 +22,19 @@
         </div>
     </div>
 
-    <div class="alert alert-info" role="note"><strong>Порядок работы:</strong> заполните карточку и учебное содержимое → сохраните черновик → передайте на озвучивание → прослушайте MP3 → отправьте на проверку → одобрите материал.
-        <strong>Одобрение не публикует материал во Flutter:</strong> публикация в CURRENT выполняется отдельно.
-        <details class="mt-2"><summary>Что означают разделы и состояния?</summary>
-            <p class="mb-1 mt-2">Карточка — сведения для каталога; содержимое — сам урок; переводы — другие языки; изображения — обложка и иллюстрации; TTS — генерация и проверка MP3; этапы — контроль качества.</p>
-            <p class="mb-0"><code>DRAFT</code> — редактируемый черновик; <code>READY_FOR_AUDIO</code> — ожидание озвучивания; <code>READY_FOR_REVIEW</code> — на проверке; <code>APPROVED</code> — одобрен; <code>PUBLISHED</code> — опубликован.</p>
+    <div class="alert alert-info" role="note">
+        <strong>Порядок работы:</strong> заполните карточку и учебный текст → сохраните черновик →
+        передайте на озвучивание → прослушайте MP3 → отправьте на проверку → одобрите.
+        <strong>Одобрение не означает публикацию во Flutter:</strong> для появления в каталоге нужна отдельная публикация CURRENT.
+        <details class="mt-2"><summary>За что отвечают разделы и состояния?</summary>
+            <p class="mt-2 mb-1">Карточка — сведения для каталога; учебное содержимое — сам урок;
+            переводы — другие языки; изображения — обложка и иллюстрации;
+            озвучивание — подготовка и проверка MP3; этапы — согласование.</p>
+            <p class="mb-0"><code>DRAFT</code> — черновик; <code>READY_FOR_AUDIO</code> — подготовлен к аудио;
+            <code>READY_FOR_REVIEW</code> — на проверке; <code>APPROVED</code> — одобрен;
+            <code>PUBLISHED</code> — опубликован.</p>
         </details>
     </div>
-    <div th:if="${flashSuccess}" class="alert alert-success" th:text="${flashSuccess}"></div>
-
     <form method="post" th:action="@{/admin/content/revisions/{id}(id=${revision.id})}" th:object="${form}">
         <input type="hidden" th:field="*{expectedVersion}">
         <input type="hidden" th:field="*{bodyType}">
@@ -41,7 +45,7 @@
 
         <div class="card studio-card mb-4">
             <div class="card-body p-4">
-                <h2 class="h5 mb-2">1. Карточка материала</h2><p class="text-secondary small">Сведения, которые ученик увидит в каталоге: назначение урока, сложность и время изучения.</p>
+                <h2 class="h5 mb-2">1. Карточка материала</h2><p class="text-secondary small">Здесь задаются название, описание и параметры, которые увидит ученик в каталоге.</p>
                 <div class="row g-3">
                     <div class="col-12">
                         <label class="form-label" for="title">Название</label>
@@ -50,40 +54,40 @@
                     </div>
                     <div class="col-12">
                         <label class="form-label" for="subtitle">Подзаголовок</label>
-                        <input class="form-control" id="subtitle" th:field="*{subtitle}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"><div class="form-text">Короткое уточнение содержания урока.</div>
+                        <input class="form-control" id="subtitle" th:field="*{subtitle}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"><div class="form-text">Короткое пояснение к теме.</div>
                         <div class="text-danger small" th:errors="*{subtitle}"></div>
                     </div>
                     <div class="col-12">
                         <label class="form-label" for="description">Описание</label>
-                        <textarea class="form-control" id="description" rows="4" th:field="*{description}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Что изучит ученик и как будет использовать материал.</div>
+                        <textarea class="form-control" id="description" rows="4" th:field="*{description}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Чему научится ученик и зачем нужен этот материал.</div>
                         <div class="text-danger small" th:errors="*{description}"></div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" for="categoryCode">Код категории</label>
-                        <input class="form-control" id="categoryCode" th:field="*{categoryCode}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"><div class="form-text">Код существующей категории каталога.</div>
+                        <input class="form-control" id="categoryCode" th:field="*{categoryCode}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"><div class="form-text">Код существующей категории.</div>
                         <div class="text-danger small" th:errors="*{categoryCode}"></div>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label" for="levelCode">Уровень</label>
-                        <input class="form-control" id="levelCode" th:field="*{levelCode}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"><div class="form-text">Уровень сложности, например A1 или B1.</div>
+                        <input class="form-control" id="levelCode" th:field="*{levelCode}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"><div class="form-text">Уровень, например A1, B1 или B2.</div>
                         <div class="text-danger small" th:errors="*{levelCode}"></div>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label" for="minutes">Минуты</label>
-                        <input class="form-control" id="minutes" type="number" min="1" th:field="*{minutes}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"><div class="form-text">Ожидаемое время изучения в минутах.</div>
+                        <input class="form-control" id="minutes" type="number" min="1" th:field="*{minutes}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"><div class="form-text">Примерное время изучения в минутах.</div>
                         <div class="text-danger small" th:errors="*{minutes}"></div>
                     </div>
                     <div class="col-md-2">
                         <label class="form-label" for="availability">Доступность</label>
                         <select class="form-select" id="availability" th:field="*{availability}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}">
                             <option th:each="status : ${availabilityValues}" th:value="${status}" th:text="${status}"></option>
-                        </select><div class="form-text">ACTIVE — доступен, INACTIVE — скрыт из активного набора при публикации.</div>
+                        </select><div class="form-text">ACTIVE — активный материал; INACTIVE — неактивный.</div>
                         <div class="text-danger small" th:errors="*{availability}"></div>
                     </div>
                     <div class="col-12">
                         <label class="form-label" for="skillCodes">Коды навыков</label>
-                        <textarea class="form-control font-monospace" id="skillCodes" rows="3" th:field="*{skillCodes}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Навыки, которые тренирует материал.</div>
-                        <div class="form-text">Один существующий код навыка на строку.</div>
+                        <textarea class="form-control font-monospace" id="skillCodes" rows="3" th:field="*{skillCodes}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Коды навыков из каталога, по одному на строку.</div>
+                        <div class="form-text">Один код навыка на строку.</div>
                     </div>
                 </div>
             </div>
@@ -94,45 +98,45 @@
                 <h2 class="h5 mb-3" th:text="${'2. Учебное содержимое · ' + revision.contentType}">2. Учебное содержимое</h2>
 
                 <div th:if="${form.bodyType == 'vocabulary'}" class="row g-3">
-                    <div class="col-md-6"><label class="form-label">Слово / термин</label><input class="form-control" th:field="*{term}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"><div class="form-text">Изучаемое слово.</div></div>
-                    <div class="col-md-6"><label class="form-label">Часть речи</label><input class="form-control" th:field="*{partOfSpeech}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"><div class="form-text">Часть речи на английском: noun, verb и т. п.</div></div>
-                    <div class="col-12"><label class="form-label">Определение</label><textarea class="form-control" rows="3" th:field="*{definition}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Значение изучаемого слова.</div></div>
-                    <div class="col-12"><label class="form-label">Примеры</label><textarea data-structured="examples" class="form-control" rows="4" th:field="*{examples}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Примеры использования в предложениях.</div><div class="form-text">Один пример на строку.</div></div>
+                    <div class="col-md-6"><label class="form-label">Слово / термин</label><input class="form-control" th:field="*{term}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"><div class="form-text">Изучаемое слово или термин.</div></div>
+                    <div class="col-md-6"><label class="form-label">Часть речи</label><input class="form-control" th:field="*{partOfSpeech}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"><div class="form-text">Часть речи: noun, verb, adjective и т. п.</div></div>
+                    <div class="col-12"><label class="form-label">Определение</label><textarea class="form-control" rows="3" th:field="*{definition}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Определение слова в учебном контексте.</div></div>
+                    <div class="col-12"><label class="form-label">Примеры</label><textarea data-structured="examples" class="form-control" rows="4" th:field="*{examples}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Один пример употребления на строку.</div><div class="form-text">Один пример на строку.</div></div>
                 </div>
 
                 <div th:if="${form.bodyType == 'interview'}" class="row g-3">
-                    <div class="col-12"><label class="form-label">Вопрос интервью</label><textarea class="form-control" rows="3" th:field="*{prompt}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Вопрос для ученика на собеседовании.</div></div>
-                    <div class="col-12"><label class="form-label">Пример ответа</label><textarea class="form-control" rows="5" th:field="*{modelAnswer}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Образец правильного, естественного ответа.</div></div>
-                    <div class="col-12"><label class="form-label">Ключевые тезисы</label><textarea data-structured="keyPoints" class="form-control" rows="4" th:field="*{keyPoints}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Главные мысли ответа, по одной на строку.</div><div class="form-text">Один тезис на строку.</div></div>
+                    <div class="col-12"><label class="form-label">Вопрос интервью</label><textarea class="form-control" rows="3" th:field="*{prompt}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Вопрос, который задают ученику.</div></div>
+                    <div class="col-12"><label class="form-label">Пример ответа</label><textarea class="form-control" rows="5" th:field="*{modelAnswer}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Образец ответа.</div></div>
+                    <div class="col-12"><label class="form-label">Ключевые тезисы</label><textarea data-structured="keyPoints" class="form-control" rows="4" th:field="*{keyPoints}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Основные тезисы ответа.</div><div class="form-text">Один тезис на строку.</div></div>
                 </div>
 
                 <div th:if="${form.bodyType == 'topic'}">
                     <label class="form-label">Разделы темы</label>
-                    <textarea data-structured="sections" class="form-control font-monospace" rows="10" th:field="*{sections}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Формат: Заголовок|Текст, каждая секция с новой строки.</div>
+                    <textarea data-structured="sections" class="form-control font-monospace" rows="10" th:field="*{sections}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Формат: Заголовок|Текст, одна секция на строку.</div>
                     <div class="form-text">Одна секция на строку: <code>heading|text</code>.</div>
                 </div>
 
                 <div th:if="${form.bodyType == 'phrase'}" class="row g-3">
-                    <div class="col-12"><label class="form-label">Фраза</label><input class="form-control" th:field="*{phrase}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"><div class="form-text">Фраза для изучения и произношения.</div></div>
-                    <div class="col-12"><label class="form-label">Применение</label><textarea class="form-control" rows="3" th:field="*{usage}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Когда и в какой ситуации употребляется фраза.</div></div>
-                    <div class="col-12"><label class="form-label">Примеры</label><textarea data-structured="examples" class="form-control" rows="4" th:field="*{examples}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Примеры использования в предложениях.</div><div class="form-text">Один пример на строку.</div></div>
+                    <div class="col-12"><label class="form-label">Фраза</label><input class="form-control" th:field="*{phrase}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"><div class="form-text">Фраза для произношения.</div></div>
+                    <div class="col-12"><label class="form-label">Применение</label><textarea class="form-control" rows="3" th:field="*{usage}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Ситуация, в которой фраза применяется.</div></div>
+                    <div class="col-12"><label class="form-label">Примеры</label><textarea data-structured="examples" class="form-control" rows="4" th:field="*{examples}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Один пример употребления на строку.</div><div class="form-text">Один пример на строку.</div></div>
                 </div>
 
                 <div th:if="${form.bodyType == 'shadowing'}" class="row g-3">
-                    <div class="col-12"><label class="form-label">Расшифровка аудио</label><textarea class="form-control" rows="6" th:field="*{transcript}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Текст упражнения на повторение речи.</div></div>
-                    <div class="col-12"><label class="form-label">Сегменты аудио</label><textarea data-structured="segments" class="form-control font-monospace" rows="8" th:field="*{segments}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Формат: startMs|endMs|text, например 0|1200|Hello.</div><div class="form-text">Один сегмент на строку: <code>startMs|endMs|text</code>. Временные метки в миллисекундах; при необходимости могут быть пустыми.</div></div>
+                    <div class="col-12"><label class="form-label">Расшифровка аудио</label><textarea class="form-control" rows="6" th:field="*{transcript}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Полный текст для повторения вслух.</div></div>
+                    <div class="col-12"><label class="form-label">Сегменты аудио</label><textarea data-structured="segments" class="form-control font-monospace" rows="8" th:field="*{segments}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Формат: началоMs|конецMs|текст, например 0|1200|Hello.</div><div class="form-text">Один сегмент на строку: <code>startMs|endMs|text</code>. Время в миллисекундах, может быть пустым.</div></div>
                 </div>
 
                 <div th:if="${form.bodyType == 'question'}" class="row g-3">
-                    <div class="col-12"><label class="form-label">Вопрос</label><textarea class="form-control" rows="3" th:field="*{questionText}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Вопрос, на который отвечает ученик.</div></div>
-                    <div class="col-12"><label class="form-label">Объяснение ответа</label><textarea class="form-control" rows="4" th:field="*{explanation}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Почему правильный вариант верен.</div></div>
-                    <div class="col-12"><label class="form-label">Варианты ответа</label><textarea data-structured="options" class="form-control font-monospace" rows="8" th:field="*{options}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Формат: A|true|Ответ или B|false|Ответ, по одному варианту на строку.</div><div class="form-text">Один вариант на строку: <code>key|true|text</code>.</div></div>
+                    <div class="col-12"><label class="form-label">Вопрос</label><textarea class="form-control" rows="3" th:field="*{questionText}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Однозначный вопрос ученику.</div></div>
+                    <div class="col-12"><label class="form-label">Объяснение ответа</label><textarea class="form-control" rows="4" th:field="*{explanation}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Объяснение правильного ответа.</div></div>
+                    <div class="col-12"><label class="form-label">Варианты ответа</label><textarea data-structured="options" class="form-control font-monospace" rows="8" th:field="*{options}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Формат: A|true|Верный или B|false|Неверный.</div><div class="form-text">Один вариант на строку: <code>key|true|text</code>.</div></div>
                 </div>
 
                 <div th:if="${form.bodyType == 'practice_test'}" class="row g-3">
-                    <div class="col-12"><label class="form-label">Инструкция к тесту</label><textarea class="form-control" rows="5" th:field="*{instructions}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Правила прохождения теста для ученика.</div></div>
-                    <div class="col-md-4"><label class="form-label">Проходной балл, %</label><input class="form-control" type="number" min="0" max="100" th:field="*{passingScorePercent}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"><div class="form-text">Минимальный процент для успешного прохождения.</div></div>
-                    <div class="col-12"><label class="form-label">Вопросы теста (UUID ревизий)</label><textarea data-question-picker="true" class="form-control font-monospace" rows="8" th:field="*{questionRevisionIds}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Ссылки на сохранённые ревизии вопросов. Сначала создайте вопросы.</div><div class="form-text">Один UUID сохранённой ревизии вопроса на строку.</div></div>
+                    <div class="col-12"><label class="form-label">Инструкция к тесту</label><textarea class="form-control" rows="5" th:field="*{instructions}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Правила выполнения теста.</div></div>
+                    <div class="col-md-4"><label class="form-label">Проходной балл, %</label><input class="form-control" type="number" min="0" max="100" th:field="*{passingScorePercent}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"><div class="form-text">Минимальный результат в процентах.</div></div>
+                    <div class="col-12"><label class="form-label">Вопросы теста (UUID ревизий)</label><textarea data-question-picker="true" class="form-control font-monospace" rows="8" th:field="*{questionRevisionIds}" th:disabled="${revision.lifecycle.name() != 'DRAFT'}"></textarea><div class="form-text">Сначала создайте вопросы, затем добавьте UUID их сохранённых ревизий.</div><div class="form-text">Один UUID сохранённой ревизии вопроса на строку.</div></div>
                 </div>
             </div>
         </div>
@@ -140,19 +144,27 @@
         <div class="d-flex gap-2 mb-4">
             <button class="btn btn-primary" type="submit" th:if="${revision.lifecycle.name() == 'DRAFT'}">Сохранить черновик</button>
             <a class="btn btn-outline-secondary" th:href="@{/admin/content}">Отмена</a>
-            <span th:if="${revision.lifecycle.name() != 'DRAFT'}" class="text-secondary align-self-center">Зафиксированная ревизия: поля доступны только для чтения.</span>
+            <span th:if="${revision.lifecycle.name() != 'DRAFT'}" class="text-secondary align-self-center">Зафиксированная ревизия: редактирование заблокировано.</span>
         </div>
     </form>
 
-    <div class="card studio-card mb-4">
+    <div class="card studio-card mb-4" data-image-section>
         <div class="card-body p-4">
-            <h2 class="h5 mb-3">3. Изображения</h2>
-            <p class="text-secondary">Обложка отображается в каталоге, иллюстрация — внутри урока. Выберите существующее изображение со статусом READY или загрузите новое. У опубликованной ревизии привязки изменить нельзя.</p>
+            <h2 class="h5 mb-2">3. Изображения</h2>
+            <p class="text-secondary">Choose an existing READY image or upload a new one. Published revisions cannot change bindings.</p>
+            <div class="d-flex gap-3 mb-3 flex-wrap" data-image-previews>
+                <div th:each="image : ${imageAssets}" th:attr="data-selected-role=${image.role}">
+                    <p class="small mb-1" th:text="${image.label()}">Image</p>
+                    <img th:if="${image.ready}" th:src="@{/admin/media/{id}/preview(id=${image.assetId})}"
+                         th:alt="${image.label()}" style="width:96px;height:96px;object-fit:contain">
+                    <p th:unless="${image.ready}" class="text-warning small">Изображение пока недоступно.</p>
+                </div>
+            </div>
             <div class="d-flex gap-2" th:if="${revision.lifecycle.name() == 'DRAFT'}">
-                <a class="btn btn-outline-primary"
-                   th:href="@{/admin/media(revisionId=${revision.id},role='COVER_IMAGE')}">Выбрать обложку</a>
-                <a class="btn btn-outline-secondary"
-                   th:href="@{/admin/media(revisionId=${revision.id},role='CONTENT_IMAGE')}">Выбрать иллюстрацию</a>
+                <button type="button" class="btn btn-outline-primary" data-media-role="COVER_IMAGE"
+                        th:attr="data-media-revision=${revision.id}">Выбрать обложку</button>
+                <button type="button" class="btn btn-outline-secondary" data-media-role="CONTENT_IMAGE"
+                        th:attr="data-media-revision=${revision.id}">Выбрать иллюстрацию</button>
             </div>
         </div>
     </div>
@@ -164,7 +176,7 @@
                 <span class="small text-secondary">Actual backend jobs · authenticated MP3 preview</span>
             </div>
             <p class="text-secondary small">
-                Укажите назначение аудио, движок Piper/Kokoro и одобренный голос. Kokoro доступен только при разрешении в DEV и наличии работающего V2 Worker.
+                Аудио создаётся выбранным TTS Worker (Piper или Kokoro, если он включён в Backend). Для запуска требуется активная одобренная модель.
                 Прослушивание доступно только после статуса READY и проверки целостности MP3.
                 Повторное задание с теми же параметрами использует существующий job.
             </p>
@@ -208,11 +220,11 @@
                 <button type="submit" class="btn btn-primary mt-3"
                         th:disabled="${#lists.isEmpty(ttsModels)}">Создать или использовать TTS-задание</button>
                 <p class="text-secondary small mb-0 mt-2" th:if="${#lists.isEmpty(ttsModels)}">
-                    Нет активных одобренных голосов. Сначала настройте и активируйте модель.
+                    Нет активных одобренных голосов. Сначала зарегистрируйте и включите модель.
                 </p>
             </form>
             <p class="small text-secondary" th:if="${revision.lifecycle.name() != 'READY_FOR_AUDIO'}">
-                Для генерации MP3 сохраните черновик и переведите материал в READY_FOR_AUDIO.
+                Чтобы создать MP3, сохраните черновик и переведите материал в READY_FOR_AUDIO.
                 Опубликованные ревизии неизменяемы.
             </p>
             <p class="text-secondary" th:if="${#lists.isEmpty(ttsJobs)}">
@@ -236,7 +248,7 @@
                     Audio playback is not supported in this browser.
                 </audio>
                 <p th:if="${!job.previewAvailable}" class="small text-secondary mb-0">
-                    MP3 можно прослушать после завершения задания со статусом READY.
+                    MP3 доступен для прослушивания после статуса READY.
                 </p>
                 <p th:if="${job.failureCode != null}" class="small text-danger mb-0">
                     Код ошибки: <span th:text="${job.failureCode}">FAILED</span>
@@ -247,7 +259,7 @@
 
     <div class="card studio-card mb-4">
         <div class="card-body p-4">
-            <h2 class="h5 mb-3">5. Этапы согласования</h2>
+            <h2 class="h5 mb-2">5. Этапы согласования</h2><p class="text-secondary small">Переключение этапов фиксирует ревизию. Проверьте текст и аудио перед одобрением. Для появления во Flutter необходима отдельная публикация.</p>
             <p class="text-secondary" th:text="'Текущее состояние: ' + ${revision.lifecycle}">Current state</p>
 
             <form th:if="${revision.lifecycle.name() == 'DRAFT'}" method="post"
@@ -287,6 +299,7 @@
             </form>
         </div>
     </div>
+    <th:block th:replace="~{admin/fragments/media-picker :: picker}"></th:block>
 </main>
 <script>
 (function () {

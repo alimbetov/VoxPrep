@@ -8,7 +8,6 @@
         </div>
         <a class="btn btn-outline-secondary" th:href="@{/admin/content/revisions/{id}/edit(id=${revisionId})}">Back to content</a>
     </div>
-    <div class="alert alert-success" th:if="${flashSuccess}" th:text="${flashSuccess}"></div>
     <form class="card card-body mb-4" th:action="@{/admin/media/upload}" method="post" enctype="multipart/form-data">
         <input type="hidden" name="revisionId" th:value="${revisionId}">
         <input type="hidden" name="role" th:value="${role}">

@@ -53,6 +53,20 @@ public class MediaLibraryService {
                 List.of(role.assetKind()), FileAssetStatus.READY, PageRequest.of(page, 24));
     }
 
+    public List<BoundImage> boundImages(UUID revisionId) {
+        return jdbc.query("""
+                SELECT b.role, f.id, f.status
+                FROM app.content_asset_binding b JOIN app.file_asset f ON f.id = b.file_asset_id
+                WHERE b.content_revision_id = ? AND b.role IN ('COVER_IMAGE', 'CONTENT_IMAGE')
+                ORDER BY b.role
+                """, (row, index) -> new BoundImage(row.getString("role"),
+                        row.getObject("id", UUID.class), "READY".equals(row.getString("status"))), revisionId);
+    }
+
+    public record BoundImage(String role, UUID assetId, boolean ready) {
+        public String label() { return "COVER_IMAGE".equals(role) ? "Cover image" : "Content image"; }
+    }
+
     public FileAssetEntity requireReadyImage(UUID id) {
         FileAssetEntity file = files.findById(Objects.requireNonNull(id))
                 .orElseThrow(() -> new IllegalArgumentException("Image not found"));

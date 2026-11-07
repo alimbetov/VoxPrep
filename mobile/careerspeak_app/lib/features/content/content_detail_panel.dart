@@ -105,13 +105,6 @@ class ContentDetailPanel extends ConsumerWidget {
         ),
         const SizedBox(height: 16),
         ContentMarkerChips(state: marker),
-        if (item.type == ContentType.interview) ...[
-          const SizedBox(height: 24),
-          _InterviewAudioControls(item: item),
-        ] else if (item.hasAudio) ...[
-          const SizedBox(height: 24),
-          _AudioPlaybackControls(item: item, marker: marker),
-        ],
         const SizedBox(height: 24),
         Wrap(
           spacing: 8,
@@ -195,6 +188,13 @@ class ContentDetailPanel extends ConsumerWidget {
               ),
             ),
           ),
+        if (item.type == ContentType.interview) ...[
+          const SizedBox(height: 24),
+          _InterviewAudioControls(item: item),
+        ] else if (item.hasAudio) ...[
+          const SizedBox(height: 24),
+          _AudioPlaybackControls(item: item, marker: marker),
+        ],
       ],
     );
   }

@@ -2,6 +2,7 @@
 <html lang="ru" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/fragments/shell :: layout('Content', 'content', ~{::main})}">
 <main>
+    <div th:if="${flashSuccess}" class="alert alert-success" th:text="${flashSuccess}"></div>
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <span class="badge text-bg-secondary mb-2">MVC-R3.1</span>
@@ -21,7 +22,6 @@
             <code>PUBLISHED</code> — опубликован; <code>ARCHIVED</code> — архив.</p>
         </details>
     </div>
-    <div th:if="${flashSuccess}" class="alert alert-success" th:text="${flashSuccess}"></div>
 
     <div class="card studio-card">
         <div class="table-responsive">
