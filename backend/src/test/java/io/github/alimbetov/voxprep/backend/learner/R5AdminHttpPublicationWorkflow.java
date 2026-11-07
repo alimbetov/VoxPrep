@@ -65,7 +65,7 @@ final class R5AdminHttpPublicationWorkflow {
             assertThat(auth.statusCode()).isEqualTo(302);
             var page = get(http, "/admin/content/revisions/new");
             assertThat(page.statusCode()).isEqualTo(200);
-            assertThat(page.body()).contains("Create first content revision");
+            assertThat(page.body()).contains("Создание нового материала");
             String payload = "contentCode=" + enc(code)
                     + "&expectedVersion=0&bodyType=" + enc(bodyType)
                     + "&title=" + enc(title)
