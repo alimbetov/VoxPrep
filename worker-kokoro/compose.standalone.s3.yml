@@ -1,0 +1,9 @@
+# Optional private S3 credentials override.
+# Supply STANDALONE_AWS_CREDENTIALS_FILE in your private .env.standalone.
+# Run with both -f compose.standalone.yml -f compose.standalone.s3.yml.
+services:
+  kokoro-standalone:
+    environment:
+      AWS_SHARED_CREDENTIALS_FILE: /run/secrets/aws_credentials
+    volumes:
+      - "${STANDALONE_AWS_CREDENTIALS_FILE:?configure_private_credentials_file}:/run/secrets/aws_credentials:ro"
