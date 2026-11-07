@@ -30,7 +30,7 @@ from voxprep_kokoro_worker.adapters.voice_bundle import SUPPORTED_VOICES
 from voxprep_kokoro_worker.domain.job import ClaimedJob
 
 LOG = logging.getLogger(__name__)
-MAX_BODY = 16384
+MAX_BODY = 65536
 MAX_OUTPUT_BYTES = 16 * 1024 * 1024
 
 
@@ -94,6 +94,13 @@ class StandaloneService:
         if settings.manifest_path.stat().st_size > 65536:
             raise ValueError("Model manifest is too large")
         self.manifest = json.loads(settings.manifest_path.read_text(encoding="utf-8"))
+        required = {"onnx/model_quantized.onnx"} | {
+            "voices/" + voice + ".bin" for voice in SUPPORTED_VOICES
+        }
+        present = {a.get("path") for a in self.manifest.get("artifacts", [])
+                   if isinstance(a, dict)}
+        if not required.issubset(present):
+            raise ValueError("Pinned bundle must contain ONNX and all supported voice assets")
         self.source = PinnedModelSource(
             manifest=self.manifest, local_dir=settings.local_model_dir,
             hf_repo=settings.hf_repo, s3_bucket=settings.model_s3_bucket,
@@ -213,6 +220,9 @@ class StandaloneService:
         data = json.loads(meta.read_text(encoding="utf-8"))
         if data["id"] != output_id or media.stat().st_size != data["sizeBytes"]:
             return None
+        with media.open("rb") as stream:
+            if hashlib.file_digest(stream, "sha256").hexdigest() != data["sha256"]:
+                return None
         return data
 
 
