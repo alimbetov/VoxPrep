@@ -302,8 +302,9 @@ def make_server(settings: StandaloneSettings, service: StandaloneService, queue:
             if not self.authorized():
                 return
             if path == "/health/ready":
-                return self.respond(200 if service.ready else 503,
-                                    {"status": "READY" if service.ready else "NOT_READY"})
+                live = service.ready and (queue is None or queue.healthy)
+                return self.respond(200 if live else 503,
+                                    {"status": "READY" if live else "NOT_READY"})
             if path == "/v1/models/active":
                 return self.respond(200, {
                     "modelCode": service.manifest["modelCode"],
@@ -312,10 +313,13 @@ def make_server(settings: StandaloneSettings, service: StandaloneService, queue:
                     "cacheReady": service.ready,
                 })
             if path == "/v1/metrics":
-                return self.respond(200, {
+                report = {
                     "completedJobs": service.completed, "failedJobs": service.failed,
                     "maxConcurrentInference": 1,
-                })
+                }
+                if queue is not None:
+                    report.update(queue.stats())
+                return self.respond(200, report)
             parts = path.split("/")
             if len(parts) == 5 and parts[:4] == ["", "v1", "tts", "jobs"]:
                 data = queue.get(parts[4]) if queue is not None else service.find(parts[4])
