@@ -9,9 +9,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg espeak-ng libsndfile1 && rm -rf /var/lib/apt/lists/*
 COPY pyproject.toml ./
 COPY src ./src
-RUN python -m pip install --no-cache-dir . \
+RUN python -m pip install --no-cache-dir '.[s3]' \
     && useradd -r -u 10002 -m kokoro \
     && mkdir -p "$MODEL_CACHE_DIR" "$TEMP_DIR" \
     && chown -R kokoro:kokoro /var/lib/voxprep/kokoro "$TEMP_DIR"
 USER kokoro
 ENTRYPOINT ["voxprep-kokoro-worker"]
+
+# Switch to --entrypoint voxprep-kokoro-standalone for the independent API.
+EXPOSE 8086
