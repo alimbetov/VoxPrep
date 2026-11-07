@@ -6,10 +6,12 @@ on:
     paths:
       - "worker-kokoro/**"
       - ".github/workflows/kokoro-standalone-multiarch.yml"
+      - ".github/workflows/kokoro-k3-real-inference.yml"
   pull_request:
     paths:
       - "worker-kokoro/**"
       - ".github/workflows/kokoro-standalone-multiarch.yml"
+      - ".github/workflows/kokoro-k3-real-inference.yml"
 
 permissions:
   contents: read
