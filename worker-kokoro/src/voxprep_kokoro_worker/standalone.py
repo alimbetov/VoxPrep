@@ -89,6 +89,13 @@ class StandaloneService:
         self.settings = settings
         for path in (settings.cache_dir, settings.temp_dir, settings.output_dir):
             path.mkdir(parents=True, exist_ok=True)
+            if path.is_symlink():
+                raise ValueError("Symlinked storage directories are forbidden")
+        # Interrupted local jobs never become successful results. Remove
+        # their disposable workspaces on restart; completed MP3s persist.
+        for orphan in settings.temp_dir.glob("standalone-*"):
+            if orphan.is_dir() and not orphan.is_symlink():
+                shutil.rmtree(orphan)
         if settings.output_dir.is_symlink():
             raise ValueError("Symlink output directory is forbidden")
         if settings.manifest_path.stat().st_size > 65536:
@@ -207,10 +214,15 @@ class StandaloneService:
         if self._s3 is None:
             self._s3 = boto3.client("s3", endpoint_url=self.settings.s3_endpoint_url,
                                    region_name=self.settings.s3_region)
+        key = self._object_key(output_id)
         with path.open("rb") as stream:
             self._s3.upload_fileobj(
-                stream, self.settings.output_s3_bucket, self._object_key(output_id),
+                stream, self.settings.output_s3_bucket, key,
                 ExtraArgs={"ContentType": "audio/mpeg", "Metadata": {"sha256": sha256}})
+        verified = self._s3.head_object(Bucket=self.settings.output_s3_bucket, Key=key)
+        if (verified.get("ContentLength") != path.stat().st_size or
+            verified.get("Metadata", {}).get("sha256") != sha256):
+            raise ValueError("RustFS/S3 output metadata verification failed")
 
     def find(self, output_id: str):
         try:
