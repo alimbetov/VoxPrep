@@ -111,6 +111,8 @@ class StandaloneService:
         self.postprocessor = postprocessor or FfmpegPostprocessor()
         self.busy = threading.BoundedSemaphore(1)
         self.ready = False
+        self.completed = 0
+        self.failed = 0
         self._s3 = None
 
     def _job(self, *, text: str, voice: str, speed: float) -> ClaimedJob:
@@ -185,10 +187,14 @@ class StandaloneService:
                 pending = self.settings.output_dir / (output_id + ".json.tmp")
                 pending.write_text(json.dumps(info, sort_keys=True), encoding="utf-8")
                 pending.replace(self.settings.output_dir / (output_id + ".json"))
+                self.completed += 1
                 LOG.info("standalone synthesis succeeded: id=%s sha256=%s", output_id, digest)
                 return info
             finally:
                 shutil.rmtree(work, ignore_errors=True)
+        except Exception:
+            self.failed += 1
+            raise
         finally:
             self.busy.release()
 
@@ -229,6 +235,10 @@ class StandaloneService:
 def make_server(settings: StandaloneSettings, service: StandaloneService):
     class Handler(BaseHTTPRequestHandler):
         server_version = "KokoroStandalone/0.1"
+        def setup(self):
+            super().setup()
+            self.connection.settimeout(30)
+
         def log_message(self, format, *args):
             LOG.info("standalone HTTP: " + format, *args)
 
@@ -258,6 +268,18 @@ def make_server(settings: StandaloneSettings, service: StandaloneService):
             if path == "/health/ready":
                 return self.respond(200 if service.ready else 503,
                                     {"status": "READY" if service.ready else "NOT_READY"})
+            if path == "/v1/models/active":
+                return self.respond(200, {
+                    "modelCode": service.manifest["modelCode"],
+                    "manifestSha256": service.manifest["manifestSha256"],
+                    "voices": sorted(SUPPORTED_VOICES),
+                    "cacheReady": service.ready,
+                })
+            if path == "/v1/metrics":
+                return self.respond(200, {
+                    "completedJobs": service.completed, "failedJobs": service.failed,
+                    "maxConcurrentInference": 1,
+                })
             parts = path.split("/")
             if len(parts) == 5 and parts[:4] == ["", "v1", "tts", "jobs"]:
                 data = service.find(parts[4])
@@ -307,8 +329,29 @@ def make_server(settings: StandaloneSettings, service: StandaloneService):
             self.respond(201, result)
 
     class Server(ThreadingHTTPServer):
-        daemon_threads = True
+        daemon_threads = False  # finish active inference before server_close
+        block_on_close = True
         request_queue_size = 8
+
+        def __init__(self, *args, **kwargs):
+            self._requests = threading.BoundedSemaphore(8)
+            super().__init__(*args, **kwargs)
+
+        def process_request(self, request, client_address):
+            if not self._requests.acquire(blocking=False):
+                self.shutdown_request(request)
+                return
+            try:
+                super().process_request(request, client_address)
+            except Exception:
+                self._requests.release()
+                raise
+
+        def process_request_thread(self, request, client_address):
+            try:
+                super().process_request_thread(request, client_address)
+            finally:
+                self._requests.release()
 
     return Server((settings.host, settings.port), Handler)
 
