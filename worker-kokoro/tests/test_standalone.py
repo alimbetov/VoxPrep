@@ -25,7 +25,11 @@ def fixture(tmp_path):
         "onnx/model_quantized.onnx", "voices/af_heart.bin",
         "voices/am_michael.bin", "voices/bf_emma.bin"
     ):
-        value = ("verified:" + name).encode()
+        value = (
+            ("verified:" + name).encode()
+            if name.startswith("onnx/")
+            else __import__("struct").pack("<f", 0.125) * (256 * 256)
+        )
         file = source_dir / name
         file.parent.mkdir(parents=True, exist_ok=True)
         file.write_bytes(value)
