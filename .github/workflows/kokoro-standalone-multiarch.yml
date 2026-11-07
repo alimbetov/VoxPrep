@@ -14,6 +14,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: kokoro-standalone-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   images:
     name: Container ${{ matrix.arch }}
