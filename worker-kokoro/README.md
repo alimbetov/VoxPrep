@@ -1,6 +1,8 @@
 ## Independent standalone mode (experimental)
 
 A separate `voxprep-kokoro-standalone` entry point is now available.
+Its HTTP POST accepts and persists jobs with `202 Accepted`; completed MP3s
+are served through authenticated status/audio GET endpoints.
 It accepts authenticated local HTTP synthesis without VoxPrep Backend V2,
 verifies pinned model assets from local storage, private RustFS/S3 or a
 fixed Hugging Face revision, and saves MP3 locally or directly to S3.
@@ -8,9 +10,9 @@ fixed Hugging Face revision, and saves MP3 locally or directly to S3.
 See **[STANDALONE_DEPLOYMENT.md](STANDALONE_DEPLOYMENT.md)** for the
 manifest generator, Docker Compose, API contract and recovery constraints.
 
-**Important:** This is a bounded, synchronous single-tenant internal API,
-not yet a durable asynchronous job scheduler. Multiarch and real K4/long
-synthesis remain qualification gates. The original V2 polling process and
+**Important:** This is a bounded, SQLite-backed asynchronous single-tenant internal API,
+with idempotency, restart replay and exact model snapshot validation. Multi-node coordination, automatic retry on external storage errors, cancellation
+of running inference, release-grade telemetry and Kokoro K4 remain qualification gates. The original V2 polling process and
 Piper implementation have not been changed.
 
 # Independent Kokoro-82M Worker (K3 inference proven; K4 acceptance pending)
