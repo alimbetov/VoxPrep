@@ -17,7 +17,7 @@ and recovery tests are accepted.
   those sources.
 - **Engine:** original Kokoro ONNX/three voice style vectors, long-text chunks,
   WAV and FFmpeg MP3. **No Piper fallback.**
-- **Queue:** durable SQLite WAL (FULL synchronous), one process owner via OS flock, bounded 100 pending jobs, one inference worker, replay of interrupted RUNNING jobs up to three attempts and duplicate-submit protection.
+- **Queue:** durable SQLite WAL (FULL synchronous), one process owner via OS flock, bounded 100 pending jobs, one inference worker, replay of interrupted RUNNING jobs up to three attempts, immutable manifest snapshots and duplicate-submit protection.
 - **Output:** private persistent local volume; optional direct RustFS/S3
   upload with HEAD size/hash-metadata check. Results remain accessible via
   authenticated metadata/audio GET endpoints across clean restarts.
@@ -159,7 +159,10 @@ concurrent HTTP connections. The service never logs request text or secrets.
   using their original output UUID up to three attempts. If the MP3 had been
   committed before the crash, the SHA-256-verified result is reused without
   running ONNX again. Normal runtime errors become FAILED; they are not
-  automatically retried by this D2 release.
+  automatically retried by this D2 release. If the model manifest changes
+  before processing a queued job, it fails with `MODEL_SNAPSHOT_MISMATCH`
+  instead of synthesizing against another model. Legacy D2 rows without
+  snapshot identity are migrated but fail closed.
 - Source fallback is ordered, but every artifact is checked against the same
   manifest. A source cannot silently substitute another model revision.
 - `/health/live` is unauthenticated (for infrastructure probes).
@@ -209,6 +212,8 @@ curl --fail-with-body -H "Authorization: Bearer $STANDALONE_API_TOKEN" \
 ```
 
 The pinned K3 workflow also exercises the D2 real-engine queue using all
-three voices and writes a real MP3/SQLite reopen report. That workflow is
+three voices, loads pinned model assets from an isolated real RustFS, uploads
+MP3s to RustFS and checks matching bytes/SHA-256, and writes a real
+MP3/SQLite reopen report. That workflow is
 separate from the much faster mock-based unit tests; evaluate the actual
 workflow result and audio quality before claiming it passed.
