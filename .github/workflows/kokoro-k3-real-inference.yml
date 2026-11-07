@@ -79,6 +79,14 @@ jobs:
           python -m voxprep_kokoro_worker.real_model_smoke \
             --model-dir worker-kokoro/k3-model \
             --output-dir worker-kokoro/k3-evidence
+      - name: D2 real standalone queue to MP3 and offline reopen (three voices)
+        env:
+          PYTHONPATH: worker-kokoro/src
+        run: |
+          python -m voxprep_kokoro_worker.d2_real_standalone_smoke \
+            --model-dir worker-kokoro/k3-model \
+            --output-dir worker-kokoro/d2-evidence \
+            --revision 1939ad2a8e416c0acfeecc08a694d14ef25f2231
       - name: Upload real K3 evidence (even when inference fails)
         if: always()
         uses: actions/upload-artifact@v4
@@ -89,5 +97,7 @@ jobs:
             worker-kokoro/k3-evidence/*.json
             worker-kokoro/k3-evidence/*.mp3
             worker-kokoro/k3-evidence/*.wav
+            worker-kokoro/d2-evidence/d2-real-smoke-evidence.json
+            worker-kokoro/d2-evidence/*.mp3
           if-no-files-found: warn
           retention-days: 7
