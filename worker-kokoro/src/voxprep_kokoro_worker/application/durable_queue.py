@@ -10,6 +10,7 @@ import fcntl
 import hashlib
 import json
 import logging
+import shutil
 import sqlite3
 import threading
 import time
@@ -66,6 +67,11 @@ class DurableQueue:
             self._owner_handle.close()
             raise QueueClosed("Another process owns the standalone queue") from exc
         try:
+            # The exclusive lock must be acquired BEFORE deleting interrupted
+            # workspaces; a second instance must never erase a live inference.
+            for orphan in service.settings.temp_dir.glob("standalone-*"):
+                if orphan.is_dir() and not orphan.is_symlink():
+                    shutil.rmtree(orphan)
             db_path = root / "jobs.sqlite3"
             if db_path.is_symlink():
                 raise ValueError("Queue database must not be a symlink")
