@@ -89,25 +89,10 @@ void main() {
       child: const ContentDetailPanel(item: goldenInterview),
     );
 
-    // The legacy screenshot placed the audio controls above the lesson.
-    // After the intentional reading-order redesign, assert the new contract
-    // without accepting an unrelated/obsolete image as a golden baseline.
-    // Regenerate interview_two_audio_roles.png from an approved device render
-    // before restoring pixel-exact qualification for this screen.
-    final list = tester.widget<ListView>(find.byType(ListView).first);
-    final children = (list.childrenDelegate as SliverChildListDelegate).children;
-    final descriptionIndex = children.indexWhere(
-      (widget) => widget is Text && widget.data == goldenInterview.description,
+    await expectLater(
+      find.byKey(_goldenRootKey),
+      matchesGoldenFile('baselines/interview_two_audio_roles.png'),
     );
-    final audioIndex = children.indexWhere(
-      (widget) => widget.runtimeType.toString() == '_InterviewAudioControls',
-    );
-    expect(descriptionIndex, greaterThanOrEqualTo(0));
-    expect(audioIndex, greaterThan(descriptionIndex));
-    await tester.ensureVisible(find.text('Interview audio'));
-    await tester.pumpAndSettle();
-    expect(find.text('Question'), findsWidgets);
-    expect(find.text('Sample answer'), findsOneWidget);
   });
 
   testWidgets('golden practice question', (tester) async {
