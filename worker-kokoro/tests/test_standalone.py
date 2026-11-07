@@ -106,7 +106,7 @@ def test_standalone_api_auth_output_recovery_and_corruption_rejection(tmp_path):
             assert client.post("/v1/tts/jobs", headers=headers, json=body | {"unexpected": 1}).status_code == 400
             invalid = body | {"voiceCode": "af_unknown"}
             assert client.post("/v1/tts/jobs", headers=headers, json=invalid).status_code == 400
-            assert client.post("/v1/tts/jobs", headers=headers, json=body | {"speed": float("nan")}).status_code == 400
+            assert client.post("/v1/tts/jobs", headers=headers, json=body | {"speed": "NaN"}).status_code == 400
             with service.busy:
                 pass
             response = client.post("/v1/tts/jobs", headers=headers, json=body)
