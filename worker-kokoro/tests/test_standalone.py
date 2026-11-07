@@ -250,9 +250,17 @@ def test_restart_cleans_only_aborted_workspace_and_keeps_outputs(tmp_path):
     settings.output_dir.mkdir()
     result = settings.output_dir / "completed.mp3"
     result.write_bytes(b"persistent")
-    StandaloneService(settings, synthesizer=FakeSynth(), postprocessor=FakePost())
-    assert not orphan.exists()
-    assert result.read_bytes() == b"persistent"
+    from voxprep_kokoro_worker.application.durable_queue import DurableQueue
+    service = StandaloneService(settings, synthesizer=FakeSynth(), postprocessor=FakePost())
+    # Service construction alone must not delete another live worker's
+    # intermediate files; cleanup happens after queue ownership is acquired.
+    assert orphan.exists()
+    queue = DurableQueue(settings.output_dir / "queue", service)
+    try:
+        assert not orphan.exists()
+        assert result.read_bytes() == b"persistent"
+    finally:
+        queue.stop()
 
 
 def test_s3_metadata_mismatch_rejects_output_and_does_not_commit_local(tmp_path, monkeypatch):
