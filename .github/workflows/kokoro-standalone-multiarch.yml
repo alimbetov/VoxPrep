@@ -1,0 +1,58 @@
+name: Kokoro Standalone Multiarch
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "worker-kokoro/**"
+      - ".github/workflows/kokoro-standalone-multiarch.yml"
+  pull_request:
+    paths:
+      - "worker-kokoro/**"
+      - ".github/workflows/kokoro-standalone-multiarch.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  images:
+    name: Container ${{ matrix.arch }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            platform: linux/amd64
+          - arch: arm64
+            platform: linux/arm64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Build standalone-capable image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./worker-kokoro
+          platforms: ${{ matrix.platform }}
+          load: true
+          tags: kokoro-standalone:qualify
+          push: false
+      - name: Runtime import and non-root verification (not real ONNX)
+        run: |
+          docker run --rm --platform "${{ matrix.platform }}" \
+            --entrypoint python kokoro-standalone:qualify \
+            -c "import os; import boto3; import voxprep_kokoro_worker.standalone; import voxprep_kokoro_worker.adapters.audio; assert os.getuid()==10002; print('runtime imports ok')"
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compose syntax and resource policy
+        env:
+          STANDALONE_API_TOKEN: qualification-only-random-placeholder-not-production
+        run: |
+          docker compose -f worker-kokoro/compose.standalone.yml config --quiet
+          docker compose -f worker-kokoro/compose.standalone.yml config | grep -q 'mem_limit:'
+          docker compose -f worker-kokoro/compose.standalone.yml config | grep -q 'read_only: true'
