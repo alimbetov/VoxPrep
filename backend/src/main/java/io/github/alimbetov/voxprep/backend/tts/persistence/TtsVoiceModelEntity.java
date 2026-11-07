@@ -43,16 +43,16 @@ public class TtsVoiceModelEntity extends AbstractJpaEntity {
     @Column(name = "model_version", nullable = false, updatable = false, length = 128)
     private String modelVersion;
 
-    @Column(name = "model_asset_id", nullable = false, updatable = false)
+    @Column(name = "model_asset_id", updatable = false)
     private UUID modelAssetId;
 
-    @Column(name = "config_asset_id", nullable = false, updatable = false)
+    @Column(name = "config_asset_id", updatable = false)
     private UUID configAssetId;
 
-    @Column(name = "model_sha256", nullable = false, updatable = false, length = 64)
+    @Column(name = "model_sha256", updatable = false, length = 64)
     private String modelSha256;
 
-    @Column(name = "config_sha256", nullable = false, updatable = false, length = 64)
+    @Column(name = "config_sha256", updatable = false, length = 64)
     private String configSha256;
 
     @Column(name = "source_provider", updatable = false, length = 64)
@@ -141,14 +141,41 @@ public class TtsVoiceModelEntity extends AbstractJpaEntity {
         this.engine = Objects.requireNonNull(engine, "engine");
         this.engineVersion = TtsVoiceEntity.required(engineVersion, "engineVersion", 64);
         this.modelVersion = TtsVoiceEntity.required(modelVersion, "modelVersion", 128);
-        this.modelAssetId = Objects.requireNonNull(modelAssetId, "modelAssetId");
-        this.configAssetId = Objects.requireNonNull(configAssetId, "configAssetId");
-        this.modelSha256 = sha256(modelSha256, "modelSha256");
-        this.configSha256 = sha256(configSha256, "configSha256");
+        if (engine == TtsEngine.PIPER) {
+            this.modelAssetId = Objects.requireNonNull(modelAssetId, "modelAssetId");
+            this.configAssetId = Objects.requireNonNull(configAssetId, "configAssetId");
+            this.modelSha256 = sha256(modelSha256, "modelSha256");
+            this.configSha256 = sha256(configSha256, "configSha256");
+        } else if (engine == TtsEngine.KOKORO) {
+            if (modelAssetId != null || configAssetId != null
+                    || modelSha256 != null || configSha256 != null) {
+                throw new IllegalArgumentException("Kokoro uses an immutable bundle, not Piper assets");
+            }
+        } else {
+            throw new IllegalArgumentException("Unsupported TTS engine");
+        }
         this.sourceProvider = TtsVoiceEntity.optional(sourceProvider, "sourceProvider", 64);
         this.sourceRepository = TtsVoiceEntity.optional(sourceRepository, "sourceRepository", 256);
         this.sourceRevision = TtsVoiceEntity.optional(sourceRevision, "sourceRevision", 128);
         updateReviewMetadata(status, licenseName, licenseReference, commercialUseReviewed, approvedAt);
+    }
+
+    /**
+     * Kokoro is registered in the shared voice-model catalog with NO Piper
+     * model/config assets. Binding to a verified multi-asset bundle is a
+     * separate immutable operation and must precede job enrollment.
+     */
+    public static TtsVoiceModelEntity forKokoro(
+            String code, TtsVoiceEntity voice, String engineVersion,
+            String modelVersion, String sourceRepository, String sourceRevision,
+            TtsVoiceModelStatus status, String licenseName,
+            String licenseReference, boolean commercialUseReviewed,
+            Instant approvedAt) {
+        return new TtsVoiceModelEntity(
+                code, voice, TtsEngine.KOKORO, engineVersion, modelVersion,
+                null, null, null, null, "huggingface",
+                sourceRepository, sourceRevision, status,
+                licenseName, licenseReference, commercialUseReviewed, approvedAt);
     }
 
     public void updateReviewMetadata(

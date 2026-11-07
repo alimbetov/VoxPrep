@@ -90,6 +90,102 @@ class TtsJobLeaseIntegrationTest {
     }
 
     @Test
+    void legacyGenericClaimNeverStealsKokoroJob() {
+        UUID kokoroJob = createPendingJobs("kokoro-only", 1, TtsEngine.KOKORO).getFirst();
+        assertThat(leaseService.claimNext("legacy-piper", Duration.ofMinutes(5))).isEmpty();
+        assertThat(jdbcTemplate.queryForObject(
+                "select status from app.tts_job where id = ?", String.class, kokoroJob))
+                .isEqualTo("PENDING");
+    }
+
+    @Test
+    void legacyGenericClaimSkipsEarlierKokoroAndClaimsPiper() {
+        UUID kokoroJob = createPendingJobs("kokoro-first", 1, TtsEngine.KOKORO).getFirst();
+        UUID piperJob = createPendingJobs("piper-second", 1, TtsEngine.PIPER).getFirst();
+        var claimed = leaseService.claimNext("legacy-piper", Duration.ofMinutes(5)).orElseThrow();
+        assertThat(claimed.jobId()).isEqualTo(piperJob);
+        assertThat(jdbcTemplate.queryForObject(
+                "select status from app.tts_job where id = ?", String.class, kokoroJob))
+                .isEqualTo("PENDING");
+    }
+
+    @Test
+    void engineScopedClaimOnlyReceivesMatchingJobs() {
+        UUID kokoro = createPendingWorkerJobs("scoped-kokoro", TtsEngine.KOKORO);
+        UUID piper = createPendingWorkerJobs("scoped-piper", TtsEngine.PIPER);
+        var piperClaim = leaseService.claimNextForEngine(
+                "piper-v2", TtsEngine.PIPER, Duration.ofMinutes(5)).orElseThrow();
+        var kokoroClaim = leaseService.claimNextForEngine(
+                "kokoro-v2", TtsEngine.KOKORO, Duration.ofMinutes(5)).orElseThrow();
+        assertThat(piperClaim.jobId()).isEqualTo(piper);
+        assertThat(kokoroClaim.jobId()).isEqualTo(kokoro);
+        assertThat(piperClaim.leaseToken()).isNotEqualTo(kokoroClaim.leaseToken());
+    }
+
+    @Test
+    void concurrentEngineScopedClaimsCannotClaimSameJob() throws Exception {
+        UUID jobId = createPendingWorkerJobs("same-engine", TtsEngine.PIPER);
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            var ready = new CountDownLatch(2);
+            var start = new CountDownLatch(1);
+            var first = executor.submit(() -> {
+                ready.countDown();
+                start.await(5, TimeUnit.SECONDS);
+                return leaseService.claimNextForEngine(
+                        "piper-v2-a", TtsEngine.PIPER, Duration.ofMinutes(5));
+            });
+            var second = executor.submit(() -> {
+                ready.countDown();
+                start.await(5, TimeUnit.SECONDS);
+                return leaseService.claimNextForEngine(
+                        "piper-v2-b", TtsEngine.PIPER, Duration.ofMinutes(5));
+            });
+            assertThat(ready.await(5, TimeUnit.SECONDS)).isTrue();
+            start.countDown();
+            var one = first.get(5, TimeUnit.SECONDS);
+            var two = second.get(5, TimeUnit.SECONDS);
+            assertThat((one.isPresent() ? 1 : 0) + (two.isPresent() ? 1 : 0)).isEqualTo(1);
+            assertThat(one.or(() -> two).orElseThrow().jobId()).isEqualTo(jobId);
+        }
+    }
+
+    @Test
+    void v2HeartbeatRejectsForeignEngineAndAcceptsOwnedLease() {
+        UUID job = createPendingWorkerJobs("heartbeat-kokoro", TtsEngine.KOKORO);
+        var claim = leaseService.claimNextForEngine(
+                "kokoro-owner", TtsEngine.KOKORO, Duration.ofMinutes(5)).orElseThrow();
+        assertThat(claim.jobId()).isEqualTo(job);
+        assertThat(leaseService.heartbeatForEngine(
+                job, "kokoro-owner", claim.leaseToken(),
+                TtsEngine.PIPER, Duration.ofMinutes(5))).isEmpty();
+        assertThat(leaseService.heartbeatForEngine(
+                job, "kokoro-owner", UUID.randomUUID(),
+                TtsEngine.KOKORO, Duration.ofMinutes(5))).isEmpty();
+        assertThat(leaseService.heartbeatForEngine(
+                job, "kokoro-owner", claim.leaseToken(),
+                TtsEngine.KOKORO, Duration.ofMinutes(5))).isPresent();
+    }
+
+    @Test
+    void v2FailRejectsForeignEngineAndWrongToken() {
+        UUID job = createPendingWorkerJobs("fail-kokoro", TtsEngine.KOKORO);
+        var claim = leaseService.claimNextForEngine(
+                "kokoro-owner", TtsEngine.KOKORO, Duration.ofMinutes(5)).orElseThrow();
+        assertThat(leaseService.failWorkerForEngine(
+                job, claim.fileId(), "kokoro-owner", claim.leaseToken(),
+                TtsEngine.PIPER, "TEST", "wrong engine")).isFalse();
+        assertThat(leaseService.failWorkerForEngine(
+                job, claim.fileId(), "kokoro-owner", UUID.randomUUID(),
+                TtsEngine.KOKORO, "TEST", "wrong lease")).isFalse();
+        assertThat(leaseService.failWorkerForEngine(
+                job, claim.fileId(), "kokoro-owner", claim.leaseToken(),
+                TtsEngine.KOKORO, "TEST", "correct engine")).isTrue();
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT status FROM app.tts_job WHERE id = ?", String.class, job))
+                .isEqualTo("FAILED");
+    }
+
+    @Test
     void activeLeaseIsNotClaimable() {
         UUID jobId = createPendingJobs("active", 1).getFirst();
         jdbcTemplate.update("""
@@ -129,29 +225,52 @@ class TtsJobLeaseIntegrationTest {
         return leaseService.claimNext(workerId, Duration.ofMinutes(5)).orElseThrow();
     }
 
+    private UUID createPendingWorkerJobs(String suffix, TtsEngine engine) {
+        UUID jobId = createPendingJobs(suffix, 1, engine).getFirst();
+        UUID revisionId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                INSERT INTO app.content_revision (
+                    id, version, created_at, updated_at, content_code, content_type, revision_number,
+                    lifecycle, checksum_sha256, title, subtitle, description, category_code, level_code,
+                    minutes, availability)
+                VALUES (?, 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, ?, 'phrase', 1, 'DRAFT', ?,
+                        'Title', 'Subtitle', 'Description', 'GENERAL', 'B1', 1, 'ACTIVE')
+                """, revisionId, "lease-claim-" + suffix + "-" + revisionId, "9".repeat(64));
+        jdbcTemplate.update("""
+                UPDATE app.tts_job
+                   SET file_id = ?, content_revision_id = ?, audio_role = 'pronunciation',
+                       normalized_tts_text = 'Test utterance', language = 'en-US',
+                       fingerprint = ?
+                 WHERE id = ?
+                """, UUID.randomUUID(), revisionId, TtsFingerprint.sha256(jobId.toString()), jobId);
+        return jobId;
+    }
+
     private List<UUID> createPendingJobs(String suffix, int count) {
+        return createPendingJobs(suffix, count, TtsEngine.PIPER);
+    }
+
+    private List<UUID> createPendingJobs(String suffix, int count, TtsEngine engine) {
         return transactionTemplate.execute(status -> {
             var voice = voiceRepository.saveAndFlush(new TtsVoiceEntity(
                     "voice-lease-" + suffix, "US English Lessac", "en-US", "US", "FEMALE", "NEUTRAL", true));
             var assets = TtsTestAssets.createModelAssets(assetRepository, "lease-" + suffix, 'a', 'b');
-            var model = modelRepository.saveAndFlush(new TtsVoiceModelEntity(
-                    "model-lease-" + suffix,
-                    voice,
-                    TtsEngine.PIPER,
-                    "1.3.0",
-                    "en_US-lessac-medium-v1",
-                    assets.modelAssetId(),
-                    assets.configAssetId(),
-                    String.valueOf('a').repeat(64),
-                    String.valueOf('b').repeat(64),
-                    SOURCE_PROVIDER,
-                    SOURCE_REPOSITORY,
-                    SOURCE_REVISION,
-                    TtsVoiceModelStatus.ACTIVE,
-                    "MIT",
-                    "https://example.invalid/license",
-                    true,
-                    Instant.parse("2026-11-02T18:00:00Z")));
+            var candidate = engine == TtsEngine.KOKORO
+                    ? TtsVoiceModelEntity.forKokoro(
+                        "model-lease-" + suffix, voice, "kokoro-onnx-0.6.1",
+                        "kokoro-82m-v1", "onnx-community/Kokoro-82M-v1.0-ONNX",
+                        SOURCE_REVISION, TtsVoiceModelStatus.ACTIVE,
+                        "Apache-2.0", "https://example.invalid/license", true,
+                        Instant.parse("2026-11-02T18:00:00Z"))
+                    : new TtsVoiceModelEntity(
+                        "model-lease-" + suffix, voice, engine,
+                        "1.3.0", "en_US-lessac-medium-v1",
+                        assets.modelAssetId(), assets.configAssetId(),
+                        String.valueOf('a').repeat(64), String.valueOf('b').repeat(64),
+                        SOURCE_PROVIDER, SOURCE_REPOSITORY, SOURCE_REVISION,
+                        TtsVoiceModelStatus.ACTIVE, "MIT", "https://example.invalid/license",
+                        true, Instant.parse("2026-11-02T18:00:00Z"));
+            var model = modelRepository.saveAndFlush(candidate);
             return java.util.stream.IntStream.range(0, count)
                     .mapToObj(index -> jobRepository.saveAndFlush(new TtsJobEntity(
                             model,

@@ -77,6 +77,29 @@ class TtsOutputFinalizationIntegrationTest {
     }
 
     @Test
+    void crossEngineOutputIsRejectedBeforeRustFsWrite() {
+        var fixture = pendingWorkerJob("cross-engine");
+        var claim = leaseService.claimNextForWorker("piper-output", Duration.ofMinutes(5)).orElseThrow();
+        byte[] mp3 = "cross-engine-should-not-write".getBytes(StandardCharsets.UTF_8);
+        var upload = new TtsOutputFinalizationService.OutputUpload(
+                fixture.job().getId(), "piper-output", fixture.fileId(), claim.leaseToken(),
+                fixture.fingerprint(), fixture.model().getId(),
+                TtsOutputFinalizationService.AUDIO_PROFILE, sha256(mp3),
+                mp3.length, 100L, TtsOutputFinalizationService.CONTENT_TYPE, mp3);
+
+        assertThat(outputService.finalizeOutputForEngine(
+                upload, TtsEngine.KOKORO, "a".repeat(64)))
+                .isEqualTo(TtsOutputFinalizationService.FinalizationResult.REPLAY_MISMATCH);
+        assertThat(jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM app.file_asset WHERE id = ?",
+                Integer.class, fixture.fileId())).isZero();
+
+        assertThat(outputService.finalizeOutputForEngine(
+                upload, TtsEngine.PIPER, null))
+                .isEqualTo(TtsOutputFinalizationService.FinalizationResult.CREATED);
+    }
+
+    @Test
     void staleLeaseCannotFinalizeOutput() {
         var fixture = pendingWorkerJob("stale-output");
         var claim = leaseService.claimNextForWorker("worker-old", Duration.ofMinutes(5)).orElseThrow();

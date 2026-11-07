@@ -78,6 +78,8 @@ voxprep:
     max-connections: ${VOXPREP_STORAGE_MAX_CONNECTIONS:50}
   worker-delivery:
     api-key: ${VOXPREP_WORKER_API_KEY:${worker_api_key}}
+    kokoro-api-key: ${VOXPREP_KOKORO_WORKER_API_KEY:}
+    kokoro-enabled: ${VOXPREP_KOKORO_ENABLED:false}
     url-ttl: ${VOXPREP_WORKER_MODEL_URL_TTL:5m}
     lease-duration: ${VOXPREP_WORKER_LEASE_DURATION:2m}
   security:

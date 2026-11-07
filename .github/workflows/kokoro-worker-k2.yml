@@ -1,0 +1,43 @@
+name: Kokoro Worker K2 Foundation
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "worker-kokoro/**"
+      - ".github/workflows/kokoro-worker-k2.yml"
+      - ".github/workflows/kokoro-k3-real-inference.yml"
+  pull_request:
+    paths:
+      - "worker-kokoro/**"
+      - ".github/workflows/kokoro-worker-k2.yml"
+      - ".github/workflows/kokoro-k3-real-inference.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker-kokoro
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install HTTP and unit test dependencies (no model download)
+        run: python -m pip install "httpx==0.28.1" "pytest==8.4.2" "numpy==2.2.6"
+      - name: Compile worker source
+        run: python -m compileall -q src tests
+      - name: Validate V2 fail-closed contracts and cache
+        env:
+          PYTHONPATH: src
+        run: python -m pytest -q tests
+      - name: Ensure Piper imports are absent in new package
+        run: |
+          if grep -R -nE 'from piper import|import piper|/internal/v1/tts/' src; then
+            echo "Kokoro must not depend on Piper runtime/protocol"
+            exit 1
+          fi

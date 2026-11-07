@@ -3,6 +3,7 @@ package io.github.alimbetov.voxprep.backend.tts.application;
 import io.github.alimbetov.voxprep.backend.content.application.ContentRevisionSnapshot;
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
 import io.github.alimbetov.voxprep.backend.tts.domain.ContentAudioRole;
+import io.github.alimbetov.voxprep.backend.tts.domain.TtsEngine;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsJobEntity;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsJobRepository;
 import io.github.alimbetov.voxprep.backend.tts.persistence.TtsVoiceModelRepository;
@@ -60,6 +61,12 @@ public class TtsJobPreparationService {
                 .orElseThrow(() -> new IllegalArgumentException("TTS voice model not found: " + modelCode));
         if (!voiceModel.selectableForNewJobs()) {
             throw new IllegalStateException("TTS voice model is not selectable for new jobs: " + modelCode);
+        }
+
+        // Fail closed until authenticated engine-scoped V2 claim, immutable model
+        // bundles and Kokoro job fingerprinting are implemented and qualified.
+        if (voiceModel.getEngine() != TtsEngine.PIPER) {
+            throw new IllegalStateException("Kokoro TTS job enrollment is not enabled");
         }
 
         String fingerprint = TtsFingerprint.compute(

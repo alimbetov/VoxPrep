@@ -1,0 +1,11 @@
+# Private configuration and generated model/audio data
+.env.standalone
+manifest.json
+model-source/
+.aws/
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.mp3
+*.wav

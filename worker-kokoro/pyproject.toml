@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=75,<86"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "voxprep-kokoro-worker"
+version = "0.1.0"
+requires-python = ">=3.12,<3.13"
+dependencies = ["httpx==0.28.1", "numpy>=1.26,<3", "kokoro-onnx==0.6.1", "soundfile>=0.12,<1"]
+
+[project.optional-dependencies]
+dev = ["pytest==8.4.2", "pytest-cov==7.1.0"]
+s3 = ["boto3>=1.35,<2"]
+
+[project.scripts]
+voxprep-kokoro-worker = "voxprep_kokoro_worker.main:main"
+voxprep-kokoro-standalone = "voxprep_kokoro_worker.standalone:main"
+voxprep-kokoro-manifest = "voxprep_kokoro_worker.manifest_cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q"

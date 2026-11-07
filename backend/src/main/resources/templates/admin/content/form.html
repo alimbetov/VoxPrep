@@ -176,7 +176,7 @@
                 <span class="small text-secondary">Actual backend jobs · authenticated MP3 preview</span>
             </div>
             <p class="text-secondary small">
-                Аудио создаётся отдельным Piper Worker. Для запуска требуется активная одобренная модель.
+                Аудио создаётся выбранным TTS Worker (Piper или Kokoro, если он включён в Backend). Для запуска требуется активная одобренная модель.
                 Прослушивание доступно только после статуса READY и проверки целостности MP3.
                 Повторное задание с теми же параметрами использует существующий job.
             </p>
@@ -192,12 +192,28 @@
                                     th:text="${role.title}">Pronunciation</option>
                         </select>
                     </div>
-                    <div class="col-12 col-lg-8">
+                    <div class="col-12 col-lg-3">
+                        <label class="form-label" for="ttsEngine">Движок синтеза</label>
+                        <select class="form-select" id="ttsEngine" name="ttsEngine" aria-describedby="ttsEngineHint">
+                            <option value="PIPER">Piper TTS</option>
+                            <option value="KOKORO" th:disabled="${ttsKokoroEnabled != true}">Kokoro-82M — English voices</option>
+                        </select>
+                        <div id="ttsEngineHint" class="form-text" th:if="${ttsKokoroEnabled != true}">
+                            Kokoro выключен в Backend. Для DEV требуется токен, проверенный bundle и работающий Worker.
+                        </div>
+                        <div class="form-text">
+                            Голоса Kokoro: af_heart (основной диктор США),
+                            am_michael (диалоги США), bf_emma (британское произношение).
+                            Нужны одобренная модель и доступный V2 Worker.
+                        </div>
+                    </div>
+                    <div class="col-12 col-lg-5">
                         <label class="form-label" for="ttsVoiceModelCode">Одобренный голос</label>
                         <select class="form-select" id="ttsVoiceModelCode" name="voiceModelCode" required>
                             <option value="">Выберите голос</option>
                             <option th:each="voice : ${ttsModels}" th:value="${voice.code}"
-                                    th:text="${voice.displayName + ' · ' + voice.language + ' · ' + voice.code}">Model</option>
+                                    th:attr="data-engine=${voice.engine}"
+                                    th:text="${voice.engine + ' · ' + voice.displayName + ' · ' + voice.language + ' · ' + voice.code}">Model</option>
                         </select>
                     </div>
                 </div>
@@ -220,7 +236,7 @@
                         <strong th:text="${job.role != null ? job.role : 'Audio'}">Назначение аудио</strong>
                         <span class="badge text-bg-secondary ms-2" th:text="${job.status}">PENDING</span>
                         <div class="small text-secondary">
-                            <span th:text="${job.modelCode}">voice model</span>
+                            <span th:text="${job.engine + ' · ' + job.modelCode}">PIPER · voice model</span>
                             <span th:if="${job.language != null}" th:text="${' · ' + job.language}">en-US</span>
                             <span th:text="${' · attempts: ' + job.attemptCount}">0</span>
                         </div>
@@ -285,4 +301,23 @@
     </div>
     <th:block th:replace="~{admin/fragments/media-picker :: picker}"></th:block>
 </main>
+<script>
+(function () {
+    const engine = document.getElementById('ttsEngine');
+    const voice = document.getElementById('ttsVoiceModelCode');
+    if (!engine || !voice) return;
+    const available = Array.from(voice.options).filter(option => option.value);
+    const update = () => {
+        available.forEach(option => {
+            option.hidden = option.dataset.engine !== engine.value;
+            option.disabled = option.dataset.engine !== engine.value;
+        });
+        if (voice.selectedOptions.length && voice.selectedOptions[0].disabled) {
+            voice.value = '';
+        }
+    };
+    engine.addEventListener('change', update);
+    update();
+})();
+</script>
 </html>
