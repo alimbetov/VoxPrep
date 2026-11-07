@@ -15,6 +15,7 @@ s3 = ["boto3>=1.35,<2"]
 [project.scripts]
 voxprep-kokoro-worker = "voxprep_kokoro_worker.main:main"
 voxprep-kokoro-standalone = "voxprep_kokoro_worker.standalone:main"
+voxprep-kokoro-manifest = "voxprep_kokoro_worker.manifest_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
