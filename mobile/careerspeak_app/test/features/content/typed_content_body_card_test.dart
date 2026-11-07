@@ -130,7 +130,11 @@ void main() {
   ) async {
     await render(
       tester,
-      PhraseBody(phrase: 'Good morning', usage: 'Greeting', examples: []),
+      PhraseBody(
+        phrase: 'Good morning',
+        usage: 'Greeting',
+        examples: ['Good morning, team.'],
+      ),
     );
     final scrolling = find.byKey(const Key('learning-content-scroll'));
     expect(tester.getSize(scrolling).height, lessThan(420));
