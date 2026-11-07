@@ -215,6 +215,26 @@ class DurableQueue:
                 self._wakeup.wait(0.5)
                 self._wakeup.clear()
 
+    @property
+    def healthy(self) -> bool:
+        return (not self._stop.is_set() and self._thread is not None
+                and self._thread.is_alive())
+
+    def stats(self) -> dict:
+        with self._lock:
+            rows = self._db.execute(
+                "SELECT status, COUNT(*) FROM jobs GROUP BY status"
+            ).fetchall()
+        counts = {status.lower(): count for status, count in rows}
+        return {
+            "queuedJobs": counts.get("queued", 0),
+            "runningJobs": counts.get("running", 0),
+            "succeededJobs": counts.get("succeeded", 0),
+            "failedJobs": counts.get("failed", 0),
+            "cancelledJobs": counts.get("cancelled", 0),
+            "maxQueueDepth": self.max_queued,
+        }
+
     def start(self):
         if self._thread is not None:
             return
