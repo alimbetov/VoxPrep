@@ -172,3 +172,36 @@ def test_queue_synthesis_error_is_failed_and_no_text_leaked(tmp_path):
     assert status["errorCode"] == "SYNTHESIS_FAILED"
     assert "sensitive" not in json.dumps(status)
     queue.stop()
+
+def test_background_queue_liveness_and_persistent_metrics(tmp_path):
+    import time
+    settings, service = service_fixture(tmp_path)
+    queue = DurableQueue(settings.output_dir / "queue", service)
+    assert not queue.healthy
+    queued, _ = queue.submit(PAYLOAD, "background-1")
+    assert queue.stats()["queuedJobs"] == 1
+    server = make_server(settings, service, queue)
+    server_thread = threading.Thread(target=server.serve_forever, daemon=True)
+    server_thread.start()
+    try:
+        with httpx.Client(base_url="http://127.0.0.1:" + str(server.server_address[1])) as client:
+            headers = {"Authorization": "Bearer " + settings.token}
+            assert client.get("/health/ready", headers=headers).status_code == 503
+            queue.start()
+            assert queue.healthy
+            assert client.get("/health/ready", headers=headers).status_code == 200
+            deadline = time.monotonic() + 5
+            while queue.get(queued["id"])["status"] != "SUCCEEDED" and time.monotonic() < deadline:
+                time.sleep(0.02)
+            assert queue.get(queued["id"])["status"] == "SUCCEEDED"
+            metrics = client.get("/v1/metrics", headers=headers).json()
+            assert metrics["succeededJobs"] == 1
+            assert metrics["queuedJobs"] == 0
+            assert metrics["maxQueueDepth"] == 100
+            assert client.get(f"/v1/tts/jobs/{queued['id']}/audio",
+                              headers=headers).content == b"safe-mp3-output"
+    finally:
+        server.shutdown()
+        server.server_close()
+        server_thread.join(timeout=5)
+        queue.stop()
