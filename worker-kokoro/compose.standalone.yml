@@ -33,11 +33,9 @@ services:
       MODEL_CACHE_DIR: /var/lib/voxprep/kokoro/models
       TEMP_DIR: /tmp/voxprep-kokoro
       STANDALONE_OUTPUT_DIR: /var/lib/voxprep/kokoro/output
-      AWS_SHARED_CREDENTIALS_FILE: /run/secrets/aws_credentials
     volumes:
       - "./manifest.json:/config/manifest.json:ro"
       - "./model-source:/model-source:ro"
-      - "${STANDALONE_AWS_CREDENTIALS_FILE:?path_to_private_credentials}:/run/secrets/aws_credentials:ro"
       - kokoro-cache:/var/lib/voxprep/kokoro/models
       - kokoro-output:/var/lib/voxprep/kokoro/output
       - kokoro-tmp:/tmp/voxprep-kokoro
