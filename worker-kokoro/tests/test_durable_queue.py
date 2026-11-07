@@ -254,3 +254,24 @@ def test_legacy_queue_migration_fails_closed_on_missing_bundle_identity(tmp_path
         assert queue.get(ident)["errorCode"] == "MODEL_SNAPSHOT_MISMATCH"
     finally:
         queue.stop()
+
+def test_second_instance_cannot_delete_first_instances_working_files(tmp_path):
+    settings, first_service = service_fixture(tmp_path)
+    root = settings.output_dir / "queue"
+    owner = DurableQueue(root, first_service)
+    active = settings.temp_dir / "standalone-active-inference"
+    active.mkdir()
+    file = active / "audio.wav"
+    file.write_bytes(b"still-in-use")
+    second_service = StandaloneService(
+        settings, synthesizer=FakeSynth(), postprocessor=FakePost())
+    assert file.read_bytes() == b"still-in-use"
+    with pytest.raises(QueueClosed):
+        DurableQueue(root, second_service)
+    assert file.read_bytes() == b"still-in-use"
+    owner.stop()
+    recovered = DurableQueue(root, second_service)
+    try:
+        assert not active.exists()
+    finally:
+        recovered.stop()
