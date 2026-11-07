@@ -3,9 +3,12 @@ name: Generate Learner UI Goldens
 on:
   push:
     branches:
+      - main
       - feat/universal-vertical-catalogue
       - feat/ba-product-contract-remediation
     paths:
+      - 'mobile/careerspeak_app/lib/features/content/content_detail_panel.dart'
+      - 'mobile/careerspeak_app/lib/features/content/typed_content_body_card.dart'
       - 'mobile/careerspeak_app/lib/features/home/home_screen.dart'
       - 'mobile/careerspeak_app/lib/features/learn/learn_screen.dart'
       - 'mobile/careerspeak_app/lib/features/learning_direction/**'
