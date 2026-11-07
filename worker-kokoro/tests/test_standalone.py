@@ -170,6 +170,12 @@ def test_s3_model_provider_and_output_adapter_use_pinned_keys(tmp_path, monkeypa
         def upload_fileobj(self, stream, bucket, key, ExtraArgs):
             calls.append(("put", bucket, key, ExtraArgs["Metadata"]["sha256"]))
             assert stream.read() == b"safe-mp3-output"
+        def head_object(self, *, Bucket, Key):
+            calls.append(("head", Bucket, Key))
+            return {
+                "ContentLength": len(b"safe-mp3-output"),
+                "Metadata": {"sha256": hashlib.sha256(b"safe-mp3-output").hexdigest()},
+            }
 
     monkeypatch.setitem(sys.modules, "boto3", SimpleNamespace(client=lambda *a, **kw: S3()))
     s3_settings = replace(
@@ -183,6 +189,7 @@ def test_s3_model_provider_and_output_adapter_use_pinned_keys(tmp_path, monkeypa
     assert info["s3Key"] == "generated/" + info["id"] + ".mp3"
     assert len([c for c in calls if c[0] == "get"]) == 4
     assert len([c for c in calls if c[0] == "put"]) == 1
+    assert len([c for c in calls if c[0] == "head"]) == 1
 
 
 def test_config_requires_secret_and_explicit_remote_bind(tmp_path):
