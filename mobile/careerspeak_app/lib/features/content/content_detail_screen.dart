@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../app/repository_providers.dart';
+import '../../app/external_learning_video_providers.dart';
 import '../../application/result/result.dart';
 import '../../domain/content_identity.dart';
 import '../../domain/content_item.dart';
@@ -63,6 +64,13 @@ class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> {
           typedContentByIdentityProvider(widget.identity),
         );
 
+        final video = ref.watch(
+          externalLearningVideoProvider((
+            identity: widget.identity,
+            revision: value.revision,
+          )),
+        );
+
         return Column(
           children: [
             ContentCover(
@@ -77,6 +85,7 @@ class _ContentDetailScreenState extends ConsumerState<ContentDetailScreen> {
                 typedBody: typed.asData?.value,
                 typedBodyLoading: typed.isLoading,
                 typedBodyError: typed.hasError,
+                externalVideo: video.asData?.value,
               ),
             ),
           ],
