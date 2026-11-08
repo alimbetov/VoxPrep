@@ -55,5 +55,5 @@ void main() {
         throwsFormatException,
       );
     }
-  }
+  });
 }
