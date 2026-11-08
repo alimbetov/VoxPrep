@@ -37,9 +37,16 @@ final class ExternalLearningVideo {
       throw const FormatException('Video metadata must be an object');
     }
     const keys = <String>{
-      'schemaVersion', 'contentType', 'contentCode', 'revision',
-      'contentVersion', 'rootSha256', 'provider', 'providerVideoId',
-      'title', 'url',
+      'schemaVersion',
+      'contentType',
+      'contentCode',
+      'revision',
+      'contentVersion',
+      'rootSha256',
+      'provider',
+      'providerVideoId',
+      'title',
+      'url',
     };
     if (json.keys.toSet().difference(keys).isNotEmpty ||
         keys.difference(json.keys.toSet()).isNotEmpty ||
@@ -55,7 +62,9 @@ final class ExternalLearningVideo {
         json['title'] is! String ||
         json['rootSha256'] is! String ||
         json['url'] is! String) {
-      throw const FormatException('Video metadata does not match exact content');
+      throw const FormatException(
+        'Video metadata does not match exact content',
+      );
     }
     final video = ExternalLearningVideo(
       identity: identity,
