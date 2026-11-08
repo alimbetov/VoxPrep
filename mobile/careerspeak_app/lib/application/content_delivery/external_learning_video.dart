@@ -42,7 +42,7 @@ final class ExternalLearningVideo {
       'title', 'url',
     };
     if (json.keys.toSet().difference(keys).isNotEmpty ||
-        json.keys.toSet().difference(keys).isNotEmpty ||
+        keys.difference(json.keys.toSet()).isNotEmpty ||
         json.length != keys.length ||
         json['schemaVersion'] != 1 ||
         json['contentType'] != identity.type.name ||
