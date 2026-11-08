@@ -37,18 +37,21 @@ public class ContentMvcController {
     private final ContentMvcMapper mapper;
     private final TtsReviewQueryService ttsReview;
     private final io.github.alimbetov.voxprep.backend.asset.application.MediaLibraryService mediaLibrary;
+    private final io.github.alimbetov.voxprep.backend.asset.application.ExternalLearningVideoService externalVideos;
 
     public ContentMvcController(
             ContentAdminQueryService query,
             ContentAuthoringService authoring,
             ContentMvcMapper mapper,
             TtsReviewQueryService ttsReview,
-            io.github.alimbetov.voxprep.backend.asset.application.MediaLibraryService mediaLibrary) {
+            io.github.alimbetov.voxprep.backend.asset.application.MediaLibraryService mediaLibrary,
+            io.github.alimbetov.voxprep.backend.asset.application.ExternalLearningVideoService externalVideos) {
         this.query = query;
         this.authoring = authoring;
         this.mapper = mapper;
         this.ttsReview = ttsReview;
         this.mediaLibrary = mediaLibrary;
+        this.externalVideos = externalVideos;
     }
 
     @GetMapping
@@ -231,6 +234,7 @@ public class ContentMvcController {
         model.addAttribute("activeSection", "content");
         model.addAttribute("revision", revision);
         model.addAttribute("imageAssets", mediaLibrary.boundImages(revision.id()));
+        model.addAttribute("externalVideo", externalVideos.find(revision.id()).orElse(null));
         model.addAttribute("form", form);
         model.addAttribute("lifecycleForm", lifecycleForm);
         model.addAttribute("ttsJobs", ttsReview.latest(revision.id()));
