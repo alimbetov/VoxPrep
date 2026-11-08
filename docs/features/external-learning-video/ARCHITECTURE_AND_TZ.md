@@ -1,8 +1,43 @@
 # External learning video V1 — additive media, not an image replacement
 
-Status: **ARCHITECTURE PROPOSAL / SCENARIO-FIRST; NO PRODUCTION CODE IMPLEMENTED**
+Status: **V1 implementation in Draft PR #56; automated/device acceptance pending**
 Baseline: `main` @ `2b5deffa5cfa94d3a24cfe3212a90f2542345ecc`
 Branch: `feat/content-external-learning-video-v1`
+
+
+## Implementation delta — PR #56
+
+The code in this branch now implements draft-only video references and a frozen
+one-row-per-revision copy, captured by a PostgreSQL trigger on the
+\`content_revision.published_at\` transition. This copy is immutable and
+rolled back atomically if the content publication transaction fails.
+
+The **versioned learner projection** is a separate, installation-authenticated
+\`GET /api/v2/content/{contentType}/{contentCode}/external-video\`, guarded by
+the existing FREE/FULL content policy. It returns HTTP 204 when no video is
+published. The response includes \`schemaVersion=1\`, exact content
+identity/revision, CURRENT \`contentVersion\` and \`rootSha256\`, and a
+canonical YouTube URL derived from its video ID.
+
+**Important compatibility limitation:** the video is **not a member of the
+existing schema-2 pack/root canonical-hash calculation**. The returned CURRENT
+root identity scopes the reference, while immutable DB snapshot triggers
+prevent later changes; the root digest itself does not cryptographically
+commit to this separate extension. Treat SHA-covered vNext manifest inclusion
+as a separate contract-versioning gate if required for the public release.
+Never claim old root hashes authenticate the video URL.
+
+Flutter fetches the optional v2 reference only online through authenticated
+\`ApiClient\` and adds a user-gesture external-launch button. The link is
+not yet stored in Drift. This intentionally leaves the existing offline
+content/image/audio behavior unchanged. Offline video metadata persistence
+requires a separately versioned, atomic CURRENT extension and new tests;
+do not silently add new keys to strict legacy decoders.
+
+Implemented tests: Java URL adversarial cases, installation route protection,
+PostgreSQL draft-to-published video snapshot and Flutter strict v2 response
+decoder. Browser admin form, actual phone external launch, offline-video
+metadata and canonical root extension remain independent acceptance gates.
 
 ## Decision
 
