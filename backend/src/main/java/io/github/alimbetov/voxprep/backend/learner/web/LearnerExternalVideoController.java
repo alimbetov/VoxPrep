@@ -5,6 +5,7 @@ import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRe
 import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentAccessPolicy;
 import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentService;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,14 +25,17 @@ public class LearnerExternalVideoController {
     private final LearnerContentService content;
     private final ContentRevisionRepository revisions;
     private final ExternalLearningVideoService videos;
+    private final boolean enabled;
 
     public LearnerExternalVideoController(LearnerContentAccessPolicy access,
             LearnerContentService content, ContentRevisionRepository revisions,
-            ExternalLearningVideoService videos) {
+            ExternalLearningVideoService videos,
+            @Value("${voxprep.media.external-video.enabled:false}") boolean enabled) {
         this.access = access;
         this.content = content;
         this.revisions = revisions;
         this.videos = videos;
+        this.enabled = enabled;
     }
 
     public record Projection(int schemaVersion, String contentType,
@@ -42,6 +46,9 @@ public class LearnerExternalVideoController {
     public ResponseEntity<Projection> read(
             @PathVariable String contentType, @PathVariable String contentCode) {
         access.requireAccessible(contentType, contentCode);
+        if (!enabled) {
+            return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
+        }
         var snapshot = content.get(contentType, contentCode);
         UUID id = revisions.findIdByExactIdentity(
                 snapshot.contentCode(), snapshot.contentType(), snapshot.revisionNumber())
