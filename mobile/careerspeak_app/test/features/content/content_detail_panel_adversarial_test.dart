@@ -63,7 +63,8 @@ void main() {
       video: video,
     );
     final list = tester.widget<ListView>(find.byType(ListView).first);
-    final children = (list.childrenDelegate as SliverChildListDelegate).children;
+    final children =
+        (list.childrenDelegate as SliverChildListDelegate).children;
     final videoIndex = children.indexWhere(
       (widget) => widget.runtimeType.toString() == '_ExternalVideoButton',
     );
@@ -84,7 +85,8 @@ void main() {
       assetCatalog: const _RoleCatalog(<String>{}),
     );
     final list = tester.widget<ListView>(find.byType(ListView).first);
-    final children = (list.childrenDelegate as SliverChildListDelegate).children;
+    final children =
+        (list.childrenDelegate as SliverChildListDelegate).children;
     expect(
       children.any(
         (widget) => widget.runtimeType.toString() == '_ExternalVideoButton',
@@ -407,7 +409,9 @@ Future<void> _pump(
         ),
       ],
       child: MaterialApp(
-        home: Scaffold(body: ContentDetailPanel(item: item, externalVideo: video)),
+        home: Scaffold(
+          body: ContentDetailPanel(item: item, externalVideo: video),
+        ),
       ),
     ),
   );
