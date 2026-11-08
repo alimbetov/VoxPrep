@@ -595,7 +595,6 @@ bool _isBenignAudioSupersession(Object error) {
       error.failure.code == 'ROLE_AUDIO_REQUEST_SUPERSEDED';
 }
 
-
 /// External provider is opened only after an explicit learner tap.
 class _ExternalVideoButton extends StatelessWidget {
   const _ExternalVideoButton({required this.video});
@@ -610,8 +609,10 @@ class _ExternalVideoButton extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Дополнительное учебное видео',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Дополнительное учебное видео',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             Text(video.title),
             const SizedBox(height: 8),
@@ -621,27 +622,37 @@ class _ExternalVideoButton extends StatelessWidget {
               label: const Text('Смотреть учебное видео'),
               onPressed: () async {
                 try {
-                  final opened = await launchUrl(video.uri,
-                      mode: LaunchMode.externalApplication);
+                  final opened = await launchUrl(
+                    video.uri,
+                    mode: LaunchMode.externalApplication,
+                  );
                   if (!opened && context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text(
-                          'Не удалось открыть видео во внешнем приложении.')),
+                      const SnackBar(
+                        content: Text(
+                          'Не удалось открыть видео во внешнем приложении.',
+                        ),
+                      ),
                     );
                   }
                 } catch (_) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text(
-                          'Для просмотра видео требуется доступ к внешнему сервису.')),
+                      const SnackBar(
+                        content: Text(
+                          'Для просмотра видео требуется доступ к внешнему сервису.',
+                        ),
+                      ),
                     );
                   }
                 }
               },
             ),
             const SizedBox(height: 4),
-            Text('Откроется YouTube. Для просмотра нужен интернет.',
-                style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              'Откроется YouTube. Для просмотра нужен интернет.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
           ],
         ),
       ),
