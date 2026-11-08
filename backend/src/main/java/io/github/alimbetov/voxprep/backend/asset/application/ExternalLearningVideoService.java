@@ -73,6 +73,16 @@ public class ExternalLearningVideoService {
                 revisionId).stream().findFirst();
     }
 
+    /** Immutable, transactionally captured on the DRAFT/APPROVED -> PUBLISHED boundary. */
+    @Transactional(readOnly = true)
+    public Optional<Video> findPublished(UUID revisionId) {
+        return jdbc.query("""
+                SELECT provider, provider_video_id, title
+                  FROM app.content_external_video_snapshot WHERE content_revision_id=?
+                """, (rs, index) -> new Video(rs.getString(1), rs.getString(2), rs.getString(3)),
+                revisionId).stream().findFirst();
+    }
+
     @Transactional
     public void save(UUID revisionId, String url, String title) {
         Objects.requireNonNull(revisionId);
