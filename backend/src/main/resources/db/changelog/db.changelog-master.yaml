@@ -68,3 +68,5 @@ databaseChangeLog:
       file: db/changelog/k1-kokoro-job-snapshot.sql
   - include:
       file: db/changelog/k1-kokoro-model-asset-shape.sql
+  - include:
+      file: db/changelog/ev1-content-external-video.sql
