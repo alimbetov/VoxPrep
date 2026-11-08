@@ -13,6 +13,7 @@ public final class LearnerApiRoutePolicy {
 
     private static final List<String> PROTECTED_ROOTS = List.of(
             "/api/v1/content",
+            "/api/v2/content",
             "/api/v1/catalogue",
             "/api/v1/catalogues",
             "/api/v1/assessment",
