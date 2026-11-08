@@ -46,7 +46,7 @@ public class LearnerExternalVideoController {
         UUID id = revisions.findIdByExactIdentity(
                 snapshot.contentCode(), snapshot.contentType(), snapshot.revisionNumber())
                 .orElseThrow(() -> new IllegalStateException("Exact published revision missing"));
-        return videos.find(id).map(video -> ResponseEntity.ok()
+        return videos.findPublished(id).map(video -> ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())
                 .body(new Projection(1, snapshot.contentType(),
                         snapshot.contentCode(), snapshot.revisionNumber(),
