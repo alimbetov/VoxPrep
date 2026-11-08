@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../app/audio_playback_providers.dart';
 import '../../app/learner_state_providers.dart';
 import '../../application/content_delivery/content_audio_policy.dart';
 import '../../application/result/result.dart';
 import '../../application/content_delivery/typed_content_body.dart';
+import '../../application/content_delivery/external_learning_video.dart';
 import '../../application/services/audio_playback_controller.dart';
 import '../../application/services/role_audio_clip_controller.dart'
     as role_audio;
@@ -22,6 +24,7 @@ class ContentDetailPanel extends ConsumerWidget {
     this.typedBody,
     this.typedBodyLoading = false,
     this.typedBodyError = false,
+    this.externalVideo,
     super.key,
   });
 
@@ -30,6 +33,7 @@ class ContentDetailPanel extends ConsumerWidget {
   final TypedContentBody? typedBody;
   final bool typedBodyLoading;
   final bool typedBodyError;
+  final ExternalLearningVideo? externalVideo;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -188,6 +192,10 @@ class ContentDetailPanel extends ConsumerWidget {
               ),
             ),
           ),
+        if (externalVideo != null) ...[
+          const SizedBox(height: 16),
+          _ExternalVideoButton(video: externalVideo!),
+        ],
         if (item.type == ContentType.interview) ...[
           const SizedBox(height: 24),
           _InterviewAudioControls(item: item),
@@ -585,4 +593,58 @@ bool _isBenignAudioSupersession(Object error) {
   if (error is! ApplicationFailureException) return false;
   return error.failure.code == 'PLAYBACK_SUPERSEDED' ||
       error.failure.code == 'ROLE_AUDIO_REQUEST_SUPERSEDED';
+}
+
+
+/// External provider is opened only after an explicit learner tap.
+class _ExternalVideoButton extends StatelessWidget {
+  const _ExternalVideoButton({required this.video});
+
+  final ExternalLearningVideo video;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Дополнительное учебное видео',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(video.title),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              key: const Key('open-external-learning-video'),
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('Смотреть учебное видео'),
+              onPressed: () async {
+                try {
+                  final opened = await launchUrl(video.uri,
+                      mode: LaunchMode.externalApplication);
+                  if (!opened && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text(
+                          'Не удалось открыть видео во внешнем приложении.')),
+                    );
+                  }
+                } catch (_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text(
+                          'Для просмотра видео требуется доступ к внешнему сервису.')),
+                    );
+                  }
+                }
+              },
+            ),
+            const SizedBox(height: 4),
+            Text('Откроется YouTube. Для просмотра нужен интернет.',
+                style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ),
+      ),
+    );
+  }
 }
