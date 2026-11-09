@@ -260,6 +260,59 @@ def main():
         denied = context.request.get(BASE + '/api/v2/content/vocabulary/' + premium_code + '/external-video', headers=headers)
         assert denied.status == 403, (denied.status, denied.text())
         report['checks']['free_cannot_read_full_video'] = 403
+
+        disabled_base = os.environ.get('VOXPREP_EV1_DISABLED_BASE_URL')
+        report['checks']['live_feature_flag_disabled'] = 'NOT RUN'
+        if disabled_base:
+            off = context.request.get(disabled_base.rstrip('/') + path, headers=headers)
+            assert off.status == 204 and off.body() == b''
+            assert off.headers['cache-control'] == 'no-store'
+            off_full = context.request.get(disabled_base.rstrip('/') +
+                '/api/v2/content/vocabulary/' + premium_code + '/external-video', headers=headers)
+            assert off_full.status == 403
+            report['checks']['live_feature_flag_disabled'] = 'PASS (FREE 204; locked FULL 403)'
+
+        # Real published media bytes, not only authoring bindings or DOM controls.
+        media_path = '/api/v1/content/vocabulary/' + code
+        media = context.request.get(BASE + media_path + '/media', headers=headers)
+        assert media.status == 200
+        images = [item for item in media.json() if item['kind'] in ('COVER_IMAGE', 'CONTENT_IMAGE')]
+        assert len(images) == 2
+        report['learner_media'] = []
+        for item in images:
+            url = BASE + media_path + '/media/' + item['assetId'] + '/content'
+            data = context.request.get(url, headers=headers)
+            assert data.status == 200 and data.headers['content-type'].startswith('image/')
+            assert hashlib.sha256(data.body()).hexdigest() == item['sha256']
+            assert len(data.body()) == item['sizeBytes']
+            assert context.request.get(url, headers=headers | {'If-None-Match': data.headers['etag']}).status == 304
+            report['learner_media'].append(item)
+        report['checks']['published_images_http_hash_etag'] = 'PASS'
+        audio_response = context.request.get(BASE + media_path + '/audio', headers=headers)
+        assert audio_response.status == 200 and len(audio_response.json()) == 1
+        audio_item = audio_response.json()[0]
+        audio_bytes = context.request.get(BASE + media_path + '/audio/' + audio_item['assetId'] + '/content', headers=headers)
+        assert audio_bytes.status == 200
+        assert hashlib.sha256(audio_bytes.body()).hexdigest() == audio_item['sha256'] == report['mp3_sha256']
+        learner_mp3 = OUT / 'learner-pronunciation.mp3'
+        learner_mp3.write_bytes(audio_bytes.body())
+        probe = json.loads(subprocess.check_output(['ffprobe', '-v', 'error',
+            '-show_streams', '-show_format', '-of', 'json', str(learner_mp3)], timeout=15))
+        assert probe['streams'][0]['codec_name'] == 'mp3' and probe['streams'][0]['channels'] == 1
+        probe['format']['filename'] = learner_mp3.name
+        (OUT / 'learner-ffprobe.json').write_text(json.dumps(probe, indent=2) + '\n')
+        report['checks']['published_mp3_http_hash_ffprobe'] = 'PASS'
+
+        # Use the repository's explicitly DEV-only simulated store boundary;
+        # this is not a real purchase or a mocked content-authorization policy.
+        purchase = context.request.post(BASE + '/api/v1/purchases/verify', headers=headers,
+            data={'provider': 'GOOGLE_PLAY', 'productId': 'voxprep_full_unlock',
+                  'purchaseEventId': str(uuid.uuid4()),
+                  'verificationData': 'sim:v1:GOOGLE_PLAY:GRANTED:ev1_' + uuid.uuid4().hex})
+        assert purchase.status == 200
+        unlocked = context.request.get(BASE + '/api/v2/content/vocabulary/' + premium_code + '/external-video', headers=headers)
+        assert unlocked.status == 200 and unlocked.json()['title'] == 'Premium video'
+        report['checks']['verified_dev_full_can_read_video'] = 'PASS (DEV simulated-store entitlement)'
         for role, asset in assets.items():
             assert asset in bindings
         assert bindings == sql("SELECT role||':'||file_asset_id FROM app.content_asset_binding WHERE content_revision_id='" + revision + "' ORDER BY role;")
@@ -286,6 +339,18 @@ def main():
         report['next_revision_id'] = next_revision
         report['checks']['next_draft_no_leak'] = 'PASS'
         page.screenshot(path=str(OUT / '04-next-draft-isolated.png'), full_page=True)
+
+        # An actually authored DRAFT-only identity must stay absent from learner HTTP.
+        draft_code = 'EV1_DRAFT_ONLY_' + suffix
+        draft_created = post('/admin/content/revisions', fields | dict(
+            contentCode=draft_code, expectedVersion='0', bodyType='vocabulary', availability='ACTIVE'))
+        draft_id = draft_created.headers['location'].split('/')[-2]
+        post('/admin/content/revisions/' + draft_id + '/external-video',
+             {'url': 'https://youtu.be/dQw4w9WgXcQ', 'title': 'Unpublished video metadata'})
+        draft_response = context.request.get(BASE + '/api/v2/content/vocabulary/' + draft_code + '/external-video', headers=headers)
+        assert draft_response.status == 404
+        assert 'Unpublished video metadata' not in draft_response.text()
+        report['checks']['draft_only_identity_not_found'] = 404
         browser.close()
 
 
