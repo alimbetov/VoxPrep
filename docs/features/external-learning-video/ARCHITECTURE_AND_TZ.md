@@ -43,7 +43,7 @@ metadata and canonical root extension remain independent acceptance gates.
 
 A learner may have **cover image, content image, existing MP3, AND an optional external educational video link** attached to the *same exact content revision*. None replaces another. A video link is never interpreted as a binary FileAsset, stored in RustFS, placed into the audio-role policy, or downloaded automatically. In Flutter it appears as a distinct action, **«Смотреть учебное видео»**, while the original image and TTS controls remain visible.
 
-V1 supports one curated external video per exact ContentRevision, for all learner content types the normal typed-content screen supports. Multiple videos, embedded video playback, full video uploads and lesson-specific video timeline synchronization are out of scope.
+V1 supports one curated external video per exact ContentRevision for the five normal learner lessons: Vocabulary, Phrase, Interview, Topic and Shadowing. Question and Practice Test are deliberately excluded because they are delivered by a distinct assessment API. Multiple videos, embedded video playback, full video uploads and lesson-specific video timeline synchronization are out of scope.
 
 ## Existing production surfaces verified
 
@@ -104,6 +104,8 @@ Proposed illustrative metadata (not yet committed as a wire schema):
 ```
 
 The example video ID is a placeholder to explain structure; no educational suitability is implied.
+
+The current implementation also rejects video references on Question and Practice Test at both service and PostgreSQL trigger levels. The Content Studio video section is hidden for these assessment-only types.
 
 ## Security / privacy
 
