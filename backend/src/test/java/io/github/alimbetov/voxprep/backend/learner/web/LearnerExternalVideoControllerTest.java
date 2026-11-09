@@ -19,6 +19,9 @@ import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentSer
 import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentSnapshot;
 import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentNotFoundException;
 import io.github.alimbetov.voxprep.backend.learner.application.LearnerPremiumAccessDeniedException;
+import io.github.alimbetov.voxprep.backend.learner.application.LearnerWirePublicationService;
+import io.github.alimbetov.voxprep.backend.learner.application.LearnerWireSnapshotUnavailableException;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -30,6 +33,7 @@ class LearnerExternalVideoControllerTest {
     private final LearnerContentService content = mock(LearnerContentService.class);
     private final ContentRevisionRepository revisions = mock(ContentRevisionRepository.class);
     private final ExternalLearningVideoService videos = mock(ExternalLearningVideoService.class);
+    private final LearnerWirePublicationService wirePublications = mock(LearnerWirePublicationService.class);
 
     @Test
     void premiumVideoHttpDenialUsesLearner403ForBothFeatureFlagStates() throws Exception {
@@ -108,9 +112,41 @@ class LearnerExternalVideoControllerTest {
         assertThat(value.contentCode()).isEqualTo("PHRASE1");
         assertThat(value.revision()).isEqualTo(3);
         assertThat(value.contentVersion()).isEqualTo(14);
-        assertThat(value.rootSha256()).isEqualTo("a".repeat(64));
+        // Legacy candidate-ref SHA (a) differs from immutable Flutter ROOT SHA (b).
+        assertThat(value.rootSha256()).isEqualTo("b".repeat(64));
         assertThat(value.url()).isEqualTo("https://www.youtube.com/watch?v=AbCdEfGh123");
         verify(videos, never()).find(revisionId);
+    }
+
+    @Test
+    void mixedPublicationVersionIs503RatherThanCombiningRootAndContent() throws Exception {
+        stubPublishedVideo();
+        when(wirePublications.root()).thenReturn(new LearnerWirePublicationService.WireResponse(
+                Map.of("contentVersion", 15L), "c".repeat(64)));
+        var mvc = MockMvcBuilders.standaloneSetup(controller(true))
+                .setControllerAdvice(new LearnerContentExceptionHandler()).build();
+        mvc.perform(get("/api/v2/content/phrase/PHRASE1/external-video"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("LEARNER_WIRE_SNAPSHOT_UNAVAILABLE"));
+    }
+
+    @Test
+    void missingWireRootIs503RatherThanFallingBackToLegacyCandidateSha() throws Exception {
+        stubPublishedVideo();
+        when(wirePublications.root()).thenThrow(
+                new LearnerWireSnapshotUnavailableException("Missing immutable ROOT"));
+        var mvc = MockMvcBuilders.standaloneSetup(controller(true))
+                .setControllerAdvice(new LearnerContentExceptionHandler()).build();
+        mvc.perform(get("/api/v2/content/phrase/PHRASE1/external-video"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(jsonPath("$.code").value("LEARNER_WIRE_SNAPSHOT_UNAVAILABLE"));
+    }
+
+    private void stubPublishedVideo() {
+        UUID id = UUID.randomUUID();
+        stubCurrent(id);
+        when(videos.findPublished(id)).thenReturn(Optional.of(
+                new ExternalLearningVideoService.Video("YOUTUBE", "AbCdEfGh123", "Interview video")));
     }
 
     private void stubCurrent(UUID id) {
@@ -122,9 +158,11 @@ class LearnerExternalVideoControllerTest {
         when(current.rootSha256()).thenReturn("a".repeat(64));
         when(content.get("phrase", "PHRASE1")).thenReturn(current);
         when(revisions.findIdByExactIdentity("PHRASE1", "phrase", 3)).thenReturn(Optional.of(id));
+        when(wirePublications.root()).thenReturn(new LearnerWirePublicationService.WireResponse(
+                Map.of("contentVersion", 14L), "b".repeat(64)));
     }
 
     private LearnerExternalVideoController controller(boolean enabled) {
-        return new LearnerExternalVideoController(access, content, revisions, videos, enabled);
+        return new LearnerExternalVideoController(access, content, revisions, videos, wirePublications, enabled);
     }
 }
