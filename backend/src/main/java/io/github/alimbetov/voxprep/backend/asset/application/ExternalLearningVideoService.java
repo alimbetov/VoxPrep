@@ -109,11 +109,15 @@ public class ExternalLearningVideoService {
     }
 
     private void requireDraft(UUID revisionId) {
-        var states = jdbc.query(
-                "SELECT lifecycle FROM app.content_revision WHERE id=? FOR UPDATE",
-                (rs, row) -> rs.getString(1), revisionId);
-        if (states.size() != 1 || !"DRAFT".equals(states.get(0))) {
+        var revisions = jdbc.query(
+                "SELECT lifecycle, content_type FROM app.content_revision WHERE id=? FOR UPDATE",
+                (rs, row) -> new String[] {rs.getString(1), rs.getString(2)}, revisionId);
+        if (revisions.size() != 1 || !"DRAFT".equals(revisions.get(0)[0])) {
             throw new IllegalStateException("External video is editable only in DRAFT");
+        }
+        if (!java.util.Set.of("vocabulary", "phrase", "interview", "topic", "shadowing")
+                .contains(revisions.get(0)[1])) {
+            throw new IllegalArgumentException("External video is supported only for learner lessons");
         }
     }
 }
