@@ -106,13 +106,13 @@ class ExternalVideoMvcIntegrationTest {
         var revision = revisions.saveAndFlush(newDraft());
         videos.save(revision.getId(), "https://youtu.be/AbCdEfGh123", "First video");
         revision.markReadyForAudio();
-        revisions.saveAndFlush(revision);
+        revision = revisions.saveAndFlush(revision);
         revision.markReadyForReview();
-        revisions.saveAndFlush(revision);
+        revision = revisions.saveAndFlush(revision);
         revision.approve(Instant.parse("2026-11-09T01:00:00Z"));
-        revisions.saveAndFlush(revision);
+        revision = revisions.saveAndFlush(revision);
         revision.publish(Instant.parse("2026-11-09T01:01:00Z"));
-        revisions.saveAndFlush(revision);
+        revision = revisions.saveAndFlush(revision);
 
         String url = "/admin/content/revisions/" + revision.getId() + "/external-video";
         mvc.perform(post(url).with(user("admin").roles("ADMIN")).with(csrf())
