@@ -67,6 +67,9 @@ management:
           include: readinessState,db,rustFs
 
 voxprep:
+  media:
+    external-video:
+      enabled: ${VOXPREP_MEDIA_EXTERNAL_VIDEO_ENABLED:false}
   storage:
     endpoint: ${VOXPREP_STORAGE_ENDPOINT:http://rustfs:9000}
     region: ${VOXPREP_STORAGE_REGION:us-east-1}
