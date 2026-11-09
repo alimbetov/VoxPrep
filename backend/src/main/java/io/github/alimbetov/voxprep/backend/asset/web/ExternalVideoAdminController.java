@@ -2,6 +2,7 @@ package io.github.alimbetov.voxprep.backend.asset.web;
 
 import io.github.alimbetov.voxprep.backend.asset.application.ExternalLearningVideoService;
 import io.github.alimbetov.voxprep.backend.content.web.AdminContentStudioMvc;
+import io.github.alimbetov.voxprep.backend.content.application.ContentAuthoringConflictException;
 import java.util.UUID;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,13 +30,19 @@ public class ExternalVideoAdminController {
             messages.addFlashAttribute("flashSuccess", "Ссылка на учебное видео сохранена.");
         } catch (IllegalArgumentException exception) {
             messages.addFlashAttribute("flashError", "Укажите корректный HTTPS YouTube URL и название.");
+        } catch (IllegalStateException exception) {
+            throw new ContentAuthoringConflictException(exception.getMessage(), exception);
         }
         return redirect(revisionId);
     }
 
     @PostMapping("/remove")
     public String remove(@PathVariable UUID revisionId, RedirectAttributes messages) {
-        service.remove(revisionId);
+        try {
+            service.remove(revisionId);
+        } catch (IllegalStateException exception) {
+            throw new ContentAuthoringConflictException(exception.getMessage(), exception);
+        }
         messages.addFlashAttribute("flashSuccess", "Видеоссылка удалена.");
         return redirect(revisionId);
     }
