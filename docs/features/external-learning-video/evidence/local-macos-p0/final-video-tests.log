@@ -1,0 +1,20 @@
+00:00 +0: loading <repo>/mobile/careerspeak_app/test/application/content_delivery/external_learning_video_test.dart
+00:00 +0: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: audio controls follow lesson text in reading order
+00:00 +1: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: audio controls follow lesson text in reading order
+00:00 +2: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: audio controls follow lesson text in reading order
+00:00 +3: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: external video is additive to the existing audio controls
+00:00 +4: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: absence of external video leaves lesson audio unchanged
+00:00 +5: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: INTERVIEW shows only QUESTION when sample answer is absent
+00:00 +6: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: INTERVIEW shows only SAMPLE_ANSWER when question is absent
+00:00 +7: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: INTERVIEW renders explicit empty audio state when no roles exist
+00:00 +8: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: INTERVIEW exposes metadata failure instead of phantom controls
+00:00 +9: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: INTERVIEW playback failure is learner-visible
+00:00 +10: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: generic audio failure is shown only for current exact revision
+00:00 +11: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: stale playback failure from another item never leaks into UI
+00:00 +12: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: completed generic audio exposes Replay for current revision
+00:00 +13: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: idle generic audio disables seek and stop controls
+00:00 +14: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: stale saved position is not resumed for a newer revision
+00:00 +15: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: favorite write failure is surfaced and current state is preserved
+00:00 +16: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: completed write failure is surfaced and does not fake completion
+00:00 +17: <repo>/mobile/careerspeak_app/test/features/content/content_detail_panel_adversarial_test.dart: content without audio never renders playback controls
+00:00 +18: All tests passed!

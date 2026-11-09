@@ -1,0 +1,151 @@
+[
+  {
+    "name": "backend-verify",
+    "sha": "a68a08f9b4bb90e792e943e3236ec73f7f0d2f3a",
+    "command": [
+      "mvn",
+      "-B",
+      "-ntp",
+      "-f",
+      "backend/pom.xml",
+      "verify"
+    ],
+    "exit_code": 1,
+    "started_at": "2026-11-09T14:42:32.930188+00:00",
+    "finished_at": "2026-11-09T14:43:44.849560+00:00",
+    "log": "artifacts/local-smoke/pr56/backend-verify.log"
+  },
+  {
+    "name": "backend-verify-unrestricted",
+    "sha": "a68a08f9b4bb90e792e943e3236ec73f7f0d2f3a",
+    "command": [
+      "mvn",
+      "-B",
+      "-ntp",
+      "-f",
+      "backend/pom.xml",
+      "verify"
+    ],
+    "exit_code": 0,
+    "started_at": "2026-11-09T14:44:57.594873+00:00",
+    "finished_at": "2026-11-09T14:53:16.524477+00:00",
+    "log": "artifacts/local-smoke/pr56/backend-verify-unrestricted.log"
+  },
+  {
+    "name": "studio-model-setup",
+    "sha": "5008f376e9feb71216114e9ef31f727f7f387f3b",
+    "command": [
+      "mvn",
+      "-B",
+      "-ntp",
+      "-f",
+      "backend/pom.xml",
+      "-Dtest=LocalMacTtsModelSetupTest",
+      "-Dvoxprep.local.tts.setup=true",
+      "-DargLine=-Xmx768m",
+      "test"
+    ],
+    "exit_code": 0,
+    "started_at": "2026-11-09T14:54:59.478604+00:00",
+    "finished_at": "2026-11-09T14:57:08.085383+00:00",
+    "log": "artifacts/local-smoke/pr56/studio-model-setup.log"
+  },
+  {
+    "name": "final-offline-qualification",
+    "sha": "015790830f6e375a79f1ddcaf4beb86460c61b09",
+    "command": [
+      "bash",
+      "-c",
+      "cd mobile/careerspeak_app && flutter pub get --enforce-lockfile && flutter analyze && flutter test test/application/content_delivery/external_learning_video_test.dart test/features/content/content_detail_panel_adversarial_test.dart --reporter expanded && dart format --output=none --set-exit-if-changed lib test"
+    ],
+    "exit_code": 0,
+    "started_at": "2026-11-09T15:22:14.105841+00:00",
+    "finished_at": "2026-11-09T15:22:29.619681+00:00",
+    "log": "artifacts/local-smoke/pr56/final-offline-qualification.log"
+  },
+  {
+    "name": "pub-get",
+    "command": "flutter pub get",
+    "exit_code": 0,
+    "sha": "a68a08f9b4bb90e792e943e3236ec73f7f0d2f3a",
+    "working_tree_changes": true,
+    "log": "artifacts/local-smoke/pr56/pub-get.log"
+  },
+  {
+    "name": "pub-get-enforce",
+    "command": "flutter pub get --enforce-lockfile",
+    "exit_code": 0,
+    "sha": "a68a08f9b4bb90e792e943e3236ec73f7f0d2f3a",
+    "working_tree_changes": true,
+    "log": "artifacts/local-smoke/pr56/pub-get-enforce.log",
+    "lock_contents_committed_as": "5008f376e9feb71216114e9ef31f727f7f387f3b"
+  },
+  {
+    "name": "analyze",
+    "command": "flutter analyze",
+    "exit_code": 0,
+    "sha": "a68a08f9b4bb90e792e943e3236ec73f7f0d2f3a",
+    "working_tree_changes": true,
+    "log": "artifacts/local-smoke/pr56/analyze.log",
+    "lock_contents_committed_as": "5008f376e9feb71216114e9ef31f727f7f387f3b"
+  },
+  {
+    "name": "flutter-test",
+    "command": "flutter test --concurrency=1 --reporter expanded",
+    "exit_code": 1,
+    "sha": "a68a08f9b4bb90e792e943e3236ec73f7f0d2f3a",
+    "working_tree_changes": true,
+    "log": "artifacts/local-smoke/pr56/flutter-test.log"
+  },
+  {
+    "name": "ios-build-sequential",
+    "command": "flutter build ios --simulator --debug --no-pub --dart-define=VOXPREP_API_URL=http://127.0.0.1:18082",
+    "exit_code": 0,
+    "sha": "5008f376e9feb71216114e9ef31f727f7f387f3b",
+    "working_tree_changes": true,
+    "log": "artifacts/local-smoke/pr56/ios-build-sequential.log"
+  },
+  {
+    "name": "clean-lock-get",
+    "command": "flutter pub get --enforce-lockfile (fresh manifest-only directory)",
+    "exit_code": 0,
+    "sha": "5008f376e9feb71216114e9ef31f727f7f387f3b",
+    "working_tree_changes": true,
+    "log": "artifacts/local-smoke/pr56/clean-lock-get.log",
+    "note": "fresh directory outside a Git checkout; manifest contents identical to code head 01579083"
+  },
+  {
+    "name": "browser-retry",
+    "command": "python3 infra/acceptance/ev1-content-studio-browser.py (real Chrome)",
+    "exit_code": 1,
+    "sha": "5008f376e9feb71216114e9ef31f727f7f387f3b",
+    "working_tree_changes": true,
+    "log": "artifacts/local-smoke/pr56/browser-retry.log"
+  },
+  {
+    "name": "browser-third",
+    "command": "python3 infra/acceptance/ev1-content-studio-browser.py (interrupted Docker exec stall)",
+    "exit_code": 143,
+    "sha": "5008f376e9feb71216114e9ef31f727f7f387f3b",
+    "working_tree_changes": true,
+    "log": "artifacts/local-smoke/pr56/browser-third.log",
+    "termination_signal": "SIGTERM",
+    "note": "Stopped hung test explicitly; not a completed test result."
+  },
+  {
+    "name": "browser-direct-psql",
+    "command": "python3 infra/acceptance/ev1-content-studio-browser.py (runtime psql retry)",
+    "exit_code": 1,
+    "sha": "5008f376e9feb71216114e9ef31f727f7f387f3b",
+    "working_tree_changes": true,
+    "log": "artifacts/local-smoke/pr56/browser-direct-psql.log"
+  },
+  {
+    "name": "workflow-push",
+    "sha": "1255e97cda49c311bdf2a033ee58e877f09a0b1d",
+    "command": "git push origin feat/content-external-learning-video-v1",
+    "exit_code": 1,
+    "reason": "Git PAT lacks workflow scope",
+    "recovery": "Existing GitHub app update_ref force=false expected_sha=01579083 -> 1255e97c: success; no permission changes"
+  }
+]
