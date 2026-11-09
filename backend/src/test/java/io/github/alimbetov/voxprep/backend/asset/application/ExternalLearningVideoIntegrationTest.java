@@ -14,6 +14,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -25,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 class ExternalLearningVideoIntegrationTest {
     @Autowired private ContentRevisionRepository revisions;
     @Autowired private ExternalLearningVideoService videos;
+    @Autowired private JdbcTemplate jdbc;
 
     @Test
     void revisionPublishesImmutableSnapshotWithoutChangingTextOrMedia() {
@@ -62,6 +65,11 @@ class ExternalLearningVideoIntegrationTest {
                 .isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(() -> videos.remove(id)).isInstanceOf(IllegalStateException.class);
         assertThat(videos.findPublished(id)).contains(frozen);
+        // Even bypassing Java services, SQL cannot modify the frozen publication reference.
+        assertThatThrownBy(() -> jdbc.update(
+                "UPDATE app.content_external_video_snapshot SET title=? WHERE content_revision_id=?",
+                "tampered", id))
+                .isInstanceOf(DataAccessException.class);
     }
 
     @Test
