@@ -235,6 +235,8 @@ public class ContentMvcController {
         model.addAttribute("revision", revision);
         model.addAttribute("imageAssets", mediaLibrary.boundImages(revision.id()));
         model.addAttribute("externalVideo", externalVideos.find(revision.id()).orElse(null));
+        model.addAttribute("externalVideoSupported", revision.contentType() != io.github.alimbetov.voxprep.backend.content.domain.ContentType.QUESTION
+                && revision.contentType() != io.github.alimbetov.voxprep.backend.content.domain.ContentType.PRACTICE_TEST);
         model.addAttribute("form", form);
         model.addAttribute("lifecycleForm", lifecycleForm);
         model.addAttribute("ttsJobs", ttsReview.latest(revision.id()));
