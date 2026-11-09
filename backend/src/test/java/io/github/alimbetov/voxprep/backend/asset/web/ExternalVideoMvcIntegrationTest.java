@@ -2,6 +2,7 @@ package io.github.alimbetov.voxprep.backend.asset.web;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -15,6 +16,8 @@ import io.github.alimbetov.voxprep.backend.asset.application.ExternalLearningVid
 import io.github.alimbetov.voxprep.backend.catalogue.domain.CatalogueCode;
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
 import io.github.alimbetov.voxprep.backend.content.persistence.PhraseContentRevisionEntity;
+import io.github.alimbetov.voxprep.backend.content.persistence.QuestionContentRevisionEntity;
+import io.github.alimbetov.voxprep.backend.content.persistence.QuestionOptionEmbeddable;
 import io.github.alimbetov.voxprep.backend.sharedkernel.AvailabilityStatus;
 import io.github.alimbetov.voxprep.backend.sharedkernel.BusinessCode;
 import io.github.alimbetov.voxprep.backend.sharedkernel.RevisionNumber;
@@ -122,6 +125,30 @@ class ExternalVideoMvcIntegrationTest {
 
         assertThat(videos.findPublished(revision.getId()).orElseThrow().title())
                 .isEqualTo("First video");
+    }
+
+    @Test
+    void assessmentQuestionCannotStoreInvisibleVideoAndHasNoVideoEditor() throws Exception {
+        var question = revisions.saveAndFlush(new QuestionContentRevisionEntity(
+                new BusinessCode("EV_QUESTION_" + UUID.randomUUID().toString().replace("-", "")),
+                new RevisionNumber(1), new Sha256Digest("b".repeat(64)),
+                "Question", "Subtitle", "Description",
+                new CatalogueCode("INTERVIEW"), new CatalogueCode("B2"),
+                2, List.of(new CatalogueCode("SPEAKING")), AvailabilityStatus.ACTIVE,
+                "Which answer is correct?", "Explanation",
+                List.of(new QuestionOptionEmbeddable("A", "Yes", true),
+                        new QuestionOptionEmbeddable("B", "No", false))));
+        mvc.perform(get("/admin/content/revisions/{id}/edit", question.getId())
+                        .with(user("admin").roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("data-external-video-section"))));
+
+        mvc.perform(post("/admin/content/revisions/{id}/external-video", question.getId())
+                        .with(user("admin").roles("ADMIN")).with(csrf())
+                        .param("url", "https://youtu.be/AbCdEfGh123")
+                        .param("title", "Invisible video"))
+                .andExpect(status().isFound());
+        assertThat(videos.find(question.getId())).isEmpty();
     }
 
     private static PhraseContentRevisionEntity newDraft() {
