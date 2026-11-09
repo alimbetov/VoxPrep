@@ -13,14 +13,21 @@ CREATE TABLE app.content_external_video (
 );
 CREATE FUNCTION app.guard_external_video_draft() RETURNS trigger
 LANGUAGE plpgsql AS $$
-DECLARE current_state varchar(32);
+DECLARE
+    current_state varchar(32);
+    current_type varchar(32);
 BEGIN
     IF TG_OP = 'UPDATE' AND NEW.content_revision_id IS DISTINCT FROM OLD.content_revision_id THEN
         RAISE EXCEPTION 'Video revision identity cannot change' USING ERRCODE='23514';
     END IF;
-    SELECT lifecycle INTO current_state FROM app.content_revision
+    SELECT lifecycle, content_type INTO current_state, current_type FROM app.content_revision
         WHERE id = CASE WHEN TG_OP = 'DELETE' THEN OLD.content_revision_id ELSE NEW.content_revision_id END
         FOR UPDATE;
+    IF current_type NOT IN ('vocabulary', 'phrase', 'interview', 'topic', 'shadowing')
+       AND TG_OP <> 'DELETE' THEN
+        RAISE EXCEPTION 'External videos are supported only for lesson content types'
+            USING ERRCODE='23514';
+    END IF;
     IF current_state IS DISTINCT FROM 'DRAFT' THEN
         RAISE EXCEPTION 'External video is editable only on DRAFT revisions' USING ERRCODE='23514';
     END IF;
