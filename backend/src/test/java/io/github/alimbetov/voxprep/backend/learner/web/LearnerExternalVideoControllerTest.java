@@ -8,22 +8,54 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import io.github.alimbetov.voxprep.backend.asset.application.ExternalLearningVideoService;
 import io.github.alimbetov.voxprep.backend.content.persistence.ContentRevisionRepository;
 import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentAccessPolicy;
 import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentService;
 import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentSnapshot;
+import io.github.alimbetov.voxprep.backend.learner.application.LearnerContentNotFoundException;
+import io.github.alimbetov.voxprep.backend.learner.application.LearnerPremiumAccessDeniedException;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 class LearnerExternalVideoControllerTest {
     private final LearnerContentAccessPolicy access = mock(LearnerContentAccessPolicy.class);
     private final LearnerContentService content = mock(LearnerContentService.class);
     private final ContentRevisionRepository revisions = mock(ContentRevisionRepository.class);
     private final ExternalLearningVideoService videos = mock(ExternalLearningVideoService.class);
+
+    @Test
+    void premiumVideoHttpDenialUsesLearner403ForBothFeatureFlagStates() throws Exception {
+        doThrow(new LearnerPremiumAccessDeniedException())
+                .when(access).requireAccessible("phrase", "PREMIUM");
+        for (boolean enabled : new boolean[] {false, true}) {
+            var mvc = MockMvcBuilders.standaloneSetup(controller(enabled))
+                    .setControllerAdvice(new LearnerContentExceptionHandler()).build();
+            mvc.perform(get("/api/v2/content/phrase/PREMIUM/external-video"))
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.code").value("PREMIUM_UNLOCK_REQUIRED"));
+        }
+        verifyNoInteractions(content, revisions, videos);
+    }
+
+    @Test
+    void unpublishedVideoHttpRequestUsesLearner404WithoutReadingDraftMetadata() throws Exception {
+        doThrow(new LearnerContentNotFoundException("phrase", "DRAFT_ONLY"))
+                .when(access).requireAccessible("phrase", "DRAFT_ONLY");
+        var mvc = MockMvcBuilders.standaloneSetup(controller(true))
+                .setControllerAdvice(new LearnerContentExceptionHandler()).build();
+        mvc.perform(get("/api/v2/content/phrase/DRAFT_ONLY/external-video"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("LEARNER_CONTENT_NOT_FOUND"));
+        verifyNoInteractions(content, revisions, videos);
+    }
 
     @Test
     void disabledFlagDoesNotReadPublishedMetadata() {
