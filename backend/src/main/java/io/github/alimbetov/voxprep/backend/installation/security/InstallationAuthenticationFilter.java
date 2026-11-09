@@ -47,7 +47,11 @@ public class InstallationAuthenticationFilter extends OncePerRequestFilter {
                     principal,
                     token,
                     List.of(new SimpleGrantedAuthority("ROLE_LEARNER")));
-            SecurityContextHolder.getContext().setAuthentication(authentication);
+            // A loaded context may be shared with an admin HttpSession. Keep
+            // bearer authentication request-local instead of mutating that object.
+            var learnerContext = SecurityContextHolder.createEmptyContext();
+            learnerContext.setAuthentication(authentication);
+            SecurityContextHolder.setContext(learnerContext);
             filterChain.doFilter(request, response);
         } catch (InstallationAuthenticationException exception) {
             SecurityContextHolder.clearContext();
