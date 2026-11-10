@@ -67,7 +67,8 @@ run is archived below, rather than represented as a successful run.
    updates, retain CURRENT while newer data is merely staged, and cancel the
    notification subscription without a deferred query-cache timer. The new
    regression first failed by timeout; targeted catalogue/adaptive checks pass
-   **19/19**. No Drift migration or wire-format change.
+   **20/20** after the additional repository-isolation fix. No Drift migration
+   or wire-format change.
 
 ## Executed retest
 
@@ -80,13 +81,24 @@ run is archived below, rather than represented as a successful run.
   7 golden failures**. The failures reproduce the earlier 3.47.7 pixel diffs;
   clearing caches and using 3.47.9 did not resolve them. Golden references and
   assertions were not changed. Exact host rendering cause remains unisolated.
-- Final catalogue-change full suite at `3a1a7641`: **1059 PASS, 1 skip,
+- Intermediate catalogue-change full suite at `3a1a7641`: **1059 PASS, 1 skip,
   7 existing golden failures**, exit 1; analyzer clean. The pending-timer failure
   is gone. Drift emits multiple-database warnings in isolated UI tests (57 in
   this run versus 4 before); these are retained in the raw log, not suppressed.
 - An intermediate query-stream implementation exposed a pending-timer failure
   in adaptive widgets and stalled; it was terminated, retained as failure
   evidence and corrected in `3a1a7641`. It is not counted as a qualification.
+
+- CI exposed one additional `MissingPluginException` at `3a1a7641`: an injected
+  test catalogue repository still caused the new notification provider to open
+  platform storage. `ebf2a7f6` observes CURRENT only for actual Drift repositories;
+  a regression fails on any unintended database access. Native production
+  behavior remains the same. Golden references and assertions stay unchanged.
+- Latest full local suite at `ebf2a7f6` (test-only Riverpod API cleanup noted in
+  evidence): **1060 PASS, 1 skip, 7 existing golden failures**, exit 1.
+  Analyzer clean; catalogue/adaptive tests **20/20 PASS**. The injected-repository
+  platform error is gone. Multiple-database warnings returned to the original
+  count of **4**, rather than 57.
 
 ## Native iOS details
 

@@ -1,0 +1,14 @@
+{
+  "sha": "ebf2a7f6b7b8b14a7dd47985cf3cfd183e51d87e",
+  "working_tree_note": "one test assertion migrated from deprecated container.exists(provider) to container.read(provider.exists); targeted test and analyze rerun after that change",
+  "command": "flutter test --concurrency=1 --reporter expanded",
+  "sdk": "3.47.9",
+  "exit_code": 1,
+  "pass": 1060,
+  "skip": 1,
+  "fail": 7,
+  "failure_scope": "seven existing golden pixel mismatches only",
+  "analyze": "PASS; no issues",
+  "raw_log": "artifacts/local-smoke/pr56/retest-20261109/flutter-isolated-final-full.log",
+  "drift_multiple_database_warnings": 4
+}

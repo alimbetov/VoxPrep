@@ -1,0 +1,12 @@
+Source: https://github.com/alimbetov/VoxPrep/actions/runs/42859762365
+SHA: 3a1a764178eba61b40cf97e6701c2885962a5743
+Selected failure lines; full log remains in GitHub Actions.
+2026-11-10T17:01:46.7401854Z The following MissingPluginException was thrown running a test:
+2026-11-10T17:01:46.7402676Z MissingPluginException(No implementation found for method getTemporaryDirectory on channel
+2026-11-10T17:01:46.7427346Z 03:40 +1051 ~1 -1: <WORKTREE>/mobile/careerspeak_app/test/goldens/learner_ui_golden_test.dart: golden catalogue grid [E]
+2026-11-10T17:01:46.7439252Z The following MissingPluginException was thrown running a test (but after the test had completed):
+2026-11-10T17:01:46.7440110Z MissingPluginException(No implementation found for method getTemporaryDirectory on channel
+2026-11-10T17:01:46.7861898Z The following MissingPluginException was thrown running a test (but after the test had completed):
+2026-11-10T17:01:46.7862753Z MissingPluginException(No implementation found for method getTemporaryDirectory on channel
+2026-11-10T17:01:48.4670065Z 03:42 +1062 ~1 -1: Some tests failed.
+2026-11-10T17:01:48.5667224Z ##[error]Process completed with exit code 1.

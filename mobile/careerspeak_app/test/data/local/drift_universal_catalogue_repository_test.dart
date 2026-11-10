@@ -35,7 +35,7 @@ void main() {
         isNull,
       );
       await Future<void>.delayed(Duration.zero);
-      expect(container.exists(currentPublicationVersionProvider), isFalse);
+      expect(container.read(currentPublicationVersionProvider.exists), isFalse);
     },
   );
 
