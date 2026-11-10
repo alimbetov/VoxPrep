@@ -65,8 +65,10 @@ final currentPublicationVersionProvider = StreamProvider<int?>((ref) {
 
 final currentCatalogueProvider =
     FutureProvider.family<CataloguePayload?, CatalogueKind>((ref, kind) async {
-      ref.watch(currentPublicationVersionProvider);
       final repository = ref.watch(catalogueSnapshotRepositoryProvider);
+      if (repository is DriftCatalogueSnapshotRepository) {
+        ref.watch(currentPublicationVersionProvider);
+      }
       return (await repository.readCurrent(kind)).getOrThrow();
     });
 
@@ -79,7 +81,9 @@ final universalCatalogueRepositoryProvider =
 
 final currentUniversalCatalogueProvider =
     FutureProvider<CurrentUniversalCatalogueSnapshot?>((ref) async {
-      ref.watch(currentPublicationVersionProvider);
       final repository = ref.watch(universalCatalogueRepositoryProvider);
+      if (repository is DriftUniversalCatalogueRepository) {
+        ref.watch(currentPublicationVersionProvider);
+      }
       return (await repository.readCurrent()).getOrThrow();
     });

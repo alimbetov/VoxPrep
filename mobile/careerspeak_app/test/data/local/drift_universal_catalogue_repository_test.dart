@@ -17,6 +17,29 @@ const _hash =
 
 void main() {
   test(
+    'injected catalogue repository does not open a platform database',
+    () async {
+      final container = ProviderContainer(
+        overrides: [
+          careerSpeakDatabaseProvider.overrideWith(
+            (ref) => throw StateError('Unexpected platform database access'),
+          ),
+          universalCatalogueRepositoryProvider.overrideWithValue(
+            const _EmptyCatalogueRepository(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      expect(
+        await container.read(currentUniversalCatalogueProvider.future),
+        isNull,
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(container.exists(currentPublicationVersionProvider), isFalse);
+    },
+  );
+
+  test(
     'live catalogue updates after first sync and CURRENT promotion',
     () async {
       final database = createTestDatabase();
@@ -293,4 +316,11 @@ Future<void> _insertGraph(
        VALUES (?, 'SHELVES', 0, 1, NULL)''',
     <Object?>[version],
   );
+}
+
+final class _EmptyCatalogueRepository implements UniversalCatalogueRepository {
+  const _EmptyCatalogueRepository();
+  @override
+  Future<Result<CurrentUniversalCatalogueSnapshot?>> readCurrent() async =>
+      const Success(null);
 }
