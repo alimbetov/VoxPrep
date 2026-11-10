@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show TableUpdateQuery;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/content_delivery/catalogue_payload.dart';
@@ -47,11 +48,19 @@ final catalogueSnapshotRepositoryProvider =
 // replace the visible graph, and a first sync must refresh an initially empty UI.
 final currentPublicationVersionProvider = StreamProvider<int?>((ref) {
   final database = ref.watch(careerSpeakDatabaseProvider);
-  return (database.select(database.contentManifestStates)
-        ..where((row) => row.id.equals(1)))
-      .watchSingleOrNull()
-      .map((state) => state?.currentContentVersion)
-      .distinct();
+  final changes = Stream<void>.multi((controller) {
+    final subscription = database
+        .tableUpdates(TableUpdateQuery.onTable(database.contentManifestStates))
+        .listen((_) => controller.add(null), onError: controller.addError);
+    controller.onCancel = subscription.cancel;
+    controller.add(null);
+  });
+  return changes.asyncMap((_) async {
+    final state = await (database.select(
+      database.contentManifestStates,
+    )..where((row) => row.id.equals(1))).getSingleOrNull();
+    return state?.currentContentVersion;
+  }).distinct();
 });
 
 final currentCatalogueProvider =
