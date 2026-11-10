@@ -43,8 +43,20 @@ final catalogueSnapshotRepositoryProvider =
       );
     });
 
+// Observe only committed CURRENT changes. Staged catalogue rows must not
+// replace the visible graph, and a first sync must refresh an initially empty UI.
+final currentPublicationVersionProvider = StreamProvider<int?>((ref) {
+  final database = ref.watch(careerSpeakDatabaseProvider);
+  return (database.select(database.contentManifestStates)
+        ..where((row) => row.id.equals(1)))
+      .watchSingleOrNull()
+      .map((state) => state?.currentContentVersion)
+      .distinct();
+});
+
 final currentCatalogueProvider =
     FutureProvider.family<CataloguePayload?, CatalogueKind>((ref, kind) async {
+      ref.watch(currentPublicationVersionProvider);
       final repository = ref.watch(catalogueSnapshotRepositoryProvider);
       return (await repository.readCurrent(kind)).getOrThrow();
     });
@@ -58,6 +70,7 @@ final universalCatalogueRepositoryProvider =
 
 final currentUniversalCatalogueProvider =
     FutureProvider<CurrentUniversalCatalogueSnapshot?>((ref) async {
+      ref.watch(currentPublicationVersionProvider);
       final repository = ref.watch(universalCatalogueRepositoryProvider);
       return (await repository.readCurrent()).getOrThrow();
     });
