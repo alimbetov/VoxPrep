@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show TableUpdateQuery;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../application/content_delivery/catalogue_payload.dart';
@@ -43,9 +44,31 @@ final catalogueSnapshotRepositoryProvider =
       );
     });
 
+// Observe only committed CURRENT changes. Staged catalogue rows must not
+// replace the visible graph, and a first sync must refresh an initially empty UI.
+final currentPublicationVersionProvider = StreamProvider<int?>((ref) {
+  final database = ref.watch(careerSpeakDatabaseProvider);
+  final changes = Stream<void>.multi((controller) {
+    final subscription = database
+        .tableUpdates(TableUpdateQuery.onTable(database.contentManifestStates))
+        .listen((_) => controller.add(null), onError: controller.addError);
+    controller.onCancel = subscription.cancel;
+    controller.add(null);
+  });
+  return changes.asyncMap((_) async {
+    final state = await (database.select(
+      database.contentManifestStates,
+    )..where((row) => row.id.equals(1))).getSingleOrNull();
+    return state?.currentContentVersion;
+  }).distinct();
+});
+
 final currentCatalogueProvider =
     FutureProvider.family<CataloguePayload?, CatalogueKind>((ref, kind) async {
       final repository = ref.watch(catalogueSnapshotRepositoryProvider);
+      if (repository is DriftCatalogueSnapshotRepository) {
+        ref.watch(currentPublicationVersionProvider);
+      }
       return (await repository.readCurrent(kind)).getOrThrow();
     });
 
@@ -59,5 +82,8 @@ final universalCatalogueRepositoryProvider =
 final currentUniversalCatalogueProvider =
     FutureProvider<CurrentUniversalCatalogueSnapshot?>((ref) async {
       final repository = ref.watch(universalCatalogueRepositoryProvider);
+      if (repository is DriftUniversalCatalogueRepository) {
+        ref.watch(currentPublicationVersionProvider);
+      }
       return (await repository.readCurrent()).getOrThrow();
     });

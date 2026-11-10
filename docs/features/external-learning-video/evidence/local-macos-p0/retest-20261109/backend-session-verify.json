@@ -1,0 +1,18 @@
+{
+  "name": "backend-session-verify",
+  "sha": "8e610f62eb1b15a14d7303e72bdf32ad720fa2dc",
+  "command": [
+    "mvn",
+    "-B",
+    "-ntp",
+    "-f",
+    "backend/pom.xml",
+    "-DargLine=-Xmx768m",
+    "-Dspring.test.context.cache.maxSize=2",
+    "verify"
+  ],
+  "exit_code": 0,
+  "started_at": "2026-11-09T16:23:54.836543+00:00",
+  "finished_at": "2026-11-09T16:25:20.849418+00:00",
+  "log": "artifacts/local-smoke/pr56/retest-20261109/backend-session-verify.log"
+}

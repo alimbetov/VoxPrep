@@ -1,0 +1,21 @@
+{
+  "sha": "638c4f6063084604767ffaa1c36347db4d81aa4a",
+  "stages": [
+    {
+      "name": "h2-seed",
+      "exit_code": 0
+    },
+    {
+      "name": "h2-outage",
+      "exit_code": 0
+    },
+    {
+      "name": "h2-recovered",
+      "exit_code": 0
+    }
+  ],
+  "volumes_deleted": false,
+  "container_before": "5796db9d56b5853318149f76160a44d4626a1ceca5e7bc43e676de614079e4b2",
+  "container_after": "5796db9d56b5853318149f76160a44d4626a1ceca5e7bc43e676de614079e4b2",
+  "result": "PASS"
+}

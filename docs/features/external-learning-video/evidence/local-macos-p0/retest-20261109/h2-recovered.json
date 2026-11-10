@@ -1,0 +1,19 @@
+{
+  "name": "h2-recovered",
+  "sha": "638c4f6063084604767ffaa1c36347db4d81aa4a",
+  "command": [
+    "mvn",
+    "-B",
+    "-ntp",
+    "-f",
+    "backend/pom.xml",
+    "-Dh2.restart.acceptance=true",
+    "-Dtest=RustFsRestartAcceptanceTest#restartRecoversReady",
+    "-DargLine=-Xmx512m",
+    "test"
+  ],
+  "exit_code": 0,
+  "started_at": "2026-11-09T16:35:55.653197+00:00",
+  "finished_at": "2026-11-09T16:36:20.407553+00:00",
+  "log": "artifacts/local-smoke/pr56/retest-20261109/h2-recovered.log"
+}

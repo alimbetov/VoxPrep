@@ -1,0 +1,21 @@
+{
+  "name": "a1-live",
+  "sha": "638c4f6063084604767ffaa1c36347db4d81aa4a",
+  "command": [
+    "mvn",
+    "-B",
+    "-ntp",
+    "-f",
+    "backend/pom.xml",
+    "-Dtest=A1RealBackendFlutterAcceptanceTest,R5MediaLibraryLiveHttpAcceptanceTest",
+    "-Dvoxprep.r5.enabled=true",
+    "-Dvoxprep.a1.enabled=true",
+    "-DargLine=-Xmx768m",
+    "-Dspring.test.context.cache.maxSize=2",
+    "test"
+  ],
+  "exit_code": 0,
+  "started_at": "2026-11-09T16:30:41.734629+00:00",
+  "finished_at": "2026-11-09T16:32:39.546827+00:00",
+  "log": "artifacts/local-smoke/pr56/retest-20261109/a1-live.log"
+}

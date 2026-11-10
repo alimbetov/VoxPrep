@@ -27,7 +27,10 @@ output = Path(required("VOXPREP_R1_OUTPUT_DIR"))
 output.mkdir(parents=True, exist_ok=True)
 
 with sync_playwright() as playwright:
-    browser = playwright.chromium.launch(headless=True, args=["--no-sandbox"])
+    browser = playwright.chromium.launch(
+        headless=True, args=["--no-sandbox"],
+        executable_path=os.environ.get("VOXPREP_BROWSER_EXECUTABLE") or None,
+    )
     context = browser.new_context(viewport={"width": 1440, "height": 1000},
                                   device_scale_factor=1)
     page = context.new_page()

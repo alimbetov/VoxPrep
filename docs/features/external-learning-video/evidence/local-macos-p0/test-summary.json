@@ -1,0 +1,59 @@
+{
+  "backend": {
+    "sha": "a68a08f9b4bb90e792e943e3236ec73f7f0d2f3a",
+    "tests": 512,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 6,
+    "exit_code": 0
+  },
+  "video_backend_tests": {
+    "mvc": 5,
+    "postgres_integration": 2,
+    "url_validation": 17,
+    "learner_controller": 4,
+    "all_pass": true
+  },
+  "flutter_full": {
+    "base_sha": "a68a08f9b4bb90e792e943e3236ec73f7f0d2f3a",
+    "dirty_lock_identical_to_commit": "5008f376e9feb71216114e9ef31f727f7f387f3b",
+    "passed": 1058,
+    "failed": 7,
+    "skipped": 1,
+    "exit_code": 1,
+    "failures": "seven existing learner_ui_golden_test screenshots; no baseline update; environment difference not conclusively isolated"
+  },
+  "browser_partial": {
+    "sha": "5008f376e9feb71216114e9ef31f727f7f387f3b",
+    "revision_id": "d4b7ee63-951c-4041-a658-2a4c194ce44b",
+    "content_code": "EV1_VOCAB_53FABF0026",
+    "observed_pass": [
+      "real Vocabulary DRAFT through browser",
+      "two image bindings",
+      "video save and reload",
+      "HTML title escaping",
+      "CSRF denied 403",
+      "invalid provider leaves metadata unchanged",
+      "real Piper job READY and MP3 preview playback ended without media error"
+    ],
+    "published": false,
+    "publication_rejected": "active FULL collection had no members (test fixture error); later corrected scenario blocked by infrastructure",
+    "audio_sha256": "bcfcb95ca72b2b44d2d5a50359fd4351d195a39e89cdb8123f345f441acf989c",
+    "audio_source": "Real Piper synthesis and authenticated preview; complete exact-SHA runtime correlation not qualified before infrastructure failure."
+  },
+  "native_ios": {
+    "build_exit_code": 0,
+    "install_and_launch_exit_code": 0,
+    "entry": "lib/main.dart",
+    "backend": "http://127.0.0.1:18082",
+    "native_tests_run": false,
+    "external_launch_pass": false,
+    "limitation": "resource exhaustion; simulator shutdown preserves data"
+  },
+  "unchanged_contracts": [
+    "backend/src/main",
+    "worker/src",
+    "mobile/careerspeak_app/lib",
+    "contracts"
+  ]
+}

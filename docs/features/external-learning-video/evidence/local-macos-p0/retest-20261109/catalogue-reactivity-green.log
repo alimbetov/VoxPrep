@@ -1,0 +1,10 @@
+00:00 +0: loading <WORKTREE>/mobile/careerspeak_app/test/data/local/drift_universal_catalogue_repository_test.dart
+00:00 +0: <WORKTREE>/mobile/careerspeak_app/test/app/learner_learning_context_provider_test.dart: derives selected Goal and owning Vertical from CURRENT graph
+00:00 +1: <WORKTREE>/mobile/careerspeak_app/test/app/learner_learning_context_provider_test.dart: returns null when persisted Goal is absent from CURRENT graph
+00:00 +2: <WORKTREE>/mobile/careerspeak_app/test/app/learner_learning_context_provider_test.dart: returns null when selected Goal is inactive in CURRENT graph
+00:00 +3: <WORKTREE>/mobile/careerspeak_app/test/data/local/drift_universal_catalogue_repository_test.dart: live catalogue updates after first sync and CURRENT promotion
+00:00 +4: <WORKTREE>/mobile/careerspeak_app/test/data/local/drift_universal_catalogue_repository_test.dart: live catalogue updates after first sync and CURRENT promotion
+00:00 +5: <WORKTREE>/mobile/careerspeak_app/test/data/local/drift_universal_catalogue_repository_test.dart: DriftUniversalCatalogueRepository reads only CURRENT typed graph and ignores staged snapshot
+00:00 +6: <WORKTREE>/mobile/careerspeak_app/test/data/local/drift_universal_catalogue_repository_test.dart: DriftUniversalCatalogueRepository returns null before any CURRENT publication exists
+00:00 +7: <WORKTREE>/mobile/careerspeak_app/test/data/local/drift_universal_catalogue_repository_test.dart: DriftUniversalCatalogueRepository fails closed when CURRENT points to missing materialized snapshot
+00:00 +8: All tests passed!

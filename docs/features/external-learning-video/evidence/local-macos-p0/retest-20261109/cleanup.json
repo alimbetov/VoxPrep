@@ -1,0 +1,41 @@
+{
+  "time": "2026-11-09T15:51:39.934272+00:00",
+  "removed_caches": [
+    {
+      "cache": "Library/Caches/pip",
+      "bytes": 40260639
+    },
+    {
+      "cache": "Library/Caches/pip-tools",
+      "bytes": 164669648
+    },
+    {
+      "cache": "Library/Caches/node-gyp",
+      "bytes": 50924132
+    },
+    {
+      "cache": "Library/Caches/go-build",
+      "bytes": 545092544
+    },
+    {
+      "cache": "Library/Developer/Xcode/DerivedData/ModuleCache.noindex",
+      "bytes": 286680503
+    },
+    {
+      "cache": "Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex",
+      "bytes": 1584104
+    },
+    {
+      "cache": "Library/Developer/Xcode/DerivedData/CompilationCache.noindex",
+      "bytes": 16688
+    },
+    {
+      "cache": "unused original-checkout mobile/careerspeak_app/build",
+      "bytes": 1844363763,
+      "open_handles": false,
+      "tracked_files": false
+    }
+  ],
+  "volumes_deleted": false,
+  "containers_deleted": false
+}

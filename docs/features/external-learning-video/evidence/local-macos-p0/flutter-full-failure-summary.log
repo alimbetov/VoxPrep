@@ -1,0 +1,15 @@
+Golden "baselines/catalogue_grid.png": Pixel test failed, 2.55%, 8407px diff detected.
+03:01 +760 ~1 -1: <repo>/mobile/careerspeak_app/test/goldens/learner_ui_golden_test.dart: golden catalogue grid [E]
+Golden "baselines/content_detail.png": Pixel test failed, 4.32%, 14210px diff detected.
+03:01 +760 ~1 -2: <repo>/mobile/careerspeak_app/test/goldens/learner_ui_golden_test.dart: golden content detail [E]
+Golden "baselines/interview_two_audio_roles.png": Pixel test failed, 4.47%, 14702px diff detected.
+03:02 +760 ~1 -3: <repo>/mobile/careerspeak_app/test/goldens/learner_ui_golden_test.dart: golden interview with question and sample-answer audio [E]
+Golden "baselines/practice_question.png": Pixel test failed, 3.02%, 9953px diff detected.
+03:03 +760 ~1 -4: <repo>/mobile/careerspeak_app/test/goldens/learner_ui_golden_test.dart: golden practice question [E]
+Golden "baselines/practice_result.png": Pixel test failed, 2.02%, 6650px diff detected.
+03:05 +760 ~1 -5: <repo>/mobile/careerspeak_app/test/goldens/learner_ui_golden_test.dart: golden practice result [E]
+Golden "baselines/settings_rtl.png": Pixel test failed, 3.58%, 11791px diff detected.
+03:06 +760 ~1 -6: <repo>/mobile/careerspeak_app/test/goldens/learner_ui_golden_test.dart: golden settings rtl [E]
+Golden "baselines/home_small_phone.png": Pixel test failed, 3.16%, 5746px diff detected.
+03:06 +760 ~1 -7: <repo>/mobile/careerspeak_app/test/goldens/learner_ui_golden_test.dart: golden small-phone home [E]
+11:08 +1058 ~1 -7: Some tests failed.

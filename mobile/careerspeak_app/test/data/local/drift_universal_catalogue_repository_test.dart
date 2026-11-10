@@ -1,3 +1,8 @@
+import 'dart:async';
+
+import 'package:careerspeak_app/app/catalogue_payload_providers.dart';
+import 'package:careerspeak_app/app/learner_state_providers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:careerspeak_app/application/ports/universal_catalogue_repository.dart';
 import 'package:careerspeak_app/application/result/result.dart';
 import 'package:careerspeak_app/data/local/database/careerspeak_database.dart';
@@ -11,6 +16,100 @@ const _hash =
     'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
 void main() {
+  test(
+    'injected catalogue repository does not open a platform database',
+    () async {
+      final container = ProviderContainer(
+        overrides: [
+          careerSpeakDatabaseProvider.overrideWith(
+            (ref) => throw StateError('Unexpected platform database access'),
+          ),
+          universalCatalogueRepositoryProvider.overrideWithValue(
+            const _EmptyCatalogueRepository(),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      expect(
+        await container.read(currentUniversalCatalogueProvider.future),
+        isNull,
+      );
+      await Future<void>.delayed(Duration.zero);
+      expect(container.read(currentPublicationVersionProvider.exists), isFalse);
+    },
+  );
+
+  test(
+    'live catalogue updates after first sync and CURRENT promotion',
+    () async {
+      final database = createTestDatabase();
+      final container = ProviderContainer(
+        overrides: [careerSpeakDatabaseProvider.overrideWithValue(database)],
+      );
+      addTearDown(() async {
+        container.dispose();
+        await database.close();
+      });
+      final first = Completer<int>();
+      final second = Completer<int>();
+      final subscription = container.listen(currentUniversalCatalogueProvider, (
+        _,
+        next,
+      ) {
+        final version = next.asData?.value?.contentVersion;
+        if (version == 100 && !first.isCompleted) first.complete(version);
+        if (version == 101 && !second.isCompleted) second.complete(version);
+      }, fireImmediately: true);
+      addTearDown(subscription.close);
+      expect(
+        await container.read(currentUniversalCatalogueProvider.future),
+        isNull,
+      );
+      final now = DateTime.utc(2026, 11, 10);
+      await database.transaction(() async {
+        await _insertGraph(database, 100, 'FIRST');
+        await database
+            .into(database.contentManifestStates)
+            .insert(
+              ContentManifestStatesCompanion.insert(
+                id: const Value(1),
+                schemaVersion: 2,
+                currentContentVersion: 100,
+                currentManifestChecksum: _hash,
+                updatedAt: now,
+              ),
+            );
+      });
+      expect(await first.future.timeout(const Duration(seconds: 3)), 100);
+      await _insertGraph(database, 101, 'STAGED');
+      expect(
+        container
+            .read(currentUniversalCatalogueProvider)
+            .asData
+            ?.value
+            ?.contentVersion,
+        100,
+      );
+      await (database.update(
+        database.contentManifestStates,
+      )..where((row) => row.id.equals(1))).write(
+        const ContentManifestStatesCompanion(currentContentVersion: Value(101)),
+      );
+      expect(await second.future.timeout(const Duration(seconds: 3)), 101);
+      expect(
+        container
+            .read(currentUniversalCatalogueProvider)
+            .asData
+            ?.value
+            ?.graph
+            .verticals
+            .single
+            .code,
+        'STAGED_VERTICAL',
+      );
+    },
+  );
+
   group('DriftUniversalCatalogueRepository', () {
     test(
       'reads only CURRENT typed graph and ignores staged snapshot',
@@ -217,4 +316,11 @@ Future<void> _insertGraph(
        VALUES (?, 'SHELVES', 0, 1, NULL)''',
     <Object?>[version],
   );
+}
+
+final class _EmptyCatalogueRepository implements UniversalCatalogueRepository {
+  const _EmptyCatalogueRepository();
+  @override
+  Future<Result<CurrentUniversalCatalogueSnapshot?>> readCurrent() async =>
+      const Success(null);
 }

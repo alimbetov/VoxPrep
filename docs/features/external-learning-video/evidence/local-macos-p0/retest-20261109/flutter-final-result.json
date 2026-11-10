@@ -1,0 +1,13 @@
+{
+  "sha": "3a1a764178eba61b40cf97e6701c2885962a5743",
+  "command": "flutter test --concurrency=1 --reporter expanded",
+  "sdk": "3.47.9",
+  "exit_code": 1,
+  "pass": 1059,
+  "skip": 1,
+  "fail": 7,
+  "failure_scope": "seven existing golden pixel mismatches; no other test failures",
+  "analyze": "PASS; no issues",
+  "raw_log": "artifacts/local-smoke/pr56/retest-20261109/flutter-catalogue-final-full.log",
+  "drift_multiple_database_warnings": 57
+}

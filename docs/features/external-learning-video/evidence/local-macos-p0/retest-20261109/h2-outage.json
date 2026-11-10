@@ -1,0 +1,19 @@
+{
+  "name": "h2-outage",
+  "sha": "638c4f6063084604767ffaa1c36347db4d81aa4a",
+  "command": [
+    "mvn",
+    "-B",
+    "-ntp",
+    "-f",
+    "backend/pom.xml",
+    "-Dh2.restart.acceptance=true",
+    "-Dtest=RustFsRestartAcceptanceTest#outageLeavesRegistered",
+    "-DargLine=-Xmx512m",
+    "test"
+  ],
+  "exit_code": 0,
+  "started_at": "2026-11-09T16:35:28.961192+00:00",
+  "finished_at": "2026-11-09T16:35:54.279462+00:00",
+  "log": "artifacts/local-smoke/pr56/retest-20261109/h2-outage.log"
+}

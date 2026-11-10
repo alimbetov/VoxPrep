@@ -3,6 +3,7 @@ import 'package:careerspeak_app/app/audio_playback_providers.dart';
 import 'package:careerspeak_app/app/learner_state_providers.dart';
 import 'package:careerspeak_app/application/content_delivery/content_audio_policy.dart';
 import 'package:careerspeak_app/application/content_delivery/content_manifest.dart';
+import 'package:careerspeak_app/application/content_delivery/external_learning_video.dart';
 import 'package:careerspeak_app/application/ports/asset_catalog_repository.dart';
 import 'package:careerspeak_app/application/ports/learner_state_repository.dart';
 import 'package:careerspeak_app/application/result/result.dart';
@@ -42,6 +43,62 @@ void main() {
     );
     expect(descriptionIndex, greaterThanOrEqualTo(0));
     expect(audioIndex, greaterThan(descriptionIndex));
+  });
+
+  testWidgets('external video is additive to the existing audio controls', (
+    tester,
+  ) async {
+    final video = ExternalLearningVideo(
+      identity: ContentIdentity.fromItem(_topicWithAudio),
+      revision: _topicWithAudio.revision,
+      title: 'Extra listening lesson',
+      providerVideoId: 'AbCdEfGh123',
+      rootSha256: _hash,
+    );
+    await _pump(
+      tester,
+      item: _topicWithAudio,
+      repository: _FakeLearnerStateRepository(),
+      assetCatalog: const _RoleCatalog(<String>{}),
+      video: video,
+    );
+    final list = tester.widget<ListView>(find.byType(ListView).first);
+    final children =
+        (list.childrenDelegate as SliverChildListDelegate).children;
+    final videoIndex = children.indexWhere(
+      (widget) => widget.runtimeType.toString() == '_ExternalVideoButton',
+    );
+    final audioIndex = children.indexWhere(
+      (widget) => widget.runtimeType.toString() == '_AudioPlaybackControls',
+    );
+    expect(videoIndex, greaterThanOrEqualTo(0));
+    expect(audioIndex, greaterThan(videoIndex));
+  });
+
+  testWidgets('absence of external video leaves lesson audio unchanged', (
+    tester,
+  ) async {
+    await _pump(
+      tester,
+      item: _topicWithAudio,
+      repository: _FakeLearnerStateRepository(),
+      assetCatalog: const _RoleCatalog(<String>{}),
+    );
+    final list = tester.widget<ListView>(find.byType(ListView).first);
+    final children =
+        (list.childrenDelegate as SliverChildListDelegate).children;
+    expect(
+      children.any(
+        (widget) => widget.runtimeType.toString() == '_ExternalVideoButton',
+      ),
+      isFalse,
+    );
+    expect(
+      children.any(
+        (widget) => widget.runtimeType.toString() == '_AudioPlaybackControls',
+      ),
+      isTrue,
+    );
   });
 
   testWidgets('INTERVIEW shows only QUESTION when sample answer is absent', (
@@ -332,6 +389,7 @@ Future<void> _pump(
   required ContentItem item,
   required LearnerStateRepository repository,
   required AssetCatalogRepository assetCatalog,
+  ExternalLearningVideo? video,
   role_audio.RoleAudioClipState roleState =
       const role_audio.RoleAudioClipState(),
   content_audio.ContentPlaybackState playbackState =
@@ -351,7 +409,9 @@ Future<void> _pump(
         ),
       ],
       child: MaterialApp(
-        home: Scaffold(body: ContentDetailPanel(item: item)),
+        home: Scaffold(
+          body: ContentDetailPanel(item: item, externalVideo: video),
+        ),
       ),
     ),
   );

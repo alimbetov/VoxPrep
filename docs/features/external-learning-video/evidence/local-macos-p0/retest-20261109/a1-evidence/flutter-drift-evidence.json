@@ -1,0 +1,23 @@
+{
+  "source": "A1 real PostgreSQL + authenticated HTTP + Drift",
+  "rootN": {
+    "contentVersion": 1,
+    "checksum": "73665d3a5a3b8ebdd455ea729faf54eb5d9586f5875f40e3eed56b65f0194154"
+  },
+  "offlineCurrent": {
+    "contentVersion": 2,
+    "contentCode": "A1_FREE_PHRASE",
+    "contentType": "phrase",
+    "revision": 2,
+    "phrase": "Could you introduce yourself professionally?",
+    "freeCollectionMembers": [
+      "CONTENT|A1_FREE_PHRASE|phrase|2",
+      "PRACTICE_TEST|A1_FREE_EXAM|1"
+    ]
+  },
+  "failureInjection": {
+    "missingPayloadRejected": true,
+    "checksumMismatchRejected": true,
+    "preservedN": true
+  }
+}

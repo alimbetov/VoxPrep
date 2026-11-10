@@ -1,0 +1,21 @@
+00:00 +0: loading <WORKTREE>/mobile/careerspeak_app/test/data/local/drift_universal_catalogue_repository_test.dart
+00:00 +0: <WORKTREE>/mobile/careerspeak_app/test/data/local/drift_universal_catalogue_repository_test.dart: live catalogue updates after first sync and CURRENT promotion
+00:01 +1: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: P1.7 no overflow at 360 px / 1.0×
+00:01 +2: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: P1.7 no overflow at 360 px / 1.0×
+00:01 +3: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: P1.7 no overflow at 360 px / 1.0×
+00:01 +4: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: P1.7 no overflow at 360 px / 1.0×
+00:02 +5: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: P1.7 no overflow at 360 px / 1.6×
+00:02 +6: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: P1.7 no overflow at 360 px / 2.0×
+00:02 +7: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: P1.7 no overflow at 600 px / 1.0×
+00:03 +8: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: P1.7 no overflow at 600 px / 1.6×
+00:03 +9: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: P1.7 no overflow at 600 px / 2.0×
+00:03 +10: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: P1.7 no overflow at 840 px / 1.0×
+00:03 +11: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: P1.7 no overflow at 840 px / 1.6×
+00:04 +12: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: P1.7 no overflow at 840 px / 2.0×
+00:04 +13: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: P1.7 no overflow at 1200 px / 1.0×
+00:04 +14: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: P1.7 no overflow at 1200 px / 1.6×
+00:04 +15: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: P1.7 no overflow at 1200 px / 2.0×
+00:04 +16: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: detail route and marker state survive compact-to-large resize
+00:04 +17: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: compact and non-compact navigation switch at 600 px
+00:05 +18: <WORKTREE>/mobile/careerspeak_app/test/acceptance/p1_7_adaptive_acceptance_test.dart: assessment remains usable at 360 px and 2.0× text scale
+00:05 +19: All tests passed!

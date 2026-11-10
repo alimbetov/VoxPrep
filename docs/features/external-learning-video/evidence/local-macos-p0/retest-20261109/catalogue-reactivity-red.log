@@ -1,0 +1,10 @@
+00:00 +0: loading <WORKTREE>/mobile/careerspeak_app/test/data/local/drift_universal_catalogue_repository_test.dart
+00:00 +0: live catalogue updates after first sync and CURRENT promotion
+00:04 +0 -1: live catalogue updates after first sync and CURRENT promotion [E]
+  TimeoutException after 0:00:03.000000: Future not completed
+  dart:async  _startMicrotaskLoop
+  
+00:04 +0 -1: Some tests failed.
+
+Failing tests:
+  <WORKTREE>/mobile/careerspeak_app/test/data/local/drift_universal_catalogue_repository_test.dart: live catalogue updates after first sync and CURRENT promotion

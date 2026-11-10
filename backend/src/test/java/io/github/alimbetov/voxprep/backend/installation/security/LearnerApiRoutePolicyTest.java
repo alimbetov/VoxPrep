@@ -17,6 +17,7 @@ class LearnerApiRoutePolicyTest {
                 "/api/v1/catalogue/",
                 "/api/v1/assessments/practice-tests/PRACTICE_01",
                 "/api/v1/content",
+                "/api/v2/content/phrase/INTRO/external-video",
                 "/api/v1/content/phrase/INTRO",
                 "/api/v1/content/phrase/INTRO/localization",
                 "/api/v1/content/phrase/INTRO/media",
@@ -38,6 +39,7 @@ class LearnerApiRoutePolicyTest {
                 "/api/v1/catalogue-preview",
                 "/api/v1/assessments-other",
                 "/api/v1/content-public",
+                "/api/v2/content-public",
                 "/api/v1/purchases-public",
                 "/api/v1/other");
     }

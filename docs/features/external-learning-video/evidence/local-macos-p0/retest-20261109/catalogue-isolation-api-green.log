@@ -1,0 +1,7 @@
+00:00 +0: loading <WORKTREE>/mobile/careerspeak_app/test/data/local/drift_universal_catalogue_repository_test.dart
+00:00 +0: injected catalogue repository does not open a platform database
+00:00 +1: live catalogue updates after first sync and CURRENT promotion
+00:00 +2: DriftUniversalCatalogueRepository reads only CURRENT typed graph and ignores staged snapshot
+00:00 +3: DriftUniversalCatalogueRepository returns null before any CURRENT publication exists
+00:00 +4: DriftUniversalCatalogueRepository fails closed when CURRENT points to missing materialized snapshot
+00:00 +5: All tests passed!

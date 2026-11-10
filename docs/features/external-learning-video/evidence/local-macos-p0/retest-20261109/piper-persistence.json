@@ -1,0 +1,10 @@
+{
+  "sha": "638c4f6063084604767ffaa1c36347db4d81aa4a",
+  "content_code": "EV1_VOCAB_A56F80DD88",
+  "asset_id": "3bcab118-03f3-4632-a31b-d825ad97b855",
+  "bytes": 9261,
+  "before_sha256": "4e7ded589014568d4e3ac7949ec4bc38d467006a2b6388e8ef5c29d792c58fd6",
+  "after_sha256": "4e7ded589014568d4e3ac7949ec4bc38d467006a2b6388e8ef5c29d792c58fd6",
+  "rustfs_same_container_after_sigkill": true,
+  "result": "PASS"
+}

@@ -6,6 +6,7 @@ analyzer:
     - build/**
     - macos/**
     - web/**
+    - ios/**
 
 linter:
   rules:
