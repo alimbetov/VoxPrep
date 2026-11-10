@@ -1,0 +1,18 @@
+{
+  "name": "session-context-green",
+  "sha": "e569affcf44e8a592a35aefb94e84df42e5015c2",
+  "command": [
+    "mvn",
+    "-B",
+    "-ntp",
+    "-f",
+    "backend/pom.xml",
+    "-Dtest=InstallationAuthenticationFilterRouteTest",
+    "-DargLine=-Xmx512m",
+    "test"
+  ],
+  "exit_code": 0,
+  "started_at": "2026-11-09T16:22:38.515225+00:00",
+  "finished_at": "2026-11-09T16:23:02.122096+00:00",
+  "log": "artifacts/local-smoke/pr56/retest-20261109/session-context-green.log"
+}

@@ -1,0 +1,17 @@
+{
+  "8e610f62": {
+    "backend/src": "c42b78b6b1bf1d0b3ddecb5d8b9e9c7f279e4cc9",
+    "worker/src": "d2e5f94c7659069461d74e26548d5b1cebdf672c",
+    "contracts": "0b9b7e0181b138aec2591288819df24adfe1d39e"
+  },
+  "638c4f60": {
+    "backend/src": "c42b78b6b1bf1d0b3ddecb5d8b9e9c7f279e4cc9",
+    "worker/src": "d2e5f94c7659069461d74e26548d5b1cebdf672c",
+    "contracts": "0b9b7e0181b138aec2591288819df24adfe1d39e"
+  },
+  "3a1a7641": {
+    "backend/src": "c42b78b6b1bf1d0b3ddecb5d8b9e9c7f279e4cc9",
+    "worker/src": "d2e5f94c7659069461d74e26548d5b1cebdf672c",
+    "contracts": "0b9b7e0181b138aec2591288819df24adfe1d39e"
+  }
+}

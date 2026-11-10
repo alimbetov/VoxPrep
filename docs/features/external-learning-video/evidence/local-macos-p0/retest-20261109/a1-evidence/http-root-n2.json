@@ -1,0 +1,22 @@
+{
+  "source": "production HTTP root manifest",
+  "contentVersion": 2,
+  "checksum": "13655ba34e48afe4fde2001e904523a44e05932bcae0e36cb71213af482fcd55",
+  "contentPayload": {
+    "code": "A1_FREE_PHRASE",
+    "revision": 2,
+    "checksum": "976f04f51b016e64d8865e7ae0157c27a755e2d35badc1301bb4e6905ba89d52"
+  },
+  "packs": [
+    {
+      "code": "A1_FREE",
+      "revision": 2,
+      "checksum": "0634552680d7c90f949292cdeeba5af4e365e36b1bc93a43620fdd0b379e64ab"
+    },
+    {
+      "code": "A1_FULL",
+      "revision": 2,
+      "checksum": "a4e61bff4d34bc54b9a0796830106e486efa3ae0ed0ac983664b341ba24866bc"
+    }
+  ]
+}

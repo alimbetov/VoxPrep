@@ -1,0 +1,18 @@
+{
+  "name": "video-wire-sha-red",
+  "sha": "099d44084e5c44c810d85bb7b1c20c05be64fbea",
+  "command": [
+    "mvn",
+    "-B",
+    "-ntp",
+    "-f",
+    "backend/pom.xml",
+    "-Dtest=LearnerExternalVideoControllerTest#returnsOnlyFrozenVideoScopedToExactCurrentPublication",
+    "-DargLine=-Xmx512m",
+    "test"
+  ],
+  "exit_code": 1,
+  "started_at": "2026-11-09T16:10:39.345225+00:00",
+  "finished_at": "2026-11-09T16:11:02.859327+00:00",
+  "log": "artifacts/local-smoke/pr56/retest-20261109/video-wire-sha-red.log"
+}

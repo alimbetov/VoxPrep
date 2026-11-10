@@ -1,0 +1,13 @@
+{
+  "candidateRefSha256": "19b59090959f4226a435d6f77ffa2c4c908db78f4bfd43e86e2d27e272484d89",
+  "currentReleaseId": "a68d55c7-b63c-47b5-8c19-7a242e37a3e0",
+  "databaseRevisionRefCount": 8,
+  "httpContentPayloadSha256": "976f04f51b016e64d8865e7ae0157c27a755e2d35badc1301bb4e6905ba89d52",
+  "httpWireRootSha256": "13655ba34e48afe4fde2001e904523a44e05932bcae0e36cb71213af482fcd55",
+  "immutableWireDocumentCount": 20,
+  "nPlusOneVersion": 2,
+  "nVersion": 1,
+  "offlineFreeMemberCount": 2,
+  "source": "live PostgreSQL + published HTTP root + reopened Flutter Drift",
+  "verification": "PASS"
+}

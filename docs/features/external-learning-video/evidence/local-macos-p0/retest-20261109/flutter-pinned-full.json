@@ -1,0 +1,13 @@
+{
+  "name": "flutter-pinned-full",
+  "sha": "60e8625c089191d660c4c85b8b3b07100a65c444",
+  "command": [
+    "bash",
+    "-c",
+    "cd mobile/careerspeak_app && flutter --version && flutter pub get --enforce-lockfile && flutter analyze && flutter test --concurrency=1 --reporter expanded"
+  ],
+  "exit_code": 1,
+  "started_at": "2026-11-09T15:56:10.007982+00:00",
+  "finished_at": "2026-11-09T15:59:47.436612+00:00",
+  "log": "artifacts/local-smoke/pr56/retest-20261109/flutter-pinned-full.log"
+}

@@ -1,0 +1,18 @@
+{
+  "name": "video-http-regression-green",
+  "sha": "60e8625c089191d660c4c85b8b3b07100a65c444",
+  "command": [
+    "mvn",
+    "-B",
+    "-ntp",
+    "-f",
+    "backend/pom.xml",
+    "-Dtest=LearnerExternalVideoControllerTest",
+    "-DargLine=-Xmx512m",
+    "test"
+  ],
+  "exit_code": 0,
+  "started_at": "2026-11-09T16:03:05.353410+00:00",
+  "finished_at": "2026-11-09T16:03:30.371092+00:00",
+  "log": "artifacts/local-smoke/pr56/retest-20261109/video-http-regression-green.log"
+}

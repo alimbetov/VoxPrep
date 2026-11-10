@@ -1,5 +1,116 @@
 # PR #56 — local macOS P0 acceptance
 
+Updated: 2026-11-10 (Asia/Almaty). **Verdict: BLOCKED. Keep Draft; do not merge.**
+
+The clean retest completed the real editorial browser flow, PostgreSQL/HTTP/
+Flutter/Drift acceptance and RustFS restart recovery. It also found and fixed
+three backend defects and a native Flutter catalogue refresh defect. Android,
+complete iOS accessibility/offline scenarios and the local golden failures
+remain outstanding. CI success does not replace these gates.
+
+## Current evidence and provenance
+
+Evidence: [retest-20261109](evidence/local-macos-p0/retest-20261109/).
+The directory retains the date when this retest started. The interrupted initial
+run is archived below, rather than represented as a successful run.
+
+- Backend/browser/A1/H2 source: `638c4f6063084604767ffaa1c36347db4d81aa4a`.
+  Backend `verify` ran at `8e610f62` with the same backend source tree.
+- Flutter catalogue fixes: `eb1769c0` and `3a1a7641`. The native UI smoke ran
+  with `eb1769c0`; `3a1a7641` changes only subscription cleanup/notification
+  mechanics. Its targeted and full suite results are recorded separately. A final native
+  rebuild/recheck at `3a1a7641` also confirms Continue, external Safari launch
+  and return with completion/playback-position labels unchanged.
+- Official isolated Flutter **3.47.9**, tag commit
+  `c197ca5199e9ee5661e865596c9c07294dfab51c`; Dart **3.13.7**.
+  Global Flutter was preserved. Lock resolution was enforced, without upgrade.
+- Java 21 selected per process; existing qualification PostgreSQL **56432** and
+  RustFS **29000** reused. Backend **18082**, temporary flag-off backend **18083**.
+  Existing user backend 18081 and user data volumes were preserved.
+- Rebuildable caches removed: approximately **3.6 GiB**, including Flutter build
+  output. No Docker volume/container deletion, model-cache deletion or DB drop.
+  [Cleanup manifest](evidence/local-macos-p0/retest-20261109/cleanup.json).
+
+## Gate results
+
+| Gate | Result | Reproducible evidence / limits |
+|---|---|---|
+| P0-1 dependency lock | PASS | Enforced lock with official Flutter 3.47.9; analyzer clean. Full test qualification remains separate. |
+| P0-2 real Content Studio browser | PASS | Actual MVC vocabulary creation, two uploaded images, real Piper MP3, external video, approve/publish, reopen, next draft. [HTTP statuses and identities](evidence/local-macos-p0/retest-20261109/browser-session-fixed/browser-report.json). |
+| SEC-01 FREE/FULL | PASS in DEV store scope | Anonymous 401, FREE-to-FULL 403, FULL 200 using existing DEV simulated-store HTTP verification. No real purchase/store qualification claimed. |
+| SEC-02 immutable published content | PASS | Browser save/remove 409; PostgreSQL UPDATE and DELETE denied; next draft does not leak into published video. |
+| SEC-03 session/CSRF/escaping | PASS | CSRF 403, escaped title, invalid URL leaves metadata unchanged; admin session remains 200 after learner bearer request. |
+| FLAG-01 live flag off | PASS | Separate actual server: FREE 204, locked FULL 403. |
+| REG-01 image delivery | PASS | Published HTTP bytes/checksums plus ETag 304; native image visible. |
+| REG-02 audio delivery | PASS | Actual Piper READY, browser playback ended, HTTP SHA/ffprobe; iOS Play → Pause → Replay. No subjective speech-quality assessment claimed. |
+| REG-03 publication to Drift | PASS | Actual A1 Spring/PG/RustFS/Flutter 3.47.9 process, N→N+1, offline/file reopen. [Verified evidence](evidence/local-macos-p0/retest-20261109/a1-evidence/r1-verified.json). |
+| H2 storage restart | PASS | Seed → isolated RustFS SIGKILL → outage → restart same container/volumes → READY/idempotence. Existing H2 fixture is a storage-byte probe. A separate actual Piper MP3 also retained identical SHA after restart. |
+| P0-3 Android | BLOCKED | No Android SDK/device. |
+| P0-3 iOS | PARTIAL | Real HTTP catalogue/lesson, explicit Safari YouTube launch, return to same lesson, native MP3 playback. Device offline/no-handler, VoiceOver, large text and full progress assertions not qualified. |
+| P0-4 exact delivery SHA CI | Pending delivery verification | All eight required checks passed at `638c4f60`; the final delivery SHA requires its own check. Final result is recorded in delivery evidence/task response. |
+
+## Defects fixed during this acceptance
+
+1. `099d4408`: premium/missing video exceptions escaped the scoped learner
+   advice and returned 500. Registered the v2 controller; real 403/404 and
+   regression red/green verified.
+2. `e569affc`: video projection used legacy candidate-ref SHA. It now uses the
+   verified immutable Flutter wire ROOT checksum and one repeatable-read
+   transaction for authorization/content/root identity; inconsistent ROOT fails
+   closed with 503. Video metadata is still **not cryptographically included**
+   in schema-2 ROOT and is **not persisted to Drift**.
+3. `8e610f62`: learner bearer authentication mutated an admin session's shared
+   SecurityContext. A fresh request-local context preserves that admin session.
+   Actual before: **200 → 200 → 403**; after: **200 → 200 → 200**.
+4. `eb1769c0`, `3a1a7641`: an initially empty catalogue stayed cached after a
+   successful locale-triggered sync. Providers now observe committed CURRENT
+   updates, retain CURRENT while newer data is merely staged, and cancel the
+   notification subscription without a deferred query-cache timer. The new
+   regression first failed by timeout; targeted catalogue/adaptive checks pass
+   **19/19**. No Drift migration or wire-format change.
+
+## Executed retest
+
+- Backend `verify`: **519 tests, 0 failures/errors, 6 opt-in skips**.
+- Live A1/R5: **2/2 PASS**. Verifier: `R1_EVIDENCE_VERIFIED 2
+  13655ba34e48afe4fde2001e904523a44e05932bcae0e36cb71213af482fcd55`.
+- Live H2: **3/3 PASS**. Actual Piper MP3: **9261 bytes**; SHA-256 before/after
+  restart `4e7ded589014568d4e3ac7949ec4bc38d467006a2b6388e8ef5c29d792c58fd6`.
+- Clean pinned Flutter full run before catalogue changes: **1058 PASS, 1 skip,
+  7 golden failures**. The failures reproduce the earlier 3.47.7 pixel diffs;
+  clearing caches and using 3.47.9 did not resolve them. Golden references and
+  assertions were not changed. Exact host rendering cause remains unisolated.
+- Final catalogue-change full suite at `3a1a7641`: **1059 PASS, 1 skip,
+  7 existing golden failures**, exit 1; analyzer clean. The pending-timer failure
+  is gone. Drift emits multiple-database warnings in isolated UI tests (57 in
+  this run versus 4 before); these are retained in the raw log, not suppressed.
+- An intermediate query-stream implementation exposed a pending-timer failure
+  in adaptive widgets and stalled; it was terminated, retained as failure
+  evidence and corrected in `3a1a7641`. It is not counted as a qualification.
+
+## Native iOS details
+
+[Native smoke](evidence/local-macos-p0/retest-20261109/ios-native-smoke.json)
+and screenshots record a real `lib/main.dart` debug simulator build, no mocks
+or provider overrides. An isolated bundle ID
+`io.github.alimbetov.voxprep.pr56acceptance` preserves the original installation
+and its Keychain. The original bundle returned `UNAUTHORIZED` before sync;
+the exact credential mismatch cause is not established. No anonymous fallback,
+credential reset or security-policy relaxation was added. A separate dummy-key
+Keychain probe passed, so missing entitlements were not assumed or changed.
+
+After choosing Australia/English in Settings, sync was SUCCEEDED and CURRENT
+version **5**, wire ROOT **6652b1f21d001b7f00ace528b149582e53012abd4622364c2512f80a7846384c**
+was stored in Drift. The initially stale UI led to the catalogue regression fix.
+The native fixture is an existing published FREE lesson in that CURRENT,
+not necessarily the last-created browser fixture. Safari opening is proven;
+external YouTube availability/playback is outside this app smoke.
+
+<details>
+<summary>Archived initial interrupted run (2026-11-09)</summary>
+
+# PR #56 — local macOS P0 acceptance
+
 Date: 2026-11-09 (Asia/Almaty). **Verdict: BLOCKED. Keep Draft; do not merge.**
 
 This is a partial real acceptance run, not a device or full editorial PASS.
@@ -174,3 +285,5 @@ do not globally upgrade the user's existing SDK or run `pub upgrade`.
 **BLOCKED.** Dependency correction and partial real integration are substantive
 results, but mandatory P0-2 and both complete mobile gates lack evidence. Keep
 PR #56 Draft even if delivery-head CI is 8/8 green. No merge to `main`.
+
+</details>

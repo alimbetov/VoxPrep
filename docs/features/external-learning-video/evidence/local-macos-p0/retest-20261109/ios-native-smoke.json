@@ -1,0 +1,51 @@
+{
+  "source_sha": "eb1769c0c34273b976a3b74f2166f632a42bd7b1",
+  "recorded_at": "2026-11-10T16:53:37.688405+00:00",
+  "entrypoint": "lib/main.dart",
+  "configuration": "debug, iOS simulator; production HTTP; no mocks or provider overrides",
+  "test_bundle_id": "io.github.alimbetov.voxprep.pr56acceptance",
+  "api": "http://127.0.0.1:18082",
+  "original_installation_preserved": true,
+  "keychain_dummy_probe": "PASS; no actual credentials read or printed",
+  "old_bundle_bootstrap": "UNAUTHORIZED; root cause of credential mismatch not established; no insecure fallback introduced",
+  "checks": {
+    "published_catalogue_and_lesson": "PASS",
+    "external_launch": "PASS; explicit button opened Safari youtube.com",
+    "return_same_lesson": "PASS; video panel and audio remain available; no relaunch observed",
+    "native_piper_playback": "PASS; Play to Pause to Replay, duration 0:01",
+    "android": "BLOCKED; no SDK/device",
+    "voiceover_and_large_text": "NOT RUN",
+    "device_offline_and_no_handler": "NOT RUN"
+  },
+  "publication": [
+    {
+      "content_version": 5,
+      "schema_version": 2,
+      "checksum": "6652b1f21d001b7f00ace528b149582e53012abd4622364c2512f80a7846384c"
+    }
+  ],
+  "sync_runs": [
+    {
+      "run_id": "locale-1794329233539436",
+      "state": "SUCCEEDED",
+      "error_code": null
+    },
+    {
+      "run_id": "startup-1794329482878512",
+      "state": "SUCCEEDED",
+      "error_code": null
+    }
+  ],
+  "final_recheck": {
+    "source_sha": "3a1a764178eba61b40cf97e6701c2885962a5743",
+    "build": "PASS; lib/main.dart, isolated bundle ID",
+    "continue_last_lesson": "PASS; EV1_VOCAB_C5F55FF3FD",
+    "external_safari_launch_and_return": "PASS",
+    "completion_before_after": "Mark completed; unchanged",
+    "saved_playback_position_before_after": "0:00; unchanged",
+    "screenshots": [
+      "ios-final-safari.png",
+      "ios-final-return.png"
+    ]
+  }
+}

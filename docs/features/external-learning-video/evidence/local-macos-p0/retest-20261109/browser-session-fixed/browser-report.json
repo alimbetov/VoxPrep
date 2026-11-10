@@ -1,0 +1,174 @@
+{
+  "sha": "638c4f6063084604767ffaa1c36347db4d81aa4a",
+  "checks": {
+    "title_html_escaped": "PASS",
+    "save_reload": "PASS",
+    "csrf_denied": 403,
+    "invalid_url_no_mutation": "PASS",
+    "real_piper_preview_playback": "PASS",
+    "real_browser_publication": "PASS",
+    "published_save_remove_409": "PASS",
+    "sql_update_delete_denied": "PASS",
+    "free_cannot_read_full_video": 403,
+    "live_feature_flag_disabled": "PASS (FREE 204; locked FULL 403)",
+    "published_images_http_hash_etag": "PASS",
+    "published_mp3_http_hash_ffprobe": "PASS",
+    "verified_dev_full_can_read_video": "PASS (DEV simulated-store entitlement)",
+    "image_audio_bindings_preserved": "PASS",
+    "learner_exact_current": "PASS",
+    "anonymous_denied": "PASS",
+    "next_draft_no_leak": "PASS",
+    "draft_only_identity_not_found": 404
+  },
+  "http": [
+    {
+      "method": "POST",
+      "path": "/admin/content/revisions/ca505559-16d6-4820-9741-ee2035a13bcc/external-video",
+      "status": 302,
+      "expected": 302
+    },
+    {
+      "method": "POST",
+      "path": "/admin/content/revisions",
+      "status": 302,
+      "expected": 302
+    },
+    {
+      "method": "POST",
+      "path": "/admin/content/revisions/99f70052-0a56-4e69-898e-c534e35bfa82/external-video",
+      "status": 302,
+      "expected": 302
+    },
+    {
+      "method": "POST",
+      "path": "/admin/content/revisions/99f70052-0a56-4e69-898e-c534e35bfa82/ready-for-audio",
+      "status": 302,
+      "expected": 302
+    },
+    {
+      "method": "POST",
+      "path": "/admin/content/revisions/99f70052-0a56-4e69-898e-c534e35bfa82/review",
+      "status": 302,
+      "expected": 302
+    },
+    {
+      "method": "POST",
+      "path": "/admin/content/revisions/99f70052-0a56-4e69-898e-c534e35bfa82/approve",
+      "status": 302,
+      "expected": 302
+    },
+    {
+      "method": "POST",
+      "path": "/admin/catalogue/verticals",
+      "status": 302,
+      "expected": 302
+    },
+    {
+      "method": "POST",
+      "path": "/admin/catalogue/goals",
+      "status": 302,
+      "expected": 302
+    },
+    {
+      "method": "POST",
+      "path": "/admin/catalogue/tracks",
+      "status": 302,
+      "expected": 302
+    },
+    {
+      "method": "POST",
+      "path": "/admin/catalogue/collections",
+      "status": 302,
+      "expected": 302
+    },
+    {
+      "method": "POST",
+      "path": "/admin/catalogue/collections/e73337e3-0ecc-4084-8ad3-bf1ef96ebd07/members",
+      "status": 302,
+      "expected": 302
+    },
+    {
+      "method": "POST",
+      "path": "/admin/catalogue/collections",
+      "status": 302,
+      "expected": 302
+    },
+    {
+      "method": "POST",
+      "path": "/admin/catalogue/collections/74adf7c9-6034-4163-b0fd-58a2302a59eb/members",
+      "status": 302,
+      "expected": 302
+    },
+    {
+      "method": "POST",
+      "path": "/admin/content/revisions/ca505559-16d6-4820-9741-ee2035a13bcc/external-video",
+      "status": 409,
+      "expected": 409
+    },
+    {
+      "method": "POST",
+      "path": "/admin/content/revisions/ca505559-16d6-4820-9741-ee2035a13bcc/external-video/remove",
+      "status": 409,
+      "expected": 409
+    },
+    {
+      "method": "POST",
+      "path": "/admin/content/revisions",
+      "status": 302,
+      "expected": 302
+    },
+    {
+      "method": "POST",
+      "path": "/admin/content/revisions/5c3bbff9-4249-41ce-8528-ef665d67d8ef/external-video",
+      "status": 302,
+      "expected": 302
+    }
+  ],
+  "content_code": "EV1_VOCAB_A56F80DD88",
+  "revision_id": "ca505559-16d6-4820-9741-ee2035a13bcc",
+  "mp3_sha256": "4e7ded589014568d4e3ac7949ec4bc38d467006a2b6388e8ef5c29d792c58fd6",
+  "bindings_before_publication": "CONTENT_IMAGE:9c688dc1-b633-4575-9dc5-2a4a0b9f7cf4\nCOVER_IMAGE:43cf6e06-68ba-462a-acff-519222b02c0b\nPRONUNCIATION:3bcab118-03f3-4632-a31b-d825ad97b855",
+  "premium_content_code": "EV1_PREMIUM_A56F80DD88",
+  "full_collection_id": "74adf7c9-6034-4163-b0fd-58a2302a59eb",
+  "frozen_snapshot": {
+    "content_revision_id": "ca505559-16d6-4820-9741-ee2035a13bcc",
+    "provider": "YOUTUBE",
+    "provider_video_id": "aqz-KE-bpKQ",
+    "title": "Lesson <img src=x onerror=alert(1)> & \"quoted\"",
+    "frozen_at": "2026-11-09T16:27:29+00:00"
+  },
+  "learner_projection": {
+    "schemaVersion": 1,
+    "contentType": "vocabulary",
+    "contentCode": "EV1_VOCAB_A56F80DD88",
+    "revision": 1,
+    "contentVersion": 5,
+    "rootSha256": "6652b1f21d001b7f00ace528b149582e53012abd4622364c2512f80a7846384c",
+    "provider": "YOUTUBE",
+    "providerVideoId": "aqz-KE-bpKQ",
+    "title": "Lesson <img src=x onerror=alert(1)> & \"quoted\"",
+    "url": "https://www.youtube.com/watch?v=aqz-KE-bpKQ"
+  },
+  "learner_media": [
+    {
+      "assetId": "9c688dc1-b633-4575-9dc5-2a4a0b9f7cf4",
+      "role": "contentImage",
+      "kind": "CONTENT_IMAGE",
+      "mediaType": "image/png",
+      "sizeBytes": 608,
+      "sha256": "81e29c2aac658f2376fc66f9872ad11d917eb481a309aa4a9850de66e92a211d",
+      "etag": "\"81e29c2aac658f2376fc66f9872ad11d917eb481a309aa4a9850de66e92a211d\""
+    },
+    {
+      "assetId": "43cf6e06-68ba-462a-acff-519222b02c0b",
+      "role": "coverImage",
+      "kind": "COVER_IMAGE",
+      "mediaType": "image/png",
+      "sizeBytes": 608,
+      "sha256": "0ed2a7b4f7a95a813a932294b90bfe1601650251ed3e1a9ed57242833b7bb9dd",
+      "etag": "\"0ed2a7b4f7a95a813a932294b90bfe1601650251ed3e1a9ed57242833b7bb9dd\""
+    }
+  ],
+  "next_revision_id": "baea1538-8961-4fcc-954b-c2bf502d5fdf",
+  "result": "PASS"
+}
